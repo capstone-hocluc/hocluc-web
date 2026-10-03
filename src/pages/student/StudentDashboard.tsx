@@ -83,14 +83,17 @@ function DashboardContent({
   onContinueLearning,
 }: StudentDashboardProps & { vm: DashboardViewModel }) {
   const [visibleCounts, setVisibleCounts] = useState(getVisibleCounts)
-  const [courseStartIndex, setCourseStartIndex] = useState(0)
-  const [practiceStartIndex, setPracticeStartIndex] = useState(0)
+  const [courseStartRaw, setCourseStartIndex] = useState(0)
+  const [practiceStartRaw, setPracticeStartIndex] = useState(0)
   const { message, show: showMessage } = useTransientMessage(2600)
 
   const courseVisibleCount = visibleCounts.courses
   const practiceVisibleCount = visibleCounts.practice
   const maxCourseStartIndex = Math.max(0, vm.courses.length - courseVisibleCount)
   const maxPracticeStartIndex = Math.max(0, testPractice.length - practiceVisibleCount)
+  // Clamp while rendering: the carousel offset must follow resizes and list changes.
+  const courseStartIndex = Math.min(courseStartRaw, maxCourseStartIndex)
+  const practiceStartIndex = Math.min(practiceStartRaw, maxPracticeStartIndex)
   const visibleCourses = vm.courses.slice(courseStartIndex, courseStartIndex + courseVisibleCount)
   const visiblePracticeItems = testPractice.slice(
     practiceStartIndex,
@@ -104,14 +107,6 @@ function DashboardContent({
     window.addEventListener('resize', syncVisibleCounts)
     return () => window.removeEventListener('resize', syncVisibleCounts)
   }, [])
-
-  useEffect(() => {
-    setCourseStartIndex((current) => Math.min(current, maxCourseStartIndex))
-  }, [maxCourseStartIndex])
-
-  useEffect(() => {
-    setPracticeStartIndex((current) => Math.min(current, maxPracticeStartIndex))
-  }, [maxPracticeStartIndex])
 
   const showComingSoon = () => showMessage('Tính năng đang được phát triển.')
   const { recentLesson, summary } = vm
@@ -173,9 +168,9 @@ function DashboardContent({
                     label="Điều hướng khóa học"
                     canPrevious={courseStartIndex > 0}
                     canNext={courseStartIndex < maxCourseStartIndex}
-                    onPrevious={() => setCourseStartIndex((current) => Math.max(0, current - 1))}
+                    onPrevious={() => setCourseStartIndex(Math.max(0, courseStartIndex - 1))}
                     onNext={() =>
-                      setCourseStartIndex((current) => Math.min(maxCourseStartIndex, current + 1))
+                      setCourseStartIndex(Math.min(maxCourseStartIndex, courseStartIndex + 1))
                     }
                   />
                   <Button appearance="ghost" className={linkButtonClass} onClick={onOpenMyCourses}>
@@ -235,9 +230,9 @@ function DashboardContent({
                 label="Điều hướng luyện đề"
                 canPrevious={practiceStartIndex > 0}
                 canNext={practiceStartIndex < maxPracticeStartIndex}
-                onPrevious={() => setPracticeStartIndex((current) => Math.max(0, current - 1))}
+                onPrevious={() => setPracticeStartIndex(Math.max(0, practiceStartIndex - 1))}
                 onNext={() =>
-                  setPracticeStartIndex((current) => Math.min(maxPracticeStartIndex, current + 1))
+                  setPracticeStartIndex(Math.min(maxPracticeStartIndex, practiceStartIndex + 1))
                 }
               />
               <Button appearance="ghost" className={linkButtonClass} onClick={showComingSoon}>

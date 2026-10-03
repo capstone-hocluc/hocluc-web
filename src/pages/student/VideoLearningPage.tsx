@@ -46,7 +46,10 @@ function VideoLearningPage({
   const [aiOpen, setAiOpen] = useState(false)
   const { message, show: showMessage } = useTransientMessage(2400)
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<AiMessage[]>([])
+  const [chat, setChat] = useState<{ activityId: string | null; messages: AiMessage[] }>({
+    activityId: null,
+    messages: [],
+  })
 
   const mockContext = findCourseActivity(courseId, activityId)
   const real = usePageResource(
@@ -80,16 +83,20 @@ function VideoLearningPage({
     return () => window.removeEventListener('keydown', closeFloating)
   }, [])
 
-  useEffect(() => {
-    if (!context) return
-    setMessages([
-      {
-        id: 'ai-initial',
-        role: 'ai',
-        text: `Chào bạn! Mình đang hỗ trợ bài "${context.activity.title}". Bạn muốn mình giải thích phần nào?`,
-      },
-    ])
-  }, [context?.activity.id])
+  // The conversation belongs to one activity; opening another starts from the greeting again.
+  const activityKey = context?.activity.id ?? null
+  const messages: AiMessage[] =
+    chat.activityId === activityKey
+      ? chat.messages
+      : context
+        ? [
+            {
+              id: 'ai-initial',
+              role: 'ai',
+              text: `Chào bạn! Mình đang hỗ trợ bài "${context.activity.title}". Bạn muốn mình giải thích phần nào?`,
+            },
+          ]
+        : []
 
   const navigateActivity = (activity: VideoActivity) => {
     const routeType = getActivityRouteType(activity)
@@ -106,11 +113,14 @@ function VideoLearningPage({
     const text = (forcedText || input).trim()
     if (!text || !context) return
 
-    setMessages((current) => [
-      ...current,
-      { id: `user-${Date.now()}`, role: 'user', text },
-      { id: `ai-${Date.now()}`, role: 'ai', text: getMockAiResponse(text, context.activity.title) },
-    ])
+    setChat({
+      activityId: activityKey,
+      messages: [
+        ...messages,
+        { id: `user-${Date.now()}`, role: 'user', text },
+        { id: `ai-${Date.now()}`, role: 'ai', text: getMockAiResponse(text, context.activity.title) },
+      ],
+    })
     setInput('')
   }
 

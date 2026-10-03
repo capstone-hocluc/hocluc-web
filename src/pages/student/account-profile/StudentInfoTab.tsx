@@ -5,6 +5,7 @@ import {
   FormGroupTitle,
   SaveBar,
 } from '../../../components/student/profile/AccountPanel'
+import DropdownField, { type DropdownOption } from '../../../components/ui/DropdownField'
 import { Field, Input } from '../../../components/ui/Field'
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import { useSavedIndicator } from '../../../hooks/useSavedIndicator'
@@ -40,21 +41,39 @@ interface FieldConfig {
   label: string
   type?: 'text' | 'date' | 'number'
   placeholder?: string
+  // Backend-enum fields are picked, not typed: any other value is rejected with a 400.
+  options?: readonly DropdownOption[]
 }
+
+const genderOptions: readonly DropdownOption[] = [
+  { id: 'MALE', label: 'Nam' },
+  { id: 'FEMALE', label: 'Nữ' },
+  { id: 'OTHER', label: 'Khác' },
+]
+
+const academicTrackOptions: readonly DropdownOption[] = [
+  { id: 'NATURAL_SCIENCES', label: 'Khoa học tự nhiên' },
+  { id: 'SOCIAL_SCIENCES', label: 'Khoa học xã hội' },
+  { id: 'COMBINED', label: 'Tổ hợp' },
+]
+
+const targetExamOptions: readonly DropdownOption[] = [
+  { id: 'VNUHCM_DGNL', label: 'Đánh giá năng lực ĐHQG-HCM' },
+]
 
 const personalFields: FieldConfig[] = [
   { key: 'dateOfBirth', label: 'Ngày sinh', type: 'date' },
-  { key: 'gender', label: 'Giới tính', placeholder: 'MALE / FEMALE / ...' },
+  { key: 'gender', label: 'Giới tính', options: genderOptions },
   { key: 'province', label: 'Tỉnh/Thành' },
   { key: 'address', label: 'Địa chỉ' },
   { key: 'schoolName', label: 'Trường học' },
   { key: 'grade', label: 'Khối lớp', type: 'number' },
   { key: 'graduationYear', label: 'Năm tốt nghiệp', type: 'number' },
-  { key: 'academicTrack', label: 'Khối học', placeholder: 'NATURAL_SCIENCES / ...' },
+  { key: 'academicTrack', label: 'Khối học', options: academicTrackOptions },
 ]
 
 const goalFields: FieldConfig[] = [
-  { key: 'targetExam', label: 'Kỳ thi mục tiêu', placeholder: 'VNUHCM_DGNL / ...' },
+  { key: 'targetExam', label: 'Kỳ thi mục tiêu', options: targetExamOptions },
   { key: 'targetExamYear', label: 'Năm thi', type: 'number' },
   { key: 'targetUniversity', label: 'Trường đại học mục tiêu' },
   { key: 'targetMajor', label: 'Ngành học mục tiêu' },
@@ -132,14 +151,24 @@ function StudentInfoTab() {
   }
 
   const renderFields = (fields: FieldConfig[]) =>
-    fields.map(({ key, label, type, placeholder }) => (
+    fields.map(({ key, label, type, placeholder, options }) => (
       <Field key={key} label={label} error={errors[key]}>
-        <Input
-          type={type}
-          value={draft[key]}
-          placeholder={placeholder}
-          onChange={(event) => updateField(key, event.target.value)}
-        />
+        {options ? (
+          <DropdownField
+            ariaLabel={label}
+            options={options}
+            value={draft[key] || null}
+            placeholder="Chọn"
+            onChange={(value) => updateField(key, value ?? '')}
+          />
+        ) : (
+          <Input
+            type={type}
+            value={draft[key]}
+            placeholder={placeholder}
+            onChange={(event) => updateField(key, event.target.value)}
+          />
+        )}
       </Field>
     ))
 
