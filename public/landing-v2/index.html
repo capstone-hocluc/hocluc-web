@@ -54,6 +54,12 @@
         --radius: 24px;
         --shadow: 0 5px 0 #dce8f0;
         --font: 'Nunito', 'Segoe UI', Arial, sans-serif;
+        --type-body: 1rem;
+        --type-label: 0.875rem;
+        --type-caption: 0.75rem;
+        --type-action: 1rem;
+        --type-navigation: 1.0625rem;
+        --line-navigation: 1.5rem;
       }
       * {
         box-sizing: border-box;
@@ -203,8 +209,6 @@
       .nav-actions .btn-primary {
         color: #fff;
         font-weight: 900;
-        -webkit-text-stroke: .1px rgba(0,67,101,.4);
-        text-shadow: 0 1px 0 rgba(0,67,101,.45);
       }
       .btn-secondary {
         background: #fff;
@@ -215,7 +219,7 @@
       .btn-small {
         min-height: 44px;
         padding: 10px 18px;
-        font-size: 14px;
+        font-size: var(--type-action);
       }
       .text-link {
         display: inline-flex;
@@ -234,7 +238,7 @@
         gap: 7px;
         border-radius: 100px;
         padding: 5px 13px;
-        font-size: 12px;
+        font-size: var(--type-label);
         font-weight: 700;
       }
       .skip-link {
@@ -272,11 +276,30 @@
         text-underline-offset: 3px;
       }
       .header {
-        position: sticky;
+        --header-surface: oklch(1 0 0);
+        --header-shadow: 0 8px 24px oklch(0.3 0.04 238 / 0.08);
+        --header-ease: cubic-bezier(0.25, 1, 0.5, 1);
+        position: fixed;
         top: 0;
+        left: 0;
+        width: 100%;
         z-index: 20;
-        background: #fff;
-        border-bottom: 1px solid #e8eff4;
+        background: transparent;
+        border: 0;
+        transition: background-color 250ms var(--header-ease), box-shadow 250ms var(--header-ease);
+      }
+      .header.is-scrolled,
+      .header.is-menu-open {
+        background: var(--header-surface);
+        box-shadow: var(--header-shadow);
+      }
+      .header-scroll-sentinel {
+        position: absolute;
+        top: 64px;
+        left: 0;
+        width: 1px;
+        height: 1px;
+        pointer-events: none;
       }
       .nav {
         height: 79px;
@@ -308,7 +331,7 @@
         margin-left: auto;
       }
       .nav-links a {
-        font-size: 14px;
+        font-size: var(--type-label);
         font-weight: 700;
         min-height: 44px;
         display: flex;
@@ -332,7 +355,7 @@
         font-size: 23px;
       }
       .login-link {
-        font-size: 14px;
+        font-size: var(--type-label);
         font-weight: 700;
         background: none;
         border: 0;
@@ -525,11 +548,11 @@
       }
       .hero-streak b {
         display: block;
-        font-size: 14px;
+        font-size: var(--type-label);
       }
       .hero-streak small {
         color: var(--text);
-        font-size: 11px;
+        font-size: var(--type-caption);
       }
       .flame {
         font-size: 31px;
@@ -716,7 +739,7 @@
         position: absolute;
         top: 16px;
         left: 21px;
-        font-size: 10px;
+        font-size: var(--type-caption);
         font-weight: 800;
         color: var(--tone);
         letter-spacing: 1px;
@@ -747,7 +770,7 @@
         margin-bottom: 12px;
       }
       .domain-content > p {
-        font-size: 14px;
+        font-size: var(--type-body);
         line-height: 1.75;
         color: var(--text);
         min-height: 73px;
@@ -756,7 +779,7 @@
         display: flex;
         gap: 14px;
         flex-wrap: wrap;
-        font-size: 12px;
+        font-size: var(--type-label);
         color: var(--text);
         padding: 17px 0;
         border-bottom: 1px solid var(--line);
@@ -769,7 +792,7 @@
         padding: 14px 0 0;
         width: 100%;
         color: var(--tone);
-        font-size: 14px;
+        font-size: var(--type-label);
       }
       .catalog-note {
         display: flex;
@@ -866,7 +889,7 @@
         margin-bottom: 6px;
       }
       .step-body p {
-        font-size: 13px;
+        font-size: var(--type-body);
         color: var(--text);
         max-width: 410px;
       }
@@ -904,7 +927,7 @@
         align-items: center;
         background: #f7fafc;
         border-bottom: 1px solid var(--line);
-        font-size: 12px;
+        font-size: var(--type-label);
         font-weight: 700;
       }
       .lesson-header span:last-child {
@@ -930,7 +953,7 @@
       }
       .lesson-group {
         color: var(--purple);
-        font-size: 12px;
+        font-size: var(--type-label);
         font-weight: 700;
         margin-bottom: 12px;
       }
@@ -939,7 +962,7 @@
         line-height: 1.5;
       }
       .lesson-body > p {
-        font-size: 14px;
+        font-size: var(--type-body);
         margin-top: 8px;
         color: var(--text);
       }
@@ -965,7 +988,7 @@
       .answer span {
         border: 1px solid var(--line);
         color: #5b6d7c;
-        font-size: 11px;
+        font-size: var(--type-label);
         width: 23px;
         height: 23px;
         display: grid;
@@ -989,7 +1012,7 @@
       }
       .lesson-feedback {
         margin-top: 20px;
-        font-size: 13px;
+        font-size: var(--type-body);
         padding: 13px;
         border-radius: 10px;
         background: #eff7fc;
@@ -1008,7 +1031,7 @@
       }
       .lesson-bottom small {
         color: var(--text);
-        font-size: 11px;
+        font-size: var(--type-label);
       }
       .lesson-bottom .btn:disabled {
         background: #d8e2e9;
@@ -1053,7 +1076,7 @@
         margin-bottom: 5px;
       }
       .feature-list p {
-        font-size: 14px;
+        font-size: var(--type-body);
         color: var(--text);
       }
       .practice {
@@ -1464,7 +1487,7 @@
         letter-spacing: -0.6px;
       }
       .dialog-top p {
-        font-size: 12px;
+        font-size: var(--type-body);
         color: var(--text);
         margin-top: 8px;
       }
@@ -1496,7 +1519,7 @@
         margin-bottom: 8px;
       }
       .module-code {
-        font-size: 11px;
+        font-size: var(--type-label);
         font-weight: 700;
         color: var(--blue-dark);
         background: var(--pale);
@@ -1504,7 +1527,7 @@
         padding: 3px 7px;
       }
       .module-time {
-        font-size: 12px;
+        font-size: var(--type-label);
         color: var(--text);
       }
       .module h3 {
@@ -1512,11 +1535,11 @@
         margin-bottom: 7px;
       }
       .module p {
-        font-size: 13px;
+        font-size: var(--type-body);
         color: var(--text);
       }
       .dialog-note {
-        font-size: 12px;
+        font-size: var(--type-label);
         color: var(--text);
         margin: 18px 0;
       }
@@ -1526,7 +1549,7 @@
         gap: 18px;
       }
       .field label {
-        font-size: 13px;
+        font-size: var(--type-label);
         font-weight: 700;
         display: block;
         margin-bottom: 6px;
@@ -1540,7 +1563,7 @@
         color: var(--navy);
       }
       .start-form p {
-        font-size: 14px;
+        font-size: var(--type-body);
         color: var(--text);
       }
       .recommendation {
@@ -1554,7 +1577,7 @@
         margin-bottom: 9px;
       }
       .recommendation p {
-        font-size: 14px;
+        font-size: var(--type-body);
         color: var(--text);
         margin-bottom: 15px;
       }
@@ -1603,7 +1626,7 @@
           gap: 16px;
         }
         .nav-links a {
-          font-size: 12px;
+          font-size: var(--type-label);
         }
         .nav-actions {
           gap: 12px;
@@ -1623,7 +1646,7 @@
           font-size: 11px;
         }
         .hero-buttons .btn {
-          font-size: 14px;
+          font-size: var(--type-action);
           padding: 13px 16px;
         }
         .subject-shortcuts {
@@ -1683,7 +1706,7 @@
         }
         .mobile-nav a {
           padding: 10px 0;
-          font-size: 15px;
+          font-size: var(--type-label);
           font-weight: 700;
         }
         .hero-grid {
@@ -1889,7 +1912,7 @@
           height: 33px;
         }
         .nav-actions .btn-small {
-          font-size: 11px;
+          font-size: var(--type-action);
           padding: 10px 12px;
           min-height: 40px;
         }
@@ -1915,7 +1938,7 @@
           line-height: 1.2;
         }
         .hero-copy-slide > p {
-          font-size: 15px;
+          font-size: var(--type-body);
           line-height: 1.75;
           margin: 23px 0;
         }
@@ -1975,10 +1998,10 @@
           gap: 6px;
         }
         .hero-streak b {
-          font-size: 11px;
+          font-size: var(--type-label);
         }
         .hero-streak small {
-          font-size: 9px;
+          font-size: var(--type-caption);
         }
         .flame {
           font-size: 23px;
@@ -2033,13 +2056,13 @@
           letter-spacing: -0.8px;
         }
         .intro {
-          font-size: 15px;
+          font-size: var(--type-body);
         }
         .catalog-heading {
           margin-bottom: 25px;
         }
         .catalog-heading p {
-          font-size: 14px;
+          font-size: var(--type-body);
         }
         .catalog-caption {
           font-size: 11px;
@@ -2076,7 +2099,7 @@
           font-size: 11px;
         }
         .journey-copy > p {
-          font-size: 15px;
+          font-size: var(--type-body);
         }
         .journey-step {
           gap: 13px;
@@ -2088,7 +2111,7 @@
           display: none;
         }
         .step-body p {
-          font-size: 12px;
+          font-size: var(--type-body);
         }
         .step-number {
           width: 49px;
@@ -2100,7 +2123,7 @@
         }
         .lesson-header {
           padding: 15px 18px;
-          font-size: 10px;
+          font-size: var(--type-label);
         }
         .lesson-body {
           padding: 22px 19px;
@@ -2118,24 +2141,24 @@
           gap: 10px;
         }
         .lesson-bottom small {
-          font-size: 9px;
+          font-size: var(--type-label);
           max-width: 110px;
         }
         .lesson-bottom .btn {
-          font-size: 12px;
+          font-size: var(--type-action);
           padding: 12px 17px;
         }
         .feature-copy h2 {
           font-size: 30px;
         }
         .feature-copy > p {
-          font-size: 15px;
+          font-size: var(--type-body);
         }
         .feature-list {
           gap: 18px;
         }
         .feature-list p {
-          font-size: 13px;
+          font-size: var(--type-body);
         }
         .practice {
           padding-top: 5px;
@@ -2373,7 +2396,7 @@
       }
       .catalog-heading p {
         max-width: none;
-        font-size: 15px;
+        font-size: var(--type-body);
         margin-top: 12px;
       }
       .domain-content > p {
@@ -2405,7 +2428,7 @@
         border: 1px solid #cbdfe9;
         border-radius: 11px;
         padding: 11px 17px;
-        font-size: 13px;
+        font-size: var(--type-label);
         font-weight: 700;
         min-height: 44px;
         display: inline-flex;
@@ -2442,7 +2465,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 20px;
-        font-size: 12px;
+        font-size: var(--type-label);
         color: var(--text);
       }
       .footer-compact .logo {
@@ -2468,7 +2491,7 @@
           margin-top: 0;
         }
         .nav-actions .btn {
-          font-size: 13px;
+          font-size: var(--type-action);
           padding: 10px 15px;
         }
         .section {
@@ -2481,7 +2504,7 @@
           gap: 6px;
         }
         .nav-actions .btn {
-          font-size: 12px;
+          font-size: var(--type-action);
           padding: 10px 13px;
         }
         .hero h1 {
@@ -2490,7 +2513,7 @@
           letter-spacing: -0.35px;
         }
         .hero-copy-slide > p {
-          font-size: 15px;
+          font-size: var(--type-body);
           max-width: 330px;
           line-height: 1.7;
           margin: 21px auto;
@@ -2509,7 +2532,7 @@
           font-size: 28px;
         }
         .catalog-heading p {
-          font-size: 14px;
+          font-size: var(--type-body);
         }
         .domain-content h3 {
           font-size: 21px;
@@ -2521,7 +2544,7 @@
           font-size: 38px;
         }
         .practice-pill {
-          font-size: 12px;
+          font-size: var(--type-label);
           padding: 10px 12px;
         }
         .practice-pills {
@@ -2539,7 +2562,7 @@
           gap: 12px;
         }
         .footer-compact > .text-link {
-          font-size: 12px;
+          font-size: var(--type-label);
         }
       }
 
@@ -2603,15 +2626,15 @@
 .calculator-showcase {display: grid; grid-template-columns: 1fr 1fr; gap: 70px; align-items: center;}
 .calculator-copy h2 {font-size: clamp(30px,3.2vw,43px); line-height: 1.25;}
 .calculator-copy > p {margin: 18px 0 24px; max-width: 400px; color: var(--text); font-size: 16px;}
-.calculator-label {display:inline-flex; align-items:center; gap:8px; color:var(--blue-dark); font-size:12px; font-weight:800; margin-bottom:16px;}
+.calculator-label {display:inline-flex; align-items:center; gap:8px; color:var(--blue-dark); font-size: var(--type-label); font-weight:800; margin-bottom:16px;}
 .calculator-label:before {content:''; width:8px; height:8px; background:var(--sky); border-radius:50%;}
 .calculator-examples {display:flex; gap:8px; flex-wrap:wrap; margin-bottom:26px;}
-.calculator-examples button {min-height:44px; padding:10px 15px; border:1px solid #c5dce9; border-radius:11px; background:white; font-size:13px; font-weight:800;}
+.calculator-examples button {min-height:44px; padding:10px 15px; border:1px solid #c5dce9; border-radius:11px; background:white; font-size: var(--type-label); font-weight:800;}
 .calculator-examples button[aria-pressed=true] {background:var(--blue); color:var(--navy); border-color:var(--blue);}
 #calculator-question {font-size:22px; line-height:1.45; margin-bottom:20px; max-width:460px;}
 .calculator-guide {min-height:135px;}
-.guide-count {display:inline-block; color:var(--blue-dark); font-size:12px; font-weight:800; margin-bottom:8px;}
-.calculator-guide p {font-size:14px; color:var(--text); margin:0 0 13px;}
+.guide-count {display:inline-block; color:var(--blue-dark); font-size: var(--type-label); font-weight:800; margin-bottom:8px;}
+.calculator-guide p {font-size: var(--type-body); color:var(--text); margin:0 0 13px;}
 .guide-keys {display:flex; gap:5px; flex-wrap:wrap; max-width:430px; padding-bottom:15px;}
 .guide-keys kbd {font:700 12px var(--font); min-width:28px; height:31px; padding:3px 7px; border:1px solid #b7cddc; border-bottom-width:3px; background:white; border-radius:6px; display:grid; place-items:center;}
 .calculator-stage {position:relative; isolation:isolate; padding:25px 32px; background:#e5f3fd; border-radius:35px;}
@@ -2634,15 +2657,15 @@
 #calculator-face .calc-key.is-active .calc-key-cap {background:#ffe58a; color:#453e21; box-shadow:0 0 0 2px #b79842,0 2px 0 #695422;}
 #calculator-face .calc-key.is-latched .calc-key-cap {box-shadow:0 0 0 2px #8bd4fa;}
 .calc-bottom-label {text-align:center; font-size:8px; color:#9db3c8; letter-spacing:1.4px; padding-top:5px;}
-.calculator-under {display:flex; justify-content:center; align-items:center; gap:17px; margin-top:20px; color:var(--text); font-size:11px;}
-.calculator-under button {min-height:44px; border:0; background:none; padding:5px 0; color:var(--blue-dark); font-weight:800; font-size:12px;}
+.calculator-under {display:flex; justify-content:center; align-items:center; gap:17px; margin-top:20px; color:var(--text); font-size: var(--type-label);}
+.calculator-under button {min-height:44px; border:0; background:none; padding:5px 0; color:var(--blue-dark); font-weight:800; font-size: var(--type-label);}
 #calculator-output {position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;}
-#calculator-notice {font-size:12px; color:var(--blue-dark); margin-top:12px; text-align:center;}
+#calculator-notice {font-size: var(--type-label); color:var(--blue-dark); margin-top:12px; text-align:center;}
 #calculator-notice:empty {display:none;}
-.calculator-caption {font-size:11px; color:var(--text); margin-top:15px;}
+.calculator-caption {font-size: var(--type-label); color:var(--text); margin-top:15px;}
 @media(max-width:1050px) {.calculator-showcase {gap:35px}.calculator-stage {padding:24px 18px}.nav-links{gap:15px}}
 @media(max-width:800px) {.calculator-showcase{grid-template-columns:1fr;gap:30px}.calculator-copy{max-width:560px;margin:auto;width:100%}.calculator-copy>p{max-width:510px}.calculator-stage{max-width:440px;width:100%;margin:auto}.calculator-guide{min-height:110px}.calculator-section{padding:52px 0}}
-@media(max-width:480px) {.calculator-section{padding:42px 0}.calculator-copy h2{font-size:30px}.calculator-copy>p{font-size:14px}.calculator-examples{gap:6px;margin-bottom:21px}.calculator-examples button{font-size:12px;padding:9px 11px}#calculator-question{font-size:20px}.calculator-stage{padding:22px 9px;border-radius:23px}.calculator-stage:before{width:250px;height:250px}#calculator-face .calc-face{padding:14px 10px 16px}#calculator-face .calc-keys .calc-key-extra{font-size:7px}#calculator-face .calc-keys .calc-key-cap{font-size:10px}#calculator-face .calc-key.is-num .calc-key-cap,#calculator-face .calc-key.is-op .calc-key-cap{font-size:15px;height:36px}.calculator-under{font-size:10px;gap:12px}}
+@media(max-width:480px) {.calculator-section{padding:42px 0}.calculator-copy h2{font-size:30px}.calculator-copy>p{font-size:14px}.calculator-examples{gap:6px;margin-bottom:21px}.calculator-examples button{font-size: var(--type-label);padding:9px 11px}#calculator-question{font-size:20px}.calculator-stage{padding:22px 9px;border-radius:23px}.calculator-stage:before{width:250px;height:250px}#calculator-face .calc-face{padding:14px 10px 16px}#calculator-face .calc-keys .calc-key-extra{font-size:7px}#calculator-face .calc-keys .calc-key-cap{font-size:10px}#calculator-face .calc-key.is-num .calc-key-cap,#calculator-face .calc-key.is-op .calc-key-cap{font-size:15px;height:36px}.calculator-under{font-size: var(--type-label);gap:12px}}
 
       /* Bright sky-blue brand; darker text preserves legibility. */
       .logo .wordmark, .logo .wordmark span { color: var(--blue); }
@@ -2695,8 +2718,8 @@
       /* Subject illustrations and Lucide labels share a clear, consistent layout. */
       .domain-art, .domain-card:nth-child(n + 4) .domain-art {height:174px; padding:20px;}
       .domain-art .art-label {position:absolute;left:20px;top:51px;max-width:52%;font-size:36px !important;letter-spacing:-1px;}
-      .domain-art .art-sub {left:20px;top:15px;font-size:9px;letter-spacing:.6px;z-index:2;}
-      .domain-art .art-doodle, .domain-card:nth-child(n + 4) .art-doodle {left:20px;bottom:22px;max-width:50%;font-size:12px;line-height:1.3;transform:none;opacity:1;display:flex;align-items:center;gap:6px;font-weight:700;}
+      .domain-art .art-sub {left:20px;top:15px;font-size: var(--type-caption);letter-spacing:.6px;z-index:2;}
+      .domain-art .art-doodle, .domain-card:nth-child(n + 4) .art-doodle {left:20px;bottom:22px;max-width:50%;font-size:var(--type-label);line-height:1.3;transform:none;opacity:1;display:flex;align-items:center;gap:6px;font-weight:700;}
       .art-doodle .ui-icon {width:17px;height:17px;stroke-width:2;}
       .domain-art .character, .domain-card:nth-child(n + 4) .domain-art .character, .domain-art img.character {width:46%;height:144px;right:1px;bottom:5px;object-fit:contain;transform-origin:50% 85%;}
       #tieng-viet .character {width:48%;}
@@ -2723,7 +2746,7 @@
         .nav .logo {font-size:19px;gap:5px;}
         .nav .logo-icon {width:28px;height:28px;}
         .nav-actions {gap:6px;}
-        .nav-actions .btn-small {font-size:11px;padding:9px 10px;}
+        .nav-actions .btn-small {font-size: var(--type-action);padding:9px 10px;}
         .menu-toggle {width:36px;min-width:36px;height:36px;}
       }
       /* Three floating study objects around the learning scene. */
@@ -2757,23 +2780,21 @@
         font-size:17px;
         font-weight:900;
         letter-spacing:.01em;
-        -webkit-text-stroke:.15px rgba(0,67,101,.4);
-        text-shadow:0 1px 0 rgba(0,67,101,.45);
       }
       .hero-carousel {position:relative;}
       .hero-copy-carousel {display:grid;}
       .hero-copy-slide {grid-area:1/1;min-width:0;pointer-events:none;}
-      .hero-copy-slide > h1,.hero-copy-slide > p {will-change:opacity,transform;animation-duration:14s;animation-timing-function:cubic-bezier(.22,.61,.36,1);animation-iteration-count:infinite;}
+      .hero-copy-slide > h1,.hero-copy-slide > p {animation-duration:14s;animation-timing-function:cubic-bezier(.22,.61,.36,1);animation-iteration-count:infinite;}
       .hero-copy-slide-illustration {z-index:1;}
       .hero-copy-slide-illustration > h1 {animation-name:hero-copy-heading-illustration;}
       .hero-copy-slide-illustration > p {animation-name:hero-copy-body-illustration;}
       .hero-copy-slide-amy {z-index:2;}
       .hero-copy-slide-amy > h1 {opacity:0;transform:translateY(7px);animation-name:hero-copy-heading-amy;}
       .hero-copy-slide-amy > p {opacity:0;transform:translateY(5px);animation-name:hero-copy-body-amy;}
-      @keyframes hero-copy-heading-illustration {0%,38%,100%{opacity:1;transform:translateY(0);}48%,88%{opacity:0;transform:translateY(-7px);}}
-      @keyframes hero-copy-body-illustration {0%,40%,100%{opacity:1;transform:translateY(0);}50%,90%{opacity:0;transform:translateY(-4px);}}
-      @keyframes hero-copy-heading-amy {0%,38%,100%{opacity:0;transform:translateY(7px);}48%,88%{opacity:1;transform:translateY(0);}}
-      @keyframes hero-copy-body-amy {0%,40%,100%{opacity:0;transform:translateY(5px);}50%,90%{opacity:1;transform:translateY(0);}}
+      @keyframes hero-copy-heading-illustration {0%,38%,100%{opacity:1;transform:none;}48%,88%{opacity:0;transform:translateY(-7px);}}
+      @keyframes hero-copy-body-illustration {0%,40%,100%{opacity:1;transform:none;}50%,90%{opacity:0;transform:translateY(-4px);}}
+      @keyframes hero-copy-heading-amy {0%,38%,100%{opacity:0;transform:translateY(7px);}48%,88%{opacity:1;transform:none;}}
+      @keyframes hero-copy-body-amy {0%,40%,100%{opacity:0;transform:translateY(5px);}50%,90%{opacity:1;transform:none;}}
       .hero-slide {position:absolute;inset:0;opacity:0;pointer-events:none;will-change:opacity,transform;animation-duration:14s;animation-timing-function:cubic-bezier(.22,.61,.36,1);animation-iteration-count:infinite;}
       .hero-slide-illustration {z-index:1;opacity:1;animation-name:hero-illustration-cycle;}
       .hero-slide-amy {z-index:2;animation-name:hero-amy-cycle;}
@@ -2788,10 +2809,10 @@
       .hero-amy-card {
         position:absolute;z-index:5;display:flex;align-items:center;gap:9px;min-height:55px;padding:10px 14px;
         border:1px solid #e2edf4;border-radius:16px;background:#fff;box-shadow:0 5px 0 #dcebf5;
-        color:var(--text);font-size:11px;font-weight:700;line-height:1.25;
+        color:var(--text);font-size: var(--type-caption);font-weight:700;line-height:1.25;
       }
       .hero-amy-card strong {display:block;color:var(--blue-dark);font-size:16px;font-weight:900;line-height:1.2;}
-      .hero-amy-card small {display:block;margin-top:2px;color:inherit;font-size:10px;}
+      .hero-amy-card small {display:block;margin-top:2px;color:inherit;font-size: var(--type-caption);}
       .amy-card-access {left:0;top:39%;}
       .amy-card-community {right:0;top:38%;max-width:160px;background:var(--blue);border-color:#27a8e1;color:#fff;}
       .amy-card-community strong,.amy-card-community small {color:#fff;}
@@ -2800,222 +2821,348 @@
       .amy-card-students {right:0;bottom:13%;}
       @media(max-width:480px) {
         .hero-amy {height:94%;left:52%;max-width:78%;}
-        .hero-amy-card {min-height:45px;gap:6px;padding:7px 9px;border-radius:12px;font-size:9px;}
+        .hero-amy-card {min-height:45px;gap:6px;padding:7px 9px;border-radius:12px;font-size: var(--type-caption);}
         .hero-amy-card strong {font-size:13px;}
-        .hero-amy-card small {font-size:8px;}
+        .hero-amy-card small {font-size: var(--type-caption);}
         .amy-card-access {left:-2px;top:37%;}
         .amy-card-community {right:-2px;top:37%;max-width:126px;}
         .amy-card-courses {left:-2px;bottom:15%;}
         .amy-card-students {right:-2px;bottom:15%;}
       }
+      :root {
+        --landing-header-height: 80px;
+      }
+      .nav {
+        height: var(--landing-header-height);
+      }
+      .hero-grid {
+        min-height: max(45rem, 100svh);
+        padding-top: calc(var(--landing-header-height) + 4rem);
+        padding-bottom: 4rem;
+      }
+      .hero-art {
+        transform: none;
+      }
+      @media (min-width: 481px) {
+        .hero-art {
+          height: clamp(30rem, 40vw, 34rem);
+        }
+        .hero-owl {
+          width: clamp(19.0625rem, 25vw, 21rem);
+          top: 24%;
+        }
+        .hero-girl {
+          width: clamp(11.5625rem, 15vw, 13rem);
+          height: clamp(12.1875rem, 16vw, 13.75rem);
+          top: 46%;
+        }
+        .hero-boy {
+          width: clamp(11.25rem, 15vw, 12.5rem);
+          height: clamp(17.1875rem, 23vw, 19rem);
+          top: 20%;
+        }
+        .hero-ground {
+          width: 14rem;
+          height: 1.25rem;
+          bottom: 3rem;
+        }
+        .hero-streak {
+          bottom: 10%;
+        }
+        .tool-ruler {
+          width: 5.375rem;
+          height: 3rem;
+          top: 16%;
+        }
+        .tool-pencil {
+          width: 2.375rem;
+          height: 5.375rem;
+        }
+      }
+      @media (min-width: 801px) {
+        .hero-grid {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+          gap: 2rem;
+        }
+      }
+      @media (max-width: 800px) {
+        :root {
+          --landing-header-height: 70px;
+        }
+        .hero-grid {
+          padding-top: calc(var(--landing-header-height) + 3rem);
+          padding-bottom: 2rem;
+          gap: 1.5rem;
+        }
+        .hero-art {
+          width: min(35rem, 100%);
+          height: 32rem;
+        }
+      }
+      @media (max-width: 480px) {
+        .hero-grid {
+          padding-top: calc(var(--landing-header-height) + 2rem);
+          padding-bottom: 1.5rem;
+          gap: 0;
+        }
+        .hero-art {
+          height: 24rem;
+        }
+        .hero-owl {
+          width: min(14.375rem, 70%);
+          top: 29%;
+        }
+        .hero-girl {
+          width: 8.25rem;
+          height: 8.75rem;
+          top: 58%;
+        }
+        .hero-boy {
+          width: 8.125rem;
+          height: 14.5rem;
+          top: 27%;
+        }
+      }
       .school-proof {
-        padding: 24px 0 44px;
-        background: linear-gradient(180deg, #f0faff 0%, #ffffff 100%);
-      }
-      .school-proof-card {
-        display: grid;
-        gap: 25px 34px;
-        padding: 30px 34px;
-        border: 1px solid #dceef7;
-        border-radius: 26px;
-        background: #fff;
-        box-shadow: 0 12px 30px #1447630d;
-      }
-      .school-proof-top {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(245px, 0.46fr);
-        align-items: center;
-        gap: 28px;
-      }
-      .school-proof-eyebrow {
-        margin: 0 0 9px;
-        color: var(--blue-dark);
-        font-size: 11px;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        --proof-space-xs: 0.5rem;
+        --proof-space-sm: 1rem;
+        --proof-space-md: 1.5rem;
+        --proof-space-lg: 2rem;
+        --proof-surface: oklch(0.975 0.012 235);
+        --proof-radius: 0.75rem;
+        --proof-body-size: 1rem;
+        --proof-caption-size: var(--type-label);
+        --proof-ease: cubic-bezier(0.25, 1, 0.5, 1);
+        --proof-highlight: oklch(0.87 0.14 89);
+        padding: var(--proof-space-lg) 0;
       }
       .school-proof-copy h2 {
-        max-width: 660px;
         margin: 0;
-        font-size: clamp(25px, 3vw, 35px);
-        line-height: 1.2;
-        letter-spacing: -0.5px;
+        font-size: clamp(1.5rem, 3vw, 2rem);
+        line-height: 1.25;
+        letter-spacing: -0.02em;
+        text-wrap: balance;
       }
       .school-proof-description {
-        max-width: 610px;
-        margin: 12px 0 0;
+        display: flex;
+        align-items: center;
+        gap: var(--proof-space-md);
+        margin: var(--proof-space-sm) 0 0;
         color: var(--text);
-        font-size: 15px;
+        font-size: var(--proof-body-size);
         line-height: 1.6;
+        text-wrap: pretty;
       }
-      .school-proof-stat {
-        padding: 19px 22px;
-        border: 1px solid #d8edf8;
-        border-radius: 20px;
-        background: #effaff;
+      .school-proof-total {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: baseline;
+        gap: var(--proof-space-xs);
+        color: var(--blue-dark);
+        font-weight: 900;
       }
       .school-proof-number {
-        display: block;
-        color: var(--blue-dark);
-        font-size: 56px;
-        font-weight: 900;
-        line-height: 0.95;
-        letter-spacing: -2px;
+        position: relative;
+        isolation: isolate;
+        display: inline-block;
+        min-width: 3ch;
+        padding-inline: 0.25rem;
+        font-size: 4rem;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        text-align: center;
       }
-      .school-proof-stat-label {
-        display: block;
-        max-width: 245px;
-        margin-top: 8px;
-        color: var(--text);
-        font-size: 13px;
-        font-weight: 800;
-        line-height: 1.4;
+      .school-proof-number::after {
+        content: '';
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0.08em;
+        height: 0.14em;
+        border-radius: 50%;
+        background: var(--proof-highlight);
+        transform: rotate(-3deg);
+        transform-origin: left center;
+        z-index: -1;
       }
-      .school-proof-counts {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 7px;
-        margin: 14px 0 0;
-        padding: 0;
-        list-style: none;
+      .school-proof-total.is-counting .school-proof-number::after {
+        animation: school-count-underline 950ms var(--proof-ease) both;
       }
-      .school-proof-counts li {
-        padding: 6px 9px;
-        border-radius: 999px;
-        background: #fff;
-        color: var(--blue-dark);
-        font-size: 11px;
-        font-weight: 800;
-        line-height: 1.25;
+      @keyframes school-count-underline {
+        from { transform: rotate(-3deg) scaleX(0.2); }
+        to { transform: rotate(-3deg) scaleX(1); }
       }
-      .school-proof-bottom {
-        display: grid;
-        grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.9fr);
-        gap: 24px;
-        padding-top: 21px;
-        border-top: 1px solid #e7f0f5;
+      .school-proof-accessible-count {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
       }
-      .school-proof-sample-label {
-        display: block;
-        color: var(--text);
-        font-size: 12px;
-        font-weight: 800;
+      .school-proof-context {
+        max-width: 48ch;
       }
       .school-proof-schools {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 8px;
-        margin: 10px 0 0;
+        gap: var(--proof-space-sm);
+        margin: var(--proof-space-md) 0 0;
         padding: 0;
         list-style: none;
       }
       .school-proof-schools li {
         display: flex;
-        min-height: 48px;
+        min-height: 4rem;
         align-items: center;
-        padding: 9px 11px;
-        border: 1px solid #e4eff5;
-        border-radius: 12px;
-        background: #f8fcfe;
+        padding: var(--proof-space-sm);
+        border-radius: var(--proof-radius);
+        background: var(--proof-surface);
         color: var(--text);
-        font-size: 12px;
+        font-size: 0.875rem;
         font-weight: 800;
-        line-height: 1.35;
+        line-height: 1.4;
       }
       .school-proof-source {
-        align-self: center;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--proof-space-sm);
+        margin-top: var(--proof-space-xs);
       }
       .school-proof-source p {
         margin: 0;
         color: var(--text);
-        font-size: 12px;
-        line-height: 1.55;
+        font-size: var(--proof-caption-size);
+        line-height: 1.5;
       }
       .school-proof-source a {
         display: inline-flex;
-        min-height: 44px;
+        min-height: 2.75rem;
         align-items: center;
-        gap: 7px;
-        margin-top: 7px;
+        gap: var(--proof-space-xs);
         color: var(--blue-dark);
-        font-size: 13px;
+        font-size: 0.875rem;
         font-weight: 900;
         text-decoration: none;
       }
       .school-proof-source a:hover {
         text-decoration: underline;
-        text-underline-offset: 3px;
+        text-underline-offset: 0.25rem;
       }
       .school-proof-source .ui-icon {
-        width: 17px;
-        height: 17px;
+        width: var(--proof-space-sm);
+        height: var(--proof-space-sm);
+        transition: transform 200ms var(--proof-ease);
+      }
+      .school-proof-source a:hover .ui-icon {
+        transform: translate(2px, -2px);
+      }
+      .school-proof-source a:active {
+        transform: translateY(2px);
       }
       @media (max-width: 800px) {
-        .school-proof-top {
-          grid-template-columns: minmax(0, 1fr) minmax(220px, 0.55fr);
-          gap: 18px;
-        }
-        .school-proof-bottom {
-          grid-template-columns: 1fr;
-          gap: 16px;
-        }
         .school-proof-schools {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
-      @media (max-width: 560px) {
+      @media (max-width: 480px) {
         .school-proof {
-          padding: 13px 0 34px;
+          padding: var(--proof-space-md) 0;
         }
-        .school-proof-card {
-          gap: 19px;
-          padding: 22px 19px;
-          border-radius: 22px;
-        }
-        .school-proof-top {
-          grid-template-columns: 1fr;
-          gap: 16px;
-        }
-        .school-proof-copy h2 {
-          font-size: 27px;
-        }
-        .school-proof-description {
-          margin-top: 9px;
-          font-size: 14px;
-        }
-        .school-proof-stat {
-          display: grid;
-          grid-template-columns: auto 1fr;
-          align-items: center;
-          column-gap: 15px;
-          padding: 15px 17px;
-          border-radius: 17px;
-        }
-        .school-proof-number {
-          grid-row: span 2;
-          font-size: 51px;
-        }
-        .school-proof-stat-label {
-          margin-top: 0;
-          font-size: 12px;
-        }
-        .school-proof-counts {
-          gap: 6px;
-          margin-top: 7px;
-        }
-        .school-proof-counts li {
-          padding: 5px 8px;
-          font-size: 10px;
-        }
-        .school-proof-bottom {
-          gap: 15px;
-          padding-top: 17px;
+        .school-proof-schools {
+          gap: var(--proof-space-xs);
         }
         .school-proof-schools li {
-          min-height: 50px;
-          padding: 8px 9px;
-          font-size: 11px;
+          padding: var(--proof-space-xs) var(--proof-space-sm);
+        }
+        .school-proof-description {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: var(--proof-space-xs);
+        }
+        .school-proof-number {
+          font-size: 3rem;
+        }
+        .school-proof-source {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0;
+          margin-top: var(--proof-space-sm);
+        }
+      }
+      /* Readable navigation: collapse links before larger labels become crowded. */
+      .nav-links a,
+      .login-link,
+      .mobile-nav a {
+        font-size: var(--type-navigation);
+        font-weight: 800;
+        line-height: var(--line-navigation);
+        text-shadow: none;
+        -webkit-text-stroke: 0;
+      }
+      .btn {
+        font-weight: 800;
+      }
+      @media (max-width: 1050px) {
+        .nav-links,
+        .login-link {
+          display: none;
+        }
+        .nav-actions {
+          margin-left: auto;
+        }
+        .menu-toggle {
+          display: block;
+        }
+        .mobile-nav.open {
+          display: flex;
+          flex-direction: column;
+          padding: 12px 28px 20px;
+          gap: 8px;
+          border-top: 1px solid var(--line);
+          background: white;
+        }
+        .mobile-nav a {
+          padding: 10px 0;
+          font-weight: 800;
+        }
+      }
+      @media (max-width: 480px) {
+        .nav-actions .btn-small {
+          font-size: var(--type-label);
+          padding-inline: 10px;
+          gap: 8px;
+        }
+        .hero-amy-card strong {
+          font-size: var(--type-label);
+        }
+      }
+      @media (max-width: 360px) {
+        .nav-actions .btn-small .ui-icon {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero-copy-slide > h1,
+        .hero-copy-slide > p,
+        .hero-slide {
+          animation: none;
+          transform: none;
+          will-change: auto;
+        }
+        .header {
+          transition: none;
+        }
+        .school-proof-total.is-counting .school-proof-number::after {
+          animation: none;
+        }
+        .school-proof-source .ui-icon {
+          transition: none;
+        }
+        .school-proof-source a:hover .ui-icon,
+        .school-proof-source a:active {
+          transform: none;
         }
       }
     </style>
@@ -3160,6 +3307,7 @@ SOFTWARE.
         <symbol id="star" viewBox="0 0 240 240"><image href="assets/star-reading-v2.png" width="240" height="240" preserveAspectRatio="xMidYMid meet" /></symbol>
       </defs>
     </svg>
+    <div class="header-scroll-sentinel" aria-hidden="true"></div>
     <header class="header">
       <nav class="container nav" aria-label="Điều hướng chính">
         <a class="logo" href="#top" aria-label="hocluc.com — Trang chủ"
@@ -3260,44 +3408,29 @@ SOFTWARE.
       </section>
       <section class="school-proof" id="truong-nhan-diem" aria-labelledby="school-proof-title">
         <div class="container">
-          <div class="school-proof-card">
-            <div class="school-proof-top">
-              <div class="school-proof-copy">
-                <p class="school-proof-eyebrow">Kỳ thi ĐGNL ĐHQG-HCM (V-ACT) 2026</p>
-                <h2 id="school-proof-title">Thêm lựa chọn xét tuyển với điểm V-ACT</h2>
-                <p class="school-proof-description">
-                  Nhiều đơn vị đại học trong và ngoài ĐHQG-HCM đăng ký sử dụng kết quả kỳ thi năm 2026.
-                </p>
-              </div>
-              <div class="school-proof-stat">
-                <strong class="school-proof-number">120</strong>
-                <span class="school-proof-stat-label">đơn vị đăng ký sử dụng kết quả ĐGNL ĐHQG-HCM năm 2026</span>
-                <ul class="school-proof-counts" aria-label="Phân loại đơn vị">
-                  <li>109 đơn vị đại học</li>
-                  <li>11 cao đẳng</li>
-                </ul>
-              </div>
-            </div>
-            <div class="school-proof-bottom">
-              <div class="school-proof-sample">
-                <span class="school-proof-sample-label">Một số trường trong danh sách</span>
-                <ul class="school-proof-schools">
-                  <li>ĐH Bách khoa</li>
-                  <li>ĐH Khoa học Tự nhiên</li>
-                  <li>ĐH Kinh tế TP.HCM</li>
-                  <li>Học viện Công nghệ Bưu chính Viễn thông</li>
-                </ul>
-              </div>
-              <div class="school-proof-source">
-                <p>
-                  Danh sách do Trung tâm Khảo thí và Đánh giá Chất lượng Đào tạo ĐHQG-HCM cập nhật ngày 18/09/2026. Phương thức và điều kiện xét tuyển tùy trường, tùy ngành.
-                </p>
-                <a href="https://cetqa.vnuhcm.edu.vn/tin-tuc/cac-don-vi-su-dung-ket-qua-p-38.html" target="_blank" rel="noopener noreferrer">
-                  Xem danh sách đầy đủ
-                  <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#ui-arrow-up-right"/></svg>
-                </a>
-              </div>
-            </div>
+          <div class="school-proof-copy">
+            <h2 id="school-proof-title">Các trường sử dụng điểm V-ACT</h2>
+            <p class="school-proof-description">
+              <strong class="school-proof-total">
+                <span class="school-proof-number" data-target-count="120" aria-hidden="true">120</span>
+                <span class="school-proof-accessible-count">120</span>
+                <span>đơn vị</span>
+              </strong>
+              <span class="school-proof-context">đăng ký sử dụng kết quả năm 2026, theo điều kiện tuyển sinh riêng.</span>
+            </p>
+          </div>
+          <ul class="school-proof-schools" aria-label="Một số trường trong danh sách">
+            <li>ĐH Bách khoa</li>
+            <li>ĐH Khoa học Tự nhiên</li>
+            <li>ĐH Kinh tế TP.HCM</li>
+            <li>Học viện Công nghệ Bưu chính Viễn thông</li>
+          </ul>
+          <div class="school-proof-source">
+            <p>Nguồn: ĐHQG-HCM · Cập nhật 18/09/2026</p>
+            <a href="https://cetqa.vnuhcm.edu.vn/tin-tuc/cac-don-vi-su-dung-ket-qua-p-38.html" target="_blank" rel="noopener noreferrer">
+              Xem danh sách đầy đủ
+              <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#ui-arrow-up-right"/></svg>
+            </a>
           </div>
         </div>
       </section>
@@ -3860,16 +3993,19 @@ SOFTWARE.
           document.querySelector('#recommendation').hidden = true
         })
       )
+      const landingHeader = document.querySelector('.header')
       const menu = document.querySelector('.menu-toggle'),
         mobileNav = document.querySelector('#mobile-nav')
       function closeMenu() {
         mobileNav.classList.remove('open')
+        landingHeader.classList.remove('is-menu-open')
         menu.setAttribute('aria-expanded', 'false')
         menu.setAttribute('aria-label', 'Mở menu')
         menu.innerHTML = '<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#ui-menu"/></svg>'
       }
       menu.addEventListener('click', () => {
         const open = mobileNav.classList.toggle('open')
+        landingHeader.classList.toggle('is-menu-open', open)
         menu.setAttribute('aria-expanded', String(open))
         menu.setAttribute('aria-label', open ? 'Đóng menu' : 'Mở menu')
         menu.innerHTML = open ? '<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#ui-x"/></svg>' : '<svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#ui-menu"/></svg>'
@@ -3881,8 +4017,60 @@ SOFTWARE.
           menu.focus()
         }
       })
-      matchMedia('(min-width: 801px)').addEventListener('change', (e) => {
+      matchMedia('(min-width: 1051px)').addEventListener('change', (e) => {
         if (e.matches) closeMenu()
+      })
+      const headerSentinel = document.querySelector('.header-scroll-sentinel')
+      if ('IntersectionObserver' in window) {
+        const headerObserver = new IntersectionObserver(([entry]) => {
+          landingHeader.classList.toggle('is-scrolled', entry.boundingClientRect.top < 0)
+        })
+        headerObserver.observe(headerSentinel)
+      } else {
+        landingHeader.classList.add('is-scrolled')
+      }
+      const schoolCount = document.querySelector('[data-target-count]')
+      const schoolCountTotal = schoolCount.closest('.school-proof-total')
+      const schoolCountTarget = Number(schoolCount.dataset.targetCount)
+      const schoolCountMotion = matchMedia('(prefers-reduced-motion: reduce)')
+      let schoolCountFrame = null
+      function finishSchoolCount() {
+        if (schoolCountFrame !== null) cancelAnimationFrame(schoolCountFrame)
+        schoolCountFrame = null
+        schoolCount.textContent = String(schoolCountTarget)
+        schoolCount.dataset.countState = 'complete'
+        schoolCountTotal.classList.remove('is-counting')
+      }
+      function animateSchoolCount() {
+        if (schoolCountMotion.matches) {
+          finishSchoolCount()
+          return
+        }
+        schoolCount.textContent = '0'
+        schoolCount.dataset.countState = 'running'
+        schoolCountTotal.classList.add('is-counting')
+        let startedAt
+        function updateSchoolCount(timestamp) {
+          if (startedAt === undefined) startedAt = timestamp
+          const progress = Math.min((timestamp - startedAt) / 950, 1)
+          schoolCount.textContent = String(Math.round(schoolCountTarget * (1 - Math.pow(1 - progress, 3))))
+          if (progress < 1) schoolCountFrame = requestAnimationFrame(updateSchoolCount)
+          else finishSchoolCount()
+        }
+        schoolCountFrame = requestAnimationFrame(updateSchoolCount)
+      }
+      if (!schoolCountMotion.matches && 'IntersectionObserver' in window) {
+        const schoolCountObserver = new IntersectionObserver((entries, observer) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return
+          observer.disconnect()
+          animateSchoolCount()
+        }, { threshold: 0.6 })
+        schoolCountObserver.observe(schoolCount.closest('.school-proof-description'))
+      } else {
+        finishSchoolCount()
+      }
+      schoolCountMotion.addEventListener('change', (event) => {
+        if (event.matches) finishSchoolCount()
       })
       const questions = [
         {
