@@ -2808,6 +2808,216 @@
         .amy-card-courses {left:-2px;bottom:15%;}
         .amy-card-students {right:-2px;bottom:15%;}
       }
+      .school-proof {
+        padding: 24px 0 44px;
+        background: linear-gradient(180deg, #f0faff 0%, #ffffff 100%);
+      }
+      .school-proof-card {
+        display: grid;
+        gap: 25px 34px;
+        padding: 30px 34px;
+        border: 1px solid #dceef7;
+        border-radius: 26px;
+        background: #fff;
+        box-shadow: 0 12px 30px #1447630d;
+      }
+      .school-proof-top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(245px, 0.46fr);
+        align-items: center;
+        gap: 28px;
+      }
+      .school-proof-eyebrow {
+        margin: 0 0 9px;
+        color: var(--blue-dark);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .school-proof-copy h2 {
+        max-width: 660px;
+        margin: 0;
+        font-size: clamp(25px, 3vw, 35px);
+        line-height: 1.2;
+        letter-spacing: -0.5px;
+      }
+      .school-proof-description {
+        max-width: 610px;
+        margin: 12px 0 0;
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+      .school-proof-stat {
+        padding: 19px 22px;
+        border: 1px solid #d8edf8;
+        border-radius: 20px;
+        background: #effaff;
+      }
+      .school-proof-number {
+        display: block;
+        color: var(--blue-dark);
+        font-size: 56px;
+        font-weight: 900;
+        line-height: 0.95;
+        letter-spacing: -2px;
+      }
+      .school-proof-stat-label {
+        display: block;
+        max-width: 245px;
+        margin-top: 8px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.4;
+      }
+      .school-proof-counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin: 14px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .school-proof-counts li {
+        padding: 6px 9px;
+        border-radius: 999px;
+        background: #fff;
+        color: var(--blue-dark);
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.25;
+      }
+      .school-proof-bottom {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.9fr);
+        gap: 24px;
+        padding-top: 21px;
+        border-top: 1px solid #e7f0f5;
+      }
+      .school-proof-sample-label {
+        display: block;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .school-proof-schools {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .school-proof-schools li {
+        display: flex;
+        min-height: 48px;
+        align-items: center;
+        padding: 9px 11px;
+        border: 1px solid #e4eff5;
+        border-radius: 12px;
+        background: #f8fcfe;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+      .school-proof-source {
+        align-self: center;
+      }
+      .school-proof-source p {
+        margin: 0;
+        color: var(--text);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .school-proof-source a {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        gap: 7px;
+        margin-top: 7px;
+        color: var(--blue-dark);
+        font-size: 13px;
+        font-weight: 900;
+        text-decoration: none;
+      }
+      .school-proof-source a:hover {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .school-proof-source .ui-icon {
+        width: 17px;
+        height: 17px;
+      }
+      @media (max-width: 800px) {
+        .school-proof-top {
+          grid-template-columns: minmax(0, 1fr) minmax(220px, 0.55fr);
+          gap: 18px;
+        }
+        .school-proof-bottom {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        .school-proof-schools {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 560px) {
+        .school-proof {
+          padding: 13px 0 34px;
+        }
+        .school-proof-card {
+          gap: 19px;
+          padding: 22px 19px;
+          border-radius: 22px;
+        }
+        .school-proof-top {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+        .school-proof-copy h2 {
+          font-size: 27px;
+        }
+        .school-proof-description {
+          margin-top: 9px;
+          font-size: 14px;
+        }
+        .school-proof-stat {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          align-items: center;
+          column-gap: 15px;
+          padding: 15px 17px;
+          border-radius: 17px;
+        }
+        .school-proof-number {
+          grid-row: span 2;
+          font-size: 51px;
+        }
+        .school-proof-stat-label {
+          margin-top: 0;
+          font-size: 12px;
+        }
+        .school-proof-counts {
+          gap: 6px;
+          margin-top: 7px;
+        }
+        .school-proof-counts li {
+          padding: 5px 8px;
+          font-size: 10px;
+        }
+        .school-proof-bottom {
+          gap: 15px;
+          padding-top: 17px;
+        }
+        .school-proof-schools li {
+          min-height: 50px;
+          padding: 8px 9px;
+          font-size: 11px;
+        }
+      }
     </style>
   <!-- Nunito font license
 Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito)
@@ -3139,6 +3349,49 @@ SOFTWARE.
               <div class="hero-amy-card amy-card-community"><div><strong>Cộng đồng</strong><small>Cùng nhau học tốt hơn</small></div></div>
               <div class="hero-amy-card amy-card-courses"><div><strong>50+</strong><small>Khóa học</small></div></div>
               <div class="hero-amy-card amy-card-students"><div><strong>600.000+</strong><small>Học viên</small></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="school-proof" id="truong-nhan-diem" aria-labelledby="school-proof-title">
+        <div class="container">
+          <div class="school-proof-card">
+            <div class="school-proof-top">
+              <div class="school-proof-copy">
+                <p class="school-proof-eyebrow">Kỳ thi ĐGNL ĐHQG-HCM (V-ACT) 2026</p>
+                <h2 id="school-proof-title">Thêm lựa chọn xét tuyển với điểm V-ACT</h2>
+                <p class="school-proof-description">
+                  Nhiều đơn vị đại học trong và ngoài ĐHQG-HCM đăng ký sử dụng kết quả kỳ thi năm 2026.
+                </p>
+              </div>
+              <div class="school-proof-stat">
+                <strong class="school-proof-number">120</strong>
+                <span class="school-proof-stat-label">đơn vị đăng ký sử dụng kết quả ĐGNL ĐHQG-HCM năm 2026</span>
+                <ul class="school-proof-counts" aria-label="Phân loại đơn vị">
+                  <li>109 đơn vị đại học</li>
+                  <li>11 cao đẳng</li>
+                </ul>
+              </div>
+            </div>
+            <div class="school-proof-bottom">
+              <div class="school-proof-sample">
+                <span class="school-proof-sample-label">Một số trường trong danh sách</span>
+                <ul class="school-proof-schools">
+                  <li>ĐH Bách khoa</li>
+                  <li>ĐH Khoa học Tự nhiên</li>
+                  <li>ĐH Kinh tế TP.HCM</li>
+                  <li>Học viện Công nghệ Bưu chính Viễn thông</li>
+                </ul>
+              </div>
+              <div class="school-proof-source">
+                <p>
+                  Danh sách do Trung tâm Khảo thí và Đánh giá Chất lượng Đào tạo ĐHQG-HCM cập nhật ngày 18/09/2026. Phương thức và điều kiện xét tuyển tùy trường, tùy ngành.
+                </p>
+                <a href="https://cetqa.vnuhcm.edu.vn/tin-tuc/cac-don-vi-su-dung-ket-qua-p-38.html" target="_blank" rel="noopener noreferrer">
+                  Xem danh sách đầy đủ
+                  <svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#ui-arrow-up-right"/></svg>
+                </a>
+              </div>
             </div>
           </div>
         </div>
