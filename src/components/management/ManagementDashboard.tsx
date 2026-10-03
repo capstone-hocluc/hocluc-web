@@ -1,16 +1,21 @@
-import { useState } from 'react'
-import { BookOpen, ChevronRight, LayoutDashboard, LogOut, Menu, Users } from 'lucide-react'
+import { lazy, Suspense, useState } from 'react'
+import { BookOpen, CalendarDays, ChevronRight, ClipboardCheck, LayoutDashboard, LogOut, Menu, Users } from 'lucide-react'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Logo from '../common/Logo'
 import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
 import ManagerOverview from './ManagerOverview'
+import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import Button from '../ui/Button'
 import NavItem, { SidebarGroupLabel } from '../ui/NavItem'
 import PageHeading from '../ui/PageHeading'
 import Sidebar from '../ui/Sidebar'
 import type { ManagementRole } from './ManagementRouteGuard'
+import Notice from '../ui/Notice'
+
+const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
+const AttendanceManagementPage = lazy(() => import('../../pages/management/AttendanceManagementPage'))
 
 interface ManagementDashboardProps {
   role: ManagementRole
@@ -84,9 +89,16 @@ const NAV_ITEMS = [
   { page: 'users', label: 'Người dùng', icon: Users },
 ]
 
+const STAFF_NAV_ITEMS = [
+  ...NAV_ITEMS,
+  { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
+  { page: 'attendance', label: 'Điểm danh', icon: ClipboardCheck },
+]
+
 const MANAGER_NAV_ITEMS = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
 ]
 
 function getInitials(profile: { firstName?: string; lastName?: string; email: string }) {
@@ -114,6 +126,17 @@ function UnavailablePage({ page }: { page: string }) {
   )
 }
 
+function RestrictedAttendancePage() {
+  return (
+    <section className="space-y-5">
+      <PageHeading title="Điểm danh" subtitle="Tình trạng tham gia lớp học." />
+      <Notice tone="warning">
+        PR #13 không cấp quyền xem hoặc sửa điểm danh cho Manager. Tài khoản Staff hoặc giáo viên được phân công có thể thao tác theo đúng quyền backend.
+      </Notice>
+    </section>
+  )
+}
+
 function ManagementDashboard({
   role,
   page,
@@ -133,7 +156,9 @@ function ManagementDashboard({
       ? NAV_ITEMS.filter((item) => item.page === 'dashboard')
       : role === 'MANAGER'
         ? MANAGER_NAV_ITEMS
-        : NAV_ITEMS
+        : role === 'STAFF'
+          ? STAFF_NAV_ITEMS
+          : NAV_ITEMS
   const displayName = profile?.displayName || [profile?.firstName, profile?.lastName].filter(Boolean).join(' ')
 
   return (
@@ -226,6 +251,16 @@ function ManagementDashboard({
               <PageHeading title={meta.title} subtitle={meta.subtitle} />
               <UserManagement readOnly />
             </>
+          ) : effectivePage === 'schedules' && (role === 'STAFF' || role === 'MANAGER') ? (
+            <Suspense fallback={<SchedulingPageFallback title="Lịch học" />}>
+              <SchedulingPage role={role} />
+            </Suspense>
+          ) : effectivePage === 'attendance' && role === 'STAFF' ? (
+            <Suspense fallback={<SchedulingPageFallback title="Điểm danh" />}>
+              <AttendanceManagementPage />
+            </Suspense>
+          ) : effectivePage === 'attendance' && role === 'MANAGER' ? (
+            <RestrictedAttendancePage />
           ) : effectivePage === 'dashboard' && role === 'MANAGER' ? (
             <>
               <PageHeading title={meta.title} subtitle={meta.subtitle} />

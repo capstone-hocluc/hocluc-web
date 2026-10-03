@@ -12,9 +12,10 @@ interface PageHeadingProps {
   subtitle?: ReactNode
   action?: ReactNode
   onAction?: () => void
+  actionDisabled?: boolean
 }
 
-function PageHeading({ eyebrow, title, subtitle, action, onAction }: PageHeadingProps) {
+function PageHeading({ eyebrow, title, subtitle, action, onAction, actionDisabled = false }: PageHeadingProps) {
   return (
     <div className="mb-[27px] flex items-end justify-between gap-5">
       <div>
@@ -29,7 +30,7 @@ function PageHeading({ eyebrow, title, subtitle, action, onAction }: PageHeading
         {subtitle && <p className="text-sm text-text-muted">{subtitle}</p>}
       </div>
       {action && (
-        <Button type="button" onClick={onAction}>
+        <Button type="button" onClick={onAction} disabled={actionDisabled}>
           {action}
         </Button>
       )}

@@ -1,0 +1,141 @@
+.hl-scheduling {
+  --color-scheduling-primary-text: #096b97;
+  --color-scheduling-danger-text: #b42336;
+  --color-scheduling-danger-fill: #b42336;
+  --color-scheduling-danger-fill-hover: #a51f31;
+  --color-scheduling-warning-text: #805000;
+  --color-scheduling-neutral-text: #596579;
+}
+
+html[data-theme='dark'] .hl-scheduling {
+  --color-scheduling-primary-text: #7bd9ff;
+  --color-scheduling-danger-text: #ff9ba5;
+  --color-scheduling-danger-fill: #8f2535;
+  --color-scheduling-danger-fill-hover: #74212f;
+  --color-scheduling-warning-text: #ffd27b;
+  --color-scheduling-neutral-text: #c0d0db;
+}
+
+.hl-scheduling [class~='bg-primary'] {
+  background-color: var(--color-primary-dark);
+}
+
+.hl-scheduling [class~='bg-danger'] {
+  background-color: var(--color-scheduling-danger-fill);
+}
+
+.hl-scheduling [class~='hover:bg-badge-danger-text']:hover {
+  background-color: var(--color-scheduling-danger-fill-hover);
+}
+
+.hl-scheduling [class~='focus-visible:outline-primary']:focus-visible {
+  outline-color: var(--color-focus-ring);
+}
+
+.hl-scheduling [class~='focus-visible:border-primary']:focus-visible,
+.hl-scheduling [class~='focus-within:border-primary']:focus-within {
+  border-color: var(--color-focus-ring);
+}
+
+.hl-scheduling [class~='focus-visible:ring-primary/20']:focus-visible,
+.hl-scheduling [class~='focus-within:ring-primary/20']:focus-within {
+  --tw-ring-color: var(--color-focus-ring);
+}
+
+.hl-scheduling [class~='text-primary'] {
+  color: var(--color-scheduling-primary-text);
+}
+
+.hl-scheduling [class~='text-danger'],
+.hl-scheduling [class~='text-badge-danger-text'] {
+  color: var(--color-scheduling-danger-text);
+}
+
+.hl-scheduling [class~='text-warning'],
+.hl-scheduling [class~='text-badge-warning-text'] {
+  color: var(--color-scheduling-warning-text);
+}
+
+.hl-scheduling [class~='text-badge-neutral-text'] {
+  color: var(--color-scheduling-neutral-text);
+}
+
+.hl-scheduling [class~='text-text-muted'],
+.hl-scheduling [class~='text-text-secondary'],
+.hl-scheduling [class~='text-text-faint'] {
+  color: var(--color-text-body);
+}
+
+.hl-scheduling-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.hl-scheduling-day {
+  min-width: 0;
+  min-height: 10rem;
+  padding: 0.625rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 0.875rem;
+  background: var(--color-surface);
+}
+
+.hl-scheduling-day-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin-bottom: 0.625rem;
+  color: var(--color-text-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.hl-scheduling-day-heading time {
+  color: var(--color-text-heading);
+}
+
+.hl-scheduling-event {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 0.75rem;
+  background: var(--color-surface-hover);
+  color: var(--color-text-heading);
+  text-align: left;
+}
+
+.hl-scheduling-event:hover,
+.hl-scheduling-event:focus-visible {
+  border-color: var(--color-focus-ring);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.hl-scheduling-roster-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 7rem;
+}
+
+.hl-scheduling-mobile-agenda {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .hl-scheduling-week-grid {
+    display: none;
+  }
+
+  .hl-scheduling-mobile-agenda {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .hl-scheduling-week-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

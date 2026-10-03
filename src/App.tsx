@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import CourseCatalogPage from './pages/CourseCatalogPage'
 import CourseDetailPage from './pages/course/CourseDetailPage'
@@ -10,6 +10,7 @@ import PaymentResultPage from './pages/payment/PaymentResultPage'
 import PaymentInstructionsPage from './pages/payment/PaymentInstructionsPage'
 import AuthPage from './components/auth/AuthPage'
 import StudentOnboarding from './components/student/StudentOnboarding'
+import StudentRouteGuard from './components/student/StudentRouteGuard'
 import StudentRoutes from './pages/student/StudentRoutes'
 import AdminLoginPage from './pages/AdminLoginPage'
 import StaffDashboard from './components/staff/StaffDashboard'
@@ -23,14 +24,34 @@ import { logout } from './services/authService.ts'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
 import ThemeProvider from './components/common/ThemeProvider'
+import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
+
+const APP_HISTORY_INDEX = '__hoclucNavigationIndex'
+
+function getAppHistoryIndex(state: unknown): number | null {
+  if (!state || typeof state !== 'object') return null
+  const value = (state as Record<string, unknown>)[APP_HISTORY_INDEX]
+  return typeof value === 'number' && Number.isInteger(value) ? value : null
+}
+
+function withAppHistoryIndex(state: unknown, index: number): Record<string, unknown> {
+  const currentState =
+    state && typeof state === 'object' ? (state as Record<string, unknown>) : {}
+  return { ...currentState, [APP_HISTORY_INDEX]: index }
+}
+
+function replaceHistoryEntry(path: string) {
+  const index = getAppHistoryIndex(window.history.state) ?? 0
+  window.history.replaceState(withAppHistoryIndex(window.history.state, index), '', path)
+}
 
 function App() {
   const { clearCurrentUser } = useCurrentUser()
-  const getAuthMode = () => {
+  const getAuthMode = useCallback(() => {
     const path = window.location.pathname.replace(/\/$/, '')
     if (path === '/staff/dashboard') return 'staff-dashboard'
     if (path === '/admin/login') {
-      window.history.replaceState({}, '', '/management/login')
+      replaceHistoryEntry('/management/login')
       return 'management-login'
     }
     if (path === '/management/login') return 'management-login'
@@ -48,7 +69,9 @@ function App() {
     if (path === '/manager/payments') return 'manager-payments'
     if (path === '/manager/batches') return 'manager-batches'
     if (path === '/mentor/dashboard') return 'mentor-dashboard'
-    if (path === '/teacher/dashboard') return 'teacher-dashboard'
+  if (path === '/teacher/dashboard') return 'teacher-dashboard'
+    if (path === '/teacher/schedule') return 'teacher-schedule'
+    if (path === '/teacher/availability') return 'teacher-availability'
     if (path === '/teacher/my-courses') return 'teacher-courses'
     if (path === '/teacher/mock-exams') return 'teacher-mock-exams'
     if (/^\/teacher\/my-courses\/[^/]+\/quiz$/.test(path)) {
@@ -82,23 +105,52 @@ function App() {
     if (path === '/orders') return 'orders'
     if (path === '/payment/result') return 'payment-result'
     return path === '/signup' ? 'signup' : path === '/login' ? 'login' : null
-  }
+  }, [])
 
   const [authMode, setAuthMode] = useState(getAuthMode)
   const [currentPath, setCurrentPath] = useState(() => {
     const path = window.location.pathname.replace(/\/$/, '') || '/'
+    const existingIndex = getAppHistoryIndex(window.history.state)
+    const index = existingIndex ?? 0
+    if (existingIndex === null) {
+      window.history.replaceState(
+        withAppHistoryIndex(window.history.state, index),
+        '',
+        window.location.href
+      )
+    }
     const target = toStudentPath(path)
-    if (target !== path) window.history.replaceState({}, '', target)
+    if (target !== path) {
+      window.history.replaceState(withAppHistoryIndex(window.history.state, index), '', target)
+    }
     return target
   })
+  const historyIndexRef = useRef(getAppHistoryIndex(window.history.state) ?? 0)
+  const historyRestoreInProgressRef = useRef(false)
+  const ignoreNextHistoryGuardRef = useRef(false)
+  const afterHistoryRestoreRef = useRef<(() => void) | null>(null)
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState('')
   const [logoutLoading, setLogoutLoading] = useState(false)
   const logoutInFlight = useRef(false)
+  const pushHistoryEntry = useCallback((state: unknown, path: string) => {
+    const index = historyIndexRef.current + 1
+    window.history.pushState(withAppHistoryIndex(state, index), '', path)
+    historyIndexRef.current = index
+  }, [])
+  const replaceCurrentHistoryEntry = useCallback((state: unknown, path: string) => {
+    window.history.replaceState(
+      withAppHistoryIndex(state, historyIndexRef.current),
+      '',
+      path
+    )
+  }, [])
 
   const navigateAuth = (mode) => {
-    window.history.pushState({}, '', `/${mode}`)
-    setAuthMode(mode)
-    setCurrentPath(`/${mode}`)
+    runWithUnsavedActionGuard(() => {
+      pushHistoryEntry({}, `/${mode}`)
+      setAuthMode(mode)
+      setCurrentPath(`/${mode}`)
+    })
   }
 
   // Generic route push used by components with no prop path back to App
@@ -106,30 +158,30 @@ function App() {
   // `state` is optional history state - used to hand data (e.g. SePay payment
   // instructions) to the next page without a prop path, since it's not
   // returned by GET endpoints and would otherwise be lost on navigation.
-  const navigateTo = (rawPath, state = {}) => {
+  const navigateTo = useCallback((rawPath, state = {}) => {
     const path = toStudentPath(rawPath)
-    window.history.pushState(state, '', path)
-    setAuthMode(getAuthMode())
-    setCurrentPath(path.replace(/\/$/, '') || '/')
-  }
+    runWithUnsavedActionGuard(() => {
+      pushHistoryEntry(state, path)
+      setAuthMode(getAuthMode())
+      setCurrentPath(path.replace(/\/$/, '') || '/')
+    })
+  }, [getAuthMode, pushHistoryEntry])
 
   const backToLanding = () => {
-    window.history.pushState({}, '', '/')
-    setAuthMode(null)
-    setCurrentPath('/')
-  }
-
-  const goToOnboarding = () => {
-    window.history.pushState({}, '', '/onboarding')
-    setAuthMode('onboarding')
-    setCurrentPath('/onboarding')
+    runWithUnsavedActionGuard(() => {
+      pushHistoryEntry({}, '/')
+      setAuthMode(null)
+      setCurrentPath('/')
+    })
   }
 
   const goToEmailVerification = (email = '') => {
-    setPendingVerificationEmail(email)
-    window.history.pushState({}, '', '/verify-email')
-    setAuthMode('verify-email')
-    setCurrentPath('/verify-email')
+    runWithUnsavedActionGuard(() => {
+      setPendingVerificationEmail(email)
+      pushHistoryEntry({}, '/verify-email')
+      setAuthMode('verify-email')
+      setCurrentPath('/verify-email')
+    })
   }
   const navigateManagement = (scope: 'admin' | 'staff' | 'manager' | 'mentor', page: string) => {
     const paths = {
@@ -168,22 +220,28 @@ function App() {
       },
     } as const
     const path = paths[scope][page as keyof (typeof paths)[typeof scope]] ?? paths[scope].dashboard
-    window.history.pushState({}, '', path)
-    setAuthMode(`${scope}-${page}`)
-    setCurrentPath(path)
+    runWithUnsavedActionGuard(() => {
+      pushHistoryEntry({}, path)
+      setAuthMode(`${scope}-${page}`)
+      setCurrentPath(path)
+    })
   }
 
   const navigateTeacher = (page) => {
     const paths = {
       dashboard: '/teacher/dashboard',
       courses: '/teacher/my-courses',
+      schedule: '/teacher/schedule',
+      availability: '/teacher/availability',
       'mock-exams': '/teacher/mock-exams',
       information: '/teacher/information',
     }
     const path = page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page]
-    window.history.pushState({}, '', path)
-    setAuthMode(`teacher-${page}`)
-    setCurrentPath(path)
+    runWithUnsavedActionGuard(() => {
+      pushHistoryEntry({}, path)
+      setAuthMode(`teacher-${page}`)
+      setCurrentPath(path)
+    })
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
@@ -202,7 +260,7 @@ function App() {
     navigateTo(path)
   }
 
-  const handleLogout = async () => {
+  const performLogout = useCallback(async () => {
     if (logoutInFlight.current) return
     logoutInFlight.current = true
     setLogoutLoading(true)
@@ -211,24 +269,88 @@ function App() {
     } finally {
       clearCurrentUser()
       setPendingVerificationEmail('')
-      window.history.replaceState({}, '', '/login')
+      replaceCurrentHistoryEntry({}, '/login')
       setAuthMode('login')
       setCurrentPath('/login')
       logoutInFlight.current = false
       setLogoutLoading(false)
     }
-  }
+  }, [clearCurrentUser, replaceCurrentHistoryEntry])
+  const handleLogout = useCallback(() => {
+    runWithUnsavedActionGuard(() => {
+      void performLogout()
+    })
+  }, [performLogout])
 
   useEffect(() => {
     const openAuth = (event) => {
       const mode = event.detail?.mode || 'login'
-      window.history.pushState({}, '', `/${mode}`)
-      setAuthMode(mode)
-      setCurrentPath(`/${mode}`)
+      runWithUnsavedActionGuard(() => {
+        pushHistoryEntry({}, `/${mode}`)
+        setAuthMode(mode)
+        setCurrentPath(`/${mode}`)
+      })
     }
     const syncPath = () => {
       setAuthMode(getAuthMode())
       setCurrentPath(window.location.pathname.replace(/\/$/, '') || '/')
+    }
+    const onPopState = (event: PopStateEvent) => {
+      if (historyRestoreInProgressRef.current) {
+        historyRestoreInProgressRef.current = false
+        const afterRestore = afterHistoryRestoreRef.current
+        afterHistoryRestoreRef.current = null
+        afterRestore?.()
+        return
+      }
+      if (ignoreNextHistoryGuardRef.current) {
+        ignoreNextHistoryGuardRef.current = false
+        historyIndexRef.current =
+          getAppHistoryIndex(event.state) ?? historyIndexRef.current
+        syncPath()
+        return
+      }
+
+      const targetIndex = getAppHistoryIndex(event.state)
+      const currentIndex = historyIndexRef.current
+      if (targetIndex === null || targetIndex === currentIndex) {
+        historyIndexRef.current = targetIndex ?? currentIndex
+        syncPath()
+        return
+      }
+
+      const delta = targetIndex - currentIndex
+      let guardCallReturned = false
+      let restoreCompleted = false
+      let actionConfirmed = false
+      const continueToTarget = () => {
+        ignoreNextHistoryGuardRef.current = true
+        window.history.go(delta)
+      }
+      const navigateToHistoryEntry = () => {
+        if (!guardCallReturned) {
+          historyIndexRef.current = targetIndex
+          syncPath()
+          return
+        }
+        actionConfirmed = true
+        if (restoreCompleted) continueToTarget()
+      }
+
+      const disposition = runWithUnsavedActionGuard(navigateToHistoryEntry)
+      guardCallReturned = true
+      if (disposition === 'deferred') {
+        afterHistoryRestoreRef.current = () => {
+          restoreCompleted = true
+          if (actionConfirmed) continueToTarget()
+        }
+        historyRestoreInProgressRef.current = true
+        window.history.go(-delta)
+      } else if (disposition === 'blocked') {
+        afterHistoryRestoreRef.current = null
+        historyRestoreInProgressRef.current = true
+        window.history.go(-delta)
+      }
     }
     const onNavigate = (event) => {
       const path = event.detail?.path
@@ -238,16 +360,16 @@ function App() {
       handleLogout()
     }
     window.addEventListener('open-auth', openAuth)
-    window.addEventListener('popstate', syncPath)
+    window.addEventListener('popstate', onPopState)
     window.addEventListener('hl-navigate', onNavigate)
     window.addEventListener('hl-logout', onLogoutRequested)
     return () => {
       window.removeEventListener('open-auth', openAuth)
-      window.removeEventListener('popstate', syncPath)
+      window.removeEventListener('popstate', onPopState)
       window.removeEventListener('hl-navigate', onNavigate)
       window.removeEventListener('hl-logout', onLogoutRequested)
     }
-  }, [])
+  }, [getAuthMode, handleLogout, navigateTo, pushHistoryEntry])
 
   // Segments for any '/courses/...' path: ['courses', courseId]. Only the
   // course detail is public; studying lives under /student/courses/:id/study.
@@ -356,13 +478,15 @@ function App() {
   const studentRoute = parseStudentRoute(currentPath)
   if (studentRoute)
     return (
-      <StudentRoutes
-        route={studentRoute}
-        currentPath={currentPath}
-        navigate={navigateTo}
-        onLogout={handleLogout}
-        logoutLoading={logoutLoading}
-      />
+      <StudentRouteGuard onLogin={() => navigateTo('/login')} onGoToRole={navigateTo}>
+        <StudentRoutes
+          route={studentRoute}
+          currentPath={currentPath}
+          navigate={navigateTo}
+          onLogout={handleLogout}
+          logoutLoading={logoutLoading}
+        />
+      </StudentRouteGuard>
     )
   if (publicCourseId)
     return (

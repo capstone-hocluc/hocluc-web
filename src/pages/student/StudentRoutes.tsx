@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
+import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
 import { studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
 import StudentDashboard from './StudentDashboard'
 import MyCourses from './MyCourses'
@@ -17,6 +18,8 @@ import PlacementIntroPage from '../assessments/PlacementIntroPage'
 import PlacementAttemptPage from '../assessments/PlacementAttemptPage'
 import PlacementResultPage from '../assessments/PlacementResultPage'
 import PlacementReviewPage from '../assessments/PlacementReviewPage'
+
+const StudentSchedulePage = lazy(() => import('./StudentSchedulePage'))
 
 interface StudentRoutesProps {
   route: StudentRoute
@@ -52,6 +55,8 @@ function StudentRoutes({
             }
           />
         )
+      case 'schedule':
+        return <StudentSchedulePage />
       case 'learning-profile':
         return <LearningProfile onEditProfile={() => navigate(studentRoutes.profile())} />
       case 'profile':
@@ -191,7 +196,9 @@ function StudentRoutes({
       onLogout={onLogout}
       logoutLoading={logoutLoading}
     >
-      {page()}
+      <Suspense fallback={<SchedulingPageFallback title="Lịch học" />}>
+        {page()}
+      </Suspense>
     </StudentLayout>
   )
 }

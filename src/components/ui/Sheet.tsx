@@ -10,6 +10,10 @@ interface SheetProps {
   title: string
   /** Accessible label of the close button. */
   closeLabel?: string
+  /** Prevent closing while a submitted change is still pending. */
+  closeDisabled?: boolean
+  /** Optional responsive sizing for the close action. */
+  closeButtonClassName?: string
   className?: string
   children: ReactNode
 }
@@ -21,11 +25,13 @@ export function Sheet({
   onClose,
   title,
   closeLabel = 'Đóng',
+  closeDisabled = false,
+  closeButtonClassName,
   className,
   children,
 }: SheetProps) {
   return (
-    <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
+    <Dialog.Root open={open} onOpenChange={(next) => !next && !closeDisabled && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-80 bg-[rgba(5,8,18,0.52)]" />
         <Dialog.Content
@@ -41,8 +47,9 @@ export function Sheet({
               <Button
                 appearance="outline"
                 size="icon"
-                className="border-line-blue"
+                className={cn('border-line-blue', closeButtonClassName)}
                 aria-label={closeLabel}
+                disabled={closeDisabled}
               >
                 <X />
               </Button>

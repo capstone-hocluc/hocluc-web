@@ -12,6 +12,7 @@ const enc = encodeURIComponent
 
 export const studentRoutes = {
   dashboard: () => '/student/dashboard',
+  schedule: () => '/student/schedule',
   learningProfile: () => '/student/learning-profile',
   profile: () => '/student/profile',
   courses: () => '/student/courses',
@@ -35,6 +36,7 @@ export const studentRoutes = {
 
 export type StudentRoute =
   | { name: 'dashboard' }
+  | { name: 'schedule' }
   | { name: 'learning-profile' }
   | { name: 'profile' }
   | { name: 'courses' }
@@ -82,6 +84,8 @@ export function parseStudentRoute(path: string): StudentRoute | null {
   switch (area) {
     case 'dashboard':
       return rest.length === 0 ? { name: 'dashboard' } : null
+    case 'schedule':
+      return rest.length === 0 ? { name: 'schedule' } : null
     case 'learning-profile':
       return rest.length === 0 ? { name: 'learning-profile' } : null
     case 'profile':

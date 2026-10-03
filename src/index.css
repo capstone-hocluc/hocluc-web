@@ -15,6 +15,7 @@
 @import './styles/teacher/teacher-dashboard.css';
 @import './styles/staff/staff-features.css';
 @import './styles/components/shared.css';
+@import './styles/scheduling/scheduling.css';
 
 /* New styles added after the split above go here. */
 @import './styles/landing/header-auth.css';

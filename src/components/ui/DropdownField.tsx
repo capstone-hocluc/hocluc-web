@@ -2,7 +2,6 @@ import * as Popover from '@radix-ui/react-popover'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import {
   useDeferredValue,
-  useEffect,
   useId,
   useMemo,
   useRef,
@@ -37,6 +36,8 @@ export interface DropdownFieldProps {
   errorMessage?: ReactNode
   emptyMessage?: ReactNode
   isDisabled?: boolean
+  /** Increase trigger and menu targets for touch use in responsive workflows. */
+  mobileTouchTargets?: boolean
   isRequired?: boolean
   isInvalid?: boolean
   ariaDescribedBy?: string
@@ -49,6 +50,13 @@ export interface DropdownFieldProps {
   appearance?: 'outline' | 'fill'
   renderValue?: (option: DropdownOption | undefined) => ReactNode
   renderOption?: (option: DropdownOption, state: { isSelected: boolean }) => ReactNode
+}
+
+interface ActiveOptionState {
+  optionId: string
+  selectedValue: string | null
+  query: string
+  visibleOptions: readonly DropdownOption[]
 }
 
 const DEFAULT_PLACEHOLDER = 'Chọn giá trị'
@@ -71,14 +79,15 @@ export function DropdownField({
   selectedLabel,
   isSearchable = false,
   filterOptions = true,
-  searchPlaceholder = 'Tìm kiếm...',
+  searchPlaceholder = 'Tìm kiếm…',
   onSearchChange,
   isLoading = false,
   isError = false,
-  loadingMessage = 'Đang tải danh sách...',
+  loadingMessage = 'Đang tải danh sách…',
   errorMessage = 'Không thể tải danh sách.',
   emptyMessage = 'Không tìm thấy kết quả phù hợp.',
   isDisabled = false,
+  mobileTouchTargets = false,
   isRequired = false,
   isInvalid = false,
   ariaDescribedBy,
@@ -94,7 +103,7 @@ export function DropdownField({
 }: DropdownFieldProps) {
   const [uncontrolledIsOpen, setUncontrolledIsOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [activeIndex, setActiveIndex] = useState(-1)
+  const [activeOption, setActiveOption] = useState<ActiveOptionState | null>(null)
   const deferredQuery = useDeferredValue(query)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -114,17 +123,30 @@ export function DropdownField({
     )
   }, [deferredQuery, filterOptions, isSearchable, options])
 
-  useEffect(() => {
-    if (!isOpen) return
-    const selectedIndex = visibleOptions.findIndex((option) => option.id === (value ?? null))
-    setActiveIndex(selectedIndex >= 0 ? selectedIndex : visibleOptions.length ? 0 : -1)
-  }, [isOpen, value, visibleOptions])
+  const selectedValue = value ?? null
+  const selectedIndex = visibleOptions.findIndex((option) => option.id === selectedValue)
+  const defaultActiveIndex = selectedIndex >= 0 && !visibleOptions[selectedIndex].isDisabled
+    ? selectedIndex
+    : visibleOptions.findIndex((option) => !option.isDisabled)
+  const storedActiveIndex = activeOption && activeOption.selectedValue === selectedValue && activeOption.query === query && activeOption.visibleOptions === visibleOptions
+    ? visibleOptions.findIndex((option) => option.id === activeOption.optionId)
+    : -1
+  const activeIndex = !isOpen
+    ? -1
+    : storedActiveIndex >= 0
+    ? storedActiveIndex
+    : defaultActiveIndex
+
+  const setActiveIndex = (index: number) => {
+    const option = visibleOptions[index]
+    setActiveOption(option ? { optionId: option.id, selectedValue, query, visibleOptions } : null)
+  }
 
   const handleOpenChange = (nextIsOpen: boolean) => {
     if (controlledIsOpen === undefined) setUncontrolledIsOpen(nextIsOpen)
     if (!nextIsOpen) {
       setQuery('')
-      setActiveIndex(-1)
+      setActiveOption(null)
       onSearchChange?.('')
     }
     onOpenChange?.(nextIsOpen)
@@ -132,6 +154,7 @@ export function DropdownField({
 
   const handleSearchChange = (nextQuery: string) => {
     setQuery(nextQuery)
+    setActiveOption(null)
     onSearchChange?.(nextQuery)
   }
 
@@ -195,6 +218,7 @@ export function DropdownField({
             'dropdown-field-trigger inline-flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-[9px] border border-border-subtle bg-surface px-3 py-2 text-left text-sm font-normal text-text-label outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-55',
             appearance === 'fill' && 'border-transparent bg-primary text-white hover:bg-primary-dark',
             isInvalid && 'border-danger focus-visible:border-danger focus-visible:ring-danger/20',
+            mobileTouchTargets && 'max-[767px]:h-11',
             className,
             triggerClassName,
           )}
@@ -217,7 +241,8 @@ export function DropdownField({
           sideOffset={6}
           onOpenAutoFocus={(event) => {
             event.preventDefault()
-            if (isSearchable) searchInputRef.current?.focus()
+            const isCompactViewport = window.matchMedia('(max-width: 767px)').matches
+            if (isSearchable && !isCompactViewport) searchInputRef.current?.focus()
             else listboxRef.current?.focus()
           }}
           onKeyDown={handleKeyDown}
@@ -228,13 +253,20 @@ export function DropdownField({
         >
           {isSearchable && (
             <div className="border-b border-border-subtle p-1.5">
-              <div className="flex h-8 items-center gap-2 rounded-md border border-border-subtle px-2 text-text-muted">
+              <div className={cn(
+                'flex h-8 items-center gap-2 rounded-md border border-border-subtle px-2 text-text-muted focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20',
+                mobileTouchTargets && 'max-[767px]:h-11',
+              )}>
                 <Search size={14} aria-hidden="true" />
                 <input
                   ref={searchInputRef}
-                  autoFocus
+                  type="search"
+                  autoComplete="off"
                   aria-label={`Tìm ${ariaLabel.toLocaleLowerCase('vi-VN')}`}
-                  className="h-8 w-full border-0 bg-transparent py-1 text-xs text-text-strong outline-none"
+                  className={cn(
+                    'h-8 w-full border-0 bg-transparent py-1 text-xs text-text-strong outline-none',
+                    mobileTouchTargets && 'max-[767px]:h-11',
+                  )}
                   placeholder={searchPlaceholder}
                   value={query}
                   onChange={(event) => handleSearchChange(event.target.value)}
@@ -249,7 +281,7 @@ export function DropdownField({
             tabIndex={isSearchable ? -1 : 0}
             aria-label={`Danh sách ${ariaLabel.toLocaleLowerCase('vi-VN')}`}
             aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
-            className="max-h-64 overflow-auto p-1.5 outline-none"
+            className="max-h-64 overflow-auto p-1.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus-ring"
           >
             {visibleOptions.map((option, index) => {
               const isSelected = option.id === (value ?? null)
@@ -265,6 +297,7 @@ export function DropdownField({
                   data-highlighted={isActive || undefined}
                   className={cn(
                     'group/item relative flex w-full cursor-pointer items-center gap-3 rounded-md py-1.5 pr-8 pl-2 text-left text-sm text-text-secondary outline-none transition data-[highlighted=true]:bg-surface-hover data-[highlighted=true]:text-text-heading disabled:pointer-events-none disabled:text-text-subtle',
+                    mobileTouchTargets && 'max-[767px]:min-h-11',
                     optionClassName,
                   )}
                   onMouseEnter={() => setActiveIndex(index)}

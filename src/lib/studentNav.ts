@@ -1,8 +1,8 @@
 import type { ComponentType } from 'react'
-import { BarChart3, BookOpen, Home, UserRound } from 'lucide-react'
+import { BarChart3, BookOpen, CalendarDays, Home, UserRound } from 'lucide-react'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from './studentRoutes'
 
-export type StudentNavKey = 'dashboard' | 'learning-profile' | 'courses' | 'progress'
+export type StudentNavKey = 'dashboard' | 'schedule' | 'learning-profile' | 'courses' | 'progress'
 
 export interface StudentNavItem {
   key: StudentNavKey
@@ -15,6 +15,7 @@ export interface StudentNavItem {
 // Rendered by StudentSidebar; the only place the sidebar entries are declared.
 export const studentNavItems: StudentNavItem[] = [
   { key: 'dashboard', label: 'Tổng quan', icon: Home, path: studentRoutes.dashboard() },
+  { key: 'schedule', label: 'Lịch học', icon: CalendarDays, path: studentRoutes.schedule() },
   {
     key: 'learning-profile',
     label: 'Hồ sơ năng lực',
@@ -32,6 +33,8 @@ export function getStudentNavKey(route: StudentRoute | null): StudentNavKey | nu
   switch (route?.name) {
     case 'dashboard':
       return 'dashboard'
+    case 'schedule':
+      return 'schedule'
     case 'learning-profile':
     case 'placement':
     case 'placement-result':

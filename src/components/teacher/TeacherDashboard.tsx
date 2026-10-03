@@ -1,4 +1,4 @@
-import { type ComponentType, useState } from 'react'
+import { lazy, Suspense, type ComponentType, useState } from 'react'
 import {
   ArrowRight,
   Bell,
@@ -24,12 +24,15 @@ import {
   X,
 } from 'lucide-react'
 import Logo from '../common/Logo'
-import DropdownField from '../ui/DropdownField'
 import TeacherCourses from './TeacherCourses'
 import TeacherInformation from './TeacherInformation'
 import TeacherQuiz from './TeacherQuiz'
 import TeacherAssignments from './TeacherAssignments'
 import TeacherMockExams from './TeacherMockExams'
+import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
+
+const TeacherSchedulePage = lazy(() => import('../../pages/teacher/TeacherSchedulePage'))
+const TeacherAvailabilityPage = lazy(() => import('../../pages/teacher/TeacherAvailabilityPage'))
 
 const overview = [
   {
@@ -41,8 +44,8 @@ const overview = [
   },
   {
     label: 'Buổi học tuần này',
-    value: '08',
-    detail: '02 buổi đã hoàn thành',
+    value: '—',
+    detail: 'Mở lịch dạy để tải dữ liệu từ máy chủ',
     icon: CalendarDays,
     tone: 'gold',
   },
@@ -95,36 +98,6 @@ const courses = [
     next: 'Thứ Sáu · 17:30',
     color: 'gold',
     description: 'Củng cố nền tảng kiến thức và tư duy toán học cho lớp 11.',
-  },
-]
-
-const initialSessions = [
-  {
-    day: 'HÔM NAY',
-    date: '09',
-    time: '19:00 — 20:30',
-    title: 'Hàm số và đồ thị',
-    group: 'ĐGNL 12A · K24',
-    room: 'Phòng Live 01',
-    tone: 'blue',
-  },
-  {
-    day: 'THỨ NĂM',
-    date: '11',
-    time: '19:00 — 20:30',
-    title: 'Chữa đề mô phỏng số 05',
-    group: 'ĐGNL 12B · K24',
-    room: 'Phòng Live 02',
-    tone: 'violet',
-  },
-  {
-    day: 'THỨ SÁU',
-    date: '12',
-    time: '17:30 — 19:00',
-    title: 'Phương trình và bất phương trình',
-    group: 'ĐGNL 11A · K25',
-    room: 'Phòng Live 01',
-    tone: 'gold',
   },
 ]
 
@@ -210,99 +183,6 @@ function NavItem({
   )
 }
 
-function CreateSessionModal({ onClose, onCreate }) {
-  const [form, setForm] = useState({
-    title: '',
-    group: 'ĐGNL 12A · K24',
-    date: 'THỨ TƯ',
-    time: '19:00 — 20:30',
-    room: 'Phòng Live 01',
-  })
-  const submit = (event) => {
-    event.preventDefault()
-    if (!form.title.trim()) return
-    onCreate({ ...form, date: form.date.toUpperCase(), tone: 'blue' })
-    onClose()
-  }
-  return (
-    <div className="hl-teacher-modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <form
-        className="hl-teacher-modal"
-        onSubmit={submit}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="hl-teacher-modal-close"
-          onClick={onClose}
-          aria-label="Đóng"
-        >
-          <X size={18} />
-        </button>
-        <h2>Tạo buổi học</h2>
-        <p>Thêm một buổi học mới vào lịch giảng dạy của bạn.</p>
-        <label>
-          Tên buổi học
-          <input
-            autoFocus
-            required
-            value={form.title}
-            onChange={(event) => setForm({ ...form, title: event.target.value })}
-            placeholder="Ví dụ: Chữa đề mô phỏng số 06"
-          />
-        </label>
-        <label>
-          Lớp học
-          <DropdownField
-            ariaLabel="Lớp học"
-            options={[
-              { id: 'ĐGNL 12A · K24', label: 'ĐGNL 12A · K24' },
-              { id: 'ĐGNL 12B · K24', label: 'ĐGNL 12B · K24' },
-              { id: 'ĐGNL 11A · K25', label: 'ĐGNL 11A · K25' },
-            ]}
-            value={form.group}
-            onChange={(value) => {
-              if (value !== null) setForm({ ...form, group: value })
-            }}
-          />
-        </label>
-        <div className="hl-teacher-modal-row">
-          <label>
-            Thứ học
-            <input
-              value={form.date}
-              onChange={(event) => setForm({ ...form, date: event.target.value })}
-            />
-          </label>
-          <label>
-            Thời gian
-            <input
-              value={form.time}
-              onChange={(event) => setForm({ ...form, time: event.target.value })}
-            />
-          </label>
-        </div>
-        <label>
-          Phòng học
-          <input
-            value={form.room}
-            onChange={(event) => setForm({ ...form, room: event.target.value })}
-          />
-        </label>
-        <div className="hl-teacher-modal-actions">
-          <button type="button" onClick={onClose}>
-            Hủy
-          </button>
-          <button type="submit" className="hl-teacher-primary">
-            <CalendarDays size={15} />
-            Tạo buổi học
-          </button>
-        </div>
-      </form>
-    </div>
-  )
-}
-
 function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false, page = 'dashboard' }) {
   const quizCreateMode = page.startsWith('quiz-new-')
   const quizCourseId = quizCreateMode ? page.replace('quiz-new-', '') : page.startsWith('quiz-') ? page.replace('quiz-', '') : null
@@ -317,8 +197,6 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
   const [assignmentCourse, setAssignmentCourse] = useState(() => courses.find((course) => course.id === assignmentCourseId) || null)
   const [assignmentPreset, setAssignmentPreset] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [sessionModalOpen, setSessionModalOpen] = useState(false)
-  const [upcomingSessions, setUpcomingSessions] = useState(initialSessions)
 
   const action = (message) => {
     setNotice(message)
@@ -357,18 +235,15 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
     setAssignmentPreset(null)
     if (onNavigate) onNavigate(`assignments-${course.id}`)
   }
-  const createSession = (session) => {
-    setUpcomingSessions((items) => [
-      { ...session, day: session.date, date: '10', tone: 'blue' },
-      ...items,
-    ])
-    action(`Đã tạo buổi học “${session.title}”.`)
-  }
   const breadcrumb =
     view === 'dashboard'
       ? 'Tổng quan'
       : view === 'information'
         ? 'Thông tin cá nhân'
+        : view === 'schedule'
+          ? 'Lịch dạy'
+          : view === 'availability'
+            ? 'Giờ rảnh'
         : selectedCourse
           ? selectedCourse.name
           : 'Lớp học của tôi'
@@ -406,10 +281,17 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
             active={view === 'courses'}
             onClick={openCourses}
           />
-           <NavItem
+          <NavItem
             icon={CalendarDays}
             label="Lịch dạy"
-            onClick={() => action('Lịch giảng dạy chi tiết đang được chuẩn bị.')}
+            active={view === 'schedule'}
+            onClick={() => onNavigate ? onNavigate('schedule') : setView('schedule')}
+          />
+          <NavItem
+            icon={Clock3}
+            label="Giờ rảnh"
+            active={view === 'availability'}
+            onClick={() => onNavigate ? onNavigate('availability') : setView('availability')}
           />
           <NavItem
             icon={ClipboardCheck}
@@ -455,14 +337,16 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
             <kbd>⌘K</kbd>
           </button>
           <div className="hl-teacher-header-actions">
-            <button
-              type="button"
-              className="hl-teacher-icon-button hl-teacher-refresh"
-              onClick={() => action('Đã làm mới dữ liệu.')}
-            >
-              <RefreshCw size={16} />
-              <span>Làm mới</span>
-            </button>
+            {view !== 'schedule' && view !== 'availability' && (
+              <button
+                type="button"
+                className="hl-teacher-icon-button hl-teacher-refresh"
+                onClick={() => action('Đã làm mới dữ liệu.')}
+              >
+                <RefreshCw size={16} />
+                <span>Làm mới</span>
+              </button>
+            )}
             <button
               type="button"
               className="hl-teacher-icon-button"
@@ -555,7 +439,15 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
               {notice}
             </div>
           )}
-          {view === 'information' ? (
+          {view === 'schedule' ? (
+            <Suspense fallback={<SchedulingPageFallback title="Lịch dạy" />}>
+              <TeacherSchedulePage />
+            </Suspense>
+          ) : view === 'availability' ? (
+            <Suspense fallback={<SchedulingPageFallback title="Giờ rảnh" />}>
+              <TeacherAvailabilityPage />
+            </Suspense>
+          ) : view === 'information' ? (
             <TeacherInformation onBack={() => onNavigate?.('dashboard')} onNotify={action} />
           ) : view === 'mock-exams' ? (
             <TeacherMockExams onBack={() => onNavigate?.('dashboard')} onAction={action} />
@@ -574,10 +466,10 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
                   <button
                     type="button"
                     className="hl-teacher-primary"
-                    onClick={() => setSessionModalOpen(true)}
+                    onClick={() => onNavigate?.('schedule')}
                   >
                     <CalendarDays size={16} />
-                    Tạo buổi học
+                    Xem lịch dạy
                   </button>
                 </div>
               </div>
@@ -641,29 +533,17 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
                       <div>
                         <h2>Buổi học sắp tới</h2>
                       </div>
-                      <button type="button" onClick={() => action('Đang mở lịch giảng dạy.')}>
+                      <button type="button" onClick={() => onNavigate?.('schedule')}>
                         Xem lịch <ArrowRight size={14} />
                       </button>
                     </div>
                     <div className="hl-teacher-sessions">
-                      {upcomingSessions.map((session, index) => (
-                        <article className="hl-teacher-session" key={`${session.title}-${index}`}>
-                          <div className={`hl-teacher-session-date ${session.tone}`}>
-                            <small>{session.day}</small>
-                            <strong>{session.date}</strong>
-                          </div>
-                          <div>
-                            <h3>{session.title}</h3>
-                            <p>
-                              {session.group} · {session.room}
-                            </p>
-                          </div>
-                          <time>
-                            <Clock3 size={14} />
-                            {session.time}
-                          </time>
-                        </article>
-                      ))}
+                      <p className="text-sm text-text-muted">
+                        Lịch thật được tải ở trang Lịch dạy để tránh hiển thị dữ liệu mẫu.
+                      </p>
+                      <button type="button" onClick={() => onNavigate?.('schedule')}>
+                        Mở lịch dạy <ArrowRight size={14} />
+                      </button>
                     </div>
                   </section>
                 </div>
@@ -761,9 +641,6 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
           )}
         </div>
        </div>
-        {sessionModalOpen && (
-          <CreateSessionModal onClose={() => setSessionModalOpen(false)} onCreate={createSession} />
-        )}
       </section>
     </main>
   )
