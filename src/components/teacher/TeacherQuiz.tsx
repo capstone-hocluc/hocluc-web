@@ -68,6 +68,7 @@ type QuizFieldError = 'title' | 'duration' | 'attempts' | 'target' | 'questions'
 
 const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']
 const QUIZ_STATUS_FILTERS = ['Tất cả', 'Bản nháp', 'Đã xuất bản', 'Đã lưu trữ'] as const
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function createDraftQuestion(): DraftQuestion {
   return {
@@ -413,7 +414,7 @@ function TeacherQuizEditorForm({
     return response.data
   }, [Boolean(initialQuiz)])
 
-  const routeCourseId = (courseCatalog.data ?? []).some((item) => item.id === course.id) ? course.id : ''
+  const routeCourseId = UUID_PATTERN.test(course.id) ? course.id : ''
   const activeCourseId = selectedCourseId ?? routeCourseId
 
   const courseDetail = usePageResource(async (): Promise<CourseDetail | null> => {
@@ -424,6 +425,10 @@ function TeacherQuizEditorForm({
   }, [activeCourseId, Boolean(initialQuiz)])
 
   const activeCourseDetail = courseDetail.data?.id === activeCourseId ? courseDetail.data : null
+  const courseOptions = (courseCatalog.data ?? []).map((item) => ({ id: item.id, label: item.title }))
+  if (routeCourseId && activeCourseId === routeCourseId && activeCourseDetail && !courseOptions.some((option) => option.id === routeCourseId)) {
+    courseOptions.unshift({ id: routeCourseId, label: activeCourseDetail.title })
+  }
   const courseCatalogHasError = ['error', 'forbidden', 'not-found'].includes(courseCatalog.status)
   const courseCatalogError = getResourceErrorMessage(courseCatalog.status, courseCatalog.errorMessage, 'danh sách khóa học')
   const courseDetailHasError = ['error', 'forbidden', 'not-found'].includes(courseDetail.status)
@@ -580,7 +585,7 @@ function TeacherQuizEditorForm({
               <DropdownField
                 ariaLabel="Khóa học chính"
                 placeholder="Chọn khóa học"
-                options={(courseCatalog.data ?? []).map((item) => ({ id: item.id, label: item.title }))}
+                options={courseOptions}
                 value={activeCourseId || null}
                 isSearchable
                 isLoading={courseCatalog.status === 'loading'}
@@ -644,8 +649,12 @@ function TeacherQuizEditorForm({
           )}
           {courseCatalog.status === 'ready' && (
             <p className="mt-2 mb-0 text-xs text-text-secondary" role="note">
-              {routeCourseId
+              {routeCourseId && activeCourseId === routeCourseId && activeCourseDetail
                 ? 'Đã điền sẵn khóa học theo đường dẫn. Máy chủ sẽ xác thực quyền quản lý khi lưu.'
+                : routeCourseId && activeCourseId === routeCourseId && courseDetailHasError
+                  ? 'Không tải được khóa học theo đường dẫn. Hãy chọn khóa học khác trong danh sách.'
+                  : routeCourseId && activeCourseId === routeCourseId
+                    ? 'Đang tải khóa học theo đường dẫn...'
                 : 'Khóa học từ đường dẫn không xuất hiện trong danh mục hiện có. Hãy chọn khóa học và bài học bạn được phép quản lý; máy chủ sẽ xác thực quyền khi lưu.'}
             </p>
           )}
