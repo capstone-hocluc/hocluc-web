@@ -51,7 +51,7 @@ export interface LessonDetail {
   contentType: string
   content: string | null
   videoUrl: string | null
-  durationSeconds: number
+  durationSeconds: number | null
   sequence: number
   preview: boolean
   chapterId: string | null

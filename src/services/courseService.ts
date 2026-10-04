@@ -174,7 +174,7 @@ export interface CourseStudyLesson {
   id: string
   title: string
   contentType: string
-  durationSeconds: number
+  durationSeconds: number | null
   sequence: number
   preview: boolean
   status: string
