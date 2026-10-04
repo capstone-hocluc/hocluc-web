@@ -1,4 +1,4 @@
-import { request } from '../lib/api'
+import { ApiError, request, type ApiResponse } from '../lib/api'
 
 export type TeacherQuizType = 'PLACEMENT' | 'QUICK' | 'LESSON' | 'CHAPTER' | 'EXAM'
 export type TeacherQuizStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
@@ -153,6 +153,51 @@ export interface TeacherQuizSectionSpec {
   children?: TeacherQuizSectionSpec[]
 }
 
+export class AmbiguousTeacherQuestionSaveError extends Error {
+  constructor() {
+    super('Không xác định được máy chủ đã lưu câu hỏi hay chưa.')
+    this.name = 'AmbiguousTeacherQuestionSaveError'
+  }
+}
+
+function isDefiniteTeacherQuestionWriteRejection(error: unknown) {
+  return error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408
+}
+
+const QUESTION_TYPES = new Set<TeacherQuestionType>([
+  'SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWER',
+])
+
+function isNullableString(value: unknown) {
+  return value === null || typeof value === 'string'
+}
+
+function isNullableNumber(value: unknown) {
+  return value === null || typeof value === 'number'
+}
+
+function isTeacherQuizQuestion(value: unknown): value is TeacherQuizQuestion {
+  if (!value || typeof value !== 'object') return false
+  const question = value as Record<string, unknown>
+  return typeof question.id === 'string' && Boolean(question.id.trim()) &&
+    typeof question.sequence === 'number' &&
+    isNullableString(question.sectionId) && isNullableString(question.groupId) &&
+    typeof question.questionText === 'string' &&
+    typeof question.questionType === 'string' && QUESTION_TYPES.has(question.questionType as TeacherQuestionType) &&
+    isNullableString(question.difficulty) && isNullableString(question.categoryId) &&
+    isNullableString(question.categoryName) && isNullableString(question.explanation) &&
+    isNullableString(question.imageUrl) && isNullableNumber(question.sourcePage) &&
+    isNullableNumber(question.marks) && typeof question.needsReview === 'boolean' &&
+    isNullableString(question.reviewNote) && typeof question.correctLabels === 'string' &&
+    Array.isArray(question.options) && question.options.every((option) => {
+      if (!option || typeof option !== 'object') return false
+      const item = option as Record<string, unknown>
+      return typeof item.id === 'string' && Boolean(item.id.trim()) &&
+        typeof item.sequence === 'number' && typeof item.label === 'string' &&
+        typeof item.text === 'string' && typeof item.correct === 'boolean'
+    })
+}
+
 async function requireData<T>(path: string, fallback: string, options?: Parameters<typeof request<T>>[1]): Promise<T> {
   const response = await request<T>(path, { auth: true, ...options })
   if (!response.data) throw new Error(fallback)
@@ -195,37 +240,104 @@ export function duplicateTeacherQuiz(quizId: string): Promise<TeacherQuizRecord>
   return requireData(`${quizPath(quizId)}/duplicate`, 'Không thể sao chép bài kiểm tra.', { method: 'POST' })
 }
 
-export function setTeacherQuizLayout(quizId: string, sections: TeacherQuizSectionSpec[]): Promise<TeacherQuizSection[]> {
-  return requireData(`${quizPath(quizId)}/sections`, 'Không thể lưu cấu trúc đề thi.', {
-    method: 'PUT',
-    body: { sections },
-  })
+export async function setTeacherQuizLayout(quizId: string, sections: TeacherQuizSectionSpec[]): Promise<TeacherQuizSection[]> {
+  let savedSections: TeacherQuizSection[]
+  try {
+    savedSections = await requireData(`${quizPath(quizId)}/sections`, 'Không thể lưu cấu trúc đề thi.', {
+      method: 'PUT',
+      body: { sections },
+    })
+  } catch (error) {
+    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  const savedIds = Array.isArray(savedSections) ? savedSections.map((section) => section?.id) : []
+  if (!Array.isArray(savedSections) || savedSections.length !== sections.length ||
+      savedSections.some((section) => !section || typeof section.id !== 'string' || !section.id.trim() ||
+        typeof section.title !== 'string' || typeof section.sequence !== 'number') ||
+      new Set(savedIds).size !== sections.length) {
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  return savedSections
 }
 
-export function addTeacherQuizQuestions(quizId: string, questions: SaveTeacherQuestionRequest[]): Promise<TeacherQuizQuestion[]> {
-  return requireData(`${quizPath(quizId)}/questions`, 'Không thể thêm câu hỏi.', {
-    method: 'POST',
-    body: { questions },
-  })
+export async function addTeacherQuizQuestions(quizId: string, questions: SaveTeacherQuestionRequest[]): Promise<TeacherQuizQuestion[]> {
+  let savedQuestions: TeacherQuizQuestion[]
+  try {
+    savedQuestions = await requireData(`${quizPath(quizId)}/questions`, 'Không thể thêm câu hỏi.', {
+      method: 'POST',
+      body: { questions },
+    })
+  } catch (error) {
+    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  const savedIds = Array.isArray(savedQuestions) ? savedQuestions.map((question) => question?.id) : []
+  if (!Array.isArray(savedQuestions) || savedQuestions.length !== questions.length ||
+      savedQuestions.some((question) => !isTeacherQuizQuestion(question)) ||
+      new Set(savedIds).size !== questions.length) {
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  return savedQuestions
 }
 
-export function reorderTeacherQuizQuestions(quizId: string, questionIds: string[]): Promise<TeacherQuizQuestion[]> {
-  return requireData(`${quizPath(quizId)}/questions/order`, 'Không thể sắp xếp câu hỏi.', {
-    method: 'PUT',
-    body: { questionIds },
-  })
+export async function reorderTeacherQuizQuestions(quizId: string, questionIds: string[]): Promise<TeacherQuizQuestion[]> {
+  let savedQuestions: TeacherQuizQuestion[]
+  try {
+    savedQuestions = await requireData(`${quizPath(quizId)}/questions/order`, 'Không thể sắp xếp câu hỏi.', {
+      method: 'PUT',
+      body: { questionIds },
+    })
+  } catch (error) {
+    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  const savedIds = Array.isArray(savedQuestions) ? savedQuestions.map((question) => question?.id) : []
+  const requestedIds = new Set(questionIds)
+  if (!Array.isArray(savedQuestions) || savedQuestions.length !== questionIds.length ||
+      savedQuestions.some((question, index) => !isTeacherQuizQuestion(question) || question.id !== questionIds[index]) ||
+      new Set(savedIds).size !== questionIds.length || requestedIds.size !== questionIds.length ||
+      savedIds.some((id) => typeof id !== 'string' || !requestedIds.has(id))) {
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  return savedQuestions
 }
 
-export function updateTeacherQuizQuestion(questionId: string, payload: SaveTeacherQuestionRequest): Promise<TeacherQuizQuestion> {
-  return requireData(`/api/v1/teacher/questions/${encodeURIComponent(questionId)}`, 'Không thể lưu câu hỏi.', {
-    method: 'PUT',
-    body: payload,
-  })
+export async function updateTeacherQuizQuestion(questionId: string, payload: SaveTeacherQuestionRequest): Promise<TeacherQuizQuestion> {
+  let savedQuestion: TeacherQuizQuestion
+  try {
+    savedQuestion = await requireData(`/api/v1/teacher/questions/${encodeURIComponent(questionId)}`, 'Không thể lưu câu hỏi.', {
+      method: 'PUT',
+      body: payload,
+    })
+  } catch (error) {
+    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  if (!isTeacherQuizQuestion(savedQuestion) || savedQuestion.id !== questionId) {
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+  return savedQuestion
 }
 
 export async function deleteTeacherQuizQuestion(questionId: string): Promise<void> {
-  await request(`/api/v1/teacher/questions/${encodeURIComponent(questionId)}`, {
-    method: 'DELETE',
-    auth: true,
-  })
+  let response: ApiResponse<unknown>
+  try {
+    response = await request(`/api/v1/teacher/questions/${encodeURIComponent(questionId)}`, {
+      method: 'DELETE',
+      auth: true,
+    })
+  } catch (error) {
+    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
+    throw new AmbiguousTeacherQuestionSaveError()
+  }
+
+  if (!response || response.success !== true) throw new AmbiguousTeacherQuestionSaveError()
 }

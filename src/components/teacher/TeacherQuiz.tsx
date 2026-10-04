@@ -14,6 +14,7 @@ import {
 import { getCourseDetail, getMainCourses, type Course, type CourseDetail, type CourseLesson } from '../../services/courseService'
 import {
   addTeacherQuizQuestions,
+  AmbiguousTeacherQuestionSaveError,
   createTeacherQuiz,
   deleteTeacherQuiz,
   deleteTeacherQuizQuestion,
@@ -143,6 +144,7 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
         onCancel={() => {
           setCreating(false)
           setEditorQuizId(null)
+          refresh()
         }}
         onSaved={(message) => {
           setCreating(false)
@@ -406,6 +408,7 @@ function TeacherQuizEditorForm({
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
+  const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
 
   const courseCatalog = usePageResource(async () => {
     if (initialQuiz) return [] as Course[]
@@ -443,8 +446,8 @@ function TeacherQuizEditorForm({
   const effectiveLessonId = lessonOptions.some((lesson) => lesson.id === selectedLessonId)
     ? selectedLessonId
     : ''
-  const settingsLocked = quizIsLocked(initialQuiz) || ambiguousCreate
-  const questionsLocked = quizIsLocked(initialQuiz) || ambiguousCreate
+  const settingsLocked = quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave
+  const questionsLocked = quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave
 
   const clearFieldError = (field: QuizFieldError) => {
     setFieldErrors((current) => ({ ...current, [field]: undefined }))
@@ -463,6 +466,10 @@ function TeacherQuizEditorForm({
 
   const saveQuiz = async (publish: boolean) => {
     if (busy) return
+    if (ambiguousQuestionSave) {
+      setError('Kết quả lưu câu hỏi chưa rõ. Hãy quay về danh sách và mở lại quiz để kiểm tra; không gửi lại biểu mẫu này.')
+      return
+    }
     const durationMinutes = Number(duration)
     const maxAttempts = Number(attempts)
     const nextFieldErrors: Partial<Record<QuizFieldError, string>> = {}
@@ -514,7 +521,8 @@ function TeacherQuizEditorForm({
         await updateTeacherQuiz(quizId, updatePayload)
       }
 
-      await persistQuestionChanges(quizId, questions, initialQuestionsRef.current)
+      const savedDrafts = await persistQuestionChanges(quizId, questions, initialQuestionsRef.current)
+      setQuestions(savedDrafts)
       const refreshed = await getTeacherQuiz(quizId)
       initialQuestionsRef.current = refreshed
       setQuestions(refreshed.questions.map(fromServerQuestion))
@@ -526,6 +534,11 @@ function TeacherQuizEditorForm({
         onSaved(serverQuizId ? 'Đã lưu thay đổi quiz.' : 'Đã lưu quiz dưới dạng bản nháp.')
       }
     } catch (saveError) {
+      if (saveError instanceof AmbiguousTeacherQuestionSaveError) {
+        setAmbiguousQuestionSave(true)
+        setError('')
+        return
+      }
       if (quizId) {
         try {
           const refreshed = await getTeacherQuiz(quizId)
@@ -573,6 +586,11 @@ function TeacherQuizEditorForm({
       {ambiguousCreate && (
         <Notice tone="warning" role="alert" aria-live="assertive">
           Máy chủ có thể đã tạo quiz nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách quiz và kiểm tra thủ công trước khi tạo mới.
+        </Notice>
+      )}
+      {ambiguousQuestionSave && (
+        <Notice tone="warning" role="alert" aria-live="assertive">
+          Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không lưu lại từ biểu mẫu này; hãy quay về danh sách và mở lại quiz để kiểm tra.
         </Notice>
       )}
 
@@ -674,7 +692,7 @@ function TeacherQuizEditorForm({
         <div className="grid gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading md:col-span-1">
             Tên quiz
-            <input id="teacher-quiz-title" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
+            <input id="teacher-quiz-title" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate || ambiguousQuestionSave} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
             {fieldErrors.title && <span id="teacher-quiz-title-error" className="text-sm font-medium text-text-danger" role="alert">{fieldErrors.title}</span>}
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
@@ -780,12 +798,12 @@ function TeacherQuizEditorForm({
         {fieldErrors.questions && <p id="teacher-quiz-questions-error" className="mt-4 mb-0 text-sm font-medium text-text-danger" role="alert">{fieldErrors.questions}</p>}
         {error && <p className="mt-4 mb-0 text-sm font-medium text-text-danger" role="alert">{error}</p>}
         <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line-soft pt-4">
-          <Button appearance="outline" className="min-h-11" disabled={busy} onClick={onCancel}>Hủy</Button>
-          <Button appearance="outline" className="min-h-11" disabled={busy || ambiguousCreate} onClick={() => void saveQuiz(false)}>
+          <Button appearance="outline" className="min-h-11" disabled={busy} onClick={onCancel}>{ambiguousCreate || ambiguousQuestionSave ? 'Quay về danh sách quiz' : 'Hủy'}</Button>
+          <Button appearance="outline" className="min-h-11" disabled={busy || ambiguousCreate || ambiguousQuestionSave} onClick={() => void saveQuiz(false)}>
             {busy ? 'Đang lưu...' : initialQuiz || serverQuizId ? 'Lưu thay đổi' : 'Lưu bản nháp'}
           </Button>
           {(!initialQuiz || initialQuiz.status !== 'PUBLISHED') && (
-            <Button className="min-h-11" disabled={busy || ambiguousCreate} onClick={() => void saveQuiz(true)}>
+            <Button className="min-h-11" disabled={busy || ambiguousCreate || ambiguousQuestionSave} onClick={() => void saveQuiz(true)}>
               <CheckCircle2 size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
             </Button>
           )}
@@ -799,7 +817,7 @@ async function persistQuestionChanges(
   quizId: string,
   drafts: DraftQuestion[],
   previous: TeacherQuizEditor | null
-) {
+): Promise<DraftQuestion[]> {
   const previousQuestions = previous?.questions ?? []
   const previousById = new Map(previousQuestions.map((question) => [question.id, question]))
   const currentServerIds = new Set(drafts.flatMap((question) => question.serverId ? [question.serverId] : []))
@@ -820,9 +838,14 @@ async function persistQuestionChanges(
   for (const question of existingChanges) {
     await updateTeacherQuizQuestion(question.serverId!, toSavePayload(question))
   }
-  if (newQuestions.length > 0) {
-    await addTeacherQuizQuestions(quizId, newQuestions.map(toSavePayload))
-  }
+  if (newQuestions.length === 0) return drafts
+
+  const createdQuestions = await addTeacherQuizQuestions(quizId, newQuestions.map(toSavePayload))
+  const savedIds = new Map(newQuestions.map((question, index) => [question.clientId, createdQuestions[index].id]))
+  return drafts.map((question) => {
+    const serverId = savedIds.get(question.clientId)
+    return serverId ? { ...question, clientId: serverId, serverId } : question
+  })
 }
 
 function questionHasText(question: DraftQuestion) {

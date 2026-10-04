@@ -21,6 +21,7 @@ import {
 import { getMainCourses, type Course } from '../../services/courseService'
 import {
   addTeacherQuizQuestions,
+  AmbiguousTeacherQuestionSaveError,
   createTeacherQuiz,
   deleteTeacherQuiz,
   deleteTeacherQuizQuestion,
@@ -49,6 +50,7 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import DropdownField from '../ui/DropdownField'
 import SearchFilterBar from '../ui/SearchFilterBar'
 import Skeleton from '../ui/Skeleton'
+import Notice from '../ui/Notice'
 import StatusBadge from '../ui/StatusBadge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/DropdownMenu'
 
@@ -494,6 +496,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
         onCancel={() => {
           setCreating(false)
           setEditorQuizId(null)
+          refresh()
         }}
         onSaved={(message) => {
           setCreating(false)
@@ -768,6 +771,7 @@ function TeacherMockExamForm({
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
+  const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
   const pendingCreateRef = useRef<PendingExamCreate | null>(null)
 
   const courseCatalog = usePageResource(async () => {
@@ -778,9 +782,9 @@ function TeacherMockExamForm({
   }, [Boolean(initialQuiz)])
 
   const settingsLocked = isLocked(quizSnapshot)
-  const questionsLocked = settingsLocked || ambiguousCreate
+  const questionsLocked = settingsLocked || ambiguousCreate || ambiguousQuestionSave
   const publishedQuiz = Boolean(quizSnapshot && quizSnapshot.status !== 'DRAFT')
-  const fieldsLocked = settingsLocked || publishedQuiz || ambiguousCreate
+  const fieldsLocked = settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave
   const structureSupported = initial ? sectionStructureIsSupported(initial, fromServerEditor(initial)) : true
   const structureReadOnly = !structureSupported
   const canEditQuestions = !questionsLocked && !publishedQuiz && !structureReadOnly
@@ -915,6 +919,10 @@ function TeacherMockExamForm({
     }
     if (ambiguousCreate) {
       setError('Hãy kiểm tra kết quả tạo đề trước khi gửi lại để tránh tạo trùng.')
+      return
+    }
+    if (ambiguousQuestionSave) {
+      setError('Kết quả lưu câu hỏi chưa rõ. Hãy quay về danh sách và mở lại đề để kiểm tra; không gửi lại biểu mẫu này.')
       return
     }
     const validationMessage = validate(publish)
@@ -1061,6 +1069,11 @@ function TeacherMockExamForm({
           : serverQuizId ? 'Đã lưu thay đổi đề thi thử.' : 'Đã lưu đề thi dưới dạng bản nháp.'
       )
     } catch (saveError) {
+      if (saveError instanceof AmbiguousTeacherQuestionSaveError) {
+        setAmbiguousQuestionSave(true)
+        setError('')
+        return
+      }
       let message = formatApiError(saveError)
       if (quizId) {
         try {
@@ -1451,6 +1464,11 @@ function TeacherMockExamForm({
       </Card>
 
       {error && <p className="m-0 rounded-xl border border-badge-danger-text/25 bg-badge-danger-bg p-3 text-sm font-semibold text-badge-danger-text" role="alert">{error}</p>}
+      {ambiguousQuestionSave && (
+        <Notice tone="warning" role="alert" aria-live="assertive">
+          Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
+        </Notice>
+      )}
       {ambiguousCreate && (
         <Card as="section" padding="md" radius="lg" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
           <p className="m-0 text-sm text-text-secondary">Kết quả tạo đề chưa rõ. Kiểm tra lại danh sách trước khi gửi thao tác tạo lần nữa.</p>
@@ -1465,19 +1483,19 @@ function TeacherMockExamForm({
         </p>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button appearance="ghost" className="min-h-11" onClick={onCancel} disabled={busy}>
-            {ambiguousCreate ? 'Quay về danh sách' : 'Hủy'}
+            {ambiguousCreate || ambiguousQuestionSave ? 'Quay về danh sách' : 'Hủy'}
           </Button>
           <Button
             appearance="outline"
             className="min-h-11"
             onClick={() => ambiguousCreate ? void checkPendingCreate() : void save(false)}
-            disabled={busy || publishedQuiz}
+            disabled={busy || publishedQuiz || ambiguousQuestionSave}
           >
             {ambiguousCreate ? <ClipboardCheck size={15} /> : <Clock3 size={15} />}
             {busy ? 'Đang kiểm tra...' : ambiguousCreate ? 'Kiểm tra danh sách' : initialQuiz || hasCreatedQuiz ? 'Lưu thay đổi' : 'Lưu bản nháp'}
           </Button>
           {quizSnapshot?.status !== 'ARCHIVED' && (
-            <Button className="min-h-11" onClick={() => void save(true)} disabled={busy || settingsLocked || publishedQuiz || ambiguousCreate}>
+            <Button className="min-h-11" onClick={() => void save(true)} disabled={busy || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave}>
               <Send size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
             </Button>
           )}
