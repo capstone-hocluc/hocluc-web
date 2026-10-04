@@ -193,7 +193,9 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
   const [graded, setGraded] = useState([])
   const [view, setView] = useState(detailCourseId ? 'courses' : page)
   const [selectedCourse, setSelectedCourse] = useState(() => courses.find((course) => course.id === detailCourseId) || null)
-  const [quizCourse, setQuizCourse] = useState(() => courses.find((course) => course.id === quizCourseId) || null)
+  const [quizCourse, setQuizCourse] = useState(() => quizCourseId
+    ? courses.find((course) => course.id === quizCourseId) || { id: quizCourseId, name: 'Khóa học theo đường dẫn' }
+    : null)
   const [assignmentCourse, setAssignmentCourse] = useState(() => courses.find((course) => course.id === assignmentCourseId) || null)
   const [assignmentPreset, setAssignmentPreset] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)

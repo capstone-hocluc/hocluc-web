@@ -624,8 +624,8 @@ function TeacherQuizEditorForm({
           {courseCatalog.status === 'ready' && (
             <p className="mt-2 mb-0 text-xs text-text-secondary" role="note">
               {routeCourseId
-                ? `Đã chọn trước khóa học từ lớp ${course.name}. Hệ thống sẽ kiểm tra quyền với bài học khi lưu.`
-                : `Lớp ${course.name} chưa có trong danh mục khóa học đang mở. Hãy chọn bài học bạn được phép quản lý; hệ thống sẽ kiểm tra quyền khi lưu.`}
+                ? 'Đã điền sẵn khóa học theo đường dẫn. Máy chủ sẽ xác thực quyền quản lý khi lưu.'
+                : 'Khóa học từ đường dẫn không xuất hiện trong danh mục hiện có. Hãy chọn khóa học và bài học bạn được phép quản lý; máy chủ sẽ xác thực quyền khi lưu.'}
             </p>
           )}
           {serverQuizId && <p className="mt-2 mb-0 text-xs text-text-secondary">Quiz đã được tạo nháp. Nếu cần đổi vị trí, hãy tạo quiz mới.</p>}
