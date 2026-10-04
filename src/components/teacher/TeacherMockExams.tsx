@@ -855,8 +855,12 @@ function TeacherMockExamForm({
     if (!Number.isInteger(duration) || duration < 1 || duration > 600) return 'Thời gian làm bài phải từ 1 đến 600 phút.'
     const attempts = Number(settings.maxAttempts)
     if (!Number.isInteger(attempts) || attempts < 1 || attempts > 999) return 'Số lượt làm tối đa phải từ 1 đến 999.'
-    const passing = Number(settings.passingPercentage)
-    if (!Number.isInteger(passing) || passing < 0 || passing > 100) return 'Điểm đạt phải từ 0 đến 100%.'
+    const passingText = settings.passingPercentage.trim()
+    const passing = Number(passingText)
+    const passingDecimalDigits = passingText.split('.')[1]?.length ?? 0
+    if (!Number.isFinite(passing) || passing < 0 || passing > 100 || passingDecimalDigits > 2) {
+      return 'Điểm đạt phải từ 0 đến 100%, tối đa 2 chữ số thập phân.'
+    }
     if (settings.availableFrom && Number.isNaN(new Date(settings.availableFrom).getTime())) return 'Thời điểm bắt đầu không hợp lệ.'
     if (settings.availableUntil && Number.isNaN(new Date(settings.availableUntil).getTime())) return 'Thời hạn làm bài không hợp lệ.'
     if (settings.availableFrom && settings.availableUntil &&
@@ -1197,7 +1201,7 @@ function TeacherMockExamForm({
             Điểm đạt (%)
             <input
               className="h-11 rounded-lg border border-border-primary bg-surface px-3 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
-              type="number" min="0" max="100"
+              type="number" min="0" max="100" step="0.01"
               value={settings.passingPercentage}
               onChange={(event) => updateSettings('passingPercentage', event.target.value)}
               disabled={fieldsLocked || busy}
