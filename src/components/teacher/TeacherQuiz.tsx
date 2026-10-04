@@ -38,6 +38,7 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import DropdownField from '../ui/DropdownField'
 import SearchFilterBar from '../ui/SearchFilterBar'
 import Skeleton from '../ui/Skeleton'
+import Notice from '../ui/Notice'
 import StatusBadge from '../ui/StatusBadge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/DropdownMenu'
 
@@ -400,6 +401,7 @@ function TeacherQuizEditorForm({
   )
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [ambiguousCreate, setAmbiguousCreate] = useState(false)
 
   const courseCatalog = usePageResource(async () => {
     if (initialQuiz) return [] as Course[]
@@ -433,8 +435,8 @@ function TeacherQuizEditorForm({
   const effectiveLessonId = lessonOptions.some((lesson) => lesson.id === selectedLessonId)
     ? selectedLessonId
     : ''
-  const settingsLocked = quizIsLocked(initialQuiz)
-  const questionsLocked = quizIsLocked(initialQuiz)
+  const settingsLocked = quizIsLocked(initialQuiz) || ambiguousCreate
+  const questionsLocked = quizIsLocked(initialQuiz) || ambiguousCreate
 
   const updateQuestion = (clientId: string, update: Partial<DraftQuestion>) => {
     setQuestions((items) => items.map((question) => question.clientId === clientId ? { ...question, ...update } : question))
@@ -521,6 +523,11 @@ function TeacherQuizEditorForm({
           // Keep the form state if the follow-up read also fails.
         }
       }
+      if (!serverQuizId && !quizId && isAmbiguousCreateFailure(saveError)) {
+        setAmbiguousCreate(true)
+        setError('Yêu cầu tạo quiz chưa có kết quả xác nhận.')
+        return
+      }
       const validationMessages = saveError instanceof ApiError
         ? Object.values(saveError.errors ?? {}).filter(Boolean)
         : []
@@ -546,6 +553,12 @@ function TeacherQuizEditorForm({
         </div>
       </div>
 
+      {ambiguousCreate && (
+        <Notice tone="warning" role="alert" aria-live="assertive">
+          Máy chủ có thể đã tạo quiz nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách quiz và kiểm tra thủ công trước khi tạo mới.
+        </Notice>
+      )}
+
       {!initialQuiz && (
         <Card as="section" padding="lg" radius="lg" aria-labelledby="quiz-target-title">
           <CardTitle id="quiz-target-title" className="mb-3 text-base">Chọn vị trí quiz</CardTitle>
@@ -563,7 +576,7 @@ function TeacherQuizEditorForm({
                 errorMessage={courseCatalogError}
                 emptyMessage="Không có khóa học đang mở."
                 mobileTouchTargets
-                isDisabled={serverQuizId !== null}
+                isDisabled={serverQuizId !== null || ambiguousCreate}
                 onChange={(value) => {
                   setSelectedCourseId(value ?? '')
                   setSelectedLessonId('')
@@ -583,7 +596,7 @@ function TeacherQuizEditorForm({
                 errorMessage={courseDetailError}
                 emptyMessage="Khóa học này chưa có bài học khả dụng."
                 mobileTouchTargets
-                isDisabled={!activeCourseId || serverQuizId !== null}
+                isDisabled={!activeCourseId || serverQuizId !== null || ambiguousCreate}
                 onChange={(value) => setSelectedLessonId(value ?? '')}
               />
             </label>
@@ -622,7 +635,7 @@ function TeacherQuizEditorForm({
       {initialQuiz && (
         <div className="rounded-xl border border-line-blue bg-primary-soft px-4 py-3 text-sm text-text-secondary">
           {[initialQuiz.courseTitle, initialQuiz.lessonTitle, initialQuiz.type].filter(Boolean).join(' · ')}
-          {questionsLocked && <p className="mt-1 mb-0 font-semibold">Quiz đã có lượt thi; câu hỏi và quy định làm bài đang khóa.</p>}
+          {quizIsLocked(initialQuiz) && <p className="mt-1 mb-0 font-semibold">Quiz đã có lượt thi; câu hỏi và quy định làm bài đang khóa.</p>}
         </div>
       )}
 
@@ -631,7 +644,7 @@ function TeacherQuizEditorForm({
         <div className="grid gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading md:col-span-1">
             Tên quiz
-            <input className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal" value={title} onChange={(event) => setTitle(event.target.value)} disabled={busy} maxLength={500} />
+            <input className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal" value={title} onChange={(event) => setTitle(event.target.value)} disabled={busy || ambiguousCreate} maxLength={500} />
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
             Thời gian (phút)
@@ -734,11 +747,11 @@ function TeacherQuizEditorForm({
         {error && <p className="mt-4 mb-0 text-sm font-medium text-text-danger" role="alert">{error}</p>}
         <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line-soft pt-4">
           <Button appearance="outline" className="min-h-11" disabled={busy} onClick={onCancel}>Hủy</Button>
-          <Button appearance="outline" className="min-h-11" disabled={busy} onClick={() => void saveQuiz(false)}>
+          <Button appearance="outline" className="min-h-11" disabled={busy || ambiguousCreate} onClick={() => void saveQuiz(false)}>
             {busy ? 'Đang lưu...' : initialQuiz || serverQuizId ? 'Lưu thay đổi' : 'Lưu bản nháp'}
           </Button>
           {(!initialQuiz || initialQuiz.status !== 'PUBLISHED') && (
-            <Button className="min-h-11" disabled={busy} onClick={() => void saveQuiz(true)}>
+            <Button className="min-h-11" disabled={busy || ambiguousCreate} onClick={() => void saveQuiz(true)}>
               <CheckCircle2 size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
             </Button>
           )}
@@ -788,6 +801,11 @@ function getApiActionError(error: unknown) {
     if (details.length > 0) return `${getErrorMessage(error)}: ${details.join('; ')}`
   }
   return getErrorMessage(error)
+}
+
+function isAmbiguousCreateFailure(error: unknown) {
+  if (!(error instanceof ApiError)) return true
+  return error.status === 0 || error.status === 408 || error.status >= 500
 }
 
 function getResourceErrorMessage(status: string, errorMessage: string, resource: string) {
