@@ -141,6 +141,7 @@ export async function logout() {
   try {
     if (storedRefreshToken) {
       await request('/api/v1/auth/logout', {
+        auth: true,
         method: 'POST',
         body: { refreshToken: storedRefreshToken } satisfies LogoutRequest,
       })
