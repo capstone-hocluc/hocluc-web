@@ -95,6 +95,7 @@ export default function SchedulingPage({ role }: Props) {
   const [mutationError, setMutationError] = useState('')
   const [notice, setNotice] = useState('')
   const [recurringCreateUnknown, setRecurringCreateUnknown] = useState(false)
+  const [proposalConfirmationBlockedCourses, setProposalConfirmationBlockedCourses] = useState<Set<string>>(() => new Set())
   const [attendancePanelState, setAttendancePanelState] = useState({ dirty: false, busy: false })
   const unsavedGuard = useUnsavedActionGuard(
     attendancePanelState.dirty,
@@ -214,7 +215,7 @@ export default function SchedulingPage({ role }: Props) {
       setRecurringEditorOpen(false)
     } catch (error) {
       setMutationError(getErrorMessage(error))
-      if (!(error instanceof ApiError) || error.status >= 500) {
+      if (!(error instanceof ApiError) || error.status === 408 || error.status >= 500) {
         setRecurringCreateUnknown(true)
         calendar.reload()
       }
@@ -426,6 +427,12 @@ export default function SchedulingPage({ role }: Props) {
             sections={courseSections}
             sectionsStatus={courseDetails.status}
             sectionsErrorMessage={courseDetails.errorMessage}
+            confirmationBlocked={proposalConfirmationBlockedCourses.has(activeCourseId)}
+            onConfirmationUnknown={() => {
+              if (activeCourseId) {
+                setProposalConfirmationBlockedCourses((current) => new Set(current).add(activeCourseId))
+              }
+            }}
             onConfirmed={calendar.reload}
           />
         </>

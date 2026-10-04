@@ -38,6 +38,8 @@ interface Props {
   sections: CourseSection[]
   sectionsStatus: ScheduleResourceStatus
   sectionsErrorMessage: string
+  confirmationBlocked: boolean
+  onConfirmationUnknown: () => void
   onConfirmed: () => void
 }
 
@@ -55,6 +57,8 @@ export default function TimetableProposalPanel({
   sections,
   sectionsStatus,
   sectionsErrorMessage,
+  confirmationBlocked,
+  onConfirmationUnknown,
   onConfirmed,
 }: Props) {
   const [startDate, setStartDate] = useState(localToday())
@@ -71,6 +75,7 @@ export default function TimetableProposalPanel({
   const sectionsMessage = getSectionsMessage(sectionsStatus, sectionsErrorMessage, sections)
   const allSectionIds = sections.map((section) => section.sectionCourseId).filter(Boolean)
   const selectedSectionIds = sectionSelection ?? allSectionIds
+  const confirmationLocked = confirmationUnknown || confirmationBlocked
 
   const clearResult = () => {
     setProposal(null)
@@ -91,7 +96,7 @@ export default function TimetableProposalPanel({
 
   const generate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (busy || confirmationUnknown) return
+    if (busy || confirmationLocked) return
     if (!startDate || !endDate || startDate > endDate) {
       setErrorMessage('Chọn khoảng ngày hợp lệ; ngày kết thúc phải bằng hoặc sau ngày bắt đầu.')
       return
@@ -137,7 +142,7 @@ export default function TimetableProposalPanel({
   }
 
   const confirm = async () => {
-    if (!proposal || busy || confirmationUnknown || proposal.proposedSchedules.length === 0) return
+    if (!proposal || busy || confirmationLocked || proposal.proposedSchedules.length === 0) return
     const schedules = proposalSchedulesAsRecurring(proposal, { startDate, endDate }, SCHEDULING_TIMEZONE)
     setBusy(true)
     setErrorMessage('')
@@ -146,6 +151,7 @@ export default function TimetableProposalPanel({
       const created = await confirmTimetableProposal(courseId, { schedules })
       if (created.length !== schedules.length) {
         setConfirmationUnknown(true)
+        onConfirmationUnknown()
         setErrorMessage('Máy chủ trả về số lịch khác với số lịch đã gửi. Đừng gửi lại; hãy tải lại lịch để kiểm tra kết quả.')
         onConfirmed()
         return
@@ -154,9 +160,10 @@ export default function TimetableProposalPanel({
       setSuccessMessage(`Đã tạo ${created.length} chuỗi lịch lặp. Danh sách lịch đang được cập nhật.`)
       onConfirmed()
     } catch (error) {
-      const outcomeMayBeUnknown = !(error instanceof ApiError) || error.status >= 500
+      const outcomeMayBeUnknown = !(error instanceof ApiError) || error.status === 408 || error.status >= 500
       if (outcomeMayBeUnknown) {
         setConfirmationUnknown(true)
+        onConfirmationUnknown()
         setErrorMessage('Chưa xác định được máy chủ đã tạo lịch hay chưa. Đừng gửi lại; hãy kiểm tra mục Chuỗi lịch lặp sau khi tải lại lịch.')
         onConfirmed()
       } else {
@@ -175,7 +182,7 @@ export default function TimetableProposalPanel({
     )
   }
 
-  const controlsDisabled = busy || confirmationUnknown || sectionsStatus !== 'ready' || sections.length === 0
+  const controlsDisabled = busy || confirmationLocked || sectionsStatus !== 'ready' || sections.length === 0
 
   return (
     <Card as="section" padding="lg" className="space-y-4">
@@ -191,12 +198,12 @@ export default function TimetableProposalPanel({
           {sectionsMessage}
         </Notice>
       )}
-      {confirmationUnknown && (
+      {confirmationLocked && (
         <Notice tone="warning">
           {errorMessage || 'Kết quả xác nhận chưa rõ. Nút gửi đã khóa để tránh tạo trùng; hãy tải lại lịch và kiểm tra chuỗi lịch lặp.'}
         </Notice>
       )}
-      {errorMessage && !confirmationUnknown && <Notice tone="danger">{errorMessage}</Notice>}
+      {errorMessage && !confirmationLocked && <Notice tone="danger">{errorMessage}</Notice>}
       {successMessage && <Notice tone="info">{successMessage}</Notice>}
 
       <form className="space-y-4" onSubmit={(event) => void generate(event)}>
@@ -376,7 +383,7 @@ export default function TimetableProposalPanel({
             <Button
               type="button"
               className="max-[767px]:min-h-11"
-              disabled={busy || confirmationUnknown || proposal.proposedSchedules.length === 0}
+              disabled={busy || confirmationLocked || proposal.proposedSchedules.length === 0}
               onClick={() => void confirm()}
             >
               {busy ? 'Đang xác nhận…' : 'Tạo các chuỗi lịch này'}

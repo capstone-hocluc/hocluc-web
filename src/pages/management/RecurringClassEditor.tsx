@@ -76,8 +76,14 @@ export default function RecurringClassEditor({
     if (!startDate || !endDate || startDate > endDate) {
       return reject('Chọn khoảng ngày hợp lệ.', !startDate ? '[name="startDate"]' : '[name="endDate"]')
     }
-    if (!Number.isFinite(durationMinutes) || durationMinutes < 1) {
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
       return reject('Nhập thời lượng hợp lệ.', '[name="durationMinutes"]')
+    }
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const [endHour, endMinute] = endTime.split(':').map(Number)
+    const timeRangeMinutes = endHour * 60 + endMinute - (startHour * 60 + startMinute)
+    if (durationMinutes !== timeRangeMinutes) {
+      return reject('Thời lượng phải khớp với giờ bắt đầu và kết thúc.', '[name="durationMinutes"]')
     }
     setValidationMessage('')
     onSave({
