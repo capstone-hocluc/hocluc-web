@@ -50,12 +50,12 @@ export async function getSuggestedCourses() {
 export interface CourseLesson {
   id: string
   title: string
-  description?: string
+  description?: string | null
   contentType?: string
-  durationSeconds?: number
+  durationSeconds?: number | null
   sequence?: number
   preview?: boolean
-  videoUrl?: string
+  videoUrl?: string | null
   quizCount?: number
   assignmentCount?: number
 }
