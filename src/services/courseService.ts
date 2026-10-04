@@ -127,12 +127,12 @@ export interface CourseStudyQuiz {
   type: string
   title: string
   questionCount: number
-  durationMinutes: number
+  durationMinutes: number | null
   maxAttempts: number
-  passingPercentage: number
+  passingPercentage: number | null
   showAnswers: boolean
   attemptsUsed: number
-  bestPercentage: number
+  bestPercentage: number | null
   passed: boolean
   locked: boolean
   lockReason: string | null
@@ -148,7 +148,7 @@ export interface CourseExamSummary {
   questionCount: number
   durationMinutes: number | null
   maxAttempts: number
-  passingPercentage: number
+  passingPercentage: number | null
   showAnswers: boolean
   availableFrom: string | null
   availableUntil: string | null

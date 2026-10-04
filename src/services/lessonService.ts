@@ -5,12 +5,12 @@ export interface LessonQuiz {
   type: string
   title: string
   questionCount: number
-  durationMinutes: number
+  durationMinutes: number | null
   maxAttempts: number
-  passingPercentage: number
+  passingPercentage: number | null
   showAnswers: boolean
   attemptsUsed: number
-  bestPercentage: number
+  bestPercentage: number | null
   passed: boolean
   locked: boolean
   lockReason: string | null
