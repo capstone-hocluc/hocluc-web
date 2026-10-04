@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { CalendarDays, Info } from 'lucide-react'
-import type { ScheduleCalendarItem } from '../../types/scheduling'
+import type { AttendanceResponse, AttendanceStatus, ScheduleCalendarItem } from '../../types/scheduling'
 import { getMyCourses, type MyCourseEnrollment } from '../../services/courseService'
 import { getStudentSchedules } from '../../services/scheduleService'
-import { getMyCourseAttendance } from '../../services/attendanceService'
+import { getMyAttendanceForSchedule, getMyCourseAttendance } from '../../services/attendanceService'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import {
   addLocalDays,
@@ -25,6 +25,7 @@ import ScheduleDetailsSheet from '../../components/scheduling/ScheduleDetailsShe
 import ScheduleFilters, { type ScheduleViewMode } from '../../components/scheduling/ScheduleFilters'
 import ScheduleList from '../../components/scheduling/ScheduleList'
 import ScheduleResourceState from '../../components/scheduling/ScheduleResourceState'
+import StatusBadge from '../../components/ui/StatusBadge'
 
 function responseData<T>(response: { data?: T }, message: string): T {
   if (response.data === undefined || response.data === null) throw new Error(message)
@@ -198,7 +199,14 @@ export default function StudentSchedulePage() {
         </ScheduleResourceState>
       </Card>
 
-      <ScheduleDetailsSheet item={selectedItem} onClose={() => setSelectedItem(null)} timezone={SCHEDULING_TIMEZONE} />
+      <ScheduleDetailsSheet
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        timezone={SCHEDULING_TIMEZONE}
+        body={selectedItem?.kind === 'schedule' ? (
+          <StudentScheduleAttendancePanel key={selectedItem.item.id} scheduleId={selectedItem.item.id} />
+        ) : undefined}
+      />
     </StudentPageContainer>
   )
 }
@@ -209,5 +217,83 @@ function AttendanceMetric({ label, value }: { label: string; value: string | num
       <p className="text-xs text-text-muted">{label}</p>
       <p className="mt-1 text-lg font-semibold text-text-heading">{value}</p>
     </div>
+  )
+}
+
+const attendancePresentation: Record<AttendanceStatus, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
+  PRESENT: { label: 'Có mặt', tone: 'success' },
+  ABSENT: { label: 'Vắng mặt', tone: 'danger' },
+  LATE: { label: 'Đi muộn', tone: 'warning' },
+  EXCUSED: { label: 'Có phép', tone: 'info' },
+}
+
+function formatAttendanceTime(value?: string | null) {
+  if (!value) return null
+  const instant = new Date(value)
+  if (Number.isNaN(instant.getTime())) return null
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: SCHEDULING_TIMEZONE,
+  }).format(instant)
+}
+
+function StudentScheduleAttendancePanel({ scheduleId }: { scheduleId: string }) {
+  const attendance = useScheduleResource(
+    'student-schedule-attendance:' + scheduleId,
+    () => getMyAttendanceForSchedule(scheduleId)
+  )
+  const record = attendance.data
+
+  return (
+    <section className="space-y-3 border-t border-border-subtle pt-4">
+      <h3 className="text-sm font-semibold text-text-heading">Điểm danh buổi học</h3>
+      {attendance.status === 'not-found' ? (
+        <Notice tone="info">Chưa có ghi nhận điểm danh cho buổi học này.</Notice>
+      ) : (
+        <ScheduleResourceState
+          status={attendance.status}
+          errorMessage={attendance.errorMessage}
+          empty={!record}
+          emptyMessage="Chưa có ghi nhận điểm danh cho buổi học này."
+          onRetry={attendance.reload}
+        >
+          {record && <AttendanceDetail record={record} />}
+        </ScheduleResourceState>
+      )}
+    </section>
+  )
+}
+
+function AttendanceDetail({ record }: { record: AttendanceResponse }) {
+  const presentation = attendancePresentation[record.status]
+  const joinedAt = formatAttendanceTime(record.joinedAt)
+  const leftAt = formatAttendanceTime(record.leftAt)
+
+  return (
+    <dl className="grid gap-3 rounded-xl bg-surface-soft p-3 text-sm sm:grid-cols-2">
+      <div>
+        <dt className="text-xs text-text-muted">Trạng thái</dt>
+        <dd className="mt-1"><StatusBadge tone={presentation.tone} size="sm">{presentation.label}</StatusBadge></dd>
+      </div>
+      {record.attendanceMinutes != null && (
+        <div>
+          <dt className="text-xs text-text-muted">Thời gian tham gia</dt>
+          <dd className="mt-1 font-medium text-text-heading">{record.attendanceMinutes} phút</dd>
+        </div>
+      )}
+      {joinedAt && (
+        <div>
+          <dt className="text-xs text-text-muted">Tham gia lúc</dt>
+          <dd className="mt-1 font-medium text-text-heading">{joinedAt}</dd>
+        </div>
+      )}
+      {leftAt && (
+        <div>
+          <dt className="text-xs text-text-muted">Rời buổi học lúc</dt>
+          <dd className="mt-1 font-medium text-text-heading">{leftAt}</dd>
+        </div>
+      )}
+    </dl>
   )
 }
