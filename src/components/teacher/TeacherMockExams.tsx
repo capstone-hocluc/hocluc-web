@@ -976,7 +976,7 @@ function TeacherMockExamForm({
           setQuizSnapshot(created)
           pendingCreateRef.current = null
         } catch (creationError) {
-          if (creationError instanceof ApiError && creationError.status < 500) throw creationError
+          if (creationError instanceof ApiError && creationError.status < 500 && creationError.status !== 408) throw creationError
           setAmbiguousCreate(true)
           throw new Error(
             'Không xác định được máy chủ đã tạo đề hay chưa. Đừng gửi tạo lại; hãy kiểm tra danh sách thủ công trước.',
