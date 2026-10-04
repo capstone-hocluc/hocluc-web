@@ -103,13 +103,20 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
   const [creating, setCreating] = useState(startCreating)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
+  const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
 
   const refresh = () => quizzes.reload()
-  const runQuizAction = async (quiz: TeacherQuizRecord, operation: () => Promise<unknown>, message: string) => {
+  const runQuizAction = async (
+    quiz: TeacherQuizRecord,
+    operation: () => Promise<unknown>,
+    message: string,
+    forceCopyAfterSuccess = false,
+  ) => {
     if (busyId) return
     setBusyId(quiz.id)
     try {
       await operation()
+      if (forceCopyAfterSuccess) setForceCopyIds((current) => new Set(current).add(quiz.id))
       onAction(message)
       refresh()
     } catch (error) {
@@ -234,8 +241,30 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2 md:justify-end">
-                  <Button className="min-h-11 flex-1 sm:flex-none" onClick={() => setEditorQuizId(quiz.id)}>
-                    <Pencil size={15} />Chỉnh sửa
+                  <Button
+                    className="min-h-11 flex-1 sm:flex-none"
+                    disabled={busyId !== null}
+                    onClick={() => {
+                      const duplicateBeforeEdit =
+                        quiz.status !== 'DRAFT' || quizIsLocked(quiz) || forceCopyIds.has(quiz.id)
+                      if (!duplicateBeforeEdit) {
+                        setEditorQuizId(quiz.id)
+                        return
+                      }
+                      void runQuizAction(
+                        quiz,
+                        () => duplicateTeacherQuiz(quiz.id).then((copy) => {
+                          setEditorQuizId(copy.id)
+                          return copy
+                        }),
+                        'Đã tạo bản nháp để chỉnh sửa; quiz gốc chưa bị thay đổi.'
+                      )
+                    }}
+                  >
+                    <Pencil size={15} />
+                    {quiz.status !== 'DRAFT' || quizIsLocked(quiz) || forceCopyIds.has(quiz.id)
+                      ? 'Tạo bản nháp sửa'
+                      : 'Chỉnh sửa'}
                   </Button>
                   <Button
                     appearance="outline"
@@ -244,7 +273,8 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
                     onClick={() => runQuizAction(
                       quiz,
                       () => quiz.status === 'PUBLISHED' ? unpublishTeacherQuiz(quiz.id) : publishTeacherQuiz(quiz.id),
-                      quiz.status === 'PUBLISHED' ? 'Đã ẩn quiz.' : 'Đã xuất bản quiz.'
+                      quiz.status === 'PUBLISHED' ? 'Đã ẩn quiz.' : 'Đã xuất bản quiz.',
+                      quiz.status === 'PUBLISHED'
                     )}
                   >
                     {quiz.status === 'PUBLISHED' ? <X size={15} /> : <Send size={15} />}
