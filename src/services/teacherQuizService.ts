@@ -209,6 +209,13 @@ export function addTeacherQuizQuestions(quizId: string, questions: SaveTeacherQu
   })
 }
 
+export function reorderTeacherQuizQuestions(quizId: string, questionIds: string[]): Promise<TeacherQuizQuestion[]> {
+  return requireData(`${quizPath(quizId)}/questions/order`, 'Không thể sắp xếp câu hỏi.', {
+    method: 'PUT',
+    body: { questionIds },
+  })
+}
+
 export function updateTeacherQuizQuestion(questionId: string, payload: SaveTeacherQuestionRequest): Promise<TeacherQuizQuestion> {
   return requireData(`/api/v1/teacher/questions/${encodeURIComponent(questionId)}`, 'Không thể lưu câu hỏi.', {
     method: 'PUT',
