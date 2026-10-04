@@ -29,6 +29,21 @@ export interface LessonProgress {
   chapterCompleted: boolean
 }
 
+export interface LessonVideo {
+  id: string
+  lessonId: string
+  title: string
+  videoUrl: string | null
+  durationSeconds: number | null
+  sequence: number
+  createdAt: string | null
+}
+
+export interface LessonVideoStreamUrl {
+  streamUrl: string
+  expiresInSeconds: number
+}
+
 export interface LessonDetail {
   id: string
   title: string
@@ -46,6 +61,7 @@ export interface LessonDetail {
   owned: boolean
   progress: LessonProgress | null
   quizzes: LessonQuiz[]
+  videos?: LessonVideo[]
   previousLessonId: string | null
   nextLessonId: string | null
 }
@@ -63,6 +79,18 @@ export async function getLesson(lessonId: string): Promise<LessonDetail> {
     auth: true,
   })
   if (!response.data) throw new Error('Không thể tải bài học.')
+  return response.data
+}
+
+export async function getLessonVideoStreamUrl(
+  lessonId: string,
+  videoId: string
+): Promise<LessonVideoStreamUrl> {
+  const response = await request<LessonVideoStreamUrl>(
+    `/api/v1/lessons/${encodeURIComponent(lessonId)}/videos/${encodeURIComponent(videoId)}/stream-url`,
+    { auth: true }
+  )
+  if (!response.data?.streamUrl) throw new Error('Không thể lấy liên kết phát video.')
   return response.data
 }
 
