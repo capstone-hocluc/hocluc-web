@@ -20,6 +20,7 @@ interface CourseStudyPageProps {
   onOpenLesson: (lessonId: string) => void
   onOpenQuiz: (quizId: string) => void
   onOpenCourse: (course: Course) => void
+  onEditProfile: () => void
 }
 
 type StudyTab = 'content' | 'exams' | 'live' | 'plan'
@@ -43,6 +44,7 @@ function CourseStudyPage({
   onOpenLesson,
   onOpenQuiz,
   onOpenCourse,
+  onEditProfile,
 }: CourseStudyPageProps) {
   const {
     data: study,
@@ -117,12 +119,18 @@ function CourseStudyPage({
           </TabsList>
 
           <TabsContent value="content" className="flex flex-col gap-5">
-            {(study.nextLiveClass || study.activeStudyGroupName) && (
+            {study.nextLiveClass && (
               <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
-                {study.nextLiveClass && <NextLiveClassCard liveClass={study.nextLiveClass} />}
-                {study.activeStudyGroupName && <StudyGroupCard name={study.activeStudyGroupName} />}
+                <NextLiveClassCard liveClass={study.nextLiveClass} />
               </div>
             )}
+            <StudyGroupCard
+              key={`${courseId}-${study.activeStudyGroupId ?? 'none'}`}
+              courseId={courseId}
+              initialGroupId={study.activeStudyGroupId}
+              onCompleteProfile={onEditProfile}
+              onRefreshStudy={reload}
+            />
             <StudyCurriculum
               phases={study.phases}
               currentLessonId={study.continueLessonId}

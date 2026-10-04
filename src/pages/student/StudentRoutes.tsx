@@ -78,6 +78,7 @@ function StudentRoutes({
             onOpenLesson={(lessonId) => navigate(studentRoutes.lesson(route.courseId, lessonId))}
             onOpenQuiz={(quizId) => navigate(studentRoutes.quiz(quizId))}
             onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
+            onEditProfile={() => navigate(studentRoutes.profile('student'))}
           />
         )
       case 'lesson':
