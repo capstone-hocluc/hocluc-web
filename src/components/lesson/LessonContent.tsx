@@ -22,6 +22,7 @@ type StreamState =
   | { streamKey: string; status: 'error'; message: string }
 
 const surface = 'overflow-hidden rounded-[14px] border border-line bg-surface'
+const MAX_STREAM_RETRIES = 2
 
 function EmptyContent({ title, message }: { title: string; message: string }) {
   return (
@@ -36,11 +37,20 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
   const videos = lesson.videos ?? []
   const [selectedVideoId, setSelectedVideoId] = useState('')
   const [requestKey, setRequestKey] = useState(0)
+  const [retryCounts, setRetryCounts] = useState<Record<string, number>>({})
   const [streamState, setStreamState] = useState<StreamState>({ streamKey: '', status: 'loading' })
   const refreshedAfterPlayerError = useRef(new Set<string>())
   const selectedVideo = videos.find((video) => video.id === selectedVideoId) ?? videos[0]
   const selectedVideoIdForStream = selectedVideo?.id ?? ''
   const selectedStreamKey = selectedVideo ? `${lesson.id}:${selectedVideo.id}` : ''
+  const retryCount = retryCounts[selectedStreamKey] ?? 0
+
+  const retryStream = () => {
+    if (retryCount >= MAX_STREAM_RETRIES) return
+    setRetryCounts((current) => ({ ...current, [selectedStreamKey]: (current[selectedStreamKey] ?? 0) + 1 }))
+    setStreamState({ streamKey: selectedStreamKey, status: 'loading' })
+    setRequestKey((current) => current + 1)
+  }
 
   useEffect(() => {
     if (!hasAccess || lesson.contentType !== 'VIDEO' || !selectedVideoIdForStream) return
@@ -67,8 +77,9 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
     if (!selectedVideo) return
 
     const retryKey = selectedStreamKey
-    if (!refreshedAfterPlayerError.current.has(retryKey)) {
+    if (!refreshedAfterPlayerError.current.has(retryKey) && retryCount < MAX_STREAM_RETRIES) {
       refreshedAfterPlayerError.current.add(retryKey)
+      setRetryCounts((current) => ({ ...current, [retryKey]: (current[retryKey] ?? 0) + 1 }))
       setStreamState({ streamKey: selectedStreamKey, status: 'loading' })
       setRequestKey((current) => current + 1)
       return
@@ -148,18 +159,16 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
               <Notice tone="warning" className="max-w-[680px] justify-center text-center">
                 {currentStream.message}
               </Notice>
-              <Button
-                size="sm"
-                variant="primary"
-                appearance="outline"
-                onClick={() => {
-                  setStreamState({ streamKey: selectedStreamKey, status: 'loading' })
-                  setRequestKey((current) => current + 1)
-                }}
-              >
-                <RefreshCw aria-hidden="true" />
-                Thử lấy liên kết mới
-              </Button>
+              {retryCount < MAX_STREAM_RETRIES ? (
+                <Button size="sm" variant="primary" appearance="outline" onClick={retryStream}>
+                  <RefreshCw aria-hidden="true" />
+                  Thử lấy liên kết mới ({retryCount + 1}/{MAX_STREAM_RETRIES})
+                </Button>
+              ) : (
+                <p className="m-0 text-center text-sm text-text-secondary" role="status">
+                  Đã hết số lần thử lại cho video này. Hãy quay lại sau hoặc chọn video khác.
+                </p>
+              )}
             </div>
           ) : (
             <div className="relative w-full max-w-[854px]">
