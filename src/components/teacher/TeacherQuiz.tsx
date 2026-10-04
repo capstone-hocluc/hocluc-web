@@ -64,6 +64,8 @@ interface DraftQuestion {
   editable: boolean
 }
 
+type QuizFieldError = 'title' | 'duration' | 'attempts' | 'target' | 'questions'
+
 const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']
 const QUIZ_STATUS_FILTERS = ['Tất cả', 'Bản nháp', 'Đã xuất bản', 'Đã lưu trữ'] as const
 
@@ -399,6 +401,7 @@ function TeacherQuizEditorForm({
   const [questions, setQuestions] = useState<DraftQuestion[]>(() =>
     initial?.questions.map(fromServerQuestion) ?? [createDraftQuestion()]
   )
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<QuizFieldError, string>>>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
@@ -438,7 +441,13 @@ function TeacherQuizEditorForm({
   const settingsLocked = quizIsLocked(initialQuiz) || ambiguousCreate
   const questionsLocked = quizIsLocked(initialQuiz) || ambiguousCreate
 
+  const clearFieldError = (field: QuizFieldError) => {
+    setFieldErrors((current) => ({ ...current, [field]: undefined }))
+    setError('')
+  }
+
   const updateQuestion = (clientId: string, update: Partial<DraftQuestion>) => {
+    clearFieldError('questions')
     setQuestions((items) => items.map((question) => question.clientId === clientId ? { ...question, ...update } : question))
   }
   const updateOption = (question: DraftQuestion, optionIndex: number, value: Partial<DraftOption>) => {
@@ -451,35 +460,35 @@ function TeacherQuizEditorForm({
     if (busy) return
     const durationMinutes = Number(duration)
     const maxAttempts = Number(attempts)
-    if (!title.trim()) {
-      setError('Nhập tên quiz trước khi lưu.')
-      return
-    }
+    const nextFieldErrors: Partial<Record<QuizFieldError, string>> = {}
+    if (!title.trim()) nextFieldErrors.title = 'Nhập tên quiz trước khi lưu.'
     if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 600) {
-      setError('Thời gian làm bài phải từ 1 đến 600 phút.')
-      return
+      nextFieldErrors.duration = 'Thời gian làm bài phải từ 1 đến 600 phút.'
     }
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 999) {
-      setError('Số lần thử tối đa phải từ 1 đến 999.')
-      return
+      nextFieldErrors.attempts = 'Số lần thử tối đa phải từ 1 đến 999.'
     }
     if (!serverQuizId && (!activeCourseId || !effectiveLessonId)) {
-      setError('Chọn khóa học và bài học để gắn quiz.')
-      return
+      nextFieldErrors.target = 'Chọn khóa học và bài học để gắn quiz.'
     }
 
     const questionsWithContent = questions.filter((question) =>
       question.questionText.trim() || question.options.some((option) => option.text.trim())
     )
-    const invalidQuestion = questionsWithContent.find((question) =>
+    const invalidQuestion = questionsWithContent.find((question) => question.editable && (
       !question.questionText.trim() || question.options.length < 2 || question.options.some((option) => !option.text.trim())
-    )
+    ))
     if (invalidQuestion) {
-      setError('Mỗi câu hỏi đã bắt đầu cần có nội dung và điền đủ ít nhất hai lựa chọn.')
+      nextFieldErrors.questions = 'Mỗi câu hỏi đã bắt đầu cần có nội dung và điền đủ ít nhất hai lựa chọn.'
+    }
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors)
+      setError('Vui lòng kiểm tra các trường được đánh dấu.')
       return
     }
 
     setBusy(true)
+    setFieldErrors({})
     setError('')
     let quizId = serverQuizId
     try {
@@ -528,13 +537,16 @@ function TeacherQuizEditorForm({
         setError('Yêu cầu tạo quiz chưa có kết quả xác nhận.')
         return
       }
-      const validationMessages = saveError instanceof ApiError
-        ? Object.values(saveError.errors ?? {}).filter(Boolean)
-        : []
+      const validation = saveError instanceof ApiError
+        ? mapTeacherQuizValidationErrors(saveError.errors ?? {})
+        : { fields: {}, unmapped: [] }
+      setFieldErrors(validation.fields)
       setError(
-        validationMessages.length > 0
-          ? `${getErrorMessage(saveError)}: ${validationMessages.join('; ')}`
-          : getErrorMessage(saveError)
+        validation.unmapped.length > 0
+          ? `${getErrorMessage(saveError)}: ${validation.unmapped.join('; ')}`
+          : Object.keys(validation.fields).length > 0
+            ? 'Một số thông tin chưa hợp lệ. Hãy kiểm tra các trường được đánh dấu.'
+            : getErrorMessage(saveError)
       )
     } finally {
       setBusy(false)
@@ -577,7 +589,10 @@ function TeacherQuizEditorForm({
                 emptyMessage="Không có khóa học đang mở."
                 mobileTouchTargets
                 isDisabled={serverQuizId !== null || ambiguousCreate}
+                isInvalid={Boolean(fieldErrors.target)}
+                ariaDescribedBy={fieldErrors.target ? 'teacher-quiz-target-error' : undefined}
                 onChange={(value) => {
+                  clearFieldError('target')
                   setSelectedCourseId(value ?? '')
                   setSelectedLessonId('')
                 }}
@@ -597,10 +612,16 @@ function TeacherQuizEditorForm({
                 emptyMessage="Khóa học này chưa có bài học khả dụng."
                 mobileTouchTargets
                 isDisabled={!activeCourseId || serverQuizId !== null || ambiguousCreate}
-                onChange={(value) => setSelectedLessonId(value ?? '')}
+                isInvalid={Boolean(fieldErrors.target)}
+                ariaDescribedBy={fieldErrors.target ? 'teacher-quiz-target-error' : undefined}
+                onChange={(value) => {
+                  clearFieldError('target')
+                  setSelectedLessonId(value ?? '')
+                }}
               />
             </label>
           </div>
+          {fieldErrors.target && <p id="teacher-quiz-target-error" className="mt-2 mb-0 text-sm font-medium text-text-danger" role="alert">{fieldErrors.target}</p>}
           {courseCatalog.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-secondary" role="status">Đang tải khóa học...</p>}
           {courseCatalogHasError && (
             <div className="mt-2 flex flex-wrap items-center gap-2" role="alert">
@@ -644,23 +665,26 @@ function TeacherQuizEditorForm({
         <div className="grid gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading md:col-span-1">
             Tên quiz
-            <input className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal" value={title} onChange={(event) => setTitle(event.target.value)} disabled={busy || ambiguousCreate} maxLength={500} />
+            <input id="teacher-quiz-title" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
+            {fieldErrors.title && <span id="teacher-quiz-title-error" className="text-sm font-medium text-text-danger" role="alert">{fieldErrors.title}</span>}
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
             Thời gian (phút)
-            <input className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal" type="number" min="1" max="600" value={duration} onChange={(event) => setDuration(event.target.value)} disabled={settingsLocked || busy} />
+            <input id="teacher-quiz-duration" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" type="number" min="1" max="600" value={duration} onChange={(event) => { setDuration(event.target.value); clearFieldError('duration') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.duration ? true : undefined} aria-describedby={fieldErrors.duration ? 'teacher-quiz-duration-error' : undefined} />
+            {fieldErrors.duration && <span id="teacher-quiz-duration-error" className="text-sm font-medium text-text-danger" role="alert">{fieldErrors.duration}</span>}
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
             Số lần làm tối đa
-            <input className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal" type="number" min="1" max="999" value={attempts} onChange={(event) => setAttempts(event.target.value)} disabled={settingsLocked || busy} />
+            <input id="teacher-quiz-attempts" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" type="number" min="1" max="999" value={attempts} onChange={(event) => { setAttempts(event.target.value); clearFieldError('attempts') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.attempts ? true : undefined} aria-describedby={fieldErrors.attempts ? 'teacher-quiz-attempts-error' : undefined} />
+            {fieldErrors.attempts && <span id="teacher-quiz-attempts-error" className="text-sm font-medium text-text-danger" role="alert">{fieldErrors.attempts}</span>}
           </label>
         </div>
       </Card>
 
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="quiz-questions-title">
+      <Card as="section" padding="lg" radius="lg" aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <CardTitle id="quiz-questions-title" className="text-base">Câu hỏi ({questions.length})</CardTitle>
-          <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={() => setQuestions((items) => [...items, createDraftQuestion()])}>
+          <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={() => { clearFieldError('questions'); setQuestions((items) => [...items, createDraftQuestion()]) }}>
             <Plus size={15} />Thêm câu hỏi
           </Button>
         </div>
@@ -674,7 +698,7 @@ function TeacherQuizEditorForm({
                   <strong className="text-sm text-text-heading">Câu {questionIndex + 1}</strong>
                   {!question.editable && <StatusBadge tone="warning" size="sm">Định dạng chỉ đọc</StatusBadge>}
                   {question.editable && !questionsLocked && (
-                    <Button variant="danger" appearance="ghost" aria-label={`Xóa câu ${questionIndex + 1}`} className="min-h-11" disabled={busy} onClick={() => setQuestions((items) => items.filter((item) => item.clientId !== question.clientId))}>
+                    <Button variant="danger" appearance="ghost" aria-label={`Xóa câu ${questionIndex + 1}`} className="min-h-11" disabled={busy} onClick={() => { clearFieldError('questions'); setQuestions((items) => items.filter((item) => item.clientId !== question.clientId)) }}>
                       <Trash2 size={15} />
                     </Button>
                   )}
@@ -744,6 +768,7 @@ function TeacherQuizEditorForm({
             ))}
           </div>
         )}
+        {fieldErrors.questions && <p id="teacher-quiz-questions-error" className="mt-4 mb-0 text-sm font-medium text-text-danger" role="alert">{fieldErrors.questions}</p>}
         {error && <p className="mt-4 mb-0 text-sm font-medium text-text-danger" role="alert">{error}</p>}
         <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line-soft pt-4">
           <Button appearance="outline" className="min-h-11" disabled={busy} onClick={onCancel}>Hủy</Button>
@@ -806,6 +831,32 @@ function getApiActionError(error: unknown) {
 function isAmbiguousCreateFailure(error: unknown) {
   if (!(error instanceof ApiError)) return true
   return error.status === 0 || error.status === 408 || error.status >= 500
+}
+
+function mapTeacherQuizValidationErrors(errors: Record<string, string>) {
+  const fields: Partial<Record<QuizFieldError, string>> = {}
+  const unmapped: string[] = []
+
+  for (const [key, message] of Object.entries(errors)) {
+    if (!message) continue
+    const normalizedKey = key.replace(/[^a-z]/gi, '').toLowerCase()
+    const field: QuizFieldError | undefined = normalizedKey.includes('title')
+      ? 'title'
+      : normalizedKey.includes('duration')
+        ? 'duration'
+        : normalizedKey.includes('attempt')
+          ? 'attempts'
+          : normalizedKey.includes('course') || normalizedKey.includes('lesson')
+            ? 'target'
+            : normalizedKey.includes('question') || normalizedKey.includes('option')
+              ? 'questions'
+              : undefined
+
+    if (field) fields[field] = fields[field] ? `${fields[field]}; ${message}` : message
+    else unmapped.push(message)
+  }
+
+  return { fields, unmapped }
 }
 
 function getResourceErrorMessage(status: string, errorMessage: string, resource: string) {
