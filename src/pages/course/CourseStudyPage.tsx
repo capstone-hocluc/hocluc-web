@@ -5,6 +5,7 @@ import StudyGroupCard from '../../components/student/course/StudyGroupCard'
 import StudyCurriculum from '../../components/student/course/StudyCurriculum'
 import CourseLiveClassesTab from '../../components/student/course/CourseLiveClassesTab'
 import CourseEnrollmentPlanTab from '../../components/student/course/CourseEnrollmentPlanTab'
+import CourseExamsTab from '../../components/student/course/CourseExamsTab'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
@@ -21,13 +22,18 @@ interface CourseStudyPageProps {
   onOpenCourse: (course: Course) => void
 }
 
-type StudyTab = 'content' | 'live' | 'plan'
+type StudyTab = 'content' | 'exams' | 'live' | 'plan'
 
 const TABS: { key: StudyTab; label: string }[] = [
   { key: 'content', label: 'Nội dung học' },
+  { key: 'exams', label: 'Bài thi' },
   { key: 'live', label: 'Lớp học trực tuyến' },
   { key: 'plan', label: 'Lộ trình học' },
 ]
+
+function isStudyTab(value: string | null): value is StudyTab {
+  return TABS.some((tab) => tab.key === value)
+}
 
 // Rendered inside StudentLayout (header + sidebar come from the layout).
 function CourseStudyPage({
@@ -44,7 +50,27 @@ function CourseStudyPage({
     errorMessage,
     reload,
   } = usePageResource(() => getCourseStudy(courseId), [courseId])
-  const [activeTab, setActiveTab] = useState<StudyTab>('content')
+  const [activeTab, setActiveTab] = useState<StudyTab>(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    return isStudyTab(tab) ? tab : 'content'
+  })
+
+  const handleTabChange = (value: string) => {
+    if (!isStudyTab(value)) return
+    setActiveTab(value)
+
+    // Keep the selected tab in the current history entry so returning from a
+    // quiz detail page restores the student's place in the course.
+    const search = new URLSearchParams(window.location.search)
+    if (value === 'content') search.delete('tab')
+    else search.set('tab', value)
+    const query = search.toString()
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`
+    )
+  }
 
   return (
     <StudentPageContainer className="pb-8">
@@ -77,7 +103,7 @@ function CourseStudyPage({
       {status === 'ready' && study && (
         <Tabs
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value as StudyTab)}
+          onValueChange={handleTabChange}
           className="flex flex-col gap-5"
         >
           <CourseOverview study={study} onBack={onBackToMyCourses} onOpenLesson={onOpenLesson} />
@@ -107,6 +133,10 @@ function CourseStudyPage({
 
           <TabsContent value="live">
             <CourseLiveClassesTab courseId={courseId} />
+          </TabsContent>
+
+          <TabsContent value="exams">
+            <CourseExamsTab courseId={courseId} onOpenQuiz={onOpenQuiz} />
           </TabsContent>
 
           <TabsContent value="plan">
