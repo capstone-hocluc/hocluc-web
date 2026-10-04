@@ -47,8 +47,11 @@ export function proposalSchedulesAsRecurring(
     durationMinutes: item.durationMinutes,
     defaultMode: item.mode,
     ...(item.room ? { defaultLocation: item.room } : {}),
-    ...(item.meetingProvider ? { defaultMeetingProvider: item.meetingProvider } : {}),
-    ...(item.meetingLink ? { defaultMeetingLink: item.meetingLink } : {}),
+    ...(item.meetingProvider && (item.mode === 'ONLINE' || item.mode === 'HYBRID')
+      ? { defaultMeetingProvider: item.meetingProvider }
+      : {}),
+    // The current proposal response can contain an unprovisioned URL for physical sessions.
+    // Do not persist a meeting link until a real meeting has been provisioned.
     startDate: period.startDate,
     endDate: period.endDate,
     timezone,
