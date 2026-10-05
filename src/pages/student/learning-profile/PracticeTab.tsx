@@ -19,7 +19,7 @@ import { useLearningProfileData } from './learningProfileContext'
 import { componentColors, practiceFilters, practiceOverviewIcons, practiceStatIcons } from './icons'
 import ScoreChart from './ScoreChart'
 
-const detailBox = 'rounded-[14px] border border-line-shell bg-[#f8faff] p-3.5'
+const detailBox = 'rounded-[14px] border border-line-shell bg-[#f7fcfe] p-3.5'
 
 function PracticeAiDetailModal({ analysis, isOpen, onClose }) {
   return (
@@ -64,7 +64,7 @@ function PracticeAiHistoryModal({ analysis, isOpen, onClose }) {
         {analysis.history.map((item) => (
           <article
             key={item.id}
-            className="rounded-2xl border border-line-shell bg-[#f8faff] p-3.5"
+            className="rounded-2xl border border-line-shell bg-[#f7fcfe] p-3.5"
           >
             <div className="mb-2 flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-1">
               <strong className="text-[13px] font-black text-text-heading">{item.createdAt}</strong>
@@ -102,7 +102,7 @@ function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
       maxWidth={760}
     >
       <div className="flex flex-col gap-3.5">
-        <div className="flex items-center gap-3 rounded-2xl border border-line-shell bg-[#f8faff] p-3.5 max-[760px]:items-start">
+        <div className="flex items-center gap-3 rounded-2xl border border-line-shell bg-[#f7fcfe] p-3.5 max-[760px]:items-start">
           <span
             className="grid size-11 flex-none place-items-center overflow-hidden rounded-[14px] bg-primary-soft text-primary"
             aria-hidden="true"
@@ -168,7 +168,7 @@ function TeacherFeedbackPanel({
 
   if (!feedbackList.length) {
     return (
-      <div className="grid min-h-36 place-items-center content-center gap-2 rounded-2xl border border-dashed border-[#cfe0ff] bg-[#f8faff] p-5 text-center [&>svg]:text-primary">
+      <div className="grid min-h-36 place-items-center content-center gap-2 rounded-2xl border border-dashed border-[#c6eaf8] bg-[#f7fcfe] p-5 text-center [&>svg]:text-primary">
         <GraduationCap size={28} />
         <strong className="text-[14px] font-black text-text-heading">
           Chưa có nhận xét từ giáo viên
@@ -207,7 +207,7 @@ function TeacherFeedbackPanel({
           <button
             key={item.id}
             type="button"
-            className="grid min-h-[92px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_18px] items-start gap-3 rounded-2xl border border-[#cfe0ff] bg-[#f3f8ff] p-[13px] text-left transition hover:-translate-y-px hover:border-line-brand hover:bg-[#eaf3ff] max-[760px]:grid-cols-[minmax(0,1fr)] [&>svg]:mt-1 [&>svg]:text-[#8a95af] max-[760px]:[&>svg]:hidden"
+            className="grid min-h-[92px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_18px] items-start gap-3 rounded-2xl border border-[#c6eaf8] bg-[#f3f8ff] p-[13px] text-left transition hover:-translate-y-px hover:border-line-brand hover:bg-[#eaf3ff] max-[760px]:grid-cols-[minmax(0,1fr)] [&>svg]:mt-1 [&>svg]:text-[#8a95af] max-[760px]:[&>svg]:hidden"
             onClick={() => onOpenDetail(item)}
           >
             <div>

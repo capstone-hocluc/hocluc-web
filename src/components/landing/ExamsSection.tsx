@@ -43,7 +43,7 @@ function ExamsSection() {
                   border: `1.5px solid ${on ? 'var(--color-primary)' : '#D9E0F2'}`,
                   background: on ? 'var(--color-primary)' : '#fff',
                   color: on ? '#fff' : '#2A3354',
-                  boxShadow: on ? '0 10px 22px rgba(29,120,155,.35)' : 'none',
+                  boxShadow: on ? '0 10px 22px rgba(28, 176, 246,.35)' : 'none',
                 }}
               >
                 {c}

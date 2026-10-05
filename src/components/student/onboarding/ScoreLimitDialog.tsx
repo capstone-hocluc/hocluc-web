@@ -17,7 +17,7 @@ function ScoreLimitDialog({ open, onClose }: ScoreLimitDialogProps) {
             aria-describedby="onboarding-score-limit-text"
             className="w-[min(520px,100%)] rounded-3xl border border-[rgba(223,230,247,0.95)] bg-white/98 px-[22px] pt-6 pb-5 text-center shadow-[0_28px_70px_rgba(9,16,36,0.28)] outline-none max-[701px]:rounded-[20px] max-[701px]:px-[18px] max-[701px]:pt-5 max-[701px]:pb-[18px]"
           >
-            <div className="mx-auto mb-3.5 grid size-[52px] place-items-center rounded-[18px] bg-[linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))] text-[28px] leading-none font-black text-surface shadow-[0_14px_24px_rgba(27,77,228,0.24)]">
+            <div className="mx-auto mb-3.5 grid size-[52px] place-items-center rounded-[18px] bg-[linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))] text-[28px] leading-none font-black text-surface shadow-[0_14px_24px_rgba(28, 176, 246,0.24)]">
               !
             </div>
             <Dialog.Title className="text-[22px] leading-[1.2] tracking-[-0.4px] text-text-heading max-[701px]:text-[20px]">

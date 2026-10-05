@@ -20,7 +20,7 @@ function Streak() {
             borderRadius: 28,
             padding: 42,
             color: '#fff',
-            boxShadow: '0 40px 80px -34px rgba(29,120,155,.7)',
+            boxShadow: '0 40px 80px -34px rgba(28, 176, 246,.7)',
           }}
         >
           <div

@@ -53,7 +53,7 @@
   max-width: 280px;
   height: 34px;
   padding: 0 10px;
-  border: 1px solid #e2e8f6;
+  border: 1px solid #dceef5;
   border-radius: 8px;
   background: var(--color-surface);
   color: #8791ae;
@@ -66,7 +66,7 @@
   text-align: left;
 }
 .hl-staff-search kbd {
-  border: 1px solid #e2e8f6;
+  border: 1px solid #dceef5;
   border-radius: 5px;
   padding: 1px 5px;
   background: #f5f7fc;
@@ -97,7 +97,7 @@
   position: relative;
   display: grid;
   place-items: center;
-  border: 1px solid #e2e8f6;
+  border: 1px solid #dceef5;
   border-radius: 8px;
   background: var(--color-surface);
   color: #526080;
@@ -138,7 +138,7 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  border: 1px solid #e2e8f6;
+  border: 1px solid #dceef5;
   background: #f5f7fc;
   color: #2a3354;
   font-size: 12px;
@@ -329,7 +329,7 @@
   border: 1px solid #d9e3fa;
   border-radius: 7px;
   padding: 7px 8px;
-  background: #f7f9ff;
+  background: #f7fcfe;
   color: var(--color-primary);
   font: inherit;
   font-size: 12px;
@@ -411,7 +411,7 @@
   cursor: pointer;
 }
 .hl-staff-activity-row:hover {
-  background: #f8faff;
+  background: #f7fcfe;
 }
 .hl-staff-activity-row strong {
   font-size: 13px;
@@ -564,7 +564,7 @@
   cursor: pointer;
 }
 .hl-staff-tr:not(.head):hover {
-  background: #f8faff;
+  background: #f7fcfe;
 }
 .hl-staff-tr.head {
   color: var(--color-text-subtle);
@@ -818,7 +818,7 @@
 .hl-staff-modal input:focus,
 .hl-staff-modal [data-dropdown-trigger]:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(29, 120, 155, 0.1);
+  box-shadow: 0 0 0 3px rgba(28, 176, 246, 0.1);
 }
 .hl-staff-modal-close {
   position: absolute;

@@ -57,7 +57,7 @@ export function QuestionCard({ question, selectedId, onChoose }: QuestionCardPro
               type="button"
               className={cn(
                 'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[13px] border border-line-card bg-surface-tint px-[11px] py-[9px] text-left text-[13px] font-medium text-text-dim',
-                selected && 'border-primary bg-[#eaf3ff] shadow-[0_0_0_3px_rgba(27,77,228,0.08)]'
+                selected && 'border-primary bg-[#eaf3ff] shadow-[0_0_0_3px_rgba(28, 176, 246,0.08)]'
               )}
               onClick={() => onChoose(option.id)}
             >

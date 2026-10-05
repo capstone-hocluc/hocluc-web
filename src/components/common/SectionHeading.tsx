@@ -27,7 +27,7 @@ function SectionHeading({ title, banner, subtitle }) {
             textTransform: 'uppercase',
             padding: '9px 22px',
             borderRadius: 40,
-            boxShadow: '0 10px 22px rgba(29,120,155,.28)',
+            boxShadow: '0 10px 22px rgba(28, 176, 246,.28)',
           }}
         >
           {banner}

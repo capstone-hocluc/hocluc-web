@@ -78,7 +78,7 @@ function CourseHero({
           </div>
           <Progress value={progress} />
           <Button
-            className="h-auto min-h-[38px] gap-[7px] rounded-xl border-0 px-3.5 text-xs leading-normal font-black shadow-[0_12px_20px_rgba(27,77,228,0.14)] hover:bg-primary [&>svg]:size-[15px]"
+            className="h-auto min-h-[38px] gap-[7px] rounded-xl border-0 px-3.5 text-xs leading-normal font-black shadow-[0_12px_20px_rgba(28, 176, 246,0.14)] hover:bg-primary [&>svg]:size-[15px]"
             onClick={onContinue}
           >
             Tiếp tục học

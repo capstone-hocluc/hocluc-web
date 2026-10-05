@@ -34,7 +34,7 @@
   display: inline-flex;
   gap: 6px;
   padding: 4px;
-  border: 1px solid #dce7f7;
+  border: 1px solid #d9eff9;
   border-radius: 14px;
   background: #eaf2ff;
   box-shadow: 0 10px 22px rgba(17, 24, 58, 0.04);
@@ -57,18 +57,18 @@
 .hl-catalog-tabs button.is-active {
   background: var(--color-surface);
   color: var(--color-primary);
-  box-shadow: 0 8px 18px rgba(27, 77, 228, 0.12);
+  box-shadow: 0 8px 18px rgba(28, 176, 246, 0.12);
 }
 
 .hl-catalog-tabs button:focus-visible {
-  outline: 3px solid rgba(27, 77, 228, 0.22);
+  outline: 3px solid rgba(28, 176, 246, 0.22);
   outline-offset: 2px;
 }
 
 .hl-catalog-panel {
   min-width: 0;
   padding: 18px;
-  border: 1px solid #e0e7f3;
+  border: 1px solid #deeff7;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 12px 26px rgba(17, 24, 58, 0.045);
@@ -114,13 +114,13 @@
 
 .hl-catalog-filters button:hover,
 .hl-catalog-filters [data-dropdown-trigger]:hover {
-  border-color: #bfd4ff;
+  border-color: #bde8f8;
   color: var(--color-primary);
 }
 
 .hl-catalog-filters button.is-active {
   border-color: var(--color-primary);
-  background: #eaf1ff;
+  background: #eaf8fc;
   color: var(--color-primary);
 }
 
@@ -134,8 +134,8 @@
 .hl-catalog-filters button:focus-visible,
 .hl-catalog-filters [data-dropdown-trigger]:focus-visible,
 .hl-catalog-search:focus-within {
-  border-color: rgba(27, 77, 228, 0.55);
-  box-shadow: 0 0 0 4px rgba(27, 77, 228, 0.09);
+  border-color: rgba(28, 176, 246, 0.55);
+  box-shadow: 0 0 0 4px rgba(28, 176, 246, 0.09);
 }
 
 .hl-catalog-search {
@@ -145,7 +145,7 @@
   align-items: center;
   gap: 8px;
   padding: 0 14px;
-  border: 1px solid #dce7f7;
+  border: 1px solid #d9eff9;
   border-radius: 12px;
   background: var(--color-surface);
   color: var(--color-text-faint);
@@ -204,7 +204,7 @@
   flex-direction: column;
   overflow: hidden;
   padding: 0;
-  border: 1px solid #e0e7f3;
+  border: 1px solid #deeff7;
   border-radius: 18px;
   background: var(--color-surface);
   box-shadow: 0 10px 22px rgba(17, 24, 58, 0.04);
@@ -224,7 +224,7 @@
 }
 
 .hl-catalog-card:focus-visible {
-  outline: 3px solid rgba(27, 77, 228, 0.22);
+  outline: 3px solid rgba(28, 176, 246, 0.22);
   outline-offset: 3px;
 }
 
@@ -235,7 +235,7 @@
   align-items: flex-end;
   justify-content: space-between;
   padding: 14px;
-  background: linear-gradient(135deg, #eaf1ff, #f7fbff);
+  background: linear-gradient(135deg, #eaf8fc, #f7fbff);
 }
 
 .hl-catalog-cover::before {
@@ -252,7 +252,7 @@
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  color: rgba(27, 77, 228, 0.82);
+  color: rgba(28, 176, 246, 0.82);
 }
 
 .hl-catalog-cover-badge,
@@ -325,7 +325,7 @@
 }
 
 .hl-catalog-subject {
-  background: #eaf1ff;
+  background: #eaf8fc;
   color: var(--color-primary);
 }
 
@@ -443,7 +443,7 @@
   width: 92px;
   height: 92px;
   object-fit: contain;
-  filter: drop-shadow(0 10px 16px rgba(27, 77, 228, 0.12));
+  filter: drop-shadow(0 10px 16px rgba(28, 176, 246, 0.12));
 }
 
 .hl-catalog-state strong {

@@ -30,7 +30,7 @@ function Journey() {
               transform: 'translateX(-50%)',
               background: 'linear-gradient(180deg,var(--color-primary),var(--color-brand-soft))',
               borderRadius: 4,
-              boxShadow: '0 0 0 7px rgba(29,120,155,.05)',
+              boxShadow: '0 0 0 7px rgba(28, 176, 246,.05)',
             }}
           />
           {journeySteps.map((st, i) => {
@@ -64,7 +64,7 @@ function Journey() {
                       border: '1.5px solid #E4E9F5',
                       borderRadius: 16,
                       padding: '18px 22px',
-                      boxShadow: '0 16px 38px -26px rgba(29,120,155,.7)',
+                      boxShadow: '0 16px 38px -26px rgba(28, 176, 246,.7)',
                     }}
                   >
                     <div
@@ -112,7 +112,7 @@ function Journey() {
                       display: 'grid',
                       placeItems: 'center',
                       boxShadow:
-                        '0 12px 26px rgba(59,175,218,.5), 0 0 0 6px #fff, 0 0 0 9px rgba(29,120,155,.12)',
+                        '0 12px 26px rgba(59,175,218,.5), 0 0 0 6px #fff, 0 0 0 9px rgba(28, 176, 246,.12)',
                       animation: 'hl-pulse 3s ease-in-out infinite',
                     }}
                   >

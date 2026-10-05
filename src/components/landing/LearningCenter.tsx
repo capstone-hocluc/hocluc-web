@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Reveal, ImageSlot } from '../common/motion'
 import SectionHeading from '../common/SectionHeading'
 import { media } from '../../data/content'
+import Avatar from '../ui/Avatar'
 
 const MODES = [
   { id: 'live', label: 'Livestream' },
@@ -86,7 +87,7 @@ function LearningCenter() {
                   border: `1.5px solid ${on ? 'var(--color-primary)' : '#E4E9F5'}`,
                   background: on ? 'linear-gradient(180deg,var(--color-primary),var(--color-brand-bright))' : '#fff',
                   color: on ? '#fff' : '#2A3354',
-                  boxShadow: on ? '0 12px 26px rgba(29,120,155,.35)' : 'none',
+                  boxShadow: on ? '0 12px 26px rgba(28, 176, 246,.35)' : 'none',
                 }}
               >
                 {m.label}
@@ -101,7 +102,7 @@ function LearningCenter() {
             borderRadius: 24,
             background: 'linear-gradient(180deg,#F8FAFF,#fff)',
             padding: 24,
-            boxShadow: '0 30px 60px -34px rgba(29,120,155,.5)',
+            boxShadow: '0 30px 60px -34px rgba(28, 176, 246,.5)',
           }}
         >
           {/* LIVE */}
@@ -354,7 +355,7 @@ function LearningCenter() {
                     border: 'none',
                     borderRadius: 40,
                     padding: '13px 28px',
-                    boxShadow: '0 12px 26px rgba(29,120,155,.4)',
+                    boxShadow: '0 12px 26px rgba(28, 176, 246,.4)',
                   }}
                 >
                   Khám phá kho video
@@ -516,7 +517,7 @@ function LearningCenter() {
                     border: 'none',
                     padding: '13px 26px',
                     borderRadius: 40,
-                    boxShadow: '0 12px 26px rgba(29,120,155,.4)',
+                    boxShadow: '0 12px 26px rgba(28, 176, 246,.4)',
                     marginBottom: 18,
                   }}
                 >
@@ -619,7 +620,7 @@ function LearningCenter() {
                     border: 'none',
                     borderRadius: 40,
                     padding: '13px 28px',
-                    boxShadow: '0 12px 26px rgba(29,120,155,.4)',
+                    boxShadow: '0 12px 26px rgba(28, 176, 246,.4)',
                   }}
                 >
                   Đặt lịch với mentor
@@ -654,17 +655,11 @@ function LearningCenter() {
                     boxShadow: '0 16px 34px -16px rgba(24,48,68,.4)',
                   }}
                 >
-                  <span
-                    style={{
-                      width: 48,
-                      height: 48,
-                      flexShrink: 0,
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <ImageSlot src={media.mentorCard} alt="Mentor" circle />
-                  </span>
+                  <Avatar
+                    aria-label="Thầy Lê Minh"
+                    fallback="LM"
+                    className="size-12 text-sm"
+                  />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--color-heading)' }}>
                       Thầy Lê Minh

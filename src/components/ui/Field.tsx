@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn'
 // Form primitives: <Field> = label + control + error/helper, <Input> and
 // <Textarea> = the bordered controls. Used by the Student account forms.
 const control =
-  'w-full rounded-[10px] border border-line-blue bg-surface px-3 text-sm text-text-heading outline-none transition-colors placeholder:text-text-faint focus:border-primary focus:shadow-[0_0_0_3px_rgba(27,77,228,0.1)] read-only:bg-surface-soft disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-text-muted'
+  'w-full rounded-[10px] border border-line-blue bg-surface px-3 text-sm text-text-heading outline-none transition-colors placeholder:text-text-faint focus:border-primary focus:shadow-[0_0_0_3px_rgba(28, 176, 246,0.1)] read-only:bg-surface-soft disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-text-muted'
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input className={cn(control, 'h-[42px]', className)} {...props} />

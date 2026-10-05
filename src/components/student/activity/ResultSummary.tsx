@@ -91,9 +91,9 @@ function ResultSummaryCard({
           src="/owl-success-celebrate.png"
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute top-[-12px] left-[calc(50%+56px)] z-1 size-28 -translate-x-1/2 object-contain drop-shadow-[0_12px_18px_rgba(27,77,228,0.14)] max-[760px]:top-[-6px] max-[760px]:left-[calc(50%+48px)] max-[760px]:size-[92px]"
+          className="pointer-events-none absolute top-[-12px] left-[calc(50%+56px)] z-1 size-28 -translate-x-1/2 object-contain drop-shadow-[0_12px_18px_rgba(28, 176, 246,0.14)] max-[760px]:top-[-6px] max-[760px]:left-[calc(50%+48px)] max-[760px]:size-[92px]"
         />
-        <div className="relative z-2 grid w-[min(250px,100%)] justify-items-center gap-2.5 rounded-[14px] border border-[#dce8ff] bg-[linear-gradient(180deg,rgba(255,255,255,0.62),rgba(255,255,255,0)_46%),#eaf3ff] px-5 pt-[15px] pb-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.94),0_12px_28px_rgba(27,77,228,0.08)] max-[760px]:w-[min(230px,100%)] max-[760px]:pt-[18px]">
+        <div className="relative z-2 grid w-[min(250px,100%)] justify-items-center gap-2.5 rounded-[14px] border border-[#dce8ff] bg-[linear-gradient(180deg,rgba(255,255,255,0.62),rgba(255,255,255,0)_46%),#eaf3ff] px-5 pt-[15px] pb-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.94),0_12px_28px_rgba(28, 176, 246,0.08)] max-[760px]:w-[min(230px,100%)] max-[760px]:pt-[18px]">
           <span className="text-[11px] font-[850] tracking-[0.04em] text-text-secondary uppercase">
             Điểm cao nhất
           </span>

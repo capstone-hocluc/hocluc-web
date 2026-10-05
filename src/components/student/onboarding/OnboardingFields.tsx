@@ -71,7 +71,7 @@ export function SearchSelect({
             </span>
           </span>
         )}
-        triggerClassName="flex h-[52px] items-center gap-[9px] py-0 rounded-[15px] border-[1.5px] border-[#dce5f7] bg-white/95 px-3.5 text-[#8994b0] transition focus-within:-translate-y-px focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(27,77,228,0.1)] aria-invalid:border-danger"
+        triggerClassName="flex h-[52px] items-center gap-[9px] py-0 rounded-[15px] border-[1.5px] border-[#d9eff9] bg-white/95 px-3.5 text-[#8994b0] transition focus-within:-translate-y-px focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)] aria-invalid:border-danger"
         value={value || null}
         onChange={(nextValue) => onChange(nextValue ?? '')}
       />
@@ -81,11 +81,11 @@ export function SearchSelect({
 }
 
 const subjectChip = cva(
-  'inline-flex cursor-pointer items-center gap-[5px] rounded-full border border-[#dce5f7] bg-surface px-[13px] py-2.5 text-[12px] text-text-body transition hover:-translate-y-px hover:border-primary hover:text-primary hover:shadow-[0_10px_18px_rgba(27,77,228,0.08)]',
+  'inline-flex cursor-pointer items-center gap-[5px] rounded-full border border-[#d9eff9] bg-surface px-[13px] py-2.5 text-[12px] text-text-body transition hover:-translate-y-px hover:border-primary hover:text-primary hover:shadow-[0_10px_18px_rgba(28, 176, 246,0.08)]',
   {
     variants: {
       selected: {
-        true: 'border-primary bg-[linear-gradient(135deg,var(--color-badge-info-bg),#f7f9ff)] font-extrabold text-primary shadow-[0_8px_16px_rgba(27,77,228,0.12)]',
+        true: 'border-primary bg-[linear-gradient(135deg,var(--color-badge-info-bg),#f7fcfe)] font-extrabold text-primary shadow-[0_8px_16px_rgba(28, 176, 246,0.12)]',
         false: '',
       },
     },
@@ -140,7 +140,7 @@ export function SubjectChoice({ label, hint, selected, onChange, error }: Subjec
       <div className="flex flex-col gap-3">
         {subjectGroups.map((group) => (
           <div
-            className="rounded-[15px] border border-[#e6ecf9] bg-[rgba(250,252,255,0.8)] p-3 first:border-[#c8d7ff] first:bg-[linear-gradient(135deg,#f3f6ff,#fbfcff)]"
+            className="rounded-[15px] border border-[#e6ecf9] bg-[rgba(250,252,255,0.8)] p-3 first:border-[#bde8f8] first:bg-[linear-gradient(135deg,#f0faff,#fbfcff)]"
             key={group.label}
           >
             <div className="mb-[9px] flex items-baseline justify-between gap-2.5 max-[701px]:flex-col max-[701px]:items-start max-[701px]:gap-[3px]">

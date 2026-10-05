@@ -36,9 +36,9 @@
   --color-surface-overlay: rgba(13, 19, 38, 0.55);
   --color-focus-ring: #0b76a8;
   --color-shell-sidebar: #f5f7fc;
-  --color-shell-sidebar-text: #2a3354;
-  --color-shell-sidebar-muted: #68748e;
-  --color-shell-sidebar-active: #eaf1ff;
+  --color-shell-sidebar-text: #18324f;
+  --color-shell-sidebar-muted: #637985;
+  --color-shell-sidebar-active: #eaf8fc;
 
   --color-badge-success-bg: #e3f7ec;
   --color-badge-success-text: #227a58;
@@ -71,7 +71,7 @@
      green = completed / practice, purple = quiz / assessment,
      amber = live class / upcoming, gray = locked / secondary.
      Each pair is a soft tile background + its foreground. */
-  --color-primary-soft: #eaf1ff;
+  --color-primary-soft: #eaf8fc;
   --color-practice-soft: #e5f5ec;
   --color-practice: #23845a;
   --color-assess-soft: #efeafd;
@@ -84,27 +84,27 @@
   --color-lock: #8a93a8;
 
   /* Student surfaces & borders */
-  --color-app-bg: #f7f9ff;
+  --color-app-bg: #f6fbfe;
   --color-surface-tint: #fbfcff;
-  --color-surface-brand: #f4f8ff;
+  --color-surface-brand: #f0faff;
   --color-surface-sky: #f8fbff;
   --color-line: #e8edf6;
   --color-line-soft: #f0f3f9;
-  --color-line-card: #e0e7f3;
-  --color-line-brand: #bfd4ff;
-  --color-line-blue: #dce7f7;
-  --color-line-shell: #e2e9f9;
-  --color-primary-bright: #2455ea;
+  --color-line-card: #deeff7;
+  --color-line-brand: #bde8f8;
+  --color-line-blue: #d9eff9;
+  --color-line-shell: #dceef5;
+  --color-primary-bright: #1cb0f6;
   --color-streak: #ff8a00;
   --color-streak-soft: #fff8ec;
 
   --shadow-card: 0 12px 26px rgba(17, 24, 58, 0.045);
   --shadow-card-soft: 0 10px 24px rgba(17, 24, 58, 0.035);
-  --shadow-card-hover: 0 18px 34px rgba(27, 77, 228, 0.1);
+  --shadow-card-hover: 0 18px 34px rgba(28, 176, 246, 0.14);
 
   --color-skeleton-highlight: #f4f6fb;
-  --color-scrollbar-track: #eef4ff;
-  --color-scrollbar-thumb: #afc3ea;
+  --color-scrollbar-track: #effaff;
+  --color-scrollbar-thumb: #a9e8fb;
   --color-nav-bg: rgba(255, 255, 255, 0.6);
   --color-nav-bg-scrolled: rgba(255, 255, 255, 0.92);
 
@@ -119,8 +119,8 @@
     }
   }
   --color-skeleton-highlight: #f4f6fb;
-  --color-scrollbar-track: #eef4ff;
-  --color-scrollbar-thumb: #afc3ea;
+  --color-scrollbar-track: #effaff;
+  --color-scrollbar-thumb: #a9e8fb;
   --color-nav-bg: rgba(255, 255, 255, 0.6);
   --color-nav-bg-scrolled: rgba(255, 255, 255, 0.92);
   --animate-shimmer: hl-shimmer 1.4s ease-in-out infinite;

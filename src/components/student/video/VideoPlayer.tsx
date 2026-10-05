@@ -59,7 +59,7 @@ function VideoPlayer({ activity }: { activity: VideoActivity }) {
       >
         {playing ? <Pause size={42} /> : <Play size={46} />}
       </button>
-      <div className="absolute inset-x-[18px] bottom-[18px] grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 rounded-[14px] border border-white/16 bg-[rgba(6,10,20,0.72)] px-3 py-2.5 text-[#dce7f7] opacity-[0.92] backdrop-blur-[14px] max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
+      <div className="absolute inset-x-[18px] bottom-[18px] grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 rounded-[14px] border border-white/16 bg-[rgba(6,10,20,0.72)] px-3 py-2.5 text-[#d9eff9] opacity-[0.92] backdrop-blur-[14px] max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
         <button
           type="button"
           className={glassButton}

@@ -10,7 +10,7 @@ function Hero() {
         padding: '150px 0 90px',
         background: '#fff',
         backgroundImage:
-          'linear-gradient(rgba(29,120,155,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(29,120,155,.06) 1px, transparent 1px)',
+          'linear-gradient(rgba(28, 176, 246,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(28, 176, 246,.06) 1px, transparent 1px)',
         backgroundSize: '40px 40px',
         animation: 'hl-drift 12s linear infinite',
         overflow: 'hidden',
@@ -23,7 +23,7 @@ function Hero() {
           right: -120,
           width: 460,
           height: 460,
-          background: 'radial-gradient(circle, rgba(29,120,155,.12), transparent 65%)',
+          background: 'radial-gradient(circle, rgba(28, 176, 246,.12), transparent 65%)',
           pointerEvents: 'none',
         }}
       />
@@ -64,7 +64,7 @@ function Hero() {
               letterSpacing: '.4px',
               padding: '9px 18px',
               borderRadius: 40,
-              boxShadow: '0 10px 24px rgba(29,120,155,.3)',
+              boxShadow: '0 10px 24px rgba(28, 176, 246,.3)',
               marginBottom: 26,
             }}
           >
@@ -211,7 +211,7 @@ function Hero() {
                 width: 26,
                 height: 26,
                 borderRadius: 8,
-                background: 'rgba(29,120,155,.12)',
+                background: 'rgba(28, 176, 246,.12)',
                 transform: 'rotate(18deg)',
                 zIndex: 0,
                 animation: 'hl-float1 7s ease-in-out infinite',
@@ -243,7 +243,7 @@ function Hero() {
                 style={{
                   objectFit: 'contain',
                   objectPosition: 'center bottom',
-                  filter: 'drop-shadow(0 26px 34px rgba(29,120,155,.22))',
+                  filter: 'drop-shadow(0 26px 34px rgba(28, 176, 246,.22))',
                 }}
               />
             </div>
@@ -256,7 +256,7 @@ function Hero() {
                 background: '#fff',
                 borderRadius: 16,
                 padding: '12px 16px',
-                boxShadow: '0 18px 40px -12px rgba(29,120,155,.4)',
+                boxShadow: '0 18px 40px -12px rgba(28, 176, 246,.4)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
@@ -311,7 +311,7 @@ function Hero() {
                 color: '#fff',
                 borderRadius: 16,
                 padding: '12px 16px',
-                boxShadow: '0 18px 40px -12px rgba(29,120,155,.55)',
+                boxShadow: '0 18px 40px -12px rgba(28, 176, 246,.55)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
@@ -350,7 +350,7 @@ function Hero() {
                 color: '#fff',
                 borderRadius: 16,
                 padding: '12px 18px',
-                boxShadow: '0 18px 40px -12px rgba(29,120,155,.55)',
+                boxShadow: '0 18px 40px -12px rgba(28, 176, 246,.55)',
                 zIndex: 2,
                 animation: 'hl-float1 6.5s ease-in-out infinite',
               }}
@@ -368,7 +368,7 @@ function Hero() {
                 background: '#fff',
                 borderRadius: 16,
                 padding: '12px 18px',
-                boxShadow: '0 18px 40px -12px rgba(29,120,155,.35)',
+                boxShadow: '0 18px 40px -12px rgba(28, 176, 246,.35)',
                 zIndex: 2,
                 animation: 'hl-float2 6s ease-in-out infinite',
               }}

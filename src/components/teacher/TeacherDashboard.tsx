@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react'
 import Logo from '../common/Logo'
+import Avatar from '../ui/Avatar'
 import TeacherCourses from './TeacherCourses'
 import TeacherInformation from './TeacherInformation'
 import TeacherQuiz from './TeacherQuiz'
@@ -254,7 +255,7 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
     <main className="hl-teacher-app">
       <aside className={`hl-teacher-sidebar ${sidebarOpen ? 'is-open' : ''}`}>
         <div className="hl-teacher-brand">
-          <Logo />
+          <Logo light />
           <button
             type="button"
             className="hl-teacher-close"
@@ -374,14 +375,14 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
                 aria-label="Mở hồ sơ giảng viên"
                 aria-expanded={profileOpen}
               >
-                <img src="/expert-1.jpg" alt="Nguyễn Hoài Nam" />
+                <Avatar aria-label="Nguyễn Hoài Nam" fallback="HN" className="size-8 rounded-[7px]" />
                 <span className="hl-teacher-profile-trigger-name">Nguyễn Hoài Nam</span>
                 <ChevronDown size={14} />
               </button>
               {profileOpen && (
                 <div className="hl-teacher-profile-menu">
                   <div className="hl-teacher-profile-summary">
-                    <img src="/expert-1.jpg" alt="" />
+                    <Avatar aria-label="Nguyễn Hoài Nam" fallback="HN" className="size-[42px]" />
                     <div>
                       <strong>Nguyễn Hoài Nam</strong>
                       <small>Giảng viên Toán</small>

@@ -132,7 +132,7 @@ function Navbar() {
                   width: 40,
                   height: 40,
                   flexShrink: 0,
-                  border: '1px solid rgba(29,120,155,.16)',
+                  border: '1px solid rgba(28, 176, 246,.16)',
                   cursor: 'pointer',
                   borderRadius: '50%',
                   background: '#fff',
@@ -153,7 +153,7 @@ function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
-                  border: '1px solid rgba(29,120,155,.16)',
+                  border: '1px solid rgba(28, 176, 246,.16)',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   background: '#fff',
@@ -271,7 +271,7 @@ function Navbar() {
                 className="hl-nav-ghost"
                 onClick={() => openAuth('signup')}
                 style={{
-                  border: '1.5px solid rgba(29,120,155,.3)',
+                  border: '1.5px solid rgba(28, 176, 246,.3)',
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   background: 'transparent',

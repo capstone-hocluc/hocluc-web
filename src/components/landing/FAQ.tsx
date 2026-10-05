@@ -27,7 +27,7 @@ function FAQ() {
                   background: isOpen ? '#F4F7FE' : '#fff',
                   overflow: 'hidden',
                   transition: 'border-color .3s, background .3s, box-shadow .3s',
-                  boxShadow: isOpen ? '0 18px 36px -24px rgba(29,120,155,.5)' : 'none',
+                  boxShadow: isOpen ? '0 18px 36px -24px rgba(28, 176, 246,.5)' : 'none',
                 }}
               >
                 <button

@@ -11,6 +11,8 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
+import Avatar from '../ui/Avatar'
+import { getInitials } from '../../lib/initials'
 
 const initialProfile = {
   name: 'Nguyễn Hoài Nam',
@@ -97,7 +99,11 @@ function TeacherInformation({ onBack, onNotify }) {
       <div className="hl-teacher-information-grid">
         <section className="hl-teacher-panel hl-teacher-info-profile">
           <div className="hl-teacher-info-identity">
-            <img src="/expert-1.jpg" alt={profile.name} />
+            <Avatar
+              aria-label={profile.name}
+              fallback={getInitials(profile.name)}
+              className="size-[58px] border-2 border-[var(--color-line-brand)] text-base"
+            />
             <div>
               <h2>{profile.name}</h2>
               <p>{profile.subject}</p>

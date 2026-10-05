@@ -14,7 +14,7 @@ interface GoalCardProps {
 // "Mục tiêu hôm nay": blue hero card with the owl coach and the daily goal.
 function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
   return (
-    <section className="relative rounded-[18px] bg-linear-to-b from-[#4d9bff] via-link to-[#1048ee] px-4 pt-5 pb-px shadow-[0_18px_34px_rgba(27,77,228,0.16)] after:absolute after:top-2 after:-right-7 after:size-[132px] after:rounded-[46%] after:bg-white/18 after:content-['']">
+    <section className="relative rounded-[18px] bg-linear-to-b from-[#4d9bff] via-link to-[#1048ee] px-4 pt-5 pb-px shadow-[0_18px_34px_rgba(28, 176, 246,0.16)] after:absolute after:top-2 after:-right-7 after:size-[132px] after:rounded-[46%] after:bg-white/18 after:content-['']">
       <div className="relative z-1 mb-3 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 max-[760px]:grid-cols-1">
         <div className="inline-flex min-w-0 -translate-y-5 items-center gap-2 text-xl leading-[1.2] font-extrabold text-surface">
           <Flame className="size-4 shrink-0 fill-[#ff9b14] text-[#ff9b14]" />

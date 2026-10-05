@@ -209,11 +209,11 @@ export const plans = [
 ]
 
 export const experts = [
-  { id: 'e1', name: 'PGS.TS Nguyễn Văn A', role: 'Ban khảo thí ĐHQG HN', image: '/expert-1.jpg' },
-  { id: 'e2', name: 'TS Trần Thị B', role: 'Chuyên gia đánh giá năng lực', image: '/expert-2.jpg' },
-  { id: 'e3', name: 'ThS Lê Minh C', role: 'Cố vấn giáo dục', image: '/expert-3.jpg' },
-  { id: 'e4', name: 'TS Phạm Thu D', role: 'Nghiên cứu đánh giá', image: '/expert-4.jpg' },
-  { id: 'e5', name: 'ThS Võ Anh E', role: 'Huấn luyện thí sinh', image: '/expert-5.jpg' },
+  { id: 'e1', name: 'PGS.TS Nguyễn Văn A', role: 'Ban khảo thí ĐHQG HN' },
+  { id: 'e2', name: 'TS Trần Thị B', role: 'Chuyên gia đánh giá năng lực' },
+  { id: 'e3', name: 'ThS Lê Minh C', role: 'Cố vấn giáo dục' },
+  { id: 'e4', name: 'TS Phạm Thu D', role: 'Nghiên cứu đánh giá' },
+  { id: 'e5', name: 'ThS Võ Anh E', role: 'Huấn luyện thí sinh' },
 ]
 
 export const partners = ['ĐHQG TP.HCM', 'Sư Phạm TP.HCM', 'Bộ Công An', 'V-SAT']
@@ -225,7 +225,6 @@ export const testimonials = [
       'Nền tảng giúp mình hiểu rõ điểm mạnh yếu trước kỳ thi đánh giá năng lực, kết quả cải thiện rõ rệt chỉ sau 4 tuần.',
     name: 'Nguyễn Minh Anh',
     loc: 'Hà Nội',
-    avatar: '/avatar-minhanh.jpg',
   },
   {
     id: 't2',
@@ -233,7 +232,6 @@ export const testimonials = [
       'Báo cáo phân tích rất chi tiết, mình biết cần tập trung vào phần nào để tăng điểm nhanh nhất.',
     name: 'Trần Hoàng Long',
     loc: 'TP. Hồ Chí Minh',
-    avatar: '/avatar-hoanglong.jpg',
   },
   {
     id: 't3',
@@ -241,7 +239,6 @@ export const testimonials = [
       'Đề thi đa dạng, bám sát chuẩn đánh giá năng lực của các trường đại học lớn tại Việt Nam.',
     name: 'Lê Thị Mai',
     loc: 'Đà Nẵng',
-    avatar: '/avatar-thimai.jpg',
   },
 ]
 
@@ -290,5 +287,4 @@ export const media = {
   video: U('1610484826967-09c5720778c7', 800, 600),
   ocr: U('1606326608606-aa0b62935f2b', 700, 700),
   mentorSession: '/mentor-session.jpg',
-  mentorCard: '/expert-1.jpg',
 }

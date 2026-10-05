@@ -68,7 +68,7 @@ function LearningTab({ onAction, panelId, labelledBy }) {
       <section className="grid grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] gap-[18px] max-[1181px]:grid-cols-1">
         <ProfileCard
           as="article"
-          className="relative overflow-hidden p-5 before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(rgba(27,77,228,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(27,77,228,0.055)_1px,transparent_1px)] before:bg-[length:28px_28px] before:content-[''] [&>*]:relative [&>*]:z-1"
+          className="relative overflow-hidden p-5 before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(rgba(28, 176, 246,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(28, 176, 246,0.055)_1px,transparent_1px)] before:bg-[length:28px_28px] before:content-[''] [&>*]:relative [&>*]:z-1"
         >
           <ProfileHeading title="Tiến độ khóa học" action="Xem tất cả" onAction={onAction} />
           <div className="grid grid-cols-[148px_minmax(150px,0.45fr)_minmax(0,1fr)] items-center gap-5 max-[1181px]:grid-cols-1 max-[760px]:gap-4">

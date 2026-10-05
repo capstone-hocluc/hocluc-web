@@ -122,7 +122,7 @@
   border: 2px solid var(--color-surface);
   border-radius: 50%;
   background: #dde8ff;
-  color: #2451bd;
+  color: #0b76a8;
   font-size: 12px;
   font-weight: 700;
 }
@@ -177,7 +177,7 @@
 }
 .hl-study-group-select > label:hover {
   border-color: #b8c9f7;
-  background: #f8faff;
+  background: #f7fcfe;
 }
 .hl-study-group-select input {
   width: 15px;
@@ -1239,7 +1239,7 @@
   margin: 17px 0;
   padding: 14px;
   border-radius: 11px;
-  background: #f3f6ff;
+  background: #f0faff;
 }
 .hl-payment-amount span,
 .hl-payment-note small,
@@ -1382,7 +1382,7 @@
 .hl-batch-card:hover {
   transform: translateY(-3px);
   border-color: #b8c9f7;
-  box-shadow: 0 16px 30px rgba(29, 120, 155, 0.1);
+  box-shadow: 0 16px 30px rgba(28, 176, 246, 0.1);
 }
 .hl-batch-card h2 {
   margin: 6px 0 8px;

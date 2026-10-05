@@ -388,7 +388,7 @@ function StaffSidebar({
   adminArea = false,
 }: StaffSidebarProps) {
   return (
-    <Sidebar open={sidebarOpen} onClose={onCloseSidebar} brand={<Logo monochrome />}>
+    <Sidebar open={sidebarOpen} onClose={onCloseSidebar} brand={<Logo />}>
       <SidebarGroupLabel>Tổng quan</SidebarGroupLabel>
       <NavItem
         icon={LayoutDashboard}

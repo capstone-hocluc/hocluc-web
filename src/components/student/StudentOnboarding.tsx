@@ -36,7 +36,7 @@ const majors = [
 const highlights = ['3 phút hoàn thành', 'Cá nhân hóa ngay từ đầu', 'Có thể cập nhật sau']
 
 const textInput =
-  'border-[#dce5f7] bg-white/95 text-[13px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(27,77,228,0.1)]'
+  'border-[#d9eff9] bg-white/95 text-[13px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)]'
 
 function StudentOnboarding({ onBack }) {
   const [form, setForm] = useState({
@@ -82,11 +82,11 @@ function StudentOnboarding({ onBack }) {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_7%_8%,rgba(27,77,228,0.16)_0,transparent_24%),radial-gradient(circle_at_92%_12%,rgba(251,195,79,0.18)_0,transparent_18%),radial-gradient(circle_at_85%_90%,rgba(27,77,228,0.08)_0,transparent_26%),linear-gradient(180deg,#f8faff_0%,#f3f7ff_100%)] px-6 pt-6 pb-[58px] text-text-heading before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(rgba(255,255,255,0.55)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.55)_1px,transparent_1px)] before:bg-[length:84px_84px] before:opacity-[0.22] before:content-[''] before:[mask-image:linear-gradient(180deg,rgba(0,0,0,0.9),transparent_88%)] max-[701px]:px-3.5 max-[701px]:pt-4 max-[701px]:pb-7">
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_7%_8%,rgba(28, 176, 246,0.16)_0,transparent_24%),radial-gradient(circle_at_92%_12%,rgba(251,195,79,0.18)_0,transparent_18%),radial-gradient(circle_at_85%_90%,rgba(28, 176, 246,0.08)_0,transparent_26%),linear-gradient(180deg,#f7fcfe_0%,#f0faff_100%)] px-6 pt-6 pb-[58px] text-text-heading before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(rgba(255,255,255,0.55)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.55)_1px,transparent_1px)] before:bg-[length:84px_84px] before:opacity-[0.22] before:content-[''] before:[mask-image:linear-gradient(180deg,rgba(0,0,0,0.9),transparent_88%)] max-[701px]:px-3.5 max-[701px]:pt-4 max-[701px]:pb-7">
       <header className="relative z-1 mx-auto mb-6 flex w-[min(1180px,100%)] items-center justify-between max-[701px]:mb-[18px]">
         <Button
           appearance="outline"
-          className="size-[42px] rounded-full border-[rgba(223,230,247,0.9)] bg-white/90 p-0 shadow-[0_10px_24px_rgba(27,77,228,0.08)] backdrop-blur-[10px] hover:bg-white/90 [&>svg]:size-[18px]"
+          className="size-[42px] rounded-full border-[rgba(223,230,247,0.9)] bg-white/90 p-0 shadow-[0_10px_24px_rgba(28, 176, 246,0.08)] backdrop-blur-[10px] hover:bg-white/90 [&>svg]:size-[18px]"
           onClick={onBack}
           aria-label="Quay lại"
         >
@@ -100,7 +100,7 @@ function StudentOnboarding({ onBack }) {
       <Card
         as="section"
         padding="none"
-        className="relative z-1 mx-auto w-[min(1180px,100%)] rounded-[32px] border-[rgba(213,223,246,0.95)] bg-white/82 p-7 shadow-[0_34px_80px_rgba(27,77,228,0.12)] backdrop-blur-[14px] before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(135deg,rgba(27,77,228,0.16),rgba(251,195,79,0.26),rgba(27,77,228,0.08))] before:p-px before:content-[''] before:[mask-image:linear-gradient(var(--color-surface)_0_0),linear-gradient(var(--color-surface)_0_0)] before:[mask-origin:content-box,padding-box] before:[mask-clip:content-box,border-box] before:[mask-composite:exclude] max-[701px]:rounded-[22px] max-[701px]:p-[18px]"
+        className="relative z-1 mx-auto w-[min(1180px,100%)] rounded-[32px] border-[rgba(213,223,246,0.95)] bg-white/82 p-7 shadow-[0_34px_80px_rgba(28, 176, 246,0.12)] backdrop-blur-[14px] before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-[linear-gradient(135deg,rgba(28, 176, 246,0.16),rgba(251,195,79,0.26),rgba(28, 176, 246,0.08))] before:p-px before:content-[''] before:[mask-image:linear-gradient(var(--color-surface)_0_0),linear-gradient(var(--color-surface)_0_0)] before:[mask-origin:content-box,padding-box] before:[mask-clip:content-box,border-box] before:[mask-composite:exclude] max-[701px]:rounded-[22px] max-[701px]:p-[18px]"
       >
         <div className="relative z-1 grid grid-cols-[minmax(0,1.4fr)_minmax(290px,0.78fr)] gap-6 max-[701px]:grid-cols-1 max-[701px]:gap-[18px]">
           <div className="min-w-0">
@@ -122,15 +122,15 @@ function StudentOnboarding({ onBack }) {
                 {highlights.map((item) => (
                   <span
                     key={item}
-                    className="inline-flex min-h-[34px] items-center rounded-full border border-[#dce5f7] bg-white/90 px-3 text-[12px] font-bold text-text-heading-muted shadow-[0_10px_20px_rgba(27,77,228,0.06)] max-[701px]:min-h-8 max-[701px]:text-[11px]"
+                    className="inline-flex min-h-[34px] items-center rounded-full border border-[#d9eff9] bg-white/90 px-3 text-[12px] font-bold text-text-heading-muted shadow-[0_10px_20px_rgba(28, 176, 246,0.06)] max-[701px]:min-h-8 max-[701px]:text-[11px]"
                   >
                     {item}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="mb-6 flex items-center gap-[13px] rounded-[18px] border border-[#c8d7ff] bg-[linear-gradient(100deg,#eef3ff,#f8faff)] px-[18px] py-4 shadow-[0_10px_22px_rgba(27,77,228,0.07)] max-[701px]:items-start">
-              <span className="grid size-11 place-items-center rounded-[14px] bg-[linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))] text-surface shadow-[0_12px_22px_rgba(27,77,228,0.22)]">
+            <div className="mb-6 flex items-center gap-[13px] rounded-[18px] border border-[#bde8f8] bg-[linear-gradient(100deg,#f0faff,#f7fcfe)] px-[18px] py-4 shadow-[0_10px_22px_rgba(28, 176, 246,0.07)] max-[701px]:items-start">
+              <span className="grid size-11 place-items-center rounded-[14px] bg-[linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))] text-surface shadow-[0_12px_22px_rgba(28, 176, 246,0.22)]">
                 <GraduationCap size={22} />
               </span>
               <div className="flex flex-1 flex-col gap-1">
@@ -196,7 +196,7 @@ function StudentOnboarding({ onBack }) {
                 />
                 <div className="mt-2.5 flex items-center gap-[7px] text-[12px] text-[#8791ae]">
                   <input
-                    className="w-[88px] rounded-[10px] border border-[#dfe6f7] bg-surface px-[9px] py-[7px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(27,77,228,0.1)]"
+                    className="w-[88px] rounded-[10px] border border-[#dfe6f7] bg-surface px-[9px] py-[7px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)]"
                     type="number"
                     min="0"
                     max="1200"

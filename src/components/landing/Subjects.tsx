@@ -17,7 +17,7 @@ function Subjects() {
         padding: '90px 0',
         background: '#F6F8FE',
         backgroundImage:
-          'linear-gradient(rgba(29,120,155,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(29,120,155,.05) 1px, transparent 1px)',
+          'linear-gradient(rgba(28, 176, 246,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(28, 176, 246,.05) 1px, transparent 1px)',
         backgroundSize: '40px 40px',
       }}
     >
@@ -72,7 +72,7 @@ function Subjects() {
             border: '1.5px solid #E4E9F5',
             borderRadius: 24,
             padding: 32,
-            boxShadow: '0 26px 56px -36px rgba(29,120,155,.5)',
+            boxShadow: '0 26px 56px -36px rgba(28, 176, 246,.5)',
             display: 'grid',
             gridTemplateColumns: '.82fr 1.18fr',
             gap: 36,
@@ -142,7 +142,7 @@ function Subjects() {
                 position: 'relative',
                 minWidth: 560,
                 backgroundColor: '#FBFCFF',
-                backgroundImage: 'radial-gradient(rgba(29,120,155,.12) 1.2px, transparent 1.2px)',
+                backgroundImage: 'radial-gradient(rgba(28, 176, 246,.12) 1.2px, transparent 1.2px)',
                 backgroundSize: '18px 18px',
                 border: '1px solid #EAEEF8',
                 borderRadius: 18,
@@ -159,7 +159,7 @@ function Subjects() {
                     background: 'conic-gradient(var(--color-accent) 0% 62%, #E3E9F6 62% 100%)',
                     padding: 7,
                     flexShrink: 0,
-                    boxShadow: '0 16px 34px -16px rgba(29,120,155,.6)',
+                    boxShadow: '0 16px 34px -16px rgba(28, 176, 246,.6)',
                   }}
                 >
                   <div
@@ -233,7 +233,7 @@ function Subjects() {
                             background: n.bg,
                             border: `1.5px solid ${n.border}`,
                             color: n.color,
-                            boxShadow: '0 8px 18px -12px rgba(29,120,155,.5)',
+                            boxShadow: '0 8px 18px -12px rgba(28, 176, 246,.5)',
                           }}
                         >
                           <span

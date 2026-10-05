@@ -1,6 +1,8 @@
-import { Reveal, ImageSlot } from '../common/motion'
+import { Reveal } from '../common/motion'
 import SectionHeading from '../common/SectionHeading'
 import { testimonials } from '../../data/content'
+import Avatar from '../ui/Avatar'
+import { getInitials } from '../../lib/initials'
 
 function Testimonials() {
   return (
@@ -10,7 +12,7 @@ function Testimonials() {
         padding: '90px 0',
         background: '#F6F8FE',
         backgroundImage:
-          'linear-gradient(rgba(29,120,155,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(29,120,155,.05) 1px, transparent 1px)',
+          'linear-gradient(rgba(28, 176, 246,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(28, 176, 246,.05) 1px, transparent 1px)',
         backgroundSize: '40px 40px',
       }}
     >
@@ -45,7 +47,7 @@ function Testimonials() {
                   right: 24,
                   fontSize: 54,
                   lineHeight: 1,
-                  color: 'rgba(29,120,155,.12)',
+                  color: 'rgba(28, 176, 246,.12)',
                   fontWeight: 900,
                 }}
               >
@@ -74,17 +76,11 @@ function Testimonials() {
                   paddingTop: 18,
                 }}
               >
-                <span
-                  style={{
-                    width: 46,
-                    height: 46,
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                  }}
-                >
-                  <ImageSlot src={t.avatar} alt={t.name} circle />
-                </span>
+                <Avatar
+                  aria-label={t.name}
+                  fallback={getInitials(t.name)}
+                  className="size-[46px] text-sm"
+                />
                 <div>
                   <div
                     style={{

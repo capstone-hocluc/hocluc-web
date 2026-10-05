@@ -3,7 +3,7 @@ import Button from '../../ui/Button'
 
 // Pill button of the hero (exam date / edit profile).
 const heroButton =
-  'h-auto gap-2 rounded-full border-[#bfd4ff] bg-white/78 px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-[#f7fbff]'
+  'h-auto gap-2 rounded-full border-[#bde8f8] bg-white/78 px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-[#f7fbff]'
 
 interface ProfileHeroProps {
   displayName: string
@@ -36,11 +36,11 @@ function ProfileHero({
         </div>
       </header>
 
-      <article className="relative mb-3.5 overflow-hidden rounded-[26px] border border-[#cde9ff] bg-[linear-gradient(rgba(27,77,228,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(27,77,228,0.05)_1px,transparent_1px),radial-gradient(circle_at_88%_12%,rgba(251,195,79,0.22),transparent_24%),linear-gradient(135deg,#eaf7ff_0%,#f3f8ff_100%)] bg-[length:64px_64px,64px_64px,auto,auto] px-5 pt-[18px] pb-5 shadow-[0_14px_34px_rgba(17,24,58,0.06)] max-[760px]:rounded-[22px] max-[760px]:p-4">
+      <article className="relative mb-3.5 overflow-hidden rounded-[26px] border border-[#cde9ff] bg-[linear-gradient(rgba(28, 176, 246,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(28, 176, 246,0.05)_1px,transparent_1px),radial-gradient(circle_at_88%_12%,rgba(251,195,79,0.22),transparent_24%),linear-gradient(135deg,#eaf7ff_0%,#f3f8ff_100%)] bg-[length:64px_64px,64px_64px,auto,auto] px-5 pt-[18px] pb-5 shadow-[0_14px_34px_rgba(17,24,58,0.06)] max-[760px]:rounded-[22px] max-[760px]:p-4">
         <div className="relative z-1 flex items-center justify-between gap-3.5 max-[760px]:flex-col max-[760px]:items-start">
           <div className="flex min-w-0 items-center gap-3.5 max-[760px]:items-start">
             <img
-              className="size-[76px] flex-none object-contain drop-shadow-[0_12px_18px_rgba(27,77,228,0.14)] max-[1181px]:size-[70px] max-[760px]:size-[62px]"
+              className="size-[76px] flex-none object-contain drop-shadow-[0_12px_18px_rgba(28, 176, 246,0.14)] max-[1181px]:size-[70px] max-[760px]:size-[62px]"
               src="/owl-welcome-wave.png"
               alt=""
               aria-hidden="true"
@@ -67,7 +67,7 @@ function ProfileHero({
           </div>
           <Button
             appearance="outline"
-            className={`${heroButton} min-h-[38px] flex-none bg-surface px-4 shadow-[0_10px_22px_rgba(27,77,228,0.08)] [&>svg]:size-4`}
+            className={`${heroButton} min-h-[38px] flex-none bg-surface px-4 shadow-[0_10px_22px_rgba(28, 176, 246,0.08)] [&>svg]:size-4`}
             onClick={onEditProfile}
           >
             <Pencil size={16} />

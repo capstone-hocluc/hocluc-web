@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="/hocluc-logo.js"></script>
     <meta name="theme-color" content="#1cb0f6" />
     <meta
       name="description"
@@ -2709,7 +2710,6 @@
 @media(max-width:480px) {.calculator-section{padding:42px 0}.calculator-copy h2{font-size:30px}.calculator-copy>p{font-size:14px}.calculator-examples{gap:6px;margin-bottom:21px}.calculator-examples button{font-size: var(--type-label);padding:9px 11px}#calculator-question{font-size:20px}.calculator-stage{padding:22px 9px;border-radius:23px}.calculator-stage:before{width:250px;height:250px}#calculator-face .calc-face{padding:14px 10px 16px}#calculator-face .calc-keys .calc-key-extra{font-size:7px}#calculator-face .calc-keys .calc-key-cap{font-size:10px}#calculator-face .calc-key.is-num .calc-key-cap,#calculator-face .calc-key.is-op .calc-key-cap{font-size:15px;height:36px}.calculator-under{font-size: var(--type-label);gap:12px}}
 
       /* Bright sky-blue brand; darker text preserves legibility. */
-      .logo .wordmark, .logo .wordmark span { color: var(--blue); }
       .hero h1 .accent, h2 .accent { color: #008bc7; }
       .hero { background: #f0faff; }
       #calculator-face .calc-face[data-model="fx-580vnx"] .calc-key.is-accent .calc-key-cap {
@@ -2777,11 +2777,9 @@
       @media (prefers-reduced-motion:reduce) {
         #tieng-viet:hover .character,#khoa-hoc:hover .character {animation:none !important;}
       }
-      /* Refined vector wordmark: crisp owl at both desktop and mobile sizes. */
+      /* Shared wordmark component; keep its layout aligned with the header. */
       .logo {gap:8px;}
-      .logo-icon {width:42px;height:42px;flex:none;overflow:visible;}
-      .wordmark {font-weight:900;letter-spacing:-.5px;line-height:1.2;}
-      @media(max-width:480px) {.logo-icon {width:32px;height:32px;} .logo {gap:6px;} .wordmark {letter-spacing:-.35px;}}
+      @media(max-width:480px) {.logo {gap:6px;}}
       @media(max-width:360px) {
         .nav {padding-inline:16px;gap:6px;}
         .nav .logo {font-size:19px;gap:5px;}
@@ -2803,16 +2801,7 @@
         .tool-cube {width:40px;height:45px;right:0;top:54px;}
       }
       @media(prefers-reduced-motion:reduce) {.floating-tool {animation:none !important;transform:rotate(var(--tilt));}}
-      /* Text-only brand mark with a warm yellow dot. */
-      .logo .wordmark {color:var(--blue);font-weight:900;letter-spacing:-.65px;white-space:nowrap;}
-      .logo .wordmark .logo-dot {color:#f4b72e;}
-      /* A shallow, crisp extrusion matching the raised blue buttons. */
-      .logo .wordmark {text-shadow:0 1px 0 #0797d6,0 2px 0 #0797d6,0 3px 0 #087fb5;}
-      .logo .wordmark .logo-dot {text-shadow:0 1px 0 #dda021,0 2px 0 #dda021,0 3px 0 #bd8419;}
-      @media(max-width:480px) {
-        .logo .wordmark {text-shadow:0 1px 0 #0797d6,0 2px 0 #087fb5;}
-        .logo .wordmark .logo-dot {text-shadow:0 1px 0 #dda021,0 2px 0 #bd8419;}
-      }
+      /* Shared hocluc-logo component owns the wordmark styles. */
       /* Restore the original shared hero scene; Mai and Nam move independently. */
       .hero-girl,.hero-boy {filter:drop-shadow(0 8px 10px #14476320);}
       .student-art {display:block;}
@@ -3425,9 +3414,7 @@ SOFTWARE.
     <div class="header-scroll-sentinel" aria-hidden="true"></div>
     <header class="header">
       <nav class="container nav" aria-label="Điều hướng chính">
-        <a class="logo" href="#top" aria-label="hocluc.com — Trang chủ"
-          ><span class="wordmark">hocluc<span class="logo-dot">.</span>com</span></a
-        >
+        <a class="logo" href="#top" aria-label="hocluc.com — Trang chủ"><hocluc-logo size="27"></hocluc-logo></a>
         <div class="nav-links">
           <a href="#chuong-trinh">Chương trình học</a><a href="#lo-trinh">Cách học</a
           ><a href="#luyen-thi">Luyện thi</a><a href="#may-tinh">Máy tính</a>
@@ -3717,9 +3704,7 @@ SOFTWARE.
     </main>
     <footer class="footer" aria-label="Chân trang">
       <div class="container footer-compact">
-        <a class="logo" href="#top" aria-label="Về đầu trang hocluc.com">
-          <span class="wordmark">hocluc<span class="logo-dot">.</span>com</span>
-        </a>
+        <a class="logo" href="#top" aria-label="Về đầu trang hocluc.com"><hocluc-logo size="24"></hocluc-logo></a>
         <nav class="footer-nav" aria-label="Điều hướng cuối trang">
           <a href="#chuong-trinh">Chương trình học</a>
           <a href="#lo-trinh">Cách học</a>

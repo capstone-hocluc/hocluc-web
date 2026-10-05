@@ -24,7 +24,7 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'min-h-[38px] cursor-pointer rounded-[10px] px-5 text-sm font-black whitespace-nowrap text-text-secondary transition-colors hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary/25 data-[state=active]:bg-surface data-[state=active]:text-primary data-[state=active]:shadow-[0_8px_18px_rgba(27,77,228,0.12)]',
+        'min-h-[38px] cursor-pointer rounded-[10px] px-5 text-sm font-black whitespace-nowrap text-text-secondary transition-colors hover:text-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary/25 data-[state=active]:bg-surface data-[state=active]:text-primary data-[state=active]:shadow-[0_8px_18px_rgba(28, 176, 246,0.12)]',
         className
       )}
       {...props}

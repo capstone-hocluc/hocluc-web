@@ -22,7 +22,7 @@ function OnboardingRail() {
       <div
         className={cn(
           railCard,
-          "relative overflow-hidden border-transparent bg-[linear-gradient(145deg,var(--color-primary)_0%,var(--color-primary-dark)_70%,#0d247f_100%)] text-surface shadow-[0_24px_44px_rgba(27,77,228,0.22)] after:absolute after:-right-[50px] after:-bottom-[70px] after:size-[180px] after:rounded-full after:bg-[rgba(251,195,79,0.16)] after:blur-[6px] after:content-['']"
+          "relative overflow-hidden border-transparent bg-[linear-gradient(145deg,var(--color-primary)_0%,var(--color-primary-dark)_70%,#0d247f_100%)] text-surface shadow-[0_24px_44px_rgba(28, 176, 246,0.22)] after:absolute after:-right-[50px] after:-bottom-[70px] after:size-[180px] after:rounded-full after:bg-[rgba(251,195,79,0.16)] after:blur-[6px] after:content-['']"
         )}
       >
         <span className={cn(railKicker, 'relative z-1 text-white/78')}>Lộ trình tinh gọn</span>

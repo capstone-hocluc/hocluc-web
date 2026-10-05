@@ -7,7 +7,7 @@ function SearchInput({ className, ...props }: Omit<ComponentProps<'input'>, 'typ
   return (
     <label
       className={cn(
-        'flex min-h-10 min-w-70 items-center gap-2 rounded-xl border border-line-blue bg-surface px-3.5 text-text-faint focus-within:border-primary/55 focus-within:shadow-[0_0_0_4px_rgba(27,77,228,0.09)] max-[560px]:min-w-0 max-[560px]:flex-1',
+        'flex min-h-10 min-w-70 items-center gap-2 rounded-xl border border-line-blue bg-surface px-3.5 text-text-faint focus-within:border-primary/55 focus-within:shadow-[0_0_0_4px_rgba(28, 176, 246,0.09)] max-[560px]:min-w-0 max-[560px]:flex-1',
         className
       )}
     >

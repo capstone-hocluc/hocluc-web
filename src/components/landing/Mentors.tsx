@@ -1,4 +1,5 @@
-import { Reveal, ImageSlot } from '../common/motion'
+import { UserRound } from 'lucide-react'
+import { Reveal } from '../common/motion'
 import SectionHeading from '../common/SectionHeading'
 import { experts } from '../../data/content'
 
@@ -12,7 +13,7 @@ function Mentors() {
         padding: '90px 0',
         background: '#F6F8FE',
         backgroundImage:
-          'linear-gradient(rgba(29,120,155,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(29,120,155,.05) 1px, transparent 1px)',
+          'linear-gradient(rgba(28, 176, 246,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(28, 176, 246,.05) 1px, transparent 1px)',
         backgroundSize: '40px 40px',
       }}
     >
@@ -40,8 +41,30 @@ function Mentors() {
                 cursor: 'pointer',
               }}
             >
-              <div style={{ height: 210, background: '#E7EDFB' }}>
-                <ImageSlot src={ep.image} alt={ep.name} />
+              <div
+                aria-hidden="true"
+                style={{
+                  height: 210,
+                  display: 'grid',
+                  placeItems: 'center',
+                  background: 'linear-gradient(145deg, #eaf8fc, #f7fcfe)',
+                }}
+              >
+                <span
+                  style={{
+                    width: 92,
+                    height: 92,
+                    display: 'grid',
+                    placeItems: 'center',
+                    borderRadius: '50%',
+                    border: '3px solid #fff',
+                    background: 'var(--color-primary-soft)',
+                    color: 'var(--color-primary-text)',
+                    boxShadow: '0 10px 24px rgba(28,176,246,.14)',
+                  }}
+                >
+                  <UserRound size={32} strokeWidth={1.8} />
+                </span>
               </div>
               <div style={{ padding: '16px 14px', textAlign: 'center' }}>
                 <h4

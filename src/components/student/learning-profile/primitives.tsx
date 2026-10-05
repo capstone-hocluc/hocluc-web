@@ -55,7 +55,7 @@ export function ProfileHeading({
       {action && (
         <Button
           appearance="outline"
-          className="h-auto min-h-[34px] rounded-[10px] border-[#c8d7ff] px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-[#f4f8ff]"
+          className="h-auto min-h-[34px] rounded-[10px] border-[#bde8f8] px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-[#f0faff]"
           onClick={onAction}
         >
           {action}

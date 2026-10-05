@@ -11,7 +11,7 @@ function Features() {
         padding: '90px 0',
         background: '#F6F8FE',
         backgroundImage:
-          'linear-gradient(rgba(29,120,155,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(29,120,155,.05) 1px, transparent 1px)',
+          'linear-gradient(rgba(28, 176, 246,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(28, 176, 246,.05) 1px, transparent 1px)',
         backgroundSize: '40px 40px',
       }}
     >
@@ -32,7 +32,7 @@ function Features() {
             style={{
               position: 'absolute',
               inset: -14,
-              border: '1.5px solid rgba(29,120,155,.4)',
+              border: '1.5px solid rgba(28, 176, 246,.4)',
               borderRadius: 22,
             }}
           />
@@ -42,7 +42,7 @@ function Features() {
               height: 430,
               borderRadius: 16,
               overflow: 'hidden',
-              boxShadow: '0 30px 60px -28px rgba(29,120,155,.5)',
+              boxShadow: '0 30px 60px -28px rgba(28, 176, 246,.5)',
             }}
           >
             <ImageSlot src={media.feature} alt="Nhóm học tập" />
@@ -55,7 +55,7 @@ function Features() {
               background: '#fff',
               borderRadius: 16,
               padding: '16px 20px',
-              boxShadow: '0 20px 44px -18px rgba(29,120,155,.5)',
+              boxShadow: '0 20px 44px -18px rgba(28, 176, 246,.5)',
               display: 'flex',
               alignItems: 'center',
               gap: 14,

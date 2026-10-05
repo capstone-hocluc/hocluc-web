@@ -24,7 +24,7 @@ function MascotState({ title, message, actionLabel, onAction, className }: Masco
         src="/owl-mascot4.png"
         alt=""
         aria-hidden="true"
-        className="size-[92px] object-contain drop-shadow-[0_10px_16px_rgba(27,77,228,0.12)]"
+        className="size-[92px] object-contain drop-shadow-[0_10px_16px_rgba(28, 176, 246,0.12)]"
       />
       <strong className="text-[15px] font-black text-text-heading">{title}</strong>
       {message && <p className="m-0 text-[13.5px]">{message}</p>}

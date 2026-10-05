@@ -44,7 +44,7 @@ export function TeacherAiPanel({
   onQuickAction,
 }: TeacherAiPanelProps) {
   return (
-    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-[22px] border border-[#cfe0ff] bg-[#f3f6fc] shadow-[0_22px_46px_rgba(27,77,228,0.16)] max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
+    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-[22px] border border-[#c6eaf8] bg-[#f3f6fc] shadow-[0_22px_46px_rgba(28, 176, 246,0.16)] max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
       <div className="flex shrink-0 items-center justify-between gap-2.5 bg-primary-bright px-3.5 py-[15px] text-surface">
         <img
           src="/owl-support-headset.png"
@@ -94,7 +94,7 @@ export function TeacherAiPanel({
             appearance="outline"
             shape="pill"
             size="sm"
-            className="h-auto border-line-blue bg-[#f5f8ff] px-[9px] py-[7px] text-[11px] font-semibold"
+            className="h-auto border-line-blue bg-[#f0faff] px-[9px] py-[7px] text-[11px] font-semibold"
             onClick={() => onQuickAction(action)}
           >
             {action}

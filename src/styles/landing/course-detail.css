@@ -561,7 +561,7 @@
 .hl-cd-stats,
 .hl-cd-section,
 .hl-cd-enroll-card {
-  border: 1px solid #e0e7f3;
+  border: 1px solid #deeff7;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 12px 26px rgba(17, 24, 58, 0.045);
@@ -584,7 +584,7 @@
 }
 
 .hl-cd-badge.is-exam {
-  background: #eaf1ff;
+  background: #eaf8fc;
 }
 
 .hl-cd-title {
@@ -606,7 +606,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  border: 1px solid #dce7f7;
+  border: 1px solid #d9eff9;
   border-radius: 999px;
   background: #fbfcff;
   color: var(--color-text-dim);
@@ -623,7 +623,7 @@
   height: 32px;
   padding: 7px;
   border-radius: 11px;
-  background: #eaf1ff;
+  background: #eaf8fc;
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -717,7 +717,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 11px;
-  background: #eaf1ff;
+  background: #eaf8fc;
   color: var(--color-primary);
 }
 

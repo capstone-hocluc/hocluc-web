@@ -84,7 +84,7 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
           {targetLessonId && (
             <Button
               size="lg"
-              className="shadow-[0_12px_20px_rgba(27,77,228,0.14)]"
+              className="shadow-[0_12px_20px_rgba(28, 176, 246,0.14)]"
               onClick={() => onOpenLesson(targetLessonId)}
             >
               {hasContinueTarget ? 'Tiếp tục học' : 'Bắt đầu học'}

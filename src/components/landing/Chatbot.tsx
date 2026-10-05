@@ -224,7 +224,7 @@ function Chatbot() {
             width: 84,
             height: 84,
             borderRadius: '50%',
-            boxShadow: '0 16px 34px -10px rgba(29,120,155,.5)',
+            boxShadow: '0 16px 34px -10px rgba(28, 176, 246,.5)',
             animation: 'hl-pulse 3s infinite',
             overflow: 'hidden',
             display: 'block',

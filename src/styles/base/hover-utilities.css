@@ -6,7 +6,7 @@
 }
 .hl-nav:hover {
   color: var(--color-primary) !important;
-  background-color: rgba(27, 77, 228, 0.08);
+  background-color: rgba(28, 176, 246, 0.08);
 }
 
 .hl-by {
@@ -43,7 +43,7 @@
 }
 .hl-bb:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 28px -10px rgba(29, 120, 155, 0.5);
+  box-shadow: 0 14px 28px -10px rgba(28, 176, 246, 0.5);
 }
 
 .hl-ob {
@@ -62,7 +62,7 @@
 }
 .hl-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 26px 50px -22px rgba(29, 120, 155, 0.5);
+  box-shadow: 0 26px 50px -22px rgba(28, 176, 246, 0.5);
   border-color: var(--color-primary) !important;
 }
 
@@ -73,7 +73,7 @@
 }
 .hl-rmcard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 24px 48px -24px rgba(29, 120, 155, 0.5);
+  box-shadow: 0 24px 48px -24px rgba(28, 176, 246, 0.5);
 }
 
 .hl-slide {
@@ -83,7 +83,7 @@
 }
 .hl-slide:hover {
   transform: translateX(6px);
-  box-shadow: 0 16px 32px -20px rgba(29, 120, 155, 0.5);
+  box-shadow: 0 16px 32px -20px rgba(28, 176, 246, 0.5);
 }
 
 .hl-chip {

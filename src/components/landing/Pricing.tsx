@@ -79,8 +79,8 @@ function Pricing() {
                   padding: '30px 26px',
                   background: pop ? 'linear-gradient(180deg,var(--color-primary),var(--color-primary-dark))' : '#fff',
                   boxShadow: pop
-                    ? '0 34px 64px -22px rgba(29,120,155,.55)'
-                    : '0 18px 40px -28px rgba(29,120,155,.4)',
+                    ? '0 34px 64px -22px rgba(28, 176, 246,.55)'
+                    : '0 18px 40px -28px rgba(28, 176, 246,.4)',
                   transform: pop ? 'translateY(-12px)' : 'none',
                 }}
               >

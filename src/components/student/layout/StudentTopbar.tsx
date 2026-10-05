@@ -84,7 +84,7 @@ function StudentTopbar({
               aria-label="Thông báo"
               className={cn(
                 iconButton,
-                'size-[42px] rounded-full bg-[#f8faff] text-text-heading shadow-none max-[760px]:size-11'
+                'size-[42px] rounded-full bg-[#f7fcfe] text-text-heading shadow-none max-[760px]:size-11'
               )}
             >
               <Bell size={18} />

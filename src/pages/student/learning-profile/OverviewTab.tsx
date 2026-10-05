@@ -130,7 +130,7 @@ function UnifiedCompetencySection() {
   return (
     <ProfileCard
       as="section"
-      className="relative grid grid-cols-[minmax(210px,0.24fr)_minmax(0,0.76fr)] items-stretch gap-[22px] overflow-hidden bg-transparent bg-[linear-gradient(rgba(27,77,228,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(27,77,228,0.045)_1px,transparent_1px),linear-gradient(135deg,rgba(248,251,255,0.98),rgba(255,255,255,0.92))] bg-[length:26px_26px,26px_26px,auto] p-5 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_12%_18%,rgba(49,168,255,0.08),transparent_28%),radial-gradient(circle_at_86%_8%,rgba(27,77,228,0.07),transparent_24%)] before:content-[''] max-[1181px]:grid-cols-1 [&>*]:relative [&>*]:z-1"
+      className="relative grid grid-cols-[minmax(210px,0.24fr)_minmax(0,0.76fr)] items-stretch gap-[22px] overflow-hidden bg-transparent bg-[linear-gradient(rgba(28, 176, 246,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(28, 176, 246,0.045)_1px,transparent_1px),linear-gradient(135deg,rgba(248,251,255,0.98),rgba(255,255,255,0.92))] bg-[length:26px_26px,26px_26px,auto] p-5 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_12%_18%,rgba(49,168,255,0.08),transparent_28%),radial-gradient(circle_at_86%_8%,rgba(28, 176, 246,0.07),transparent_24%)] before:content-[''] max-[1181px]:grid-cols-1 [&>*]:relative [&>*]:z-1"
     >
       <OverallCompetencySummary />
       <ComponentSection
@@ -204,7 +204,7 @@ function AchievementCard({ onAction }) {
         </strong>
         <Button
           appearance="ghost"
-          className="h-auto rounded-full border-0 bg-[#f3f6ff] px-2.5 py-[7px] text-[11px] font-black hover:bg-[#f3f6ff]"
+          className="h-auto rounded-full border-0 bg-[#f0faff] px-2.5 py-[7px] text-[11px] font-black hover:bg-[#f0faff]"
           onClick={onAction}
         >
           Xem tất cả
@@ -267,7 +267,7 @@ function AnalysisResult({ analysis }) {
   )
 }
 
-const detailBox = 'rounded-[14px] border border-line-shell bg-[#f8faff] p-3.5'
+const detailBox = 'rounded-[14px] border border-line-shell bg-[#f7fcfe] p-3.5'
 
 function AiInsightDetailModal({ insight, analysis, isOpen, onClose }) {
   if (!insight || !analysis) return null
@@ -342,7 +342,7 @@ function AiLearningAssistant({ analysis, isAnalyzing, onAnalyze, onOpenHistory }
           'rounded-[20px] border-[#d7e5fa] bg-surface p-2.5 shadow-[0_12px_26px_rgba(17,24,58,0.045)]'
       )}
     >
-      <section className="relative min-h-[82px] min-w-0 rounded-[18px] border border-[#cfe0ff] bg-linear-to-b from-[#3c97ff] to-primary p-2.5 shadow-[0_14px_26px_rgba(27,77,228,0.16)] max-[760px]:min-h-0 max-[760px]:p-3.5">
+      <section className="relative min-h-[82px] min-w-0 rounded-[18px] border border-[#c6eaf8] bg-linear-to-b from-[#3c97ff] to-primary p-2.5 shadow-[0_14px_26px_rgba(28, 176, 246,0.16)] max-[760px]:min-h-0 max-[760px]:p-3.5">
         <div className="relative z-2 -mr-0.5 grid min-w-0 grid-cols-[minmax(126px,auto)_minmax(0,1fr)] items-center gap-2.5 rounded-[17px] border border-white/72 bg-surface p-2 shadow-[0_14px_28px_rgba(12,37,118,0.16)] max-[760px]:mr-0 max-[760px]:grid-cols-1 max-[760px]:p-3">
           <Button className={bannerButton} onClick={onAnalyze} disabled={isAnalyzing}>
             {isAnalyzing ? 'Đang phân tích...' : analysis ? 'Cập nhật phân tích' : 'Phân tích ngay'}
@@ -396,7 +396,7 @@ function AiAnalysisHistoryModal({ isOpen, onClose }) {
           return (
             <article
               key={item.id}
-              className="rounded-2xl border border-line-shell bg-[#f8faff] p-3.5"
+              className="rounded-2xl border border-line-shell bg-[#f7fcfe] p-3.5"
             >
               <div className="mb-2 flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-1">
                 <strong className={historyStrong}>{item.createdAt}</strong>
@@ -428,7 +428,7 @@ function AchievementHistoryModal({ isOpen, onClose }) {
         {learningProfilePage.achievements.map((item) => (
           <article
             key={item.id}
-            className="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line-shell bg-[#f8faff] p-3.5 max-[760px]:grid-cols-[42px_minmax(0,1fr)] max-[760px]:items-start"
+            className="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line-shell bg-[#f7fcfe] p-3.5 max-[760px]:grid-cols-[42px_minmax(0,1fr)] max-[760px]:items-start"
           >
             <IconTile tone={achievementTone[item.tone] ?? item.tone} size="xl">
               <Award size={17} />

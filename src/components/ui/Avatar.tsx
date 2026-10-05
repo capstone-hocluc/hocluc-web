@@ -19,7 +19,7 @@ function Avatar({ src, alt = '', fallback, className, ...props }: AvatarProps) {
       {...props}
     >
       <AvatarPrimitive.Image src={src} alt={alt} className="size-full object-cover" />
-      <AvatarPrimitive.Fallback className="grid size-full place-items-center bg-primary-soft text-sm font-bold text-primary">
+      <AvatarPrimitive.Fallback className="grid size-full place-items-center bg-primary-soft text-sm font-bold text-primary-text">
         {fallback}
       </AvatarPrimitive.Fallback>
     </AvatarPrimitive.Root>

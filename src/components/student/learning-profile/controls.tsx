@@ -10,7 +10,7 @@ const list = cva('', {
       page: 'inline-flex gap-1.5 rounded-[14px] border border-line-blue bg-surface p-[5px] shadow-[0_10px_22px_rgba(17,24,58,0.04)] max-[760px]:w-full max-[760px]:overflow-x-auto',
       // Source switch inside a card (AI phân tích / Nhận xét giáo viên).
       source:
-        'inline-flex gap-1.5 rounded-[14px] border border-line-blue bg-[#f8faff] p-[5px] max-[760px]:grid max-[760px]:w-full max-[760px]:grid-cols-1',
+        'inline-flex gap-1.5 rounded-[14px] border border-line-blue bg-[#f7fcfe] p-[5px] max-[760px]:grid max-[760px]:w-full max-[760px]:grid-cols-1',
       // Round filter chips.
       chip: 'mb-3 flex flex-wrap gap-2',
     },
@@ -31,12 +31,12 @@ const tab = cva('cursor-pointer font-black', {
     {
       variant: 'page',
       active: true,
-      className: 'bg-primary text-surface shadow-[0_8px_18px_rgba(27,77,228,0.18)]',
+      className: 'bg-primary text-surface shadow-[0_8px_18px_rgba(28, 176, 246,0.18)]',
     },
     {
       variant: 'source',
       active: true,
-      className: 'border-primary bg-primary text-surface shadow-[0_8px_18px_rgba(27,77,228,0.16)]',
+      className: 'border-primary bg-primary text-surface shadow-[0_8px_18px_rgba(28, 176, 246,0.16)]',
     },
     {
       variant: 'chip',
@@ -152,8 +152,8 @@ export function ComparisonDropdown<T extends ComparisonOption>({
               role="option"
               aria-selected={selected.key === option.key}
               className={cn(
-                'min-h-[34px] w-full cursor-pointer rounded-[10px] px-2.5 text-left text-[12px] font-[850] text-text-heading-muted hover:bg-[#eef3ff] hover:text-primary',
-                selected.key === option.key && 'bg-[#eef3ff] text-primary'
+                'min-h-[34px] w-full cursor-pointer rounded-[10px] px-2.5 text-left text-[12px] font-[850] text-text-heading-muted hover:bg-[#f0faff] hover:text-primary',
+                selected.key === option.key && 'bg-[#f0faff] text-primary'
               )}
               onClick={() => {
                 onChange(option)
