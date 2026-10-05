@@ -6,6 +6,14 @@ function Logo({ light = false, size = 56 }) {
     ...(light ? { light: '' } : {}),
     'aria-label': 'hocluc.com',
     role: 'img',
+    style: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      flexShrink: 0,
+      width: 'max-content',
+      maxWidth: '100%',
+      whiteSpace: 'nowrap',
+    },
   })
 }
 

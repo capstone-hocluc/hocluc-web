@@ -68,57 +68,69 @@ function AdminLoginPage({
   }
 
   return (
-    <main className="relative grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-      <ThemeToggle className="absolute top-4 right-4 border border-border-primary bg-surface text-primary-text" />
+    <main
+      className="relative grid min-h-screen place-items-center overflow-hidden px-4 py-7"
+      style={{
+        backgroundColor: '#f0faff',
+        backgroundImage:
+          'linear-gradient(rgba(28,176,246,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(28,176,246,.045) 1px, transparent 1px), radial-gradient(circle at 50% 0%, rgba(88,204,237,.2), transparent 42%)',
+        backgroundSize: '40px 40px, 40px 40px, auto',
+      }}
+    >
+      <ThemeToggle className="absolute top-4 right-4 border border-[#bde8f8] bg-white/90 text-[#0b76a8]" />
       <section
-        className="w-full max-w-[420px] rounded-2xl border border-border-primary bg-surface p-8 shadow-[0_24px_60px_-36px_rgba(24,48,68,0.35)] sm:p-9"
+        className="relative z-10 w-full max-w-[390px] rounded-[26px] border border-[#d5eef9] bg-white/95 p-6 shadow-[0_28px_70px_-42px_rgba(0,125,181,.38)] sm:p-7"
         aria-labelledby="admin-login-title"
       >
-        <div className="mb-6 flex justify-center">
-          <Logo />
+        <div className="mb-4 flex min-h-7 w-full justify-center">
+          <Logo size={34} />
         </div>
 
-        <div className="mb-6 text-center">
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold tracking-[0.12em] text-primary">
-            <ShieldCheck size={14} aria-hidden="true" />
+        <div className="mb-5 text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf8fc] px-3 py-1 text-[10px] font-extrabold tracking-[0.12em] text-[#0b76a8]">
+            <ShieldCheck size={13} aria-hidden="true" />
             {eyebrow}
           </span>
-          <h1 id="admin-login-title" className="mt-2 text-[28px] font-bold leading-tight text-text-heading">
+          <h1 id="admin-login-title" className="mt-3 text-[24px] font-black leading-tight tracking-[-0.03em] text-[#14264a]">
             {title}
           </h1>
-          <p className="mt-2 text-sm leading-6 text-text-body">
+          <p className="mx-auto mt-2 max-w-[305px] text-[13px] leading-5 text-text-body">
             {description}
           </p>
         </div>
 
-        <form className="grid gap-2" onSubmit={handleSubmit}>
-          <label htmlFor="admin-email" className="mt-2 text-[13px] font-bold text-text-strong">
-            Email
-          </label>
-          <input
-            id="admin-email"
-            type="email"
-            autoComplete="username"
-            placeholder="admin@gmail.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            disabled={loading}
-            className="h-11 w-full rounded-lg border border-border-primary bg-surface-soft px-3.5 text-[15px] text-text-heading outline-none transition-colors placeholder:text-text-subtle focus:border-primary focus:ring-3 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
-          />
+        <form className="grid gap-3" onSubmit={handleSubmit}>
+          <div className="grid gap-1.5">
+            <label htmlFor="admin-email" className="text-[12px] font-bold text-[#334b5d]">
+              Email
+            </label>
+            <input
+              id="admin-email"
+              type="email"
+              autoComplete="username"
+              placeholder="admin@gmail.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              disabled={loading}
+              className="h-10 w-full rounded-xl border border-[#d5eef9] bg-[#f8fdff] px-3.5 text-[14px] text-text-heading outline-none transition-colors placeholder:text-text-subtle focus:border-[#1cb0f6] focus:ring-3 focus:ring-[#1cb0f6]/15 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
 
-          <label htmlFor="admin-password" className="mt-2 text-[13px] font-bold text-text-strong">
-            Mật khẩu
-          </label>
-          <input
-            id="admin-password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Nhập mật khẩu"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            disabled={loading}
-            className="h-11 w-full rounded-lg border border-border-primary bg-surface-soft px-3.5 text-[15px] text-text-heading outline-none transition-colors placeholder:text-text-subtle focus:border-primary focus:ring-3 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
-          />
+          <div className="grid gap-1.5">
+            <label htmlFor="admin-password" className="text-[12px] font-bold text-[#334b5d]">
+              Mật khẩu
+            </label>
+            <input
+              id="admin-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Nhập mật khẩu"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              disabled={loading}
+              className="h-10 w-full rounded-xl border border-[#d5eef9] bg-[#f8fdff] px-3.5 text-[14px] text-text-heading outline-none transition-colors placeholder:text-text-subtle focus:border-[#1cb0f6] focus:ring-3 focus:ring-[#1cb0f6]/15 disabled:cursor-not-allowed disabled:opacity-60"
+            />
+          </div>
 
           {error && (
             <p className="mt-2 text-[13px] leading-5 text-danger" role="alert">
@@ -126,15 +138,20 @@ function AdminLoginPage({
             </p>
           )}
 
-          <Button type="submit" size="md" className="mt-4 h-11 w-full" disabled={loading}>
-            <LockKeyhole size={17} aria-hidden="true" />
+          <Button
+            type="submit"
+            size="md"
+            className="mt-1 h-11 w-full rounded-xl bg-[#1cb0f6] text-[13px] font-extrabold text-white shadow-[0_4px_0_#078fc4] transition hover:-translate-y-0.5 hover:bg-[#1cb0f6] hover:shadow-[0_5px_0_#078fc4] active:translate-y-0.5 active:shadow-none"
+            disabled={loading}
+          >
+            <LockKeyhole size={16} aria-hidden="true" />
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
         </form>
 
         <button
           type="button"
-          className="mx-auto mt-[18px] flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] text-text-body transition-colors hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="mx-auto mt-3 flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-semibold text-text-body transition-colors hover:text-primary-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           onClick={onBack}
         >
           <ArrowLeft size={15} aria-hidden="true" />

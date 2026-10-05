@@ -34,11 +34,11 @@ function Sidebar({ open, onClose, brand, roleLabel, children, user, onUserClick,
           open && 'translate-x-0'
         )}
       >
-        <div className="flex items-center justify-between px-3 pb-8">
+        <div className="relative flex items-center justify-center px-3 pb-8">
           {brand}
           <button
             type="button"
-            className="grid place-items-center text-text-muted lg:hidden"
+            className="absolute right-0 grid place-items-center text-text-muted lg:hidden"
             onClick={onClose}
             aria-label="Đóng menu"
           >
