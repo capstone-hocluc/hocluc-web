@@ -35,9 +35,9 @@ export interface QuizDetail {
   type: string
   title: string
   description: string | null
-  durationMinutes: number
+  durationMinutes: number | null
   maxAttempts: number
-  passingPercentage: number
+  passingPercentage: number | null
   showAnswers: boolean
   questionCount: number
   sectionCourseId: string | null
@@ -47,7 +47,7 @@ export interface QuizDetail {
   lessonId: string | null
   lessonTitle: string | null
   attemptsUsed: number
-  bestPercentage: number
+  bestPercentage: number | null
   passed: boolean
   locked: boolean
   lockReason: string | null

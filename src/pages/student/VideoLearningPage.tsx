@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   findCourseActivity,
   getActivityRouteType,
@@ -8,10 +8,12 @@ import {
 import { usePageResource } from '../../hooks/usePageResource'
 import { useTransientMessage } from '../../hooks/useTransientMessage'
 import { cn } from '../../lib/cn'
+import { getErrorMessage } from '../../lib/errors'
 import { buildRealVideoSource } from '../../lib/studentViewModel'
 import { getCourseStudy } from '../../services/courseService'
-import { getLesson } from '../../services/lessonService'
+import { getLesson, updateLessonProgress } from '../../services/lessonService'
 import MascotState from '../../components/common/MascotState'
+import LessonContent from '../../components/lesson/LessonContent'
 import StudentToast from '../../components/student/common/StudentToast'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import LessonDrawer from '../../components/student/video/LessonDrawer'
@@ -22,6 +24,7 @@ import type { VideoActivity, VideoContext } from '../../components/student/video
 import VideoPlayer from '../../components/student/video/VideoPlayer'
 import Card from '../../components/ui/Card'
 import Skeleton from '../../components/ui/Skeleton'
+import { showErrorToast, showSuccessToast } from '../../lib/toastBus'
 
 interface VideoLearningPageProps {
   courseId: string
@@ -50,6 +53,10 @@ function VideoLearningPage({
     activityId: null,
     messages: [],
   })
+  const watchSecondsRef = useRef(0)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const savingProgressRef = useRef(false)
+  const [completing, setCompleting] = useState(false)
 
   const mockContext = findCourseActivity(courseId, activityId)
   const real = usePageResource(
@@ -71,6 +78,56 @@ function VideoLearningPage({
   const context: VideoContext | null = source?.context ?? null
   const lessons = source?.lessons ?? []
   const adjacent = source?.adjacent ?? { previous: null, next: null }
+  const realLesson = !mockContext && real.data?.lesson?.id === activityId ? real.data.lesson : null
+
+  useEffect(() => {
+    watchSecondsRef.current = Math.max(0, realLesson?.progress?.watchDurationSeconds ?? 0)
+  }, [activityId, realLesson?.id, realLesson?.progress?.watchDurationSeconds])
+
+  const saveRealLessonProgress = async (completed: boolean) => {
+    if (!realLesson?.owned || savingProgressRef.current) return null
+    savingProgressRef.current = true
+    let watchDurationSeconds = Math.max(0, Math.floor(watchSecondsRef.current))
+    if (realLesson.durationSeconds && realLesson.durationSeconds > 0) {
+      watchDurationSeconds = Math.min(watchDurationSeconds, realLesson.durationSeconds)
+    }
+    try {
+      const updated = await updateLessonProgress(realLesson.id, { completed, watchDurationSeconds })
+      real.setData((current) =>
+        current ? { ...current, lesson: { ...current.lesson, progress: updated } } : current
+      )
+      return updated
+    } catch (error) {
+      showErrorToast(getErrorMessage(error))
+      return null
+    } finally {
+      savingProgressRef.current = false
+    }
+  }
+
+  const handleTimeUpdate = () => {
+    const current = videoRef.current?.currentTime ?? 0
+    watchSecondsRef.current = Math.max(watchSecondsRef.current, Math.floor(current))
+  }
+
+  const completeLesson = async () => {
+    if (mockContext) {
+      showMessage('Tiến độ bài học đã được cập nhật mô phỏng.')
+      return
+    }
+    if (!realLesson?.owned) {
+      showMessage('Tiến độ của bài học xem trước không được lưu.')
+      return
+    }
+    if (completing || savingProgressRef.current) return
+    setCompleting(true)
+    try {
+      const updated = await saveRealLessonProgress(true)
+      if (updated) showSuccessToast('Đã đánh dấu hoàn thành bài học.')
+    } finally {
+      setCompleting(false)
+    }
+  }
 
   useEffect(() => {
     const closeFloating = (event: KeyboardEvent) => {
@@ -104,6 +161,7 @@ function VideoLearningPage({
       showMessage('Nội dung này đang được phát triển.')
       return false
     }
+    if (realLesson) void saveRealLessonProgress(false)
     onNavigateActivity(courseId, routeType, activity.id)
     return true
   }
@@ -150,9 +208,12 @@ function VideoLearningPage({
         previous={adjacent.previous}
         next={adjacent.next}
         onOpenDrawer={() => setDrawerOpen(true)}
-        onCourses={onCourses}
+        onCourses={() => {
+          if (realLesson) void saveRealLessonProgress(false)
+          onCourses()
+        }}
         onNavigateActivity={navigateActivity}
-        onComplete={() => showMessage('Tiến độ bài học đã được cập nhật mô phỏng.')}
+        onComplete={() => void completeLesson()}
       />
       <div
         className={cn(
@@ -161,7 +222,18 @@ function VideoLearningPage({
             'grid-cols-[minmax(0,1fr)_minmax(340px,390px)] gap-[18px] [place-items:center_stretch] max-[760px]:grid-cols-1'
         )}
       >
-        <VideoPlayer activity={context.activity} />
+        {mockContext ? (
+          <VideoPlayer activity={context.activity} />
+        ) : realLesson ? (
+          <div className="w-full max-w-[1280px]">
+            <LessonContent
+              lesson={realLesson}
+              videoRef={videoRef}
+              onTimeUpdate={handleTimeUpdate}
+              onPause={() => void saveRealLessonProgress(false)}
+            />
+          </div>
+        ) : null}
         {aiOpen ? (
           <TeacherAiPanel
             lessonTitle={context.activity.title}

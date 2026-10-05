@@ -84,7 +84,7 @@ function CourseDetail({ course, onBack, onAction, onOpenQuiz, onOpenAssignments 
     setContentModalOpen(false)
     onAction(`Đã thêm “${newModule.title}” vào nội dung lớp.`)
   }
-  if (editingLesson) return <TeacherLessonEditor course={course} lesson={editingLesson} onBack={() => setEditingLesson(null)} onNotify={onAction} />
+  if (editingLesson) return <TeacherLessonEditor course={course} lesson={editingLesson} onBack={() => setEditingLesson(null)} />
   return (
     <section className="hl-teacher-course-management">
       <button type="button" className="hl-teacher-text-back" onClick={onBack}>

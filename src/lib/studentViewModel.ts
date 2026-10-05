@@ -271,11 +271,11 @@ export function buildRealVideoSource(lesson: LessonDetail, study: CourseStudy) {
       title: lesson.title,
       type: lesson.contentType === 'VIDEO' ? 'Video' : 'Bài học',
       duration: `${Math.max(1, Math.round((lesson.durationSeconds || 0) / 60))} phút`,
-      videoUrl: lesson.owned || lesson.preview ? lesson.videoUrl : null,
     },
   }
   const byId = (id: string | null) => items.find((item) => item.activity.id === id) || null
   return {
+    lesson,
     context: { ...current, course: { title: study.title } },
     lessons: items,
     adjacent: { previous: byId(lesson.previousLessonId), next: byId(lesson.nextLessonId) },

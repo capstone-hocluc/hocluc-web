@@ -1,0 +1,20 @@
+.landing-v2-host {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #f0faff;
+}
+
+.landing-v2-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #f0faff;
+}
+
+.landing-v2-frame:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: -3px;
+}

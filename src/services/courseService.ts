@@ -50,12 +50,12 @@ export async function getSuggestedCourses() {
 export interface CourseLesson {
   id: string
   title: string
-  description?: string
+  description?: string | null
   contentType?: string
-  durationSeconds?: number
+  durationSeconds?: number | null
   sequence?: number
   preview?: boolean
-  videoUrl?: string
+  videoUrl?: string | null
   quizCount?: number
   assignmentCount?: number
 }
@@ -127,23 +127,54 @@ export interface CourseStudyQuiz {
   type: string
   title: string
   questionCount: number
-  durationMinutes: number
+  durationMinutes: number | null
   maxAttempts: number
-  passingPercentage: number
+  passingPercentage: number | null
   showAnswers: boolean
   attemptsUsed: number
-  bestPercentage: number
+  bestPercentage: number | null
   passed: boolean
   locked: boolean
   lockReason: string | null
   inProgressAttemptId: string | null
 }
 
+// Summary returned by GET /courses/{courseId}/exams and used by the existing
+// QuizDetail route for the authoritative attempt/availability state.
+export interface CourseExamSummary {
+  id: string
+  type: string
+  title: string
+  questionCount: number
+  durationMinutes: number | null
+  maxAttempts: number
+  passingPercentage: number | null
+  showAnswers: boolean
+  availableFrom: string | null
+  availableUntil: string | null
+  practiceAllowed: boolean
+  attemptsUsed: number
+  bestPercentage: number | null
+  passed: boolean
+  locked: boolean
+  lockReason: string | null
+  inProgressAttemptId: string | null
+}
+
+export async function getCourseExams(courseId: string): Promise<CourseExamSummary[]> {
+  const response = await request<CourseExamSummary[]>(
+    `/api/v1/courses/${encodeURIComponent(courseId)}/exams`,
+    { auth: true }
+  )
+  if (!response.data) throw new Error('Không thể tải danh sách bài thi của khóa học.')
+  return response.data
+}
+
 export interface CourseStudyLesson {
   id: string
   title: string
   contentType: string
-  durationSeconds: number
+  durationSeconds: number | null
   sequence: number
   preview: boolean
   status: string

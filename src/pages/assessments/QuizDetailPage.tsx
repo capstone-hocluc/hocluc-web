@@ -87,7 +87,9 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
             <div className="mb-3.5 flex flex-wrap gap-x-[18px] gap-y-2.5 text-[13px] text-text-faint">
               <span>{quiz.questionCount} câu hỏi</span>
               {quiz.durationMinutes > 0 && <span>{quiz.durationMinutes} phút</span>}
-              <span>Điểm đạt: {quiz.passingPercentage}%</span>
+              {quiz.passingPercentage != null && (
+                <span>Điểm đạt: {quiz.passingPercentage}%</span>
+              )}
               <span>
                 Lượt làm: {quiz.attemptsUsed}/{quiz.maxAttempts}
               </span>
@@ -99,7 +101,8 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
                 className="mb-3.5 gap-1.5 px-3 py-1.5 text-[12.5px] font-bold"
               >
                 <CheckCircle2 size={14} />
-                Đã đạt · Kết quả tốt nhất {quiz.bestPercentage}%
+                Đã đạt
+                {quiz.bestPercentage != null && ` · Kết quả tốt nhất ${quiz.bestPercentage}%`}
               </StatusBadge>
             )}
 

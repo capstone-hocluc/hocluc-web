@@ -32,7 +32,7 @@ function QuizRow({ quiz, lockMessage, onOpenQuiz }: QuizRowProps) {
       onClick={() => onOpenQuiz(quiz.id)}
       side={
         <>
-          {quiz.bestPercentage > 0 && (
+          {(quiz.bestPercentage ?? 0) > 0 && (
             <span className="font-extrabold text-practice">{quiz.bestPercentage}%</span>
           )}
           <span>

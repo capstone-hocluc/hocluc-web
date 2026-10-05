@@ -28,7 +28,10 @@ const navGroups = [
 // once by StudentLayout (useHydrateCurrentUser) and read here from context.
 function AccountProfile() {
   const { profile, status, loadCurrentUser } = useCurrentUser()
-  const [activeSection, setActiveSection] = useState('personal')
+  const [activeSection, setActiveSection] = useState(() => {
+    const requestedSection = new URLSearchParams(window.location.search).get('section')
+    return requestedSection === 'student' ? 'student' : 'personal'
+  })
 
   if (!profile) {
     return (

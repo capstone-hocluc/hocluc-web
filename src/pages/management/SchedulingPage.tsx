@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { CalendarPlus, Info, Pencil, RefreshCw, Trash2 } from 'lucide-react'
-import type { Course } from '../../services/courseService'
-import { getMainCourses } from '../../services/courseService'
+import type { Course, CourseSection } from '../../services/courseService'
+import { getCourseDetail, getMainCourses } from '../../services/courseService'
 import { getUsers, type UserSummary } from '../../services/userService'
-import { cancelRecurringClass, getCourseRecurringClasses } from '../../services/recurringClassService'
+import { cancelRecurringClass, createRecurringClass, getCourseRecurringClasses } from '../../services/recurringClassService'
+import { ApiError } from '../../lib/api'
 import {
   createSchedule,
   deleteSchedule as deleteScheduleService,
@@ -16,6 +17,7 @@ import { runWithUnsavedActionGuard, useUnsavedActionGuard } from '../../hooks/us
 import { addLocalDays, itemDateKey, itemSubtitle, localDateLabel, localToday, sortScheduleItems, startOfLocalWeek } from '../../lib/scheduling'
 import type {
   ClassSessionResponse,
+  CreateRecurringClassRequest,
   CreateScheduleRequest,
   RecurringClassResponse,
   DayOfWeek,
@@ -92,6 +94,8 @@ export default function SchedulingPage({ role }: Props) {
   const [mutationBusy, setMutationBusy] = useState(false)
   const [mutationError, setMutationError] = useState('')
   const [notice, setNotice] = useState('')
+  const [recurringCreateUnknown, setRecurringCreateUnknown] = useState(false)
+  const [proposalConfirmationBlockedCourses, setProposalConfirmationBlockedCourses] = useState<Set<string>>(() => new Set())
   const [attendancePanelState, setAttendancePanelState] = useState({ dirty: false, busy: false })
   const unsavedGuard = useUnsavedActionGuard(
     attendancePanelState.dirty,
@@ -102,6 +106,14 @@ export default function SchedulingPage({ role }: Props) {
   const teacherResource = useScheduleResource(role === 'STAFF' ? 'management-teachers' : null, loadTeachers)
   const availableCourses = courses.data ?? []
   const activeCourseId = courseId || availableCourses[0]?.id || ''
+  const courseDetails = useScheduleResource(
+    activeCourseId ? 'management-course-detail:' + activeCourseId : null,
+    async () => requireData(await getCourseDetail(activeCourseId), 'Không thể tải danh sách môn của khóa học.')
+  )
+  const courseSections = useMemo<CourseSection[]>(
+    () => (courseDetails.data?.phases ?? []).flatMap((phase) => phase.sections ?? []),
+    [courseDetails.data]
+  )
   const weekStart = startOfLocalWeek(date)
   const weekEnd = addLocalDays(weekStart, 6)
   const scheduleRange = { startDate: weekStart, endDate: weekEnd }
@@ -139,15 +151,13 @@ export default function SchedulingPage({ role }: Props) {
   const teachers = teacherResource.data ?? []
   const courseSourceWarning =
     'Danh sách chỉ gồm các khóa học đang công khai và mở. Nhân viên có thể tạo lịch đơn trong nhóm này; khóa chưa mở hoặc đã kết thúc không xuất hiện. Giáo viên cần được phân công cho khóa trước khi tạo lịch.'
-  const recurringSourceWarning =
-    'Tạo lịch lặp tạm thời chưa khả dụng vì hệ thống chưa có danh sách lớp để chọn cho khóa học này.'
-
   const changeCourse = (nextCourseId: string | null) => {
     runWithUnsavedActionGuard(() => {
       setCourseId(nextCourseId ?? '')
       setSelectedItem(null)
       setScheduleEditor(null)
       setClassSessionEditor(null)
+      setRecurringEditorOpen(false)
     })
   }
   const changeDate = (nextDate: string) => {
@@ -193,6 +203,27 @@ export default function SchedulingPage({ role }: Props) {
     if (saved) setScheduleEditor(null)
   }
 
+  const saveRecurringClass = async (payload: CreateRecurringClassRequest) => {
+    if (!activeCourseId || recurringCreateUnknown || mutationBusy) return
+    setMutationBusy(true)
+    setMutationError('')
+    setNotice('')
+    try {
+      await createRecurringClass(activeCourseId, payload)
+      setNotice('Đã tạo chuỗi lịch lặp.')
+      calendar.reload()
+      setRecurringEditorOpen(false)
+    } catch (error) {
+      setMutationError(getErrorMessage(error))
+      if (!(error instanceof ApiError) || error.status === 408 || error.status >= 500) {
+        setRecurringCreateUnknown(true)
+        calendar.reload()
+      }
+    } finally {
+      setMutationBusy(false)
+    }
+  }
+
   const saveClassSession = async (payload: UpdateClassSessionRequest) => {
     if (!classSessionEditor) return
     const saved = await runMutation(
@@ -225,6 +256,27 @@ export default function SchedulingPage({ role }: Props) {
         : teacherResource.status === 'ready' && !teachers.length
           ? 'Chưa tải được danh sách giáo viên để tạo lịch.'
         : ''
+  const courseSectionsStatusMessage =
+    courseDetails.status === 'loading'
+      ? 'Đang tải danh sách môn của khóa học.'
+      : courseDetails.status === 'forbidden'
+        ? 'Tài khoản hiện tại không có quyền xem nội dung khóa học.'
+        : courseDetails.status === 'not-found'
+          ? 'Không tìm thấy khóa học đã chọn.'
+          : courseDetails.status === 'error'
+            ? courseDetails.errorMessage || 'Không tải được danh sách môn của khóa học.'
+            : courseDetails.status === 'ready' && !courseSections.length
+              ? 'Khóa học chưa có môn để xếp lịch.'
+              : ''
+  const recurringCreateDisabledReason = courseSectionsStatusMessage ||
+    (teacherResource.status !== 'ready'
+      ? teacherStatusMessage || 'Đang tải danh sách giáo viên.'
+      : !teachers.length
+        ? 'Chưa có giáo viên để tạo lịch lặp.'
+        : '')
+  const recurringCreateButtonReason = recurringCreateUnknown
+    ? 'Kết quả lần tạo trước chưa rõ. Hãy kiểm tra lịch rồi rời và mở lại trang trước khi tạo tiếp.'
+    : recurringCreateDisabledReason
   const scheduleCreateLoading = courses.status === 'loading' || teacherResource.status === 'loading'
 
   return (
@@ -252,10 +304,21 @@ export default function SchedulingPage({ role }: Props) {
             {scheduleCreateLoading ? 'Đang tải dữ liệu…' : 'Tạo lịch đơn'}
           </Button>
         )}
-        <Button appearance="outline" className="max-[767px]:min-h-11" disabled title={recurringSourceWarning} onClick={() => setRecurringEditorOpen(true)}>
-          <CalendarPlus size={16} />
-          Tạo lịch lặp
-        </Button>
+        {role === 'STAFF' && (
+          <Button
+            appearance="outline"
+            className="max-[767px]:min-h-11"
+            disabled={!activeCourseId || recurringCreateButtonReason !== '' || mutationBusy || attendancePanelState.busy}
+            title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch lặp.' : recurringCreateButtonReason || undefined}
+            onClick={() => runWithUnsavedActionGuard(() => {
+              setMutationError('')
+              setRecurringEditorOpen(true)
+            })}
+          >
+            <CalendarPlus size={16} />
+            Tạo lịch lặp
+          </Button>
+        )}
         <Button appearance="ghost" size="icon" className="max-[767px]:size-11" aria-label="Tải lại lịch" onClick={() => {
           runWithUnsavedActionGuard(() => {
             setSelectedItem(null)
@@ -268,10 +331,13 @@ export default function SchedulingPage({ role }: Props) {
 
       <Notice tone="warning">
         <Info size={17} aria-hidden="true" />
-        {courseSourceWarning} Lịch lặp và đề xuất hiện chưa khả dụng; bạn vẫn xem được các lịch đã tạo.
+        {courseSourceWarning} Lịch lặp và đề xuất dùng các môn trong giáo trình của khóa học.
       </Notice>
       {(attendancePanelState.busy || mutationBusy) && (
         <Notice tone="info">Đang lưu dữ liệu. Hãy đợi hoàn tất trước khi rời trang.</Notice>
+      )}
+      {recurringCreateUnknown && (
+        <Notice tone="warning">Kết quả tạo chuỗi lịch lặp chưa rõ. Không gửi lại để tránh trùng; hãy kiểm tra danh sách lịch, sau đó rời và mở lại trang để tiếp tục.</Notice>
       )}
       {(courses.status === 'error' || courses.status === 'forbidden') && (
         <Notice tone={courses.status === 'forbidden' ? 'warning' : 'danger'}>
@@ -355,7 +421,20 @@ export default function SchedulingPage({ role }: Props) {
               </div>
             </ScheduleResourceState>
           </section>
-          <TimetableProposalPanel />
+          <TimetableProposalPanel
+            key={activeCourseId}
+            courseId={activeCourseId}
+            sections={courseSections}
+            sectionsStatus={courseDetails.status}
+            sectionsErrorMessage={courseDetails.errorMessage}
+            confirmationBlocked={proposalConfirmationBlockedCourses.has(activeCourseId)}
+            onConfirmationUnknown={() => {
+              if (activeCourseId) {
+                setProposalConfirmationBlockedCourses((current) => new Set(current).add(activeCourseId))
+              }
+            }}
+            onConfirmed={calendar.reload}
+          />
         </>
       )}
 
@@ -441,11 +520,14 @@ export default function SchedulingPage({ role }: Props) {
       {recurringEditorOpen && (
         <RecurringClassEditor
           teachers={teachers}
-          disabledReason={recurringSourceWarning}
+          sections={courseSections}
+          sectionsLoading={courseDetails.status === 'loading'}
+          disabledReason={recurringCreateDisabledReason}
+          outcomeUnknown={recurringCreateUnknown}
           busy={mutationBusy}
           errorMessage={mutationError}
           onClose={() => setRecurringEditorOpen(false)}
-          onSave={() => setRecurringEditorOpen(false)}
+          onSave={(payload) => void saveRecurringClass(payload)}
         />
       )}
 

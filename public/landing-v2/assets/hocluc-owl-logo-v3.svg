@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Cú hocluc.com"><path d="M11 8 22 13q10-4 20 0L53 8l-2 22c0 17-8 26-19 26S13 47 13 30Z" fill="#1cb0f6"/>
+<path d="M17 26c0-8 9-12 15-5 6-7 15-3 15 5v7c0 10-7 16-15 16s-15-6-15-16Z" fill="#fff"/>
+<ellipse cx="24" cy="30" rx="4" ry="6" fill="#173555"/>
+<ellipse cx="40" cy="30" rx="4" ry="6" fill="#173555"/>
+<circle cx="25" cy="28" r="1.5" fill="#fff"/>
+<circle cx="41" cy="28" r="1.5" fill="#fff"/>
+<path d="m27 38 5-4 5 4-5 6Z" fill="#ffb826"/></svg>
