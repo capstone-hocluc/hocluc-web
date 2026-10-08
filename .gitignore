@@ -39,3 +39,7 @@ AGENTS.md
 
 # Curriculum master data (internal, not for repo)
 docs/master-data/
+
+# Local tools and caches
+.codegraph/
+.pi/
