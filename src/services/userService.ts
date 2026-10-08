@@ -37,6 +37,8 @@ export interface UserProfile {
   language?: string
   status?: UserStatus
   role: UserRole
+  // Not sent by the backend yet; when it is, the role switcher lists these.
+  roles?: UserRole[]
   emailVerified?: boolean
   lastLoginAt?: string
   createdAt?: string

@@ -3,7 +3,8 @@ import { LoaderCircle, ShieldAlert } from 'lucide-react'
 import { clearTokens, getAccessToken } from '../../lib/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Button from '../ui/Button'
-import type { UserRole } from '../../services/userService'
+import { useActiveRole } from '../../hooks/useActiveRole'
+import { roleHome } from '../../lib/role-home'
 
 interface Props {
   children: ReactNode
@@ -11,17 +12,9 @@ interface Props {
   onGoToRole: (path: string) => void
 }
 
-function roleHome(role: UserRole) {
-  if (role === 'TEACHER') return '/teacher/dashboard'
-  if (role === 'STAFF') return '/staff/dashboard'
-  if (role === 'MANAGER') return '/manager/dashboard'
-  if (role === 'ADMINISTRATOR') return '/admin/dashboard'
-  if (role === 'MENTOR') return '/mentor/dashboard'
-  return '/login'
-}
-
 export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Props) {
   const { profile, status, loadCurrentUser, clearCurrentUser } = useCurrentUser()
+  const { activeRole } = useActiveRole()
   const redirecting = useRef(false)
 
   useEffect(() => {
@@ -77,7 +70,8 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
     )
   }
 
-  if (profile.role !== 'STUDENT') {
+  const effectiveRole = activeRole ?? profile.role
+  if (effectiveRole !== 'STUDENT') {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
         <section className="w-full max-w-[460px] rounded-2xl border border-border-subtle bg-surface p-8 text-center">
@@ -87,7 +81,7 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
           <Button
             variant="primary"
             className="mt-5"
-            onClick={() => onGoToRole(roleHome(profile.role))}
+            onClick={() => onGoToRole(roleHome(effectiveRole))}
           >
             Về khu vực của tôi
           </Button>

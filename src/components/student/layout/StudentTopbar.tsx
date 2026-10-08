@@ -1,6 +1,7 @@
 import { Bell, Flame, LogOut, Menu, Settings, User, UserRound } from 'lucide-react'
 import Logo from '../../common/Logo'
 import Avatar from '../../ui/Avatar'
+import RoleSwitcher from '../../ui/RoleSwitcher'
 import Skeleton from '../../ui/Skeleton'
 import {
   DropdownMenu,
@@ -77,6 +78,8 @@ function StudentTopbar({
           <strong className="text-sm whitespace-nowrap max-[760px]:hidden">Khám phá streak</strong>
         </button>
 
+        <RoleSwitcher className="h-[42px] rounded-full max-[760px]:h-11" />
+
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -84,7 +87,7 @@ function StudentTopbar({
               aria-label="Thông báo"
               className={cn(
                 iconButton,
-                'size-[42px] rounded-full bg-[#f7fcfe] text-text-heading shadow-none max-[760px]:size-11'
+                'size-[42px] rounded-full bg-surface-sky text-text-heading shadow-none max-[760px]:size-11'
               )}
             >
               <Bell size={18} />

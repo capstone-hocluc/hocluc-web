@@ -1,6 +1,6 @@
+import TeacherPageHeader, { TeacherBackLink } from './TeacherPageHeader'
 import { useRef, useState } from 'react'
 import {
-  ArrowLeft,
   CheckCircle2,
   Copy,
   FilePlus2,
@@ -170,18 +170,16 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
 
   return (
     <section className="flex flex-col gap-5">
-      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
-        <ArrowLeft size={16} />Quay lại lớp học
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>Bài kiểm tra</h1>
-          <p>Tất cả quiz bạn được quyền quản lý.</p>
-        </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus size={16} />Tạo quiz
-        </Button>
-      </div>
+      <TeacherBackLink onClick={onBack}>Quay lại lớp học</TeacherBackLink>
+      <TeacherPageHeader
+        title="Bài kiểm tra"
+        description="Tất cả quiz bạn được quyền quản lý."
+        actions={
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} />Tạo quiz
+          </Button>
+        }
+      />
 
       <Card as="section" padding="lg" radius="lg" aria-labelledby="teacher-quiz-list-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -573,15 +571,11 @@ function TeacherQuizEditorForm({
 
   return (
     <section className="flex flex-col gap-4">
-      <button type="button" className="hl-teacher-text-back" onClick={onCancel}>
-        <ArrowLeft size={16} />Quay lại danh sách quiz
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>{initialQuiz ? 'Chỉnh sửa quiz' : serverQuizId ? 'Hoàn thiện quiz nháp' : 'Tạo quiz nhanh'}</h1>
-          <p>Quiz nhanh được gắn với một bài học trong khóa học.</p>
-        </div>
-      </div>
+      <TeacherBackLink onClick={onCancel}>Quay lại danh sách quiz</TeacherBackLink>
+      <TeacherPageHeader
+        title={initialQuiz ? 'Chỉnh sửa quiz' : serverQuizId ? 'Hoàn thiện quiz nháp' : 'Tạo quiz nhanh'}
+        description="Quiz nhanh được gắn với một bài học trong khóa học."
+      />
 
       {ambiguousCreate && (
         <Notice tone="warning" role="alert" aria-live="assertive">

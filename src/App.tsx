@@ -13,7 +13,7 @@ import StudentOnboarding from './components/student/StudentOnboarding'
 import StudentRouteGuard from './components/student/StudentRouteGuard'
 import StudentRoutes from './pages/student/StudentRoutes'
 import AdminLoginPage from './pages/AdminLoginPage'
-import StaffDashboard from './components/staff/StaffDashboard'
+import { registerRoleNavigator } from './hooks/useActiveRole'
 import ManagementDashboard from './components/management/ManagementDashboard'
 import ManagementRouteGuard, {
   type ManagementRole,
@@ -166,6 +166,12 @@ function App() {
       setCurrentPath(path.replace(/\/$/, '') || '/')
     })
   }, [getAuthMode, pushHistoryEntry])
+
+  // Lets the role switcher (any dashboard header) move to another role's home.
+  useEffect(() => {
+    registerRoleNavigator((path) => navigateTo(path))
+    return () => registerRoleNavigator(null)
+  }, [navigateTo])
 
   const backToLanding = () => {
     runWithUnsavedActionGuard(() => {
@@ -402,19 +408,21 @@ function App() {
     page: string,
     scope: 'admin' | 'staff' | 'manager' | 'mentor'
   ) => (
-    <ManagementRouteGuard
-      allowedRoles={[role]}
-      onLogin={() => navigateTo(scope === 'mentor' ? '/login' : '/management/login')}
-      onExit={handleLogout}
-    >
-      <ManagementDashboard
-        role={role}
-        page={page}
-        onNavigate={(nextPage) => navigateManagement(scope, nextPage)}
-        onLogout={handleLogout}
-        logoutLoading={logoutLoading}
-      />
-    </ManagementRouteGuard>
+    <ThemeProvider>
+      <ManagementRouteGuard
+        allowedRoles={[role]}
+        onLogin={() => navigateTo(scope === 'mentor' ? '/login' : '/management/login')}
+        onExit={handleLogout}
+      >
+        <ManagementDashboard
+          role={role}
+          page={page}
+          onNavigate={(nextPage) => navigateManagement(scope, nextPage)}
+          onLogout={handleLogout}
+          logoutLoading={logoutLoading}
+        />
+      </ManagementRouteGuard>
+    </ThemeProvider>
   )
 
   if (authMode?.startsWith('staff-'))
@@ -424,22 +432,7 @@ function App() {
   if (authMode?.startsWith('mentor-'))
     return renderManagement('MENTOR', authMode.replace('mentor-', ''), 'mentor')
   if (authMode === 'admin-dashboard' || authMode === 'admin-users')
-    return (
-      <ThemeProvider>
-        <ManagementRouteGuard
-          allowedRoles={['ADMINISTRATOR']}
-          onLogin={() => navigateTo('/management/login')}
-          onExit={handleLogout}
-        >
-          <StaffDashboard
-            page={authMode.replace('admin-', '')}
-            onNavigate={(nextPage) => navigateManagement('admin', nextPage)}
-            onBack={backToLanding}
-            adminArea
-          />
-        </ManagementRouteGuard>
-      </ThemeProvider>
-    )
+    return renderManagement('ADMINISTRATOR', authMode.replace('admin-', ''), 'admin')
   if (authMode === 'management-login')
     return (
       <ThemeProvider>
@@ -447,29 +440,28 @@ function App() {
           onBack={backToLanding}
           onSuccess={goAfterManagementLogin}
           allowedRoles={['ADMINISTRATOR', 'MANAGER', 'STAFF', 'TEACHER']}
-          eyebrow="KHU VỰC QUẢN LÝ"
-          title="Đăng nhập vận hành"
-          description="Đăng nhập bằng tài khoản quản trị hoặc đội ngũ vận hành để tiếp tục."
+          title="Đăng nhập quản lý"
           rejectedRoleMessage="Tài khoản này không có quyền truy cập khu vực quản lý."
         />
       </ThemeProvider>
     )
   if (authMode?.startsWith('teacher-'))
     return (
-      <ManagementRouteGuard
-        allowedRoles={['TEACHER']}
-        onLogin={() => navigateTo('/management/login')}
-        onExit={handleLogout}
-      >
-        <TeacherDashboard
-          key={authMode}
-          page={authMode.replace('teacher-', '')}
-          onNavigate={navigateTeacher}
-          onBack={backToLanding}
-          onLogout={handleLogout}
-          logoutLoading={logoutLoading}
-        />
-      </ManagementRouteGuard>
+      <ThemeProvider>
+        <ManagementRouteGuard
+          allowedRoles={['TEACHER']}
+          onLogin={() => navigateTo('/management/login')}
+          onExit={handleLogout}
+        >
+          <TeacherDashboard
+            key={authMode}
+            page={authMode.replace('teacher-', '')}
+            onNavigate={navigateTeacher}
+            onLogout={handleLogout}
+            logoutLoading={logoutLoading}
+          />
+        </ManagementRouteGuard>
+      </ThemeProvider>
     )
   if (authMode === 'onboarding') return <StudentOnboarding onBack={backToLanding} />
   // Every authenticated learning screen (dashboard, courses, study, lessons,

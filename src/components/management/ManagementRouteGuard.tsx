@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { ShieldAlert, LoaderCircle } from 'lucide-react'
 import { clearTokens, getAccessToken } from '../../lib/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useActiveRole } from '../../hooks/useActiveRole'
 import type { UserRole } from '../../services/userService'
 import Button from '../ui/Button'
 
@@ -76,6 +77,7 @@ function ManagementRouteGuard({
   children,
 }: ManagementRouteGuardProps) {
   const { profile, status, loadCurrentUser, clearCurrentUser } = useCurrentUser()
+  const { activeRole } = useActiveRole()
   const redirecting = useRef(false)
 
   useEffect(() => {
@@ -111,7 +113,7 @@ function ManagementRouteGuard({
 
   if (status === 'idle' || status === 'loading' || !profile) return <LoadingState />
 
-  if (!allowedRoles.includes(profile.role as ManagementRole)) {
+  if (!allowedRoles.includes((activeRole ?? profile.role) as ManagementRole)) {
     return (
       <AccessState
         title="Bạn không có quyền truy cập"
