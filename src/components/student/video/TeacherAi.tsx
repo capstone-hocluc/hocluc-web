@@ -44,7 +44,7 @@ export function TeacherAiPanel({
   onQuickAction,
 }: TeacherAiPanelProps) {
   return (
-    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-[22px] border border-[#c6eaf8] bg-[#f3f6fc] shadow-[0_22px_46px_rgba(28, 176, 246,0.16)] max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
+    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-[22px] border border-line-brand bg-lock-soft shadow-[0_22px_46px_rgba(28, 176, 246,0.16)] max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
       <div className="flex shrink-0 items-center justify-between gap-2.5 bg-primary-bright px-3.5 py-[15px] text-surface">
         <img
           src="/owl-support-headset.png"
@@ -55,7 +55,7 @@ export function TeacherAiPanel({
         <div className="min-w-0 flex-1">
           <strong className="block text-base font-bold">Trợ lý AI HocLuc</strong>
           <span className="mt-[3px] block text-xs leading-[1.35] font-medium">
-            <i className="mr-1.5 inline-block size-2 rounded-full bg-[#48e66e]" /> Đang hoạt động
+            <i className="mr-1.5 inline-block size-2 rounded-full bg-success" /> Đang hoạt động
           </span>
           <small className="mt-0.5 block truncate text-[10.5px] text-white/78">
             Đang hỗ trợ: {lessonTitle}
@@ -71,7 +71,7 @@ export function TeacherAiPanel({
         </Button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-[9px] overflow-y-auto bg-[#f3f6fc] px-[18px] py-[22px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-[9px] overflow-y-auto bg-lock-soft px-[18px] py-[22px]">
         {messages.map((message) => (
           <p
             key={message.id}
@@ -87,14 +87,14 @@ export function TeacherAiPanel({
         ))}
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-[#e4ecf8] bg-surface px-[18px] pt-3.5 pb-2">
+      <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-line bg-surface px-[18px] pt-3.5 pb-2">
         {quickActions.map((action) => (
           <Button
             key={action}
             appearance="outline"
             shape="pill"
             size="sm"
-            className="h-auto border-line-blue bg-[#f0faff] px-[9px] py-[7px] text-[11px] font-semibold"
+            className="h-auto border-line-blue bg-surface-brand px-[9px] py-[7px] text-[11px] font-semibold"
             onClick={() => onQuickAction(action)}
           >
             {action}

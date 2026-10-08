@@ -7,11 +7,11 @@ const cover = cva(
   {
     variants: {
       tone: {
-        red: 'bg-[linear-gradient(160deg,#111,#ff4b18_70%,#ff9518)]',
-        pink: 'bg-[linear-gradient(160deg,#141414,#d72e72_70%,#ff7aae)]',
-        rose: 'bg-[linear-gradient(160deg,#141414,#ca2f69_70%,#f66b98)]',
-        blue: 'bg-[linear-gradient(160deg,var(--color-primary-dark),var(--color-link)_72%,#5dbbff)]',
-        green: 'bg-[linear-gradient(160deg,#0f3e3b,#18a86d_72%,#74d99f)]',
+        red: 'bg-[linear-gradient(160deg,#111,var(--color-streak)_70%,var(--color-streak))]',
+        pink: 'bg-[linear-gradient(160deg,var(--color-ink),var(--color-rose)_70%,var(--color-rose))]',
+        rose: 'bg-[linear-gradient(160deg,var(--color-ink),var(--color-rose-dark)_70%,var(--color-rose-bright))]',
+        blue: 'bg-[linear-gradient(160deg,var(--color-primary-dark),var(--color-link)_72%,var(--color-primary-bright))]',
+        green: 'bg-[linear-gradient(160deg,var(--color-ink),var(--color-practice)_72%,var(--color-success))]',
       },
     },
     defaultVariants: { tone: 'red' },
@@ -60,7 +60,7 @@ function PracticeTestCard({
         <StatusBadge
           tone="danger"
           size="sm"
-          className="shrink-0 bg-[#ffecef] px-3 py-[5px] leading-[1.1] font-extrabold text-danger"
+          className="shrink-0 bg-danger-soft px-3 py-[5px] leading-[1.1] font-extrabold text-danger"
         >
           {badge}
         </StatusBadge>

@@ -11,11 +11,11 @@ function LevelLine({ title, data }: { title: string; data: DashboardDimension })
   return (
     <div>
       <strong className="block text-[13px] font-extrabold text-text-dark">{title}</strong>
-      <div className="relative mx-1 mt-4 mb-2.5 flex justify-between before:absolute before:top-[7px] before:right-2.5 before:left-2.5 before:border-t before:border-dashed before:border-[#aed3ff] before:content-['']">
+      <div className="relative mx-1 mt-4 mb-2.5 flex justify-between before:absolute before:top-[7px] before:right-2.5 before:left-2.5 before:border-t before:border-dashed before:border-line-brand before:content-['']">
         {values.map(([label]) => (
           <span
             key={label}
-            className="relative z-1 size-3 rounded-full border-[3px] border-[#0b74ff] bg-surface"
+            className="relative z-1 size-3 rounded-full border-[3px] border-link bg-surface"
           />
         ))}
       </div>
@@ -33,7 +33,7 @@ function LevelLine({ title, data }: { title: string; data: DashboardDimension })
 
 function SummaryRow({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
-    <p className="my-2.5 flex items-center gap-[9px] text-[13px] text-text-body [&>svg]:text-[#1b74f2]">
+    <p className="my-2.5 flex items-center gap-[9px] text-[13px] text-text-body [&>svg]:text-link">
       {icon} {label} <b className="ml-auto text-link">{value}</b>
     </p>
   )
@@ -64,7 +64,7 @@ function CompetencyPanel({ dimensions, summary }: CompetencyPanelProps) {
           ))}
         </div>
       </div>
-      <div className="mt-0.5 shrink-0 border-t border-[#e5ecf8] pt-4">
+      <div className="mt-0.5 shrink-0 border-t border-line pt-4">
         <strong className="mb-3.5 block text-[15px] font-extrabold text-text-dark">
           Tổng quan ôn luyện
         </strong>

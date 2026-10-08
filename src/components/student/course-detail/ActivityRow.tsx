@@ -37,14 +37,14 @@ const statusMeta = {
 // type has no colour of its own (the typed colours win, as before).
 const typeTone: Record<string, string> = {
   Video: 'bg-primary-soft text-primary',
-  'Bài tập': 'bg-[#e7f7ef] text-success',
-  'Mini Test': 'bg-[#f1ecff] text-violet',
-  'Mock Test': 'bg-[#ffecef] text-[#d83a56]',
-  'Buổi giải đề': 'bg-[#ffede8] text-[#e4572e]',
+  'Bài tập': 'bg-practice-soft text-success',
+  'Mini Test': 'bg-assess-soft text-violet',
+  'Mock Test': 'bg-danger-soft text-danger',
+  'Buổi giải đề': 'bg-danger-soft text-danger',
 }
 
 const row = cva(
-  'grid w-full cursor-pointer grid-cols-[34px_minmax(0,1fr)_auto_18px] items-center gap-[11px] border-b border-[#eef3fb] bg-surface px-3 py-[11px] text-left last:border-b-0 hover:bg-surface-sky max-[760px]:grid-cols-[34px_minmax(0,1fr)]',
+  'grid w-full cursor-pointer grid-cols-[34px_minmax(0,1fr)_auto_18px] items-center gap-[11px] border-b border-lock-soft bg-surface px-3 py-[11px] text-left last:border-b-0 hover:bg-surface-sky max-[760px]:grid-cols-[34px_minmax(0,1fr)]',
   {
     variants: {
       status: {
@@ -53,7 +53,7 @@ const row = cva(
         locked: 'cursor-default hover:bg-surface',
         'in-progress':
           'bg-surface-brand shadow-[inset_3px_0_0_var(--color-primary)] hover:bg-surface-brand',
-        overdue: 'bg-[#fff8f8] hover:bg-[#fff8f8]',
+        overdue: 'bg-danger-soft hover:bg-danger-soft',
       },
     },
   }
@@ -73,7 +73,7 @@ function ActivityRow({ activity, onAction, onOpenActivity }: ActivityRowProps) {
   const isLocked = activity.status === 'locked'
   const isCurrent = activity.status === 'in-progress'
   const canOpen = !isLocked && getActivityRouteType(activity)
-  const lockedText = isLocked ? 'text-[#8c98ad]' : ''
+  const lockedText = isLocked ? 'text-text-subtle' : ''
 
   return (
     <button
@@ -97,7 +97,7 @@ function ActivityRow({ activity, onAction, onOpenActivity }: ActivityRowProps) {
         className={cn(
           'grid size-8 place-items-center rounded-[11px]',
           typeTone[activity.type] ??
-            (isLocked ? 'bg-[#f1f4f8] text-[#9aa6bd]' : 'bg-primary-soft text-primary')
+            (isLocked ? 'bg-lock-soft text-text-subtle' : 'bg-primary-soft text-primary')
         )}
       >
         <Icon size={15} />
@@ -134,7 +134,7 @@ function ActivityRow({ activity, onAction, onOpenActivity }: ActivityRowProps) {
           </StatusBadge>
         )}
       </span>
-      {canOpen && <ChevronRight className="text-[#9aa6bd] max-[760px]:hidden" size={16} />}
+      {canOpen && <ChevronRight className="text-text-subtle max-[760px]:hidden" size={16} />}
     </button>
   )
 }

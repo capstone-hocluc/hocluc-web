@@ -59,7 +59,7 @@ function VideoScreen({ activity, onAction }) {
       />
       <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] gap-3.5 max-[760px]:grid-cols-1">
         <ActivityCard>
-          <div className="grid aspect-video place-items-center gap-2 rounded-2xl bg-[linear-gradient(135deg,#eaf8fc,#f8fbff)] text-primary">
+          <div className="grid aspect-video place-items-center gap-2 rounded-2xl bg-linear-to-br from-badge-info-bg to-surface-soft text-primary">
             <Play size={40} />
             <span className="text-[13px] font-bold">Video bài học</span>
           </div>

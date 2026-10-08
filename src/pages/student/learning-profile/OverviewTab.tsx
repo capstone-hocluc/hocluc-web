@@ -26,7 +26,7 @@ function OverallCompetencySummary() {
   const scorePercent = Math.round((profile.currentScore / profile.maxScore) * 100)
 
   return (
-    <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-[#d5e3ff] bg-surface p-[18px] max-[1181px]:items-start">
+    <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--color-line-blue)] bg-surface p-[18px] max-[1181px]:items-start">
       <ProfileHeading
         title="Tổng quan năng lực"
         subtitle="Điểm ĐGNL hiện tại"
@@ -34,7 +34,7 @@ function OverallCompetencySummary() {
         titleClassName="text-[18px] leading-[1.25]"
       />
       <div
-        className="grid size-[148px] place-items-center content-center rounded-full bg-[radial-gradient(circle_at_center,var(--color-surface)_0_58%,transparent_59%),conic-gradient(var(--color-primary)_var(--hl-profile-score),#e9f0fa_0)] shadow-[inset_0_0_0_1px_#e3eaf7] max-[1181px]:self-center"
+        className="grid size-[148px] place-items-center content-center rounded-full bg-[radial-gradient(circle_at_center,var(--color-surface)_0_58%,transparent_59%),conic-gradient(var(--color-primary)_var(--hl-profile-score),var(--color-line)_0)] shadow-[inset_0_0_0_1px_var(--color-line)] max-[1181px]:self-center"
         style={{ '--hl-profile-score': `${scorePercent}%` } as CSSProperties}
       >
         <strong className="text-[42px] leading-none font-black text-primary max-[760px]:text-[36px]">
@@ -76,7 +76,7 @@ function ComponentCard({ component, trend = component.trend, trendLabel }) {
       </div>
       <TrendBadge value={trend} label={trendLabel} />
       {component.skills && (
-        <div className="flex flex-col gap-[7px] border-t border-[#e7eef9] pt-2.5">
+        <div className="flex flex-col gap-[7px] border-t border-[var(--color-line)] pt-2.5">
           {component.skills.map((skill) => (
             <p
               key={skill.name}
@@ -142,7 +142,7 @@ function UnifiedCompetencySection() {
 }
 
 const legendBox = 'size-3 rounded-[4px]'
-const heatLevels = ['bg-[#f0f3f8]', 'bg-[#dceeff]', 'bg-[#9dd3ff]', 'bg-primary']
+const heatLevels = ['bg-[var(--color-lock-soft)]', 'bg-[var(--color-primary-soft)]', 'bg-[var(--color-brand-soft)]', 'bg-primary']
 
 function ActivityHeatmap({ data }) {
   return (
@@ -152,7 +152,7 @@ function ActivityHeatmap({ data }) {
         subtitle="Duy trì thói quen học tập để đạt kết quả tốt nhất"
       />
       <div className="flex flex-wrap gap-[13px] text-[12px] font-extrabold text-text-secondary">
-        {['bg-[#d9e1ef]', 'bg-[#dceeff]', 'bg-[#9dd3ff]', 'bg-primary'].map((color, index) => (
+        {['bg-[var(--color-line)]', 'bg-[var(--color-primary-soft)]', 'bg-[var(--color-brand-soft)]', 'bg-primary'].map((color, index) => (
           <span key={color} className="inline-flex items-center gap-[7px]">
             <i className={cn(legendBox, color)} />{' '}
             {['Không có hoạt động', '<15 phút', '15-60 phút', '>60 phút'][index]}
@@ -204,7 +204,7 @@ function AchievementCard({ onAction }) {
         </strong>
         <Button
           appearance="ghost"
-          className="h-auto rounded-full border-0 bg-[#f0faff] px-2.5 py-[7px] text-[11px] font-black hover:bg-[#f0faff]"
+          className="h-auto rounded-full border-0 bg-[var(--color-surface-brand)] px-2.5 py-[7px] text-[11px] font-black hover:bg-[var(--color-surface-brand)]"
           onClick={onAction}
         >
           Xem tất cả
@@ -239,11 +239,11 @@ function AnalysisResult({ analysis }) {
       <p className="text-[12px] leading-[1.55] font-[750] text-text-emphasis">{analysis.summary}</p>
       <div className="grid grid-cols-1 gap-2.5">
         {[
-          { title: 'Điểm mạnh', items: analysis.strengths, box: 'border-[#d7f0df] bg-[#f6fff9]' },
+          { title: 'Điểm mạnh', items: analysis.strengths, box: 'border-[var(--color-line-practice)] bg-[var(--color-practice-soft)]' },
           {
             title: 'Cần cải thiện',
             items: analysis.improvements,
-            box: 'border-[#ffe4c7] bg-[#fff8f1]',
+            box: 'border-[var(--color-live-line)] bg-[var(--color-live-tint)]',
           },
         ].map((group) => (
           <div key={group.title} className={cn('rounded-[13px] border px-3 py-[11px]', group.box)}>
@@ -267,7 +267,7 @@ function AnalysisResult({ analysis }) {
   )
 }
 
-const detailBox = 'rounded-[14px] border border-line-shell bg-[#f7fcfe] p-3.5'
+const detailBox = 'rounded-[14px] border border-line-shell bg-[var(--color-surface-sky)] p-3.5'
 
 function AiInsightDetailModal({ insight, analysis, isOpen, onClose }) {
   if (!insight || !analysis) return null
@@ -339,10 +339,10 @@ function AiLearningAssistant({ analysis, isAnalyzing, onAnalyze, onOpenHistory }
       className={cn(
         'flex min-w-0 flex-col gap-3 border border-transparent',
         activeAnalysis &&
-          'rounded-[20px] border-[#d7e5fa] bg-surface p-2.5 shadow-[0_12px_26px_rgba(17,24,58,0.045)]'
+          'rounded-[20px] border-[var(--color-line)] bg-surface p-2.5 shadow-[0_12px_26px_rgba(17,24,58,0.045)]'
       )}
     >
-      <section className="relative min-h-[82px] min-w-0 rounded-[18px] border border-[#c6eaf8] bg-linear-to-b from-[#3c97ff] to-primary p-2.5 shadow-[0_14px_26px_rgba(28, 176, 246,0.16)] max-[760px]:min-h-0 max-[760px]:p-3.5">
+      <section className="relative min-h-[82px] min-w-0 rounded-[18px] border border-[var(--color-line-brand)] bg-linear-to-b from-[var(--color-primary-bright)] to-primary p-2.5 shadow-[0_14px_26px_rgba(28, 176, 246,0.16)] max-[760px]:min-h-0 max-[760px]:p-3.5">
         <div className="relative z-2 -mr-0.5 grid min-w-0 grid-cols-[minmax(126px,auto)_minmax(0,1fr)] items-center gap-2.5 rounded-[17px] border border-white/72 bg-surface p-2 shadow-[0_14px_28px_rgba(12,37,118,0.16)] max-[760px]:mr-0 max-[760px]:grid-cols-1 max-[760px]:p-3">
           <Button className={bannerButton} onClick={onAnalyze} disabled={isAnalyzing}>
             {isAnalyzing ? 'Đang phân tích...' : analysis ? 'Cập nhật phân tích' : 'Phân tích ngay'}
@@ -396,7 +396,7 @@ function AiAnalysisHistoryModal({ isOpen, onClose }) {
           return (
             <article
               key={item.id}
-              className="rounded-2xl border border-line-shell bg-[#f7fcfe] p-3.5"
+              className="rounded-2xl border border-line-shell bg-[var(--color-surface-sky)] p-3.5"
             >
               <div className="mb-2 flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-1">
                 <strong className={historyStrong}>{item.createdAt}</strong>
@@ -428,7 +428,7 @@ function AchievementHistoryModal({ isOpen, onClose }) {
         {learningProfilePage.achievements.map((item) => (
           <article
             key={item.id}
-            className="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line-shell bg-[#f7fcfe] p-3.5 max-[760px]:grid-cols-[42px_minmax(0,1fr)] max-[760px]:items-start"
+            className="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line-shell bg-[var(--color-surface-sky)] p-3.5 max-[760px]:grid-cols-[42px_minmax(0,1fr)] max-[760px]:items-start"
           >
             <IconTile tone={achievementTone[item.tone] ?? item.tone} size="xl">
               <Award size={17} />

@@ -36,7 +36,7 @@ function CourseHero({
       as="header"
       padding="none"
       radius="lg"
-      className="border-line-card bg-[#f8fbff] bg-[linear-gradient(rgba(224,233,250,0.62)_1px,transparent_1px),linear-gradient(90deg,rgba(224,233,250,0.62)_1px,transparent_1px)] bg-[length:28px_28px] p-4 shadow-[0_12px_26px_rgba(17,24,58,0.045)] max-[760px]:rounded-2xl"
+      className="border-line-card bg-surface-sky bg-[linear-gradient(rgba(224,233,250,0.62)_1px,transparent_1px),linear-gradient(90deg,rgba(224,233,250,0.62)_1px,transparent_1px)] bg-[length:28px_28px] p-4 shadow-[0_12px_26px_rgba(17,24,58,0.045)] max-[760px]:rounded-2xl"
     >
       <Button
         appearance="ghost"
@@ -68,7 +68,7 @@ function CourseHero({
             </span>
           </div>
         </div>
-        <div className="flex flex-col gap-[9px] rounded-2xl border border-line-blue bg-[#eaf3ff] p-3.5">
+        <div className="flex flex-col gap-[9px] rounded-2xl border border-line-blue bg-primary-soft p-3.5">
           <span className="text-[13px] font-bold text-text-heading">Tiến độ khóa học</span>
           <div className="flex items-center justify-between gap-3">
             <small className="text-[12px] font-medium text-text-secondary">

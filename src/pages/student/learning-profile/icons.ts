@@ -23,9 +23,9 @@ export const componentIcons = {
 
 export const componentColors = {
   vietnamese: 'var(--color-primary)',
-  english: '#D97706',
-  math: '#16A05B',
-  science: '#6D54D4',
+  english: 'var(--color-warning)',
+  math: 'var(--color-success)',
+  science: 'var(--color-violet)',
 }
 
 export const learningMetricIcons = {

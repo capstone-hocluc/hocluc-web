@@ -73,7 +73,7 @@ function LearningTab({ onAction, panelId, labelledBy }) {
           <ProfileHeading title="Tiến độ khóa học" action="Xem tất cả" onAction={onAction} />
           <div className="grid grid-cols-[148px_minmax(150px,0.45fr)_minmax(0,1fr)] items-center gap-5 max-[1181px]:grid-cols-1 max-[760px]:gap-4">
             <div
-              className="grid size-[132px] place-items-center content-center rounded-full bg-[radial-gradient(circle_at_center,var(--color-surface)_0_54%,transparent_55%),conic-gradient(var(--color-primary)_var(--hl-profile-progress),#e5ecf8_0)] max-[1181px]:justify-self-start"
+              className="grid size-[132px] place-items-center content-center rounded-full bg-[radial-gradient(circle_at_center,var(--color-surface)_0_54%,transparent_55%),conic-gradient(var(--color-primary)_var(--hl-profile-progress),var(--color-line)_0)] max-[1181px]:justify-self-start"
               style={
                 {
                   '--hl-profile-progress': `${Math.round((activeCourses / totalCourses) * 100)}%`,
@@ -85,7 +85,7 @@ function LearningTab({ onAction, panelId, labelledBy }) {
             </div>
             <div className="flex flex-col gap-2.5 text-[12px] font-extrabold text-text-secondary">
               {[
-                { color: 'bg-[#d9e1ef]', text: `Chưa bắt đầu: ${untouchedCourses}` },
+                { color: 'bg-[var(--color-line)]', text: `Chưa bắt đầu: ${untouchedCourses}` },
                 { color: 'bg-primary', text: `Đang học: ${activeCourses}` },
                 { color: 'bg-success', text: `Hoàn thành: ${completedCourses}` },
               ].map((item) => (
@@ -150,9 +150,9 @@ function LearningTab({ onAction, panelId, labelledBy }) {
         <ProfileHeading
           title="Lịch sử học tập"
           subtitle="Hoạt động trong 30 ngày gần đây"
-          className="relative z-1 mb-3 border-b border-[#e5ecf8] bg-surface pb-3"
+          className="relative z-1 mb-3 border-b border-[var(--color-line)] bg-surface pb-3"
         />
-        <div className="flex max-h-[300px] flex-col gap-3.5 overflow-y-auto pr-2 [scrollbar-color:#afc3ea_#eef4ff] [scrollbar-width:thin] max-[760px]:max-h-[260px] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-[#eef4ff] [&::-webkit-scrollbar-thumb]:bg-[#afc3ea] [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-[#eef4ff]">
+        <div className="flex max-h-[300px] flex-col gap-3.5 overflow-y-auto pr-2 [scrollbar-color:var(--color-line-brand)_var(--color-surface-sky)] [scrollbar-width:thin] max-[760px]:max-h-[260px] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-[var(--color-surface-sky)] [&::-webkit-scrollbar-thumb]:bg-[var(--color-line-brand)] [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-[var(--color-surface-sky)]">
           {learningProfilePage.learningHistory.map((item) => (
             <div
               key={`${item.date}-${item.title}`}

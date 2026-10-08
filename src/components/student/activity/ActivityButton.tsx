@@ -10,8 +10,8 @@ const activityButton = cva(
   {
     variants: {
       tone: {
-        outline: 'border-[#d9e4ff] text-primary hover:bg-surface',
-        soft: 'border-[#bde8f8] bg-[#f0faff] text-primary hover:bg-[#f0faff]',
+        outline: 'border-line text-primary hover:bg-surface',
+        soft: 'border-line-brand bg-surface-brand text-primary hover:bg-surface-brand',
         primary: 'border-primary hover:bg-primary',
       },
       weight: {

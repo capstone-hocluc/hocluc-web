@@ -55,7 +55,7 @@ export function ProfileHeading({
       {action && (
         <Button
           appearance="outline"
-          className="h-auto min-h-[34px] rounded-[10px] border-[#bde8f8] px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-[#f0faff]"
+          className="h-auto min-h-[34px] rounded-[10px] border-line-brand px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-surface-brand"
           onClick={onAction}
         >
           {action}
@@ -77,7 +77,7 @@ export function TextButton({ className, ...props }: ComponentProps<typeof Button
 }
 
 export function ProfileProgress({ value, max = 100 }: { value: number; max?: number }) {
-  return <Progress value={Math.round((value / max) * 100)} className="bg-[#e7eef9]" />
+  return <Progress value={Math.round((value / max) * 100)} className="bg-line" />
 }
 
 export function TrendBadge({
@@ -110,10 +110,10 @@ const tile = cva('grid shrink-0 place-items-center', {
     tone: {
       blue: 'bg-primary-soft text-primary',
       amber: 'bg-badge-warning-bg text-warning',
-      green: 'bg-[#e6f7ed] text-success',
-      violet: 'bg-[#f1ecff] text-violet',
-      trophyGreen: 'bg-[#e8f8ef] text-success',
-      trophyAmber: 'bg-[#fff4df] text-[#f08a00]',
+      green: 'bg-practice-soft text-success',
+      violet: 'bg-assess-soft text-violet',
+      trophyGreen: 'bg-practice-soft text-success',
+      trophyAmber: 'bg-live-tint text-streak',
     },
     size: {
       sm: 'size-9 rounded-xl',

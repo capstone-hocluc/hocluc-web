@@ -10,7 +10,7 @@ const list = cva('', {
       page: 'inline-flex gap-1.5 rounded-[14px] border border-line-blue bg-surface p-[5px] shadow-[0_10px_22px_rgba(17,24,58,0.04)] max-[760px]:w-full max-[760px]:overflow-x-auto',
       // Source switch inside a card (AI phân tích / Nhận xét giáo viên).
       source:
-        'inline-flex gap-1.5 rounded-[14px] border border-line-blue bg-[#f7fcfe] p-[5px] max-[760px]:grid max-[760px]:w-full max-[760px]:grid-cols-1',
+        'inline-flex gap-1.5 rounded-[14px] border border-line-blue bg-surface-sky p-[5px] max-[760px]:grid max-[760px]:w-full max-[760px]:grid-cols-1',
       // Round filter chips.
       chip: 'mb-3 flex flex-wrap gap-2',
     },
@@ -23,7 +23,7 @@ const tab = cva('cursor-pointer font-black', {
       page: 'min-h-[38px] rounded-[10px] px-[18px] text-[13px] text-text-secondary max-[760px]:flex-[1_0_auto] max-[760px]:px-3.5',
       source:
         'inline-flex min-h-[34px] items-center justify-center gap-[7px] rounded-[10px] border border-transparent px-[13px] text-[12px] whitespace-nowrap text-text-emphasis transition',
-      chip: 'min-h-[34px] rounded-full border border-[#d9e4f4] bg-surface px-[13px] text-[12px] text-text-secondary',
+      chip: 'min-h-[34px] rounded-full border border-line bg-surface px-[13px] text-[12px] text-text-secondary',
     },
     active: { true: '', false: '' },
   },
@@ -152,8 +152,8 @@ export function ComparisonDropdown<T extends ComparisonOption>({
               role="option"
               aria-selected={selected.key === option.key}
               className={cn(
-                'min-h-[34px] w-full cursor-pointer rounded-[10px] px-2.5 text-left text-[12px] font-[850] text-text-heading-muted hover:bg-[#f0faff] hover:text-primary',
-                selected.key === option.key && 'bg-[#f0faff] text-primary'
+                'min-h-[34px] w-full cursor-pointer rounded-[10px] px-2.5 text-left text-[12px] font-[850] text-text-heading-muted hover:bg-surface-brand hover:text-primary',
+                selected.key === option.key && 'bg-surface-brand text-primary'
               )}
               onClick={() => {
                 onChange(option)

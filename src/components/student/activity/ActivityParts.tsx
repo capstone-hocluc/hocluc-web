@@ -55,8 +55,8 @@ export function FilterPills({ items, active, onChange }: FilterPillsProps) {
           key={item.key}
           type="button"
           className={cn(
-            'min-h-[34px] cursor-pointer rounded-full border border-[#d9e4ff] bg-surface px-[13px] text-[12px] font-extrabold text-[#52617a]',
-            active === item.key && 'border-primary bg-[#eaf3ff] text-primary'
+            'min-h-[34px] cursor-pointer rounded-full border border-line bg-surface px-[13px] text-[12px] font-extrabold text-text-dim',
+            active === item.key && 'border-primary bg-primary-soft text-primary'
           )}
           onClick={() => onChange(item.key)}
         >
@@ -80,7 +80,7 @@ export function SubmitConfirmModal({ onContinue, onSubmit }: SubmitConfirmModalP
         <AlertDialog.Overlay className="fixed inset-0 z-80 grid place-items-center bg-[rgba(9,17,41,0.45)] p-5">
           <AlertDialog.Content className="w-[min(430px,100%)] rounded-[18px] bg-surface p-5 shadow-[0_24px_70px_rgba(9,17,41,0.22)]">
             <AlertDialog.Title>Xác nhận nộp bài</AlertDialog.Title>
-            <AlertDialog.Description className="mt-2 text-[14px] leading-[1.5] text-[#52617a]">
+            <AlertDialog.Description className="mt-2 text-[14px] leading-[1.5] text-text-dim">
               Bạn vẫn còn câu chưa trả lời. Bạn có chắc muốn nộp bài không?
             </AlertDialog.Description>
             <div className="mt-[18px] flex justify-end gap-2.5">

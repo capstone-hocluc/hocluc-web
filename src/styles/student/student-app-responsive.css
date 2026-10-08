@@ -52,18 +52,8 @@
   .hl-grid-4 {
     grid-template-columns: 1fr !important;
   }
-  .hl-auth-page {
-    padding: 64px 12px 18px;
-  }
-  .hl-auth-form-panel {
-    min-height: auto;
-    padding: 20px 18px 22px;
-  }
   .hl-auth-heading--compact h1 {
     font-size: clamp(24px, 8vw, 30px);
-  }
-  .hl-auth-art-copy {
-    padding: 42px 10% 0;
   }
 }
 .hl-staff-title .hl-staff-primary {

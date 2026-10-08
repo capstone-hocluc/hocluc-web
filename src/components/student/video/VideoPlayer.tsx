@@ -30,7 +30,7 @@ function VideoPlayer({ activity }: { activity: VideoActivity }) {
     <div
       ref={playerRef}
       className={cn(
-        'relative grid aspect-video place-items-center overflow-hidden rounded-[18px] border border-white/14 bg-[#0b1020] bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-[0_28px_70px_rgba(0,0,0,0.38)]',
+        'relative grid aspect-video place-items-center overflow-hidden rounded-[18px] border border-white/14 bg-ink bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-[0_28px_70px_rgba(0,0,0,0.38)]',
         expanded
           ? 'fixed inset-5 z-90 h-auto w-auto max-w-none'
           : 'w-[min(100%,calc((100vh_-_264px)*16/9))] max-w-[1280px] max-[760px]:max-h-[calc(100dvh_-_260px)] max-[760px]:w-full'
@@ -59,7 +59,7 @@ function VideoPlayer({ activity }: { activity: VideoActivity }) {
       >
         {playing ? <Pause size={42} /> : <Play size={46} />}
       </button>
-      <div className="absolute inset-x-[18px] bottom-[18px] grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 rounded-[14px] border border-white/16 bg-[rgba(6,10,20,0.72)] px-3 py-2.5 text-[#d9eff9] opacity-[0.92] backdrop-blur-[14px] max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
+      <div className="absolute inset-x-[18px] bottom-[18px] grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 rounded-[14px] border border-white/16 bg-[rgba(6,10,20,0.72)] px-3 py-2.5 text-line-blue opacity-[0.92] backdrop-blur-[14px] max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
         <button
           type="button"
           className={glassButton}

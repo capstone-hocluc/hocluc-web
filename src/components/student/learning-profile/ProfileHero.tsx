@@ -3,7 +3,7 @@ import Button from '../../ui/Button'
 
 // Pill button of the hero (exam date / edit profile).
 const heroButton =
-  'h-auto gap-2 rounded-full border-[#bde8f8] bg-white/78 px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-[#f7fbff]'
+  'h-auto gap-2 rounded-full border-line-brand bg-white/78 px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-surface-sky'
 
 interface ProfileHeroProps {
   displayName: string
@@ -36,7 +36,7 @@ function ProfileHero({
         </div>
       </header>
 
-      <article className="relative mb-3.5 overflow-hidden rounded-[26px] border border-[#cde9ff] bg-[linear-gradient(rgba(28, 176, 246,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(28, 176, 246,0.05)_1px,transparent_1px),radial-gradient(circle_at_88%_12%,rgba(251,195,79,0.22),transparent_24%),linear-gradient(135deg,#eaf7ff_0%,#f3f8ff_100%)] bg-[length:64px_64px,64px_64px,auto,auto] px-5 pt-[18px] pb-5 shadow-[0_14px_34px_rgba(17,24,58,0.06)] max-[760px]:rounded-[22px] max-[760px]:p-4">
+      <article className="relative mb-3.5 overflow-hidden rounded-[26px] border border-line-brand bg-[linear-gradient(rgba(28, 176, 246,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(28, 176, 246,0.05)_1px,transparent_1px),radial-gradient(circle_at_88%_12%,rgba(251,195,79,0.22),transparent_24%),linear-gradient(135deg,var(--color-primary-soft)_0%,var(--color-surface-sky)_100%)] bg-[length:64px_64px,64px_64px,auto,auto] px-5 pt-[18px] pb-5 shadow-[0_14px_34px_rgba(17,24,58,0.06)] max-[760px]:rounded-[22px] max-[760px]:p-4">
         <div className="relative z-1 flex items-center justify-between gap-3.5 max-[760px]:flex-col max-[760px]:items-start">
           <div className="flex min-w-0 items-center gap-3.5 max-[760px]:items-start">
             <img
@@ -49,7 +49,7 @@ function ProfileHero({
               <h2 className="mb-1 text-[24px] leading-[1.2] font-black text-text-heading max-[760px]:text-[21px]">
                 Hi, <span className="text-primary">{displayName}</span>
               </h2>
-              <p className="max-w-[560px] text-[13px] leading-[1.55] font-[750] text-[#42506f]">
+              <p className="max-w-[560px] text-[13px] leading-[1.55] font-[750] text-text-dim">
                 Hãy tiếp tục học mỗi ngày - nỗ lực của bạn sẽ được đền đáp!
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-[7px]">
@@ -82,7 +82,7 @@ function ProfileHero({
           <div className="grid grid-cols-3 gap-2.5 max-[760px]:grid-cols-1">
             {metrics.map((metric) => (
               <div
-                className="min-w-0 rounded-[14px] border border-[#e1ecfb] bg-[#f7fbff] px-[13px] py-[11px]"
+                className="min-w-0 rounded-[14px] border border-line bg-surface-sky px-[13px] py-[11px]"
                 key={metric.label}
               >
                 <span className="mb-[5px] block text-[12px] font-[850] text-text-secondary">

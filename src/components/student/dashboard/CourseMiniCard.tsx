@@ -18,7 +18,7 @@ function CourseMiniCard({ title, category, progress, score, onOpen }: CourseMini
       className="flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[14px] border border-line-card bg-surface text-left transition duration-200 hover:-translate-y-0.5 hover:border-line-brand hover:shadow-card-hover"
       onClick={onOpen}
     >
-      <div className="relative min-h-[142px] overflow-hidden bg-[linear-gradient(135deg,#0049d8,#0878ff)] p-[22px] text-surface after:absolute after:-right-7 after:-bottom-[42px] after:size-40 after:rounded-full after:border-2 after:border-white/42 after:content-['']">
+      <div className="relative min-h-[142px] overflow-hidden bg-[linear-gradient(135deg,var(--color-link),var(--color-link))] p-[22px] text-surface after:absolute after:-right-7 after:-bottom-[42px] after:size-40 after:rounded-full after:border-2 after:border-white/42 after:content-['']">
         <span className="relative z-1 mb-[5px] block max-w-[145px] text-xs font-extrabold uppercase">
           {category}
         </span>

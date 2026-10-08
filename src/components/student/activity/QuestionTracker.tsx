@@ -9,12 +9,12 @@ const trackerButton = cva(
     variants: {
       state: {
         idle: 'border-line-card bg-surface-tint text-text-secondary',
-        active: 'border-[#9db8ff] bg-[#eaf3ff] text-primary',
-        answered: 'border-[#bde8d0] bg-[#f1fbf5] text-success',
+        active: 'border-line-brand bg-primary-soft text-primary',
+        answered: 'border-line-practice bg-practice-soft text-success',
         answeredActive: 'border-primary bg-primary text-surface',
-        reviewCorrect: 'border-[#bde8d0] bg-[#f1fbf5] text-[#12834d]',
-        reviewIncorrect: 'border-[#f2b6b6] bg-[#fff6f6] text-[#c93d3d]',
-        reviewUnanswered: 'border-[#d9dee8] bg-[#f4f7fc] text-text-secondary',
+        reviewCorrect: 'border-line-practice bg-practice-soft text-practice',
+        reviewIncorrect: 'border-danger-line bg-danger-soft text-danger',
+        reviewUnanswered: 'border-line bg-lock-soft text-text-secondary',
       },
     },
     defaultVariants: { state: 'idle' },
@@ -24,11 +24,11 @@ const trackerButton = cva(
 export type TrackerButtonState = NonNullable<Parameters<typeof trackerButton>[0]>['state']
 
 const legendDot = {
-  none: 'border-[#d9e4ff] bg-surface-tint',
+  none: 'border-line bg-surface-tint',
   answered: 'border-success bg-success',
   correct: 'border-success bg-success',
-  incorrect: 'border-[#e05252] bg-[#e05252]',
-  unanswered: 'border-[#c7cedb] bg-[#c7cedb]',
+  incorrect: 'border-danger bg-danger',
+  unanswered: 'border-line bg-line',
 }
 
 interface QuestionTrackerProps {

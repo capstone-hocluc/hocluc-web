@@ -43,7 +43,7 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
       onClick={() => onOpen(course)}
       className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[18px] border border-line-card bg-surface p-0 text-left shadow-[0_10px_22px_rgba(17,24,58,0.04)] transition duration-200 hover:-translate-y-[3px] hover:border-line-brand hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-primary/25"
     >
-      <div className="relative flex h-[120px] items-end justify-between bg-linear-to-br from-primary-soft to-[#f7fbff] p-3.5 before:absolute before:inset-0 before:bg-[linear-gradient(rgba(255,255,255,0.32)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.32)_1px,transparent_1px)] before:bg-[length:30px_30px]">
+      <div className="relative flex h-[120px] items-end justify-between bg-linear-to-br from-primary-soft to-surface-sky p-3.5 before:absolute before:inset-0 before:bg-[linear-gradient(rgba(255,255,255,0.32)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.32)_1px,transparent_1px)] before:bg-[length:30px_30px]">
         <StatusBadge
           tone="primary"
           size="sm"

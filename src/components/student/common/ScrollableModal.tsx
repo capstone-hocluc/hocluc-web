@@ -28,7 +28,7 @@ function ScrollableModal({
             className="flex max-h-[78vh] w-full flex-col overflow-hidden rounded-[22px] border border-[rgba(223,230,247,0.96)] bg-white/98 shadow-[0_30px_80px_rgba(9,16,36,0.28)] outline-none max-[760px]:max-h-[80vh] max-[760px]:rounded-[18px]"
             style={{ maxWidth: Math.min(maxWidth, 680) }}
           >
-            <div className="flex items-center justify-between gap-4 border-b border-[#e5ecf8] px-5 py-[18px] max-[760px]:px-4">
+            <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-[18px] max-[760px]:px-4">
               <Dialog.Title className="text-[18px] leading-[1.25] font-black text-text-heading">
                 {title}
               </Dialog.Title>

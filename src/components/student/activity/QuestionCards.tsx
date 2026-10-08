@@ -14,19 +14,19 @@ const stateLabel: Record<AnswerState, string> = {
 const topPill = cva('rounded-full px-[9px] py-[5px] text-[11px] font-bold', {
   variants: {
     state: {
-      neutral: 'bg-[#f4f7fc] text-text-secondary',
-      correct: 'bg-[#e7f7ef] text-[#12834d]',
-      incorrect: 'bg-[#fff0f0] text-[#c93d3d]',
-      unanswered: 'bg-[#fff7e4] text-[#a66b00]',
+      neutral: 'bg-lock-soft text-text-secondary',
+      correct: 'bg-practice-soft text-practice',
+      incorrect: 'bg-danger-soft text-danger',
+      unanswered: 'bg-live-tint text-live',
     },
   },
   defaultVariants: { state: 'neutral' },
 })
 
 const reviewBorder: Record<AnswerState, string> = {
-  correct: 'border-[#bde8d0]',
-  incorrect: 'border-[#f2b6b6]',
-  unanswered: 'border-[#f0d79c]',
+  correct: 'border-line-practice',
+  incorrect: 'border-danger-line',
+  unanswered: 'border-live-line',
 }
 
 const optionLetter = 'grid place-items-center bg-primary-soft text-[12px] text-primary'
@@ -57,7 +57,7 @@ export function QuestionCard({ question, selectedId, onChoose }: QuestionCardPro
               type="button"
               className={cn(
                 'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[13px] border border-line-card bg-surface-tint px-[11px] py-[9px] text-left text-[13px] font-medium text-text-dim',
-                selected && 'border-primary bg-[#eaf3ff] shadow-[0_0_0_3px_rgba(28, 176, 246,0.08)]'
+                selected && 'border-primary bg-primary-soft shadow-[0_0_0_3px_rgba(28, 176, 246,0.08)]'
               )}
               onClick={() => onChoose(option.id)}
             >
@@ -85,8 +85,8 @@ const reviewOption = cva(
     variants: {
       tone: {
         plain: '',
-        correct: 'border-[#bde8d0] bg-[#f1fbf5]',
-        wrong: 'border-[#f2b6b6] bg-[#fff6f6]',
+        correct: 'border-line-practice bg-practice-soft',
+        wrong: 'border-danger-line bg-danger-soft',
       },
     },
     defaultVariants: { tone: 'plain' },
@@ -154,7 +154,7 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
       </div>
       <div className="rounded-xl bg-surface-sky p-2.5">
         <strong className="text-[12px] font-extrabold text-text-heading">Giải thích</strong>
-        <p className="mt-1 text-[13px] leading-[1.5] text-[#52617a]">{question.explanation}</p>
+        <p className="mt-1 text-[13px] leading-[1.5] text-text-dim">{question.explanation}</p>
       </div>
     </ActivityCard>
   )

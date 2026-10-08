@@ -36,7 +36,7 @@ const majors = [
 const highlights = ['3 phút hoàn thành', 'Cá nhân hóa ngay từ đầu', 'Có thể cập nhật sau']
 
 const textInput =
-  'border-[#d9eff9] bg-white/95 text-[13px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)]'
+  'border-line-blue bg-white/95 text-[13px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)]'
 
 function StudentOnboarding({ onBack }) {
   const [form, setForm] = useState({
@@ -82,7 +82,7 @@ function StudentOnboarding({ onBack }) {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_7%_8%,rgba(28, 176, 246,0.16)_0,transparent_24%),radial-gradient(circle_at_92%_12%,rgba(251,195,79,0.18)_0,transparent_18%),radial-gradient(circle_at_85%_90%,rgba(28, 176, 246,0.08)_0,transparent_26%),linear-gradient(180deg,#f7fcfe_0%,#f0faff_100%)] px-6 pt-6 pb-[58px] text-text-heading before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(rgba(255,255,255,0.55)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.55)_1px,transparent_1px)] before:bg-[length:84px_84px] before:opacity-[0.22] before:content-[''] before:[mask-image:linear-gradient(180deg,rgba(0,0,0,0.9),transparent_88%)] max-[701px]:px-3.5 max-[701px]:pt-4 max-[701px]:pb-7">
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_7%_8%,rgba(28, 176, 246,0.16)_0,transparent_24%),radial-gradient(circle_at_92%_12%,rgba(251,195,79,0.18)_0,transparent_18%),radial-gradient(circle_at_85%_90%,rgba(28, 176, 246,0.08)_0,transparent_26%),linear-gradient(180deg,var(--color-surface-sky)_0%,var(--color-surface-brand)_100%)] px-6 pt-6 pb-[58px] text-text-heading before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(rgba(255,255,255,0.55)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.55)_1px,transparent_1px)] before:bg-[length:84px_84px] before:opacity-[0.22] before:content-[''] before:[mask-image:linear-gradient(180deg,rgba(0,0,0,0.9),transparent_88%)] max-[701px]:px-3.5 max-[701px]:pt-4 max-[701px]:pb-7">
       <header className="relative z-1 mx-auto mb-6 flex w-[min(1180px,100%)] items-center justify-between max-[701px]:mb-[18px]">
         <Button
           appearance="outline"
@@ -122,14 +122,14 @@ function StudentOnboarding({ onBack }) {
                 {highlights.map((item) => (
                   <span
                     key={item}
-                    className="inline-flex min-h-[34px] items-center rounded-full border border-[#d9eff9] bg-white/90 px-3 text-[12px] font-bold text-text-heading-muted shadow-[0_10px_20px_rgba(28, 176, 246,0.06)] max-[701px]:min-h-8 max-[701px]:text-[11px]"
+                    className="inline-flex min-h-[34px] items-center rounded-full border border-line-blue bg-white/90 px-3 text-[12px] font-bold text-text-heading-muted shadow-[0_10px_20px_rgba(28, 176, 246,0.06)] max-[701px]:min-h-8 max-[701px]:text-[11px]"
                   >
                     {item}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="mb-6 flex items-center gap-[13px] rounded-[18px] border border-[#bde8f8] bg-[linear-gradient(100deg,#f0faff,#f7fcfe)] px-[18px] py-4 shadow-[0_10px_22px_rgba(28, 176, 246,0.07)] max-[701px]:items-start">
+            <div className="mb-6 flex items-center gap-[13px] rounded-[18px] border border-line-brand bg-[linear-gradient(100deg,var(--color-surface-brand),var(--color-surface-sky))] px-[18px] py-4 shadow-[0_10px_22px_rgba(28, 176, 246,0.07)] max-[701px]:items-start">
               <span className="grid size-11 place-items-center rounded-[14px] bg-[linear-gradient(135deg,var(--color-primary),var(--color-primary-dark))] text-surface shadow-[0_12px_22px_rgba(28, 176, 246,0.22)]">
                 <GraduationCap size={22} />
               </span>
@@ -170,7 +170,7 @@ function StudentOnboarding({ onBack }) {
                   <label className="mt-2.5 flex flex-col gap-[7px] text-[11px] font-bold text-text-body">
                     <span>Tên ngành học của bạn</span>
                     <input
-                      className={`h-11 rounded-[11px] border-[1.5px] px-[13px] placeholder:text-[#aab2c8] ${textInput}`}
+                      className={`h-11 rounded-[11px] border-[1.5px] px-[13px] placeholder:text-text-subtle ${textInput}`}
                       value={form.major}
                       placeholder="Nhập tên ngành học"
                       onChange={(event) => update('major', event.target.value)}
@@ -183,7 +183,7 @@ function StudentOnboarding({ onBack }) {
                 <FieldLabel icon={TrendingUp}>Điểm ĐGNL mục tiêu</FieldLabel>
                 <div className="mt-px mb-2.5 flex items-baseline gap-[7px]">
                   <strong className="text-[30px] leading-none text-primary">{form.score}</strong>
-                  <span className="text-[12px] text-[#8791ae]">/ 1200 điểm</span>
+                  <span className="text-[12px] text-text-subtle">/ 1200 điểm</span>
                 </div>
                 <input
                   className="w-full cursor-pointer accent-primary"
@@ -194,9 +194,9 @@ function StudentOnboarding({ onBack }) {
                   value={form.score}
                   onChange={(event) => update('score', Number(event.target.value))}
                 />
-                <div className="mt-2.5 flex items-center gap-[7px] text-[12px] text-[#8791ae]">
+                <div className="mt-2.5 flex items-center gap-[7px] text-[12px] text-text-subtle">
                   <input
-                    className="w-[88px] rounded-[10px] border border-[#dfe6f7] bg-surface px-[9px] py-[7px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)]"
+                    className="w-[88px] rounded-[10px] border border-line bg-surface px-[9px] py-[7px] text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)]"
                     type="number"
                     min="0"
                     max="1200"
@@ -221,9 +221,9 @@ function StudentOnboarding({ onBack }) {
                 error={errors.strongest}
               />
             </div>
-            <div className="mt-7 flex items-center justify-between gap-[18px] border-t border-[#eef1f8] pt-[22px] max-[701px]:flex-col-reverse max-[701px]:items-stretch">
-              <span className="flex items-center gap-2 text-[11.5px] text-[#8791ae] max-[701px]:justify-center">
-                <span className="size-2 rounded-full bg-[#36b37e] shadow-[0_0_0_6px_rgba(54,179,126,0.12)]" />
+            <div className="mt-7 flex items-center justify-between gap-[18px] border-t border-lock-soft pt-[22px] max-[701px]:flex-col-reverse max-[701px]:items-stretch">
+              <span className="flex items-center gap-2 text-[11.5px] text-text-subtle max-[701px]:justify-center">
+                <span className="size-2 rounded-full bg-success shadow-[0_0_0_6px_rgba(54,179,126,0.12)]" />
                 Thông tin này có thể cập nhật sau
               </span>
               <Button

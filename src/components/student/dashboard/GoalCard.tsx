@@ -14,15 +14,15 @@ interface GoalCardProps {
 // "Mục tiêu hôm nay": blue hero card with the owl coach and the daily goal.
 function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
   return (
-    <section className="relative rounded-[18px] bg-linear-to-b from-[#4d9bff] via-link to-[#1048ee] px-4 pt-5 pb-px shadow-[0_18px_34px_rgba(28, 176, 246,0.16)] after:absolute after:top-2 after:-right-7 after:size-[132px] after:rounded-[46%] after:bg-white/18 after:content-['']">
+    <section className="relative rounded-[18px] bg-linear-to-b from-primary-bright via-link to-link px-4 pt-5 pb-px shadow-[0_18px_34px_rgba(28, 176, 246,0.16)] after:absolute after:top-2 after:-right-7 after:size-[132px] after:rounded-[46%] after:bg-white/18 after:content-['']">
       <div className="relative z-1 mb-3 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 max-[760px]:grid-cols-1">
         <div className="inline-flex min-w-0 -translate-y-5 items-center gap-2 text-xl leading-[1.2] font-extrabold text-surface">
-          <Flame className="size-4 shrink-0 fill-[#ff9b14] text-[#ff9b14]" />
+          <Flame className="size-4 shrink-0 fill-streak text-streak" />
           <span>Mục tiêu hôm nay</span>
         </div>
 
         <div className="flex min-w-0 items-center justify-end gap-2.5">
-          <div className="absolute -top-[38px] right-[105px] z-5 max-w-[298px] rounded-[10px] bg-[#191fb6] px-3.5 py-2.5 text-[15px] leading-[1.35] font-bold text-surface shadow-[0_8px_18px_rgba(16,72,238,0.22)]">
+          <div className="absolute -top-[38px] right-[105px] z-5 max-w-[298px] rounded-[10px] bg-primary-dark px-3.5 py-2.5 text-[15px] leading-[1.35] font-bold text-surface shadow-[0_8px_18px_rgba(16,72,238,0.22)]">
             Bắt tay vào mục tiêu đầu tiên thôi!
           </div>
 
@@ -33,8 +33,8 @@ function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
       </div>
 
       <div className="relative z-2 -translate-y-[35px] rounded-[14px] bg-surface px-3.5 pt-2.5 pb-3.5">
-        <div className="relative z-1 grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 rounded-[14px] border-2 border-[#0b74ff] bg-surface p-3 max-[760px]:grid-cols-1">
-          <span className="grid size-[34px] place-items-center rounded-full border-[1.5px] border-dashed border-[#aab6c8] text-primary">
+        <div className="relative z-1 grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 rounded-[14px] border-2 border-link bg-surface p-3 max-[760px]:grid-cols-1">
+          <span className="grid size-[34px] place-items-center rounded-full border-[1.5px] border-dashed border-line text-primary">
             <Target size={22} />
           </span>
 
@@ -54,7 +54,7 @@ function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
           </Button>
         </div>
 
-        <div className="relative z-1 mt-2.5 mr-0.5 ml-1 flex items-center gap-2 text-xs leading-[1.4] text-[#98a4b8]">
+        <div className="relative z-1 mt-2.5 mr-0.5 ml-1 flex items-center gap-2 text-xs leading-[1.4] text-text-subtle">
           <Lock size={18} />
           <span>{lockedNote}</span>
         </div>

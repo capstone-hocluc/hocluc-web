@@ -26,9 +26,9 @@ export function RecentLessonCard({
     <article
       className={`${panel} grid grid-cols-[70px_minmax(0,1fr)_auto] items-center gap-[18px] bg-white/92 max-[760px]:grid-cols-1`}
     >
-      <div className="grid h-[72px] w-16 place-content-center place-items-center rounded-[20px] border-4 border-[#2fc66f] text-center font-black text-[#24b862]">
+      <div className="grid h-[72px] w-16 place-content-center place-items-center rounded-[20px] border-4 border-success text-center font-black text-success">
         <strong className="text-[26px] leading-none">{badge}</strong>
-        <span className="mt-[3px] rounded-md bg-[#2fc66f] px-1.5 py-[3px] text-[9px] text-surface uppercase">
+        <span className="mt-[3px] rounded-md bg-success px-1.5 py-[3px] text-[9px] text-surface uppercase">
           Bài học
         </span>
       </div>
@@ -38,7 +38,7 @@ export function RecentLessonCard({
       </div>
       <Button
         appearance="ghost"
-        className="h-auto gap-1.5 border-0 p-0 text-xs leading-normal font-extrabold text-[#08a246] hover:bg-transparent max-[760px]:w-full [&>svg]:size-[18px]"
+        className="h-auto gap-1.5 border-0 p-0 text-xs leading-normal font-extrabold text-practice hover:bg-transparent max-[760px]:w-full [&>svg]:size-[18px]"
         onClick={onAction}
       >
         {actionLabel} <ArrowRight size={18} />

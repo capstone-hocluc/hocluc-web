@@ -10,7 +10,7 @@ interface CarouselControlsProps {
 }
 
 const arrowClass =
-  'rounded-[10px] border-[#d9e4f4] text-link shadow-[0_8px_18px_rgba(17,24,58,0.04)] enabled:hover:-translate-y-px enabled:hover:border-line-brand enabled:hover:bg-[#f0faff] disabled:opacity-[0.38] disabled:shadow-none'
+  'rounded-[10px] border-line text-link shadow-[0_8px_18px_rgba(17,24,58,0.04)] enabled:hover:-translate-y-px enabled:hover:border-line-brand enabled:hover:bg-surface-brand disabled:opacity-[0.38] disabled:shadow-none'
 
 // Previous / next arrows; hidden when there is nothing to scroll.
 function CarouselControls({

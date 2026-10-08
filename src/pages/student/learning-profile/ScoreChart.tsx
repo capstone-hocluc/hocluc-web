@@ -116,7 +116,7 @@ function ScoreChart({
                   x2={chartWidth - padding.right}
                   y1={y}
                   y2={y}
-                  className="stroke-[#e5ecf8] [stroke-width:1]"
+                  className="stroke-[var(--color-line)] [stroke-width:1]"
                 />
               </g>
             )
@@ -126,14 +126,14 @@ function ScoreChart({
             x2={padding.left}
             y1={padding.top}
             y2={padding.top + usableHeight}
-            className="stroke-[#d7e1f1] [stroke-width:1.2]"
+            className="stroke-[var(--color-line)] [stroke-width:1.2]"
           />
           <line
             x1={padding.left}
             x2={chartWidth - padding.right}
             y1={targetY}
             y2={targetY}
-            className="stroke-[#f4a93c] [stroke-dasharray:7_6] [stroke-width:1.5]"
+            className="stroke-[var(--color-warning)] [stroke-dasharray:7_6] [stroke-width:1.5]"
           />
           <text
             x={chartWidth - padding.right}
@@ -232,7 +232,7 @@ function ScoreChart({
             <i
               className={cn(
                 legendLine,
-                'bg-[repeating-linear-gradient(90deg,#f4a93c_0_5px,transparent_5px_9px)]'
+                'bg-[repeating-linear-gradient(90deg,var(--color-warning)_0_5px,transparent_5px_9px)]'
               )}
             />{' '}
             Mục tiêu

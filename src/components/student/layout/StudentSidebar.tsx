@@ -46,8 +46,8 @@ function StudentSidebar({
                 'group-data-[collapsed=true]/sidebar:justify-center group-data-[collapsed=true]/sidebar:px-0',
                 'max-[1180px]:justify-center max-[1180px]:px-0 max-[760px]:min-h-[42px] max-[760px]:w-[42px] max-[760px]:rounded-[14px]',
                 active
-                  ? 'border-line-brand bg-linear-to-br from-badge-info-bg to-[#f7fcfe] text-primary shadow-[0_10px_22px_rgba(28, 176, 246,0.08)]'
-                  : 'border-transparent text-text-body hover:-translate-y-px hover:border-line-blue hover:bg-[#f0faff] hover:text-primary'
+                  ? 'border-line-brand bg-linear-to-br from-badge-info-bg to-surface-sky text-primary shadow-[0_10px_22px_rgba(28, 176, 246,0.08)]'
+                  : 'border-transparent text-text-body hover:-translate-y-px hover:border-line-blue hover:bg-surface-brand hover:text-primary'
               )}
             >
               <Icon size={18} className="shrink-0" />

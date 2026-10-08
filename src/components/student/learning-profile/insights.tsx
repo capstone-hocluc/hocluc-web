@@ -44,8 +44,8 @@ export function InsightList({ tone, dense = false, items }: InsightListProps) {
 const card = cva('flex flex-col rounded-2xl p-3.5 shadow-none', {
   variants: {
     tone: {
-      strength: 'border-[#cfeedb] bg-[#f6fff9]',
-      improvement: 'border-[#ffe7a8] bg-[#fffbea]',
+      strength: 'border-line-practice bg-practice-soft',
+      improvement: 'border-live-line bg-live-tint',
     },
     size: {
       // Overview AI panel

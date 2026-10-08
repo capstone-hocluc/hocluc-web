@@ -1,51 +1,8 @@
 /* ===== student app ===== */
 @media (max-width: 800px) {
-  .hl-auth-page {
-    height: auto;
-    min-height: 100dvh;
-    padding: 70px 16px 22px;
-    overflow-x: hidden;
-    overflow-y: auto;
-  }
-  .hl-auth-back {
-    left: 18px;
-    top: 24px;
-  }
-  .hl-auth-shell {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    height: auto;
-    max-height: none;
-    border-radius: 24px;
-  }
-  .hl-auth-form-panel {
-    min-height: 650px;
-    padding: 24px;
-  }
-  .hl-auth-form-wrap {
-    width: min(460px, 100%);
-  }
   .hl-auth-name-row {
     grid-template-columns: 1fr;
     gap: 0;
-  }
-  .hl-auth-art {
-    min-height: 360px;
-    height: auto;
-  }
-  .hl-auth-art-copy {
-    padding: 50px 11% 0;
-  }
-  .hl-auth-art-copy h2 {
-    font-size: 29px;
-  }
-  .hl-auth-quote {
-    font-size: 62px;
-  }
-  .hl-auth-art-image {
-    right: -5%;
-    bottom: 0;
-    width: 75%;
   }
 }
 
