@@ -1,0 +1,102 @@
+/* Dark-mode bridge for the Admin surface only. Public and learning surfaces
+   intentionally remain outside this rollout. */
+
+html[data-theme='dark'] body {
+  background: var(--color-app-bg);
+}
+
+html[data-theme='dark'] input,
+html[data-theme='dark'] textarea,
+html[data-theme='dark'] select {
+  color-scheme: dark;
+}
+
+html[data-theme='dark'] .hl-staff-app {
+  color: var(--color-text-heading);
+  background: var(--color-app-bg);
+}
+
+html[data-theme='dark'] .hl-staff-card,
+html[data-theme='dark'] .hl-staff-kpi,
+html[data-theme='dark'] .hl-staff-panel,
+html[data-theme='dark'] .hl-staff-header,
+html[data-theme='dark'] .hl-batch-panel,
+html[data-theme='dark'] .hl-batch-hero {
+  border-color: var(--color-border-subtle);
+  background: var(--color-surface);
+  color: var(--color-text-heading);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme='dark'] .hl-staff-search,
+html[data-theme='dark'] .hl-staff-search kbd,
+html[data-theme='dark'] .hl-staff-icon-button,
+html[data-theme='dark'] .hl-staff-profile-avatar {
+  border-color: var(--color-border-primary);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-emphasis);
+}
+
+html[data-theme='dark'] .hl-staff-search input,
+html[data-theme='dark'] .hl-staff-modal input,
+html[data-theme='dark'] .hl-staff-modal [data-dropdown-trigger] {
+  border-color: var(--color-border-primary);
+  background: var(--color-surface-input);
+  color: var(--color-text-heading);
+}
+
+html[data-theme='dark'] .hl-staff-sidebar {
+  background: var(--color-shell-sidebar);
+  color: var(--color-shell-sidebar-text);
+}
+
+html[data-theme='dark'] .hl-staff-nav-item {
+  color: var(--color-shell-sidebar-muted);
+}
+
+html[data-theme='dark'] .hl-staff-nav-item:hover,
+html[data-theme='dark'] .hl-staff-nav-item.is-active,
+html[data-theme='dark'] .hl-staff-activity-row:hover,
+html[data-theme='dark'] .hl-staff-tr:not(.head):hover,
+html[data-theme='dark'] .hl-staff-list-row:hover {
+  background: var(--color-surface-hover);
+}
+
+html[data-theme='dark'] .hl-staff-nav-item.is-active {
+  color: var(--color-primary-text);
+  background: var(--color-shell-sidebar-active);
+}
+
+html[data-theme='dark'] .hl-staff-tr,
+html[data-theme='dark'] .hl-staff-list-row {
+  border-color: var(--color-border-subtle);
+  background: var(--color-surface);
+  color: var(--color-text-body);
+}
+
+html[data-theme='dark'] .hl-staff-tr.head {
+  background: var(--color-surface-soft);
+  color: var(--color-text-subtle);
+}
+
+html[data-theme='dark'] .hl-staff-modal-backdrop {
+  background: var(--color-surface-overlay);
+}
+
+html[data-theme='dark'] .hl-staff-modal {
+  border-color: var(--color-border-primary);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-heading);
+  box-shadow: var(--shadow-card-hover);
+}
+
+html[data-theme='dark'] .hl-staff-primary,
+html[data-theme='dark'] .hl-staff-pagination button.is-active {
+  color: var(--color-on-accent);
+}
+
+html[data-theme='dark'] .hl-staff-toast {
+  border-color: var(--color-border-primary);
+  background: var(--color-badge-warning-bg);
+  color: var(--color-badge-warning-text);
+}

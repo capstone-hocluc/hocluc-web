@@ -1,7 +1,4 @@
-import { LockKeyhole } from 'lucide-react'
-import TeacherPageHeader, { TeacherBackLink } from './TeacherPageHeader'
-import Card from '../ui/Card'
-import { Field, Input, Textarea } from '../ui/Field'
+import { ArrowLeft, LockKeyhole } from 'lucide-react'
 import Notice from '../ui/Notice'
 
 interface TeacherLessonEditorProps {
@@ -20,32 +17,52 @@ function TeacherLessonEditor({ course, lesson, onBack }: TeacherLessonEditorProp
   const lessonContent = lesson.content || lesson.description || ''
 
   return (
-    <section className="flex max-w-[1080px] flex-col gap-4">
-      <TeacherBackLink onClick={onBack}>Quay lại nội dung khóa học</TeacherBackLink>
+    <section className="hl-teacher-lesson-editor">
+      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
+        <ArrowLeft size={16} />
+        Quay lại nội dung khóa học
+      </button>
 
-      <TeacherPageHeader title="Chi tiết bài học" description={`${course.name} · ${lessonTitle}`} />
+      <div className="hl-teacher-title">
+        <div>
+          <h1>Chi tiết bài học</h1>
+          <p>
+            {course.name} · {lessonTitle}
+          </p>
+        </div>
+      </div>
 
-      <Notice tone="warning">
+      <Notice tone="warning" className="mb-4">
         Màn hình này đang dùng dữ liệu khóa học mẫu. BE chưa có API lưu nội dung bài học, nên
         chỉnh sửa và xuất bản đang tạm khóa.
       </Notice>
 
-      <Card as="section" padding="lg" radius="lg">
-        <h2 className="text-base font-semibold text-text-heading">Nội dung bài học</h2>
-        <p className="mt-1 mb-4 text-sm text-text-subtle">Chỉ xem cho tới khi có API lưu bài học.</p>
-        <div className="grid gap-3.5">
-          <Field label="Tên bài học">
-            <Input value={lessonTitle} readOnly aria-readonly="true" />
-          </Field>
-          <Field label="Nội dung chi tiết">
-            <Textarea className="min-h-44" value={lessonContent} readOnly aria-readonly="true" />
-          </Field>
+      <section className="hl-teacher-panel">
+        <div className="hl-teacher-panel-heading">
+          <div>
+            <h2>Nội dung bài học</h2>
+            <p className="hl-teacher-lesson-note">Chỉ xem cho tới khi có API lưu bài học.</p>
+          </div>
         </div>
-      </Card>
+        <div className="hl-teacher-lesson-form">
+          <label>
+            Tên bài học
+            <input value={lessonTitle} readOnly aria-readonly="true" />
+          </label>
+          <label>
+            Nội dung chi tiết
+            <textarea value={lessonContent} readOnly aria-readonly="true" />
+          </label>
+        </div>
+      </section>
 
-      <Card as="section" padding="lg" radius="lg">
-        <h2 className="text-base font-semibold text-text-heading">Tài liệu và video</h2>
-        <p className="mt-1 mb-4 text-sm text-text-subtle">Tải lên và chỉnh sửa media đang tạm khóa.</p>
+      <section className="hl-teacher-panel mt-4">
+        <div className="hl-teacher-panel-heading">
+          <div>
+            <h2>Tài liệu và video</h2>
+            <p className="hl-teacher-lesson-note">Tải lên và chỉnh sửa media đang tạm khóa.</p>
+          </div>
+        </div>
         <Notice tone="info" className="items-start">
           <LockKeyhole aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
           <span>
@@ -54,7 +71,7 @@ function TeacherLessonEditor({ course, lesson, onBack }: TeacherLessonEditorProp
             hiện tại.
           </span>
         </Notice>
-      </Card>
+      </section>
     </section>
   )
 }

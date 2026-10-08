@@ -1,8 +1,8 @@
-import TeacherPageHeader, { TeacherBackLink } from './TeacherPageHeader'
 import { useRef, useState } from 'react'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   CalendarClock,
   CheckCircle2,
@@ -523,16 +523,18 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
 
   return (
     <section className="flex flex-col gap-5">
-      <TeacherBackLink onClick={onBack}>Quay lại tổng quan</TeacherBackLink>
-      <TeacherPageHeader
-        title="Bài thi thử"
-        description="Quản lý đề thi, thời gian làm bài và lượt dự thi."
-        actions={
-          <Button className="min-h-11" onClick={() => setCreating(true)}>
-            <Plus size={16} />Tạo đề thi thử
-          </Button>
-        }
-      />
+      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
+        <ArrowLeft size={16} />Quay lại tổng quan
+      </button>
+      <div className="hl-teacher-title">
+        <div>
+          <h1>Bài thi thử</h1>
+          <p>Quản lý đề thi, thời gian làm bài và lượt dự thi.</p>
+        </div>
+        <Button className="min-h-11" onClick={() => setCreating(true)}>
+          <Plus size={16} />Tạo đề thi thử
+        </Button>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="flex items-center gap-3" padding="md" radius="lg">
@@ -1113,12 +1115,16 @@ function TeacherMockExamForm({
 
   return (
     <section className="flex flex-col gap-4">
-      <TeacherBackLink onClick={onCancel}>Quay lại danh sách đề thi</TeacherBackLink>
-      <TeacherPageHeader
-        title={initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'}
-        description="Thiết lập khóa học, thời gian làm bài và cấu trúc câu hỏi."
-        actions={quizSnapshot && <StatusBadge tone={statusTone(quizSnapshot.status)} size="sm">{statusLabel(quizSnapshot.status)}</StatusBadge>}
-      />
+      <button type="button" className="hl-teacher-text-back" onClick={onCancel}>
+        <ArrowLeft size={16} />Quay lại danh sách đề thi
+      </button>
+      <div className="hl-teacher-title">
+        <div>
+          <h1>{initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'}</h1>
+          <p>Thiết lập khóa học, thời gian làm bài và cấu trúc câu hỏi.</p>
+        </div>
+        {quizSnapshot && <StatusBadge tone={statusTone(quizSnapshot.status)} size="sm">{statusLabel(quizSnapshot.status)}</StatusBadge>}
+      </div>
 
       <Card as="section" padding="lg" radius="lg" aria-labelledby="exam-settings-title">
         <div className="mb-4">

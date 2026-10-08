@@ -12,13 +12,8 @@ import {
   X,
 } from 'lucide-react'
 import Avatar from '../ui/Avatar'
-import Button from '../ui/Button'
-import Card from '../ui/Card'
-import { Field, Input, Textarea } from '../ui/Field'
-import TeacherPageHeader from './TeacherPageHeader'
 import { getInitials } from '../../lib/initials'
 
-// MOCK: profile and credentials until the backend exposes the teacher profile.
 const initialProfile = {
   name: 'Nguyễn Hoài Nam',
   email: 'nam.nguyen@hocluc.com',
@@ -90,153 +85,166 @@ function TeacherInformation({ onBack, onNotify }) {
   }
 
   return (
-    <section className="flex flex-col gap-4">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex w-fit cursor-pointer items-center gap-1.5 text-[13px] font-bold text-primary"
-      >
+    <section className="hl-teacher-information-page">
+      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
         <ChevronLeft size={17} />
         Quay lại tổng quan
       </button>
-      <TeacherPageHeader title="Thông tin cá nhân" description="Hồ sơ và thông tin chuyên môn." />
-      <div className="grid items-start gap-[18px] lg:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]">
-        <Card as="section" padding="lg" radius="lg">
-          <div className="mb-[22px] flex items-center gap-3.5 border-b border-border-subtle pb-[18px]">
+      <div className="hl-teacher-title">
+        <div>
+          <h1>Thông tin cá nhân</h1>
+          <p>Hồ sơ và thông tin chuyên môn.</p>
+        </div>
+      </div>
+      <div className="hl-teacher-information-grid">
+        <section className="hl-teacher-panel hl-teacher-info-profile">
+          <div className="hl-teacher-info-identity">
             <Avatar
               aria-label={profile.name}
               fallback={getInitials(profile.name)}
-              className="size-[58px] border-2 border-line-brand text-base"
+              className="size-[58px] border-2 border-[var(--color-line-brand)] text-base"
             />
             <div>
-              <h2 className="text-[17px] font-semibold text-text-strong">{profile.name}</h2>
-              <p className="mt-1 text-xs text-text-muted">{profile.subject}</p>
+              <h2>{profile.name}</h2>
+              <p>{profile.subject}</p>
             </div>
           </div>
-          <div className="mb-4 flex items-center justify-between gap-2.5">
-            <h2 className="text-base font-semibold text-text-heading">Thông tin liên hệ</h2>
+          <div className="hl-teacher-panel-heading">
+            <div>
+              <h2>Thông tin liên hệ</h2>
+            </div>
             {!editingProfile && (
-              <Button appearance="ghost" size="sm" onClick={() => setEditingProfile(true)}>
+              <button type="button" onClick={() => setEditingProfile(true)}>
                 <Pencil size={14} />
                 Chỉnh sửa
-              </Button>
+              </button>
             )}
           </div>
           {editingProfile ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Họ và tên">
-                <Input
+            <div className="hl-teacher-profile-form">
+              <label>
+                Họ và tên
+                <input
                   value={draft.name}
                   onChange={(event) => setDraft({ ...draft, name: event.target.value })}
                 />
-              </Field>
-              <Field label="Email">
-                <Input
+              </label>
+              <label>
+                Email
+                <input
                   type="email"
                   value={draft.email}
                   onChange={(event) => setDraft({ ...draft, email: event.target.value })}
                 />
-              </Field>
-              <Field label="Số điện thoại">
-                <Input
+              </label>
+              <label>
+                Số điện thoại
+                <input
                   value={draft.phone}
                   onChange={(event) => setDraft({ ...draft, phone: event.target.value })}
                 />
-              </Field>
-              <Field label="Vai trò / chuyên môn">
-                <Input
+              </label>
+              <label>
+                Vai trò / chuyên môn
+                <input
                   value={draft.subject}
                   onChange={(event) => setDraft({ ...draft, subject: event.target.value })}
                 />
-              </Field>
-              <Field label="Giới thiệu" full>
-                <Textarea
+              </label>
+              <label className="is-full">
+                Giới thiệu
+                <textarea
                   value={draft.bio}
                   onChange={(event) => setDraft({ ...draft, bio: event.target.value })}
                 />
-              </Field>
-              <div className="col-span-full flex flex-col-reverse justify-end gap-2 pt-1 sm:flex-row">
-                <Button type="button" appearance="ghost" onClick={resetProfile}>
+              </label>
+              <div className="hl-teacher-form-actions">
+                <button type="button" onClick={resetProfile}>
                   Hủy
-                </Button>
-                <Button type="button" onClick={saveProfile}>
+                </button>
+                <button type="button" className="hl-teacher-primary" onClick={saveProfile}>
                   <Save size={15} />
                   Lưu thay đổi
-                </Button>
+                </button>
               </div>
             </div>
           ) : (
-            <div className="grid gap-3.5">
-              {[
-                { icon: UserRound, label: 'Họ và tên', value: profile.name },
-                { icon: Mail, label: 'Email', value: profile.email },
-                { icon: Phone, label: 'Số điện thoại', value: profile.phone },
-                { icon: Award, label: 'Vai trò / chuyên môn', value: profile.subject },
-              ].map(({ icon: Icon, label, value }) => (
-                <span key={label} className="flex items-center gap-2.5 text-primary">
-                  <Icon size={17} />
-                  <div className="text-text-heading-soft">
-                    <small className="mb-0.5 block text-xs text-text-subtle">{label}</small>
-                    <strong className="block text-sm">{value}</strong>
-                  </div>
-                </span>
-              ))}
-              <p className="mt-1 rounded-[10px] bg-surface-soft p-3 text-[13px] leading-relaxed text-text-body">
-                {profile.bio}
-              </p>
+            <div className="hl-teacher-contact-list">
+              <span>
+                <UserRound size={17} />
+                <div>
+                  <small>Họ và tên</small>
+                  <strong>{profile.name}</strong>
+                </div>
+              </span>
+              <span>
+                <Mail size={17} />
+                <div>
+                  <small>Email</small>
+                  <strong>{profile.email}</strong>
+                </div>
+              </span>
+              <span>
+                <Phone size={17} />
+                <div>
+                  <small>Số điện thoại</small>
+                  <strong>{profile.phone}</strong>
+                </div>
+              </span>
+              <span>
+                <Award size={17} />
+                <div>
+                  <small>Vai trò / chuyên môn</small>
+                  <strong>{profile.subject}</strong>
+                </div>
+              </span>
+              <p>{profile.bio}</p>
             </div>
           )}
-        </Card>
-        <Card as="section" padding="lg" radius="lg">
-          <h2 className="mb-4 text-base font-bold text-primary">Chuyên môn & chứng chỉ</h2>
-          <div className="grid">
+        </section>
+        <section className="hl-teacher-panel hl-teacher-credentials">
+          <div className="hl-teacher-panel-heading">
+            <div>
+              <h2 className="hl-teacher-blue-heading">Chuyên môn & chứng chỉ</h2>
+            </div>
+          </div>
+          <div className="hl-teacher-credential-list">
             {credentials.map((item) => (
-              <article
-                key={item.id}
-                className="grid grid-cols-[37px_minmax(0,1fr)_28px_28px] items-center gap-2 border-b border-border-subtle py-[11px] max-sm:gap-1.5"
-              >
-                <span className="grid size-9 place-items-center rounded-[10px] bg-badge-info-bg text-primary">
+              <article key={item.id}>
+                <span>
                   <Award size={18} />
                 </span>
                 <div>
-                  <h3 className="text-sm font-semibold text-text-strong">{item.title}</h3>
-                  <p className="mt-0.5 text-xs leading-snug text-text-subtle">
+                  <h3>{item.title}</h3>
+                  <p>
                     {item.organization} · {item.year || 'Chưa cập nhật năm'}
                   </p>
                 </div>
-                <Button
+                <button
                   type="button"
-                  appearance="ghost"
-                  size="icon"
-                  className="size-7 rounded-[7px] bg-surface-hover"
                   aria-label={`Sửa ${item.title}`}
                   onClick={() => editCredential(item)}
                 >
                   <Pencil size={15} />
-                </Button>
-                <Button
+                </button>
+                <button
                   type="button"
-                  variant="danger"
-                  appearance="ghost"
-                  size="icon"
-                  className="size-7 rounded-[7px] bg-badge-danger-bg"
+                  className="is-delete"
                   aria-label={`Xóa ${item.title}`}
                   onClick={() => deleteCredential(item.id)}
                 >
                   <Trash2 size={15} />
-                </Button>
+                </button>
               </article>
             ))}
           </div>
-          <form
-            className="mt-[17px] grid gap-2.5 rounded-xl border border-border-primary bg-surface-soft p-3.5"
-            onSubmit={submitCredential}
-          >
-            <strong className="text-sm text-text-heading-soft">
+          <form className="hl-teacher-credential-form" onSubmit={submitCredential}>
+            <strong>
               {editingCredentialId ? 'Chỉnh sửa chuyên môn/chứng chỉ' : 'Thêm chuyên môn/chứng chỉ'}
             </strong>
-            <Field label="Tên bằng cấp / chứng chỉ">
-              <Input
+            <label>
+              Tên bằng cấp / chứng chỉ
+              <input
                 required
                 value={credentialForm.title}
                 onChange={(event) =>
@@ -244,9 +252,10 @@ function TeacherInformation({ onBack, onNotify }) {
                 }
                 placeholder="Ví dụ: Thạc sĩ Toán học"
               />
-            </Field>
-            <Field label="Đơn vị cấp">
-              <Input
+            </label>
+            <label>
+              Đơn vị cấp
+              <input
                 required
                 value={credentialForm.organization}
                 onChange={(event) =>
@@ -254,25 +263,26 @@ function TeacherInformation({ onBack, onNotify }) {
                 }
                 placeholder="Tên đơn vị"
               />
-            </Field>
-            <Field label="Năm cấp">
-              <Input
+            </label>
+            <label>
+              Năm cấp
+              <input
                 value={credentialForm.year}
                 onChange={(event) =>
                   setCredentialForm({ ...credentialForm, year: event.target.value })
                 }
                 placeholder="2026"
               />
-            </Field>
-            <div className="flex items-center gap-1.5">
-              <Button type="submit">
+            </label>
+            <div>
+              <button type="submit" className="hl-teacher-primary">
                 <Plus size={15} />
                 {editingCredentialId ? 'Cập nhật' : 'Thêm mới'}
-              </Button>
+              </button>
               {editingCredentialId && (
-                <Button
+                <button
                   type="button"
-                  appearance="ghost"
+                  className="hl-teacher-form-cancel"
                   onClick={() => {
                     setCredentialForm({ title: '', organization: '', year: '' })
                     setEditingCredentialId(null)
@@ -280,11 +290,11 @@ function TeacherInformation({ onBack, onNotify }) {
                 >
                   <X size={15} />
                   Hủy
-                </Button>
+                </button>
               )}
             </div>
           </form>
-        </Card>
+        </section>
       </div>
     </section>
   )

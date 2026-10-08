@@ -15,20 +15,19 @@
     />
     <title>Học Lực — Mỗi ngày một chút, tiến xa một bước.</title>
   </head>
-  <body class="dark:bg-app-bg">
+  <body>
     <div id="root"></div>
     <script>
       (() => {
         const path = window.location.pathname
-        const isRoleSurface =
-          path === '/management/login' || /^\/(admin|staff|manager|mentor|teacher)\//.test(path)
+        const isAdminSurface = path === '/management/login' || path.startsWith('/admin/')
         let theme = 'light'
         try {
-          if (isRoleSurface && window.localStorage.getItem('hocluc.theme') === 'dark') {
+          if (isAdminSurface && window.localStorage.getItem('hocluc.theme') === 'dark') {
             theme = 'dark'
           }
         } catch {
-          // The role ThemeProvider handles storage failures after mount.
+          // The Admin ThemeProvider handles storage failures after mount.
         }
         document.documentElement.dataset.theme = theme
         document.documentElement.style.colorScheme = theme

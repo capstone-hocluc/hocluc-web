@@ -1,14 +1,19 @@
-import { lazy, Suspense } from 'react'
-import { BookOpen, CalendarDays, ClipboardCheck, LayoutDashboard, Users } from 'lucide-react'
+import { lazy, Suspense, useState } from 'react'
+import { BookOpen, CalendarDays, ChevronRight, ClipboardCheck, LayoutDashboard, LogOut, Menu, Users } from 'lucide-react'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
+import Logo from '../common/Logo'
 import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
-import Notice from '../ui/Notice'
+import Button from '../ui/Button'
+import NavItem, { SidebarGroupLabel } from '../ui/NavItem'
 import PageHeading from '../ui/PageHeading'
+import Sidebar from '../ui/Sidebar'
 import type { ManagementRole } from './ManagementRouteGuard'
-import RoleShell, { type RoleShellNavItem } from './role-shell'
+import Notice from '../ui/Notice'
+import RoleSwitcher from '../ui/RoleSwitcher'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
 const AttendanceManagementPage = lazy(() => import('../../pages/management/AttendanceManagementPage'))
@@ -80,22 +85,27 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   },
 }
 
-const NAV_ITEMS: RoleShellNavItem[] = [
-  { key: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { key: 'users', label: 'Người dùng', icon: Users },
+const NAV_ITEMS = [
+  { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { page: 'users', label: 'Người dùng', icon: Users },
 ]
 
-const STAFF_NAV_ITEMS: RoleShellNavItem[] = [
+const STAFF_NAV_ITEMS = [
   ...NAV_ITEMS,
-  { key: 'schedules', label: 'Lịch học', icon: CalendarDays },
-  { key: 'attendance', label: 'Điểm danh', icon: ClipboardCheck },
+  { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
+  { page: 'attendance', label: 'Điểm danh', icon: ClipboardCheck },
 ]
 
-const MANAGER_NAV_ITEMS: RoleShellNavItem[] = [
-  { key: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { key: 'courses', label: 'Khóa học', icon: BookOpen },
-  { key: 'schedules', label: 'Lịch học', icon: CalendarDays },
+const MANAGER_NAV_ITEMS = [
+  { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
 ]
+
+function getInitials(profile: { firstName?: string; lastName?: string; email: string }) {
+  const initials = `${profile.firstName?.[0] ?? ''}${profile.lastName?.[0] ?? ''}`.trim()
+  return initials || profile.email.slice(0, 2).toUpperCase()
+}
 
 function UnavailablePage({ page }: { page: string }) {
   const meta = PAGE_META[page] ?? {
@@ -135,6 +145,8 @@ function ManagementDashboard({
   onLogout,
   logoutLoading,
 }: ManagementDashboardProps) {
+  const { profile } = useCurrentUser()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const effectivePage = role === 'MENTOR' && page === 'dashboard' ? 'mentor-dashboard' : page
   const meta = PAGE_META[effectivePage] ?? PAGE_META.dashboard
   const roleLabel = ROLE_LABELS[role]
@@ -142,58 +154,131 @@ function ManagementDashboard({
     role === 'ADMINISTRATOR' ? 'Quản trị' : role === 'MENTOR' ? 'Mentor' : 'Vận hành'
   const navigationItems =
     role === 'MENTOR'
-      ? NAV_ITEMS.filter((item) => item.key === 'dashboard')
+      ? NAV_ITEMS.filter((item) => item.page === 'dashboard')
       : role === 'MANAGER'
         ? MANAGER_NAV_ITEMS
         : role === 'STAFF'
           ? STAFF_NAV_ITEMS
           : NAV_ITEMS
+  const displayName = profile?.displayName || [profile?.firstName, profile?.lastName].filter(Boolean).join(' ')
 
   return (
-    <RoleShell
-      roleLabel={roleLabel}
-      areaLabel={areaLabel}
-      pageTitle={meta.title}
-      navGroups={[{ label: areaLabel, items: navigationItems }]}
-      activeKey={effectivePage}
-      onNavigate={onNavigate}
-      onLogout={onLogout}
-      logoutLoading={logoutLoading}
-    >
-      {effectivePage === 'courses' && role === 'MANAGER' ? (
-        <>
-          <PageHeading title={meta.title} subtitle={meta.subtitle} />
-          <ManagementCourseList />
-        </>
-      ) : effectivePage === 'users' && (role === 'STAFF' || role === 'ADMINISTRATOR') ? (
-        <>
-          <PageHeading title={meta.title} subtitle={meta.subtitle} />
-          <UserManagement readOnly={role === 'STAFF'} canCreateUsers={role === 'ADMINISTRATOR'} />
-        </>
-      ) : effectivePage === 'schedules' && (role === 'STAFF' || role === 'MANAGER') ? (
-        <Suspense fallback={<SchedulingPageFallback title="Lịch học" />}>
-          <SchedulingPage role={role} />
-        </Suspense>
-      ) : effectivePage === 'attendance' && role === 'STAFF' ? (
-        <Suspense fallback={<SchedulingPageFallback title="Điểm danh" />}>
-          <AttendanceManagementPage />
-        </Suspense>
-      ) : effectivePage === 'attendance' && role === 'MANAGER' ? (
-        <RestrictedAttendancePage />
-      ) : effectivePage === 'dashboard' && role === 'MANAGER' ? (
-        <>
-          <PageHeading title={meta.title} subtitle={meta.subtitle} />
-          <ManagerOverview onNavigate={onNavigate} />
-        </>
-      ) : effectivePage === 'dashboard' && role !== 'MENTOR' ? (
-        <>
-          <PageHeading title={meta.title} subtitle={meta.subtitle} />
-          <AdminOverview onNavigate={onNavigate} areaLabel={areaLabel.toLocaleLowerCase('vi-VN')} />
-        </>
-      ) : (
-        <UnavailablePage page={effectivePage} />
-      )}
-    </RoleShell>
+    <main className="flex min-h-screen bg-surface-soft text-text-heading">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        brand={<Logo />}
+        roleLabel={roleLabel}
+        user={
+          profile
+            ? {
+                initials: getInitials(profile),
+                name: displayName || profile.email,
+                role: roleLabel,
+              }
+            : undefined
+        }
+        onUserClick={onLogout}
+        footer={
+          <Button
+            variant="primary"
+            appearance="ghost"
+            size="sm"
+            className="w-full justify-start px-3 text-text-muted"
+            onClick={onLogout}
+            disabled={logoutLoading}
+          >
+            <LogOut size={16} />
+            {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}
+          </Button>
+        }
+      >
+        <SidebarGroupLabel>{areaLabel}</SidebarGroupLabel>
+        {navigationItems.map(({ page: itemPage, label, icon }) => (
+          <NavItem
+            key={itemPage}
+            icon={icon}
+            label={label}
+            active={effectivePage === itemPage}
+            onClick={() => {
+              setSidebarOpen(false)
+              onNavigate(itemPage)
+            }}
+          />
+        ))}
+      </Sidebar>
+
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="flex min-h-16 items-center justify-between gap-4 border-b border-border-subtle bg-surface px-4 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            className="grid size-9 place-items-center rounded-lg text-text-muted hover:bg-surface-hover lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Mở menu"
+          >
+            <Menu size={20} />
+          </button>
+          <div className="hidden items-center gap-2 text-sm text-text-muted sm:flex">
+            <span>{areaLabel}</span>
+            <ChevronRight size={15} />
+            <strong className="font-semibold text-text-heading">{meta.title}</strong>
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            <RoleSwitcher />
+            <span className="hidden text-right sm:block">
+              <strong className="block text-sm font-semibold text-text-heading">
+                {displayName || profile?.email || roleLabel}
+              </strong>
+              <small className="block text-xs text-text-muted">{roleLabel}</small>
+            </span>
+            <button
+              type="button"
+              className="grid size-9 place-items-center rounded-full bg-badge-info-bg text-sm font-semibold text-badge-info-text"
+              onClick={onLogout}
+              aria-label="Mở tài khoản"
+            >
+              {profile ? getInitials(profile) : roleLabel.slice(0, 2)}
+            </button>
+          </div>
+        </header>
+
+        <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-5 p-4 sm:p-6 lg:p-8">
+          {effectivePage === 'courses' && role === 'MANAGER' ? (
+            <>
+              <PageHeading title={meta.title} subtitle={meta.subtitle} />
+              <ManagementCourseList />
+            </>
+          ) : effectivePage === 'users' && role === 'STAFF' ? (
+            <>
+              <PageHeading title={meta.title} subtitle={meta.subtitle} />
+              <UserManagement readOnly />
+            </>
+          ) : effectivePage === 'schedules' && (role === 'STAFF' || role === 'MANAGER') ? (
+            <Suspense fallback={<SchedulingPageFallback title="Lịch học" />}>
+              <SchedulingPage role={role} />
+            </Suspense>
+          ) : effectivePage === 'attendance' && role === 'STAFF' ? (
+            <Suspense fallback={<SchedulingPageFallback title="Điểm danh" />}>
+              <AttendanceManagementPage />
+            </Suspense>
+          ) : effectivePage === 'attendance' && role === 'MANAGER' ? (
+            <RestrictedAttendancePage />
+          ) : effectivePage === 'dashboard' && role === 'MANAGER' ? (
+            <>
+              <PageHeading title={meta.title} subtitle={meta.subtitle} />
+              <ManagerOverview onNavigate={onNavigate} />
+            </>
+          ) : effectivePage === 'dashboard' && role !== 'MENTOR' ? (
+            <>
+              <PageHeading title={meta.title} subtitle={meta.subtitle} />
+              <AdminOverview onNavigate={onNavigate} areaLabel={areaLabel.toLocaleLowerCase('vi-VN')} />
+            </>
+          ) : (
+            <UnavailablePage page={effectivePage} />
+          )}
+        </div>
+      </section>
+    </main>
   )
 }
 
