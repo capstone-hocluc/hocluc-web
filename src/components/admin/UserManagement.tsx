@@ -822,7 +822,10 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               </Status>
               <Status tone="info">{ROLE_LABELS[selectedUser.role]}</Status>
             </div>
-            {!readOnly && SWITCHABLE_ROLES.includes(selectedUser.role) && (
+            {canCreateUsers &&
+              !readOnly &&
+              selectedUser.roles &&
+              SWITCHABLE_ROLES.includes(selectedUser.role) && (
               <fieldset className="border-t border-border-subtle pt-4" disabled={grantingRoles}>
                 <legend className="text-xs font-semibold tracking-wide text-text-subtle uppercase">
                   Vai trò được đổi

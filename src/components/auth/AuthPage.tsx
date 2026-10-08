@@ -729,6 +729,7 @@ function AuthPage({
 
   return (
     <AuthShell
+      variant="dialog"
       onBack={onBack}
       className={`${isEmailVerification ? 'is-verification' : ''} ${isRecovery ? 'is-recovery' : ''}`}
     >

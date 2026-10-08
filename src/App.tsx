@@ -13,7 +13,6 @@ import StudentOnboarding from './components/student/StudentOnboarding'
 import StudentRouteGuard from './components/student/StudentRouteGuard'
 import StudentRoutes from './pages/student/StudentRoutes'
 import AdminLoginPage from './pages/AdminLoginPage'
-import { registerRoleNavigator } from './hooks/useActiveRole'
 import ManagementDashboard from './components/management/ManagementDashboard'
 import ManagementRouteGuard, {
   type ManagementRole,
@@ -166,12 +165,6 @@ function App() {
       setCurrentPath(path.replace(/\/$/, '') || '/')
     })
   }, [getAuthMode, pushHistoryEntry])
-
-  // Lets the role switcher (any dashboard header) move to another role's home.
-  useEffect(() => {
-    registerRoleNavigator((path) => navigateTo(path))
-    return () => registerRoleNavigator(null)
-  }, [navigateTo])
 
   const backToLanding = () => {
     runWithUnsavedActionGuard(() => {
@@ -546,16 +539,21 @@ function App() {
         onGoToOrders={() => navigateTo('/orders')}
       />
     )
-  return authMode ? (
-    <AuthPage
-      mode={authMode}
-      onModeChange={navigateAuth}
-      onContinue={authMode === 'signup' ? goToEmailVerification : goAfterLogin}
-      verificationEmail={pendingVerificationEmail}
-      onBack={backToLanding}
-    />
-  ) : (
-    <LandingPage />
+  // Login, signup, verification and recovery float over the landing page as one
+  // dialog; the URL still reflects the step so refresh and links keep working.
+  return (
+    <>
+      <LandingPage />
+      {authMode && (
+        <AuthPage
+          mode={authMode}
+          onModeChange={navigateAuth}
+          onContinue={authMode === 'signup' ? goToEmailVerification : goAfterLogin}
+          verificationEmail={pendingVerificationEmail}
+          onBack={backToLanding}
+        />
+      )}
+    </>
   )
 }
 
