@@ -6,11 +6,6 @@ Get-ChildItem -LiteralPath (Join-Path $landingRoot 'assets') -File -Recurse | Wh
     $encodedAsset = [Convert]::ToBase64String([IO.File]::ReadAllBytes($_.FullName))
     $landingHtml = $landingHtml.Replace($assetRelative, ('data:' + $mimeType + ';base64,' + $encodedAsset))
 }
-$amyImagePath = [IO.Path]::GetFullPath((Join-Path $landingRoot '..\Amy.png'))
-if (Test-Path -LiteralPath $amyImagePath) {
-    $encodedAmy = [Convert]::ToBase64String([IO.File]::ReadAllBytes($amyImagePath))
-    $landingHtml = $landingHtml.Replace('/Amy.png', ('data:image/png;base64,' + $encodedAmy))
-}
 $fontLicense = [IO.File]::ReadAllText((Join-Path $landingRoot 'assets/fonts/OFL.txt'))
 $landingHtml = $landingHtml.Replace('</head>', ('<!-- Nunito font license' + [Environment]::NewLine + $fontLicense + [Environment]::NewLine + '--></head>'))
 [IO.File]::WriteAllText((Join-Path $landingRoot 'hocluc-standalone.html'), $landingHtml)

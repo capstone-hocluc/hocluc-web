@@ -13,7 +13,7 @@ HTML/CSS/JavaScript thuần. Mở `hocluc-standalone.html` trực tiếp, không
 
 Nội dung chính được rút gọn: giới thiệu, 5 nhóm học, lộ trình ngắn và bài học thử. Các hoạt động ôn luyện đặt thành hàng nút gọn dưới nhóm học. Giữ đủ 14 học phần trong cửa sổ chi tiết; Casio thuộc Toán. Bỏ thông báo đầu trang, các phần giới thiệu lặp lại, FAQ, tổng thời lượng và ghi chú phiên bản trên trang chủ.
 
-Cú xanh, Mai và Nam cùng xuất hiện trong một khung minh họa; hero tự chuyển cảnh giữa khung này và ảnh Amy cũ, đồng thời đổi tiêu đề và mô tả theo từng ảnh. Hình ảnh lướt ngang nhẹ khi hòa cảnh; tiêu đề đổi trước, mô tả theo sau bằng hiệu ứng mờ và dịch chuyển rất nhẹ. Mai chuyển động nhẹ khi viết; Nam chuyển động theo nhịp riêng khi khám phá hình học. Bo và Mít xuất hiện trong nhóm học. Tham khảo cách trình bày từ [PREP](https://prepedu.com/vi/) và [Duolingo](https://vi.duolingo.com/); nội dung lấy từ tài liệu `HocLuc_Curriculum_Framework_v2.0.docx` và cấu trúc ứng dụng hiện tại.
+Cú xanh, Mai và Nam cùng xuất hiện trong một khung minh họa hero cố định. Mai chuyển động nhẹ khi viết; Nam chuyển động theo nhịp riêng khi khám phá hình học. Bo và Mít xuất hiện trong nhóm học. Tham khảo cách trình bày từ [PREP](https://prepedu.com/vi/) và [Duolingo](https://vi.duolingo.com/); nội dung lấy từ tài liệu `HocLuc_Curriculum_Framework_v2.0.docx` và cấu trúc ứng dụng hiện tại.
 
 ## Font tiếng Việt
 

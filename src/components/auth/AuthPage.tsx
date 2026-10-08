@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, NotebookPen } from 'lucide-react'
-import Logo from '../common/Logo'
+import AuthShell from './AuthShell'
 import GoogleSignInButton from './GoogleSignInButton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
@@ -510,16 +510,13 @@ function AuthPage({
     return (
       <div className={`hl-auth-recovery ${recoveryLoading ? 'is-loading' : ''}`}>
         <div className="hl-auth-heading hl-auth-heading--compact">
-          <span className="hl-auth-kicker">Khôi phục mật khẩu</span>
-          <h1>{isStepOne ? 'Nhận mã đặt lại mật khẩu' : 'Đặt lại mật khẩu'}</h1>
+          <h1>Quên mật khẩu</h1>
           <p>
             {isStepOne ? (
-              'Nhập email đã đăng ký. Chúng tôi sẽ gửi mã xác nhận để bạn đặt lại mật khẩu.'
+              'Nhập email để nhận mã xác nhận.'
             ) : (
               <>
-                Mã xác nhận đã được gửi tới{' '}
-                <strong>{recoveryForm.email || 'email của bạn'}</strong>. Nhập mã và mật khẩu mới
-                để tiếp tục.
+                Mã đã gửi tới <strong>{recoveryForm.email || 'email của bạn'}</strong>.
               </>
             )}
           </p>
@@ -661,10 +658,9 @@ function AuthPage({
   const renderEmailVerification = () => (
     <div className={`hl-auth-recovery ${verificationLoading ? 'is-loading' : ''}`}>
       <div className="hl-auth-heading hl-auth-heading--compact">
-        <h1>Xác thực email của bạn</h1>
+        <h1>Xác thực email</h1>
         <p>
-          Mã xác nhận đã được gửi tới <strong>{currentVerificationEmail || 'email của bạn'}</strong>. Nhập mã để
-          hoàn tất đăng ký.
+          Mã đã gửi tới <strong>{currentVerificationEmail || 'email của bạn'}</strong>.
         </p>
       </div>
 
@@ -732,26 +728,10 @@ function AuthPage({
   )
 
   return (
-    <main
-      className={`hl-auth-page ${isEmailVerification ? 'is-verification' : ''} ${
-        isRecovery ? 'is-recovery' : ''
-      }`}
+    <AuthShell
+      onBack={onBack}
+      className={`${isEmailVerification ? 'is-verification' : ''} ${isRecovery ? 'is-recovery' : ''}`}
     >
-      <button
-        className="hl-auth-back"
-        type="button"
-        onClick={onBack}
-        aria-label="Quay lại landing page"
-      >
-        <ArrowLeft size={18} />
-        <span>Về trang chủ</span>
-      </button>
-      <div className="hl-auth-shell">
-        <section className="hl-auth-form-panel">
-          <a className="hl-auth-logo" href="#top" onClick={onBack} aria-label="HocLuc.com">
-            <Logo />
-          </a>
-          <div className="hl-auth-form-wrap">
             {isEmailVerification ? (
               renderEmailVerification()
             ) : isRecovery ? (
@@ -759,13 +739,7 @@ function AuthPage({
             ) : (
               <>
                 <div className="hl-auth-heading">
-                  <span className="hl-auth-kicker">Cùng nhau tiến bộ mỗi ngày</span>
                   <h1>{isSignup ? 'Tạo tài khoản' : 'Chào mừng trở lại'}</h1>
-                  <p>
-                    {isSignup
-                      ? 'Bắt đầu hành trình chinh phục mục tiêu học tập.'
-                      : 'Đăng nhập để tiếp tục hành trình học tập của bạn.'}
-                  </p>
                 </div>
                 <GoogleSignInButton
                   isSignup={isSignup}
@@ -987,26 +961,7 @@ function AuthPage({
                 </p>
               </>
             )}
-          </div>
-        </section>
-        <aside className="hl-auth-art" aria-label="Minh hoạ học tập">
-          <div className="hl-auth-art-copy">
-            <span className="hl-auth-quote">“</span>
-            <h2>
-              Kiến thức hôm nay,
-              <br />
-              nền tảng ngày mai.
-            </h2>
-            <p>Học đúng cách, tiến bộ vững vàng cùng HocLuc.com</p>
-          </div>
-          <img
-            className="hl-auth-art-image"
-            src="/LoginPage.png"
-            alt="Minh hoạ sách vở và dụng cụ học tập"
-          />
-        </aside>
-      </div>
-    </main>
+    </AuthShell>
   )
 }
 
