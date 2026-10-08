@@ -17,6 +17,7 @@ import {
   getUserById,
   getUsers,
   updateUserRole,
+  updateUserRoles,
   updateUserStatus,
   USER_ROLES,
   USER_STATUSES,
@@ -143,6 +144,9 @@ function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Đã xảy ra lỗi. Vui lòng thử lại.'
 }
 
+// Only these roles can be granted together and switched between; students never can.
+const SWITCHABLE_ROLES: UserRole[] = ['ADMINISTRATOR', 'STAFF', 'MENTOR']
+
 interface UserManagementProps {
   readOnly?: boolean
   canCreateUsers?: boolean
@@ -161,6 +165,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [grantingRoles, setGrantingRoles] = useState(false)
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [createUserForm, setCreateUserForm] = useState<CreateUserForm>(EMPTY_CREATE_USER_FORM)
   const [createUserLoading, setCreateUserLoading] = useState(false)
@@ -284,6 +289,26 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
       }
     },
     [updateUserInPage]
+  )
+
+  const handleGrantedRolesChange = useCallback(
+    async (user: UserProfile, role: UserRole, granted: boolean) => {
+      const current = new Set<UserRole>(user.roles ?? [user.role])
+      if (granted) current.add(role)
+      else current.delete(role)
+      setGrantingRoles(true)
+      setError('')
+      try {
+        const updated = await updateUserRoles(user.id, Array.from(current))
+        setSelectedUser((open) => (open?.id === user.id ? { ...open, ...updated } : open))
+        setFeedback('Đã cập nhật vai trò được đổi.')
+      } catch (requestError: unknown) {
+        setError(getErrorMessage(requestError))
+      } finally {
+        setGrantingRoles(false)
+      }
+    },
+    []
   )
 
   const openUserDetail = useCallback(async (user: UserSummary) => {
@@ -797,6 +822,32 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               </Status>
               <Status tone="info">{ROLE_LABELS[selectedUser.role]}</Status>
             </div>
+            {!readOnly && SWITCHABLE_ROLES.includes(selectedUser.role) && (
+              <fieldset className="border-t border-border-subtle pt-4" disabled={grantingRoles}>
+                <legend className="text-xs font-semibold tracking-wide text-text-subtle uppercase">
+                  Vai trò được đổi
+                </legend>
+                <div className="mt-2 flex flex-wrap gap-4">
+                  {SWITCHABLE_ROLES.map((role) => (
+                    <label
+                      key={role}
+                      className="inline-flex items-center gap-2 text-sm text-text-body"
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-primary"
+                        checked={(selectedUser.roles ?? [selectedUser.role]).includes(role)}
+                        disabled={role === selectedUser.role}
+                        onChange={(event) =>
+                          void handleGrantedRolesChange(selectedUser, role, event.target.checked)
+                        }
+                      />
+                      {ROLE_LABELS[role]}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
           </div>
         ) : null}
       </Modal>

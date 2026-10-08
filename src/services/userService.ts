@@ -238,3 +238,12 @@ export async function updateUserRole(id: string, role: UserRole): Promise<UserPr
   })
   return requireResponseData(response, 'Không thể cập nhật vai trò người dùng.')
 }
+
+export async function updateUserRoles(id: string, roles: UserRole[]): Promise<UserProfile> {
+  const response = await request<UserProfile>(`/api/v1/users/${id}/roles`, {
+    method: 'PUT',
+    auth: true,
+    body: { roles },
+  })
+  return requireResponseData(response, 'Không thể cập nhật vai trò được cấp.')
+}

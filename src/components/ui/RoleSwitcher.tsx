@@ -9,12 +9,11 @@ import {
   DropdownMenuTrigger,
 } from './DropdownMenu'
 
-// Lets a user who holds several roles hop between their areas. Always shows the
-// current role; with a single role the menu just explains there is nothing to
-// switch to yet.
+// Lets an account that holds several roles hop between their areas. Hidden
+// when there is nothing to switch to.
 function RoleSwitcher({ className }: { className?: string }) {
-  const { roles, activeRole, switchRole } = useActiveRole()
-  if (!activeRole) return null
+  const { roles, activeRole, switchRole, switching, error } = useActiveRole()
+  if (!activeRole || roles.length < 2) return null
 
   return (
     <DropdownMenu>
@@ -28,7 +27,9 @@ function RoleSwitcher({ className }: { className?: string }) {
           )}
         >
           <Repeat2 size={15} aria-hidden="true" className="text-primary-text" />
-          <span className="hidden sm:inline">{ROLE_LABELS[activeRole]}</span>
+          <span className="hidden sm:inline">
+            {switching ? 'Đang đổi...' : ROLE_LABELS[activeRole]}
+          </span>
           <ChevronDown size={14} aria-hidden="true" className="text-text-muted" />
         </button>
       </DropdownMenuTrigger>
@@ -40,15 +41,16 @@ function RoleSwitcher({ className }: { className?: string }) {
           <DropdownMenuItem
             key={role}
             aria-current={role === activeRole ? 'true' : undefined}
-            onSelect={() => switchRole(role)}
+            disabled={switching}
+            onSelect={() => void switchRole(role)}
           >
             <span className="flex-1">{ROLE_LABELS[role]}</span>
             {role === activeRole && <Check size={15} aria-hidden="true" className="text-primary" />}
           </DropdownMenuItem>
         ))}
-        {roles.length < 2 && (
-          <p className="px-[11px] py-2 text-xs leading-5 text-text-muted">
-            Tài khoản chưa được cấp thêm vai trò nào khác.
+        {error && (
+          <p role="alert" className="px-[11px] py-2 text-xs leading-5 text-danger">
+            {error}
           </p>
         )}
       </DropdownMenuContent>

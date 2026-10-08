@@ -8,6 +8,7 @@ import {
   setTokens,
   type TokenData,
 } from '../lib/api'
+import type { UserRole } from './userService'
 
 export interface RegisterStudentRequest {
   email: string
@@ -149,4 +150,18 @@ export async function logout() {
   } finally {
     clearTokens()
   }
+}
+
+// Role in use is stored server-side; the response carries fresh tokens for it.
+export async function switchRole(role: UserRole) {
+  const response = await request<TokenData>('/api/v1/auth/switch-role', {
+    method: 'POST',
+    auth: true,
+    body: { role },
+  })
+
+  return ensureTokenData(
+    response,
+    'Không đổi được vai trò. Máy chủ chưa trả về đầy đủ token.'
+  )
 }
