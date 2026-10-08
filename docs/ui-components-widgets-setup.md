@@ -40,6 +40,10 @@ Tài liệu mô tả **stack UI thực tế** của project và **danh mục đ�
 
 **Số lượng file UI trong repo:** **47** file dưới `components/ui/` (xem bảng mục 9).
 
+### Ghi chú shell theo vai trò (current app)
+
+Các màn hình vận hành dùng shell dùng chung tại `src/components/management/ManagementDashboard.tsx`, gồm sidebar, topbar, page heading và `ThemeToggle`; Teacher dùng cùng các token và provider dù vẫn giữ route/page content riêng. Student giữ learner shell riêng. Khi thêm trang role mới, ưu tiên `Sidebar`, `NavItem`, `PageHeading` và semantic tokens thay vì tạo shell hoặc màu hex riêng.
+
 ---
 
 ## 2. Dependencies

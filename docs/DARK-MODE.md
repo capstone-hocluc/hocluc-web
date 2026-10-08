@@ -1,8 +1,8 @@
 # Dark mode Admin FE
 
-Dark mode hiện chỉ được triển khai trong khu vực Admin, không mở rộng sang
-Landing/public, auth người học, onboarding, student hoặc teacher. Không cần API
-từ backend.
+Dark mode được triển khai cho toàn bộ khu vực vận hành theo vai trò (Admin,
+Manager, Staff, Mentor và Teacher). Landing/public, auth người học, onboarding
+và Student vẫn dùng giao diện sáng riêng; không cần API từ backend.
 
 ## Contract
 
@@ -17,11 +17,13 @@ từ backend.
 
 - Provider/context: `src/components/common/ThemeProvider.tsx`, `theme-context.ts`, `useTheme.ts`.
 - Toggle: `src/components/ui/ThemeToggle.tsx`.
-- Token sáng/tối và bridge cho legacy CSS: `src/styles/base/tokens.css`, `theme-overrides.css`.
-- Early paint script Admin-only: `index.html`.
+- Token sáng/tối và variant `dark` của Tailwind (`@custom-variant` trong `src/index.css`): `src/styles/base/tokens.css`.
+- Early paint script: `index.html`.
 
-Toggle hiện có ở Admin login và Admin `StaffDashboard`. Khi rời Admin, provider
-trả document về light mode để không làm thay đổi các surface public chưa triển khai.
+`ThemeProvider` được mount quanh management login, management shell và Teacher
+shell; `ThemeToggle` hiện diện trong các shell vận hành. Khi rời khu vực vận hành,
+provider trả document về light mode để không làm thay đổi các surface public và
+learner chưa triển khai dark mode.
 
 ## Quy ước khi thêm UI
 
