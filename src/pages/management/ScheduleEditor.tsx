@@ -2,15 +2,13 @@ import { useState, type FormEvent } from 'react'
 import { localDateTimeToInstant, instantToLocalDateTimeInput, SCHEDULING_TIMEZONE } from '../../lib/scheduling'
 import type { CreateScheduleRequest, DeliveryMode, ScheduleResponse, UpdateScheduleRequest } from '../../types/scheduling'
 import type { UserSummary } from '../../services/userService'
-import Button from '../../components/ui/Button'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import DropdownField from '../../components/ui/DropdownField'
-import Notice from '../../components/ui/Notice'
-import { Sheet, SheetBody } from '../../components/ui/Sheet'
+import Button from '../../components/console/button'
+import ConfirmDialog from '../../components/console/confirm-dialog'
+import SelectField from '../../components/console/select-field'
+import Notice from '../../components/console/notice'
+import ConsoleSheet from '../../components/console/sheet'
+import Field, { fieldControlClass, textareaControlClass } from '../../components/console/form-field'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
-
-const fieldClass =
-  'mt-1 h-10 max-[767px]:h-11 w-full rounded-xl border border-border-subtle bg-surface-input px-3 text-sm text-text-heading outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
 function teacherName(teacher: UserSummary) {
   return teacher.displayName || [teacher.firstName, teacher.lastName].filter(Boolean).join(' ') || teacher.email
@@ -116,19 +114,16 @@ export default function ScheduleEditor({
 
   return (
     <>
-      <Sheet open onClose={requestClose} closeDisabled={busy} className="hl-scheduling" closeButtonClassName="max-[767px]:size-11" title={initial ? 'Chỉnh sửa lịch học' : 'Tạo lịch học'}>
-        <SheetBody className="p-4">
-        <form className="space-y-4" onSubmit={submit} onChange={updateFieldDraft}>
-          {courseName && <Notice tone="info">Tạo lịch đơn cho khóa: {courseName}</Notice>}
+      <ConsoleSheet open onClose={requestClose} closeDisabled={busy} title={initial ? 'Chỉnh sửa lịch học' : 'Tạo lịch học'}>
+        <form className="flex flex-col gap-4" onSubmit={submit} onChange={updateFieldDraft}>
+          {courseName && <Notice tone="info">Khóa: {courseName}</Notice>}
           {errorMessage && <Notice tone="danger">{errorMessage}</Notice>}
-          {validationMessage && <p className="text-sm text-danger" role="alert">{validationMessage}</p>}
-          <label className="block text-sm font-medium text-text-heading">
-            Tên buổi học
-            <input name="title" autoComplete="off" required disabled={busy} defaultValue={initial?.title ?? ''} className={fieldClass} />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-text-heading">
-              Bắt đầu
+          {validationMessage && <p className="text-sm text-badge-error-text" role="alert">{validationMessage}</p>}
+          <Field label="Tên buổi học">
+            <input name="title" autoComplete="off" required disabled={busy} defaultValue={initial?.title ?? ''} className={fieldControlClass} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Bắt đầu">
               <input
                 name="startDateTime"
                 autoComplete="off"
@@ -137,11 +132,10 @@ export default function ScheduleEditor({
                 disabled={busy}
                 value={startDateTime}
                 onChange={(event) => setStartDateTime(event.target.value)}
-                className={fieldClass}
+                className={fieldControlClass}
               />
-            </label>
-            <label className="block text-sm font-medium text-text-heading">
-              Kết thúc
+            </Field>
+            <Field label="Kết thúc">
               <input
                 name="endDateTime"
                 autoComplete="off"
@@ -150,68 +144,59 @@ export default function ScheduleEditor({
                 disabled={busy}
                 value={endDateTime}
                 onChange={(event) => setEndDateTime(event.target.value)}
-                className={fieldClass}
+                className={fieldControlClass}
               />
-            </label>
+            </Field>
           </div>
-          <label className="block text-sm font-medium text-text-heading">
-            Giáo viên
-            <DropdownField
-              contentClassName="hl-scheduling"
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-text-primary">Giáo viên</span>
+            <SelectField
               ariaLabel="Chọn giáo viên"
               options={teacherOptions}
-              value={teacherId || null}
-              mobileTouchTargets
-              onChange={(value) => setTeacherId(value ?? '')}
-              isDisabled={busy}
-              isSearchable
-              searchPlaceholder="Tìm giáo viên…"
-              isLoading={teachersLoading}
-              isError={Boolean(teachersError)}
-              errorMessage={teachersError || 'Không thể tải danh sách giáo viên.'}
-              emptyMessage="Không có giáo viên phù hợp trong danh sách đã tải."
-              placeholder="Chọn giáo viên"
+              value={teacherId}
+              onChange={setTeacherId}
+              disabled={busy || teachersLoading || Boolean(teachersError)}
+              placeholder={teachersLoading ? 'Đang tải…' : 'Chọn giáo viên'}
+              className="w-full"
+              triggerClassName="w-full"
             />
-            {!initial && <p className="mt-1 text-xs text-text-muted">Danh sách gồm giáo viên đang hoạt động. Giáo viên cần được phân công cho khóa này trước khi tạo lịch.</p>}
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-text-heading">
-              Hình thức
-              <select name="deliveryMode" disabled={busy} defaultValue={initial?.deliveryMode ?? 'PHYSICAL'} className={fieldClass}>
+            {teachersError && <p className="text-xs text-badge-error-text">{teachersError}</p>}
+            {!teachersError && !teachersLoading && !initial && teachers.length === 0 && (
+              <p className="text-xs text-text-tertiary">Chưa có giáo viên phù hợp.</p>
+            )}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Hình thức">
+              <select name="deliveryMode" disabled={busy} defaultValue={initial?.deliveryMode ?? 'PHYSICAL'} className={fieldControlClass}>
                 <option value="PHYSICAL">Trực tiếp</option>
                 <option value="ONLINE">Trực tuyến</option>
                 <option value="HYBRID">Kết hợp</option>
                 <option value="OFFLINE">Ngoại tuyến</option>
               </select>
-            </label>
-            <label className="block text-sm font-medium text-text-heading">
-              Phòng / địa điểm
-              <input name="location" autoComplete="off" disabled={busy} defaultValue={initial?.location ?? ''} className={fieldClass} />
-            </label>
+            </Field>
+            <Field label="Phòng / địa điểm">
+              <input name="location" autoComplete="off" disabled={busy} defaultValue={initial?.location ?? ''} className={fieldControlClass} />
+            </Field>
           </div>
-          <label className="block text-sm font-medium text-text-heading">
-            Mô tả
-            <textarea name="description" autoComplete="off" rows={3} disabled={busy} defaultValue={initial?.description ?? ''} className={fieldClass + ' h-auto max-[767px]:h-auto min-h-24 py-2'} />
-          </label>
-          <p className="text-xs text-text-muted">Múi giờ lịch: {timezone}. Đường dẫn phòng chỉ hiển thị khi hệ thống đã cung cấp.</p>
-          <div className="flex justify-end gap-2 border-t border-border-subtle pt-4">
-            <Button appearance="outline" className="max-[767px]:min-h-11" disabled={busy} onClick={requestClose}>Đóng</Button>
-            <Button type="submit" className="max-[767px]:min-h-11" disabled={busy || Boolean(teachersError) || (!initial && teachers.length === 0)}>
-              {busy ? 'Đang lưu…' : 'Lưu lịch'}
+          <Field label="Mô tả">
+            <textarea name="description" autoComplete="off" rows={3} disabled={busy} defaultValue={initial?.description ?? ''} className={textareaControlClass} />
+          </Field>
+          <p className="text-xs text-text-tertiary">Múi giờ: {timezone}</p>
+          <div className="flex justify-end gap-2 border-t border-card-border pt-4">
+            <Button type="button" appearance="outline" disabled={busy} onClick={requestClose}>Đóng</Button>
+            <Button type="submit" disabled={busy || Boolean(teachersError) || (!initial && teachers.length === 0)}>
+              {busy ? 'Đang lưu…' : 'Lưu'}
             </Button>
           </div>
         </form>
-        </SheetBody>
-      </Sheet>
+      </ConsoleSheet>
       {unsavedGuard.hasPendingAction && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
-          title="Bỏ thay đổi lịch học chưa lưu?"
-          description="Các trường bạn vừa chỉnh chưa được gửi lên máy chủ. Nếu tiếp tục, những thay đổi này sẽ bị bỏ."
+          title="Bỏ thay đổi chưa lưu?"
+          description="Các chỉnh sửa chưa được gửi sẽ bị bỏ."
           cancelLabel="Tiếp tục chỉnh sửa"
           confirmLabel="Bỏ thay đổi"
           variant="danger"
-          mobileTouchTargets
           onCancel={unsavedGuard.cancelDiscard}
           onConfirm={unsavedGuard.confirmDiscard}
         />

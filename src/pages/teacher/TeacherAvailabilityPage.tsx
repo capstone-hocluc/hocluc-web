@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { CalendarPlus, Clock3, Trash2 } from 'lucide-react'
+import { CalendarPlus, Clock3, Trash2 } from '../../components/console/icons'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import {
   createAvailabilityException,
@@ -10,12 +10,13 @@ import {
 import type { AvailabilityExceptionResponse, AvailabilitySlot, DayOfWeek } from '../../types/scheduling'
 import { getErrorMessage } from '../../lib/errors'
 import { localDateLabel } from '../../lib/scheduling'
-import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import Notice from '../../components/ui/Notice'
+import Button from '../../components/console/button'
+import { fieldControlClass } from '../../components/console/form-field'
+import Card from '../../components/console/card'
+import ConfirmDialog from '../../components/console/confirm-dialog'
+import Notice from '../../components/console/notice'
 import TeacherPageHeader from '../../components/teacher/TeacherPageHeader'
-import ScheduleResourceState from '../../components/scheduling/ScheduleResourceState'
+import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
 
 const weekdays: Array<{ value: DayOfWeek; label: string }> = [
@@ -28,8 +29,7 @@ const weekdays: Array<{ value: DayOfWeek; label: string }> = [
   { value: 'SUNDAY', label: 'Chủ Nhật' },
 ]
 
-const fieldClass =
-  'h-10 max-[767px]:h-11 min-w-0 rounded-xl border border-border-subtle bg-surface-input px-3 text-sm text-text-heading outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+const fieldClass = fieldControlClass
 
 export default function TeacherAvailabilityPage() {
   const resource = useScheduleResource('teacher-my-availability', getMyAvailability)
@@ -56,7 +56,7 @@ export default function TeacherAvailabilityPage() {
     try {
       await replaceMyAvailability({ slots })
       setAvailabilityDirty(false)
-      setNotice('Đã lưu giờ rảnh. Đang tải lại dữ liệu đã lưu.')
+      setNotice('Đã lưu giờ rảnh.')
       resource.reload()
     } catch (reason) {
       setError(getErrorMessage(reason))
@@ -97,7 +97,7 @@ export default function TeacherAvailabilityPage() {
       })
       formElement.reset()
       setExceptionDirty(false)
-      setNotice('Đã thêm ngoại lệ. Đang tải lại dữ liệu đã lưu.')
+      setNotice('Đã thêm ngoại lệ.')
       resource.reload()
     } catch (reason) {
       setError(getErrorMessage(reason))
@@ -123,14 +123,12 @@ export default function TeacherAvailabilityPage() {
   }
 
   return (
-    <div className="hl-scheduling space-y-5">
+    <div className="space-y-5">
       <TeacherPageHeader
-        eyebrow="GIẢNG DẠY"
         title="Giờ rảnh"
-        description="Cập nhật khung giờ lặp hằng tuần và ngoại lệ theo ngày."
-        actions={<Button appearance="outline" className="max-[767px]:min-h-11" disabled={busy} onClick={requestReload}><Clock3 size={16} />Tải lại</Button>}
+        actions={<Button appearance="outline" disabled={busy} onClick={requestReload}><Clock3 size={16} />Tải lại</Button>}
       />
-      {busy && <Notice tone="info">Đang lưu giờ rảnh. Hãy đợi hoàn tất trước khi rời trang.</Notice>}
+      {busy && <Notice tone="info">Đang lưu…</Notice>}
       {error && <Notice tone="danger">{error}</Notice>}
       {notice && <Notice tone="info">{notice}</Notice>}
 
@@ -141,8 +139,7 @@ export default function TeacherAvailabilityPage() {
       >
         <Card as="section" padding="lg" className="space-y-4">
           <div>
-            <h2 className="text-base font-semibold text-text-heading">Khung giờ hằng tuần</h2>
-            <p className="mt-1 text-sm text-text-muted">Lưu sẽ thay thế toàn bộ danh sách slot hiện tại.</p>
+            <h2 className="text-base font-medium text-text-primary">Khung giờ hằng tuần</h2>
           </div>
           <WeeklyAvailabilityEditor
             key={JSON.stringify(resource.data?.recurringSlots ?? [])}
@@ -156,14 +153,13 @@ export default function TeacherAvailabilityPage() {
 
       <Card as="section" padding="lg" className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-text-heading">Ngoại lệ</h2>
-          <p className="mt-1 text-sm text-text-muted">Đánh dấu ngày bận hoặc thêm một khung giờ rảnh bổ sung.</p>
+          <h2 className="text-base font-medium text-text-primary">Ngoại lệ</h2>
         </div>
         {availabilityDirty && (
-          <Notice tone="info">Lưu khung giờ tuần hoặc tải lại để bỏ thay đổi trước khi thêm hay xóa ngoại lệ.</Notice>
+          <Notice tone="info">Lưu hoặc tải lại khung giờ tuần trước khi sửa ngoại lệ.</Notice>
         )}
         {!availabilityDirty && exceptionDirty && (
-          <Notice tone="info">Gửi ngoại lệ đang nhập trước khi xóa một ngoại lệ đã lưu.</Notice>
+          <Notice tone="info">Lưu ngoại lệ đang nhập trước khi xóa.</Notice>
         )}
         <form
           ref={exceptionFormRef}
@@ -178,31 +174,31 @@ export default function TeacherAvailabilityPage() {
             )
           }}
         >
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Ngày
             <input name="exceptionDate" autoComplete="off" type="date" required disabled={busy} className={fieldClass + ' mt-1 w-full'} />
           </label>
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Bắt đầu
             <input name="startTime" autoComplete="off" type="time" disabled={busy} className={fieldClass + ' mt-1 w-full'} />
           </label>
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Kết thúc
             <input name="endTime" autoComplete="off" type="time" disabled={busy} className={fieldClass + ' mt-1 w-full'} />
           </label>
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Ghi chú
             <input name="reason" autoComplete="off" disabled={busy} className={fieldClass + ' mt-1 w-full'} />
           </label>
           <div className="flex flex-col justify-end gap-2">
-            <label className="flex max-[767px]:min-h-11 items-center gap-2 text-sm text-text-body">
+            <label className="flex items-center gap-2 text-sm text-text-tertiary">
             <input name="isAvailable" autoComplete="off" type="checkbox" disabled={busy} className="size-5 accent-primary" />
               Tôi rảnh thêm giờ này
             </label>
-            <Button type="submit" className="max-[767px]:min-h-11" disabled={busy || availabilityDirty || resource.status !== 'ready'}><CalendarPlus size={15} />Thêm ngoại lệ</Button>
+            <Button type="submit" disabled={busy || availabilityDirty || resource.status !== 'ready'}><CalendarPlus size={15} />Thêm ngoại lệ</Button>
           </div>
         </form>
-        <div className="space-y-2 border-t border-border-subtle pt-4">
+        <div className="space-y-2 border-t border-card-border pt-4">
           {(resource.data?.exceptions ?? []).length ? (resource.data?.exceptions ?? []).map((exception) => (
             <ExceptionRow
               key={exception.id}
@@ -211,19 +207,17 @@ export default function TeacherAvailabilityPage() {
               disabledReason={availabilityDirty || exceptionDirty ? 'Lưu hoặc tải lại để bỏ thay đổi chưa lưu trước khi xóa ngoại lệ.' : undefined}
               onDelete={() => setExceptionToDelete(exception)}
             />
-          )) : <p className="text-sm text-text-muted">Chưa có ngoại lệ.</p>}
+          )) : <p className="text-sm text-text-tertiary">Chưa có ngoại lệ.</p>}
         </div>
       </Card>
 
       {exceptionToDelete && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
           title="Xóa ngoại lệ?"
-          description="Ngoại lệ này sẽ bị xóa khỏi lịch rảnh của bạn."
+          description="Ngoại lệ sẽ bị xóa."
           cancelLabel="Quay lại"
           confirmLabel="Xóa ngoại lệ"
           variant="danger"
-          mobileTouchTargets
           busy={busy}
           onCancel={() => setExceptionToDelete(null)}
           onConfirm={removeException}
@@ -231,13 +225,11 @@ export default function TeacherAvailabilityPage() {
       )}
       {unsavedGuard.hasPendingAction && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
           title="Bỏ thay đổi giờ rảnh chưa lưu?"
-          description="Các chỉnh sửa khung giờ hoặc ngoại lệ chưa được gửi lên máy chủ. Nếu tiếp tục, những thay đổi này sẽ bị bỏ."
+          description="Chỉnh sửa chưa lưu sẽ bị bỏ."
           cancelLabel="Tiếp tục chỉnh sửa"
           confirmLabel="Bỏ thay đổi"
           variant="danger"
-          mobileTouchTargets
           onCancel={unsavedGuard.cancelDiscard}
           onConfirm={unsavedGuard.confirmDiscard}
         />
@@ -327,19 +319,19 @@ function WeeklyAvailabilityEditor({
         )
       }}
     >
-      {validationMessage && <p className="text-sm text-danger" role="alert">{validationMessage}</p>}
+      {validationMessage && <p className="text-sm text-badge-error-text" role="alert">{validationMessage}</p>}
       {weekdays.map((day) => {
         const currentSlots = slotsByDay.get(day.value) ?? []
         const rowCount = currentSlots.length + extraRows[day.value]
         return (
-          <fieldset key={day.value} className="rounded-xl border border-border-subtle p-3">
-            <legend className="px-1 text-sm font-medium text-text-heading">{day.label}</legend>
+          <fieldset key={day.value} className="rounded-xl border border-card-border p-3">
+            <legend className="px-1 text-sm font-medium text-text-primary">{day.label}</legend>
             <div className="space-y-2">
               {Array.from({ length: rowCount }, (_, index) => {
                 const slot = currentSlots[index]
                 return (
                   <div key={index} className="grid items-center gap-2 sm:grid-cols-[5rem_1fr_1fr]">
-                    <span className="text-xs text-text-muted">Khung {index + 1}</span>
+                    <span className="text-xs text-text-tertiary">Khung {index + 1}</span>
                     <label>
                       <span className="sr-only">{day.label}, khung {index + 1}, bắt đầu</span>
                       <input
@@ -370,7 +362,7 @@ function WeeklyAvailabilityEditor({
               <Button
                 type="button"
                 size="sm"
-                className="max-[767px]:min-h-11"
+               
                 appearance="ghost"
                 disabled={busy}
                 onClick={() => setExtraRows((current) => ({
@@ -384,8 +376,8 @@ function WeeklyAvailabilityEditor({
           </fieldset>
         )
       })}
-      <div className="flex justify-end border-t border-border-subtle pt-4">
-        <Button type="submit" className="max-[767px]:min-h-11" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu toàn bộ giờ rảnh'}</Button>
+      <div className="flex justify-end border-t border-card-border pt-4">
+        <Button type="submit" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu toàn bộ giờ rảnh'}</Button>
       </div>
     </form>
   )
@@ -413,18 +405,18 @@ function ExceptionRow({
         : 'Cả ngày'
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border-subtle p-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-xl border border-card-border p-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-text-heading">
+        <p className="font-medium text-text-primary">
           {localDateLabel(exception.exceptionDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
-        <p className="text-sm text-text-muted">
+        <p className="text-sm text-text-tertiary">
           {timeLabel}
           {' · '}{exception.isAvailable ? 'Rảnh thêm' : 'Bận'}
           {exception.reason ? ' · ' + exception.reason : ''}
         </p>
       </div>
-      <Button size="sm" className="max-[767px]:min-h-11" variant="danger" appearance="outline" onClick={onDelete} disabled={disabled} title={disabledReason}>
+      <Button size="sm" variant="danger" appearance="outline" onClick={onDelete} disabled={disabled} title={disabledReason}>
         <Trash2 size={14} />
         Xóa
       </Button>

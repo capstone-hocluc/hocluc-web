@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarPlus, Info, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { CalendarPlus, Pencil, RefreshCw, Trash2 } from '../../components/console/icons'
 import type { Course, CourseSection } from '../../services/courseService'
 import { getCourseDetail, getMainCourses } from '../../services/courseService'
 import { getUsers, type UserSummary } from '../../services/userService'
@@ -26,19 +26,19 @@ import type {
   UpdateClassSessionRequest,
   UpdateScheduleRequest,
 } from '../../types/scheduling'
-import Button from '../../components/ui/Button'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import DropdownField from '../../components/ui/DropdownField'
-import Notice from '../../components/ui/Notice'
+import Button from '../../components/console/button'
+import ConfirmDialog from '../../components/console/confirm-dialog'
+import DropdownField from '../../components/console/dropdown-field'
+import Notice from '../../components/console/notice'
 import PageHeading from '../../components/ui/PageHeading'
-import ScheduleCalendar from '../../components/scheduling/ScheduleCalendar'
-import ScheduleDetailsSheet from '../../components/scheduling/ScheduleDetailsSheet'
-import ScheduleFilters, { type ScheduleViewMode } from '../../components/scheduling/ScheduleFilters'
-import ScheduleList from '../../components/scheduling/ScheduleList'
-import ScheduleResourceState from '../../components/scheduling/ScheduleResourceState'
-import ScheduleStatusBadge from '../../components/scheduling/ScheduleStatusBadge'
-import ClassSessionRecordingsPanel from '../../components/scheduling/ClassSessionRecordingsPanel'
-import ScheduleAttendancePanel from '../../components/scheduling/ScheduleAttendancePanel'
+import ScheduleCalendar from '../../components/console/schedule/schedule-calendar'
+import ScheduleDetailsSheet from '../../components/console/schedule/schedule-details-sheet'
+import ScheduleFilters, { type ScheduleViewMode } from '../../components/console/schedule/schedule-filters'
+import ScheduleList from '../../components/console/schedule/schedule-list'
+import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
+import ScheduleStatusBadge from '../../components/console/schedule/schedule-status-badge'
+import ClassSessionRecordingsPanel from '../../components/console/schedule/class-session-recordings-panel'
+import ScheduleAttendancePanel from '../../components/console/schedule/schedule-attendance-panel'
 import ClassSessionEditor from './ClassSessionEditor'
 import RecurringClassEditor from './RecurringClassEditor'
 import ScheduleEditor from './ScheduleEditor'
@@ -149,8 +149,6 @@ export default function SchedulingPage({ role }: Props) {
 
   const courseOptions = availableCourses.map((course) => ({ id: course.id, label: course.title }))
   const teachers = teacherResource.data ?? []
-  const courseSourceWarning =
-    'Danh sách chỉ gồm các khóa học đang công khai và mở. Nhân viên có thể tạo lịch đơn trong nhóm này; khóa chưa mở hoặc đã kết thúc không xuất hiện. Giáo viên cần được phân công cho khóa trước khi tạo lịch.'
   const changeCourse = (nextCourseId: string | null) => {
     runWithUnsavedActionGuard(() => {
       setCourseId(nextCourseId ?? '')
@@ -275,23 +273,21 @@ export default function SchedulingPage({ role }: Props) {
         ? 'Chưa có giáo viên để tạo lịch lặp.'
         : '')
   const recurringCreateButtonReason = recurringCreateUnknown
-    ? 'Kết quả lần tạo trước chưa rõ. Hãy kiểm tra lịch rồi rời và mở lại trang trước khi tạo tiếp.'
+    ? 'Kết quả lần tạo trước chưa rõ. Hãy kiểm tra lịch rồi mở lại trang.'
     : recurringCreateDisabledReason
   const scheduleCreateLoading = courses.status === 'loading' || teacherResource.status === 'loading'
 
   return (
-    <div className="hl-scheduling space-y-5">
+    <div className="space-y-5">
       <PageHeading
-        eyebrow={role === 'STAFF' ? 'NHÂN SỰ VẬN HÀNH' : 'QUẢN LÝ'}
         title="Lịch học"
-        subtitle="Chọn khóa học để xem lịch đơn và các buổi học thuộc chuỗi."
       />
 
       <div className="flex flex-wrap justify-end gap-2">
         {role === 'STAFF' && (
           <Button
             appearance="outline"
-            className="max-[767px]:min-h-11"
+           
             disabled={!activeCourseId || courses.status !== 'ready' || teacherResource.status !== 'ready' || !teachers.length || mutationBusy || attendancePanelState.busy}
             title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch.' : undefined}
             onClick={() => runWithUnsavedActionGuard(() => {
@@ -307,7 +303,7 @@ export default function SchedulingPage({ role }: Props) {
         {role === 'STAFF' && (
           <Button
             appearance="outline"
-            className="max-[767px]:min-h-11"
+           
             disabled={!activeCourseId || recurringCreateButtonReason !== '' || mutationBusy || attendancePanelState.busy}
             title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch lặp.' : recurringCreateButtonReason || undefined}
             onClick={() => runWithUnsavedActionGuard(() => {
@@ -319,7 +315,7 @@ export default function SchedulingPage({ role }: Props) {
             Tạo lịch lặp
           </Button>
         )}
-        <Button appearance="ghost" size="icon" className="max-[767px]:size-11" aria-label="Tải lại lịch" onClick={() => {
+        <Button appearance="ghost" size="icon" aria-label="Tải lại lịch" onClick={() => {
           runWithUnsavedActionGuard(() => {
             setSelectedItem(null)
             calendar.reload()
@@ -328,21 +324,16 @@ export default function SchedulingPage({ role }: Props) {
           <RefreshCw size={17} />
         </Button>
       </div>
-
-      <Notice tone="warning">
-        <Info size={17} aria-hidden="true" />
-        {courseSourceWarning} Lịch lặp và đề xuất dùng các môn trong giáo trình của khóa học.
-      </Notice>
       {(attendancePanelState.busy || mutationBusy) && (
-        <Notice tone="info">Đang lưu dữ liệu. Hãy đợi hoàn tất trước khi rời trang.</Notice>
+        <Notice tone="info">Đang lưu…</Notice>
       )}
       {recurringCreateUnknown && (
-        <Notice tone="warning">Kết quả tạo chuỗi lịch lặp chưa rõ. Không gửi lại để tránh trùng; hãy kiểm tra danh sách lịch, sau đó rời và mở lại trang để tiếp tục.</Notice>
+        <Notice tone="warning">Kết quả tạo chưa rõ. Đừng gửi lại; hãy kiểm tra danh sách rồi mở lại trang.</Notice>
       )}
       {(courses.status === 'error' || courses.status === 'forbidden') && (
         <Notice tone={courses.status === 'forbidden' ? 'warning' : 'danger'}>
           Không tải được danh sách khóa học.
-          <Button size="sm" appearance="outline" className="max-[767px]:min-h-11" onClick={courses.reload}>Thử lại</Button>
+          <Button size="sm" appearance="outline" onClick={courses.reload}>Thử lại</Button>
         </Notice>
       )}
       {courses.status === 'ready' && availableCourses.length === 0 && (
@@ -353,15 +344,13 @@ export default function SchedulingPage({ role }: Props) {
       {mutationError && <Notice tone="danger">{mutationError}</Notice>}
       {notice && <Notice tone="info">{notice}</Notice>}
 
-      <section className="rounded-2xl border border-border-subtle bg-surface p-3 sm:p-4">
-        <label className="block max-w-xl text-sm font-medium text-text-heading">
+      <section className="rounded-xl border border-card-border bg-card-background p-3 sm:p-4">
+        <label className="block max-w-xl text-sm font-medium text-text-primary">
           Khóa học
           <div className="mt-2">
             <DropdownField
-              contentClassName="hl-scheduling"
               ariaLabel="Chọn khóa học để xem lịch"
               options={courseOptions}
-              mobileTouchTargets
               value={activeCourseId || null}
               onChange={changeCourse}
               isSearchable
@@ -390,7 +379,7 @@ export default function SchedulingPage({ role }: Props) {
             status={calendar.status}
             errorMessage={calendar.errorMessage}
             empty={!visibleItems.length}
-            emptyMessage={query.trim() ? 'Không tìm thấy lịch phù hợp trong tuần đã chọn.' : 'Chưa có lịch đơn hoặc buổi học thuộc chuỗi trong tuần đã chọn.'}
+            emptyMessage={query.trim() ? 'Không có lịch phù hợp.' : 'Chưa có lịch trong tuần này.'}
             onRetry={calendar.reload}
           >
             {view === 'agenda' ? (
@@ -403,8 +392,8 @@ export default function SchedulingPage({ role }: Props) {
           <section className="space-y-3">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
-                <h2 className="text-base font-semibold text-text-heading">Chuỗi lịch lặp</h2>
-                <p className="mt-1 text-sm text-text-muted">Hủy một chuỗi sẽ hủy toàn bộ các buổi thuộc chuỗi đó.</p>
+                <h2 className="text-base font-medium text-text-primary">Chuỗi lịch lặp</h2>
+                
               </div>
             </div>
             <ScheduleResourceState
@@ -447,12 +436,12 @@ export default function SchedulingPage({ role }: Props) {
           <ScheduleAttendancePanel scheduleId={selectedItem.item.id} onStateChange={setAttendancePanelState} />
         ) : undefined}
         footer={selectedItem && (
-          <div className="flex flex-wrap gap-2 border-t border-border-subtle pt-4">
+          <div className="flex flex-wrap gap-2 border-t border-card-border pt-4">
             {selectedItem.kind === 'schedule' && role === 'STAFF' && (
               <>
                 <Button
                   appearance="outline"
-                  className="max-[767px]:min-h-11"
+                 
                   onClick={() => runWithUnsavedActionGuard(() => {
                     setScheduleEditor(selectedItem.item)
                     setSelectedItem(null)
@@ -461,7 +450,7 @@ export default function SchedulingPage({ role }: Props) {
                   <Pencil size={15} />
                   Sửa lịch
                 </Button>
-                <Button variant="danger" appearance="outline" className="max-[767px]:min-h-11" onClick={() => runWithUnsavedActionGuard(() => {
+                <Button variant="danger" appearance="outline" onClick={() => runWithUnsavedActionGuard(() => {
                   setDeleteSchedule(selectedItem.item)
                   setSelectedItem(null)
                 })}>
@@ -473,7 +462,7 @@ export default function SchedulingPage({ role }: Props) {
             {selectedItem.kind === 'classSession' && (
               <Button
                 appearance="outline"
-                className="max-[767px]:min-h-11"
+               
                 onClick={() => runWithUnsavedActionGuard(() => {
                   setClassSessionEditor(selectedItem.item)
                   setSelectedItem(null)
@@ -533,13 +522,11 @@ export default function SchedulingPage({ role }: Props) {
 
       {deleteSchedule && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
           title="Hủy lịch học?"
-          description="Lịch này sẽ bị hủy. Các lịch khác của khóa học không bị ảnh hưởng."
+          description="Chỉ lịch này bị hủy."
           cancelLabel="Quay lại"
           confirmLabel="Hủy lịch"
           variant="danger"
-          mobileTouchTargets
           busy={mutationBusy}
           onCancel={() => setDeleteSchedule(null)}
           onConfirm={deleteOneSchedule}
@@ -547,13 +534,11 @@ export default function SchedulingPage({ role }: Props) {
       )}
       {cancelSeries && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
           title="Hủy toàn bộ chuỗi lịch lặp?"
-          description={<>Chuỗi “{cancelSeries.title}” và tất cả buổi học thuộc chuỗi sẽ bị hủy. Không thể chỉ hủy riêng một buổi trong chuỗi.</>}
+          description={<>Chuỗi “{cancelSeries.title}” và mọi buổi thuộc chuỗi sẽ bị hủy.</>}
           cancelLabel="Giữ lại"
           confirmLabel="Hủy cả chuỗi"
           variant="danger"
-          mobileTouchTargets
           busy={mutationBusy}
           onCancel={() => setCancelSeries(null)}
           onConfirm={cancelRecurringSeries}
@@ -561,13 +546,11 @@ export default function SchedulingPage({ role }: Props) {
       )}
       {unsavedGuard.hasPendingAction && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
-          title="Bỏ thay đổi điểm danh chưa lưu?"
-          description="Các trạng thái bạn vừa chỉnh chưa được gửi lên máy chủ. Nếu rời buổi học, những thay đổi này sẽ bị bỏ."
+          title="Bỏ thay đổi chưa lưu?"
+          description="Điểm danh vừa chỉnh chưa được lưu."
           cancelLabel="Tiếp tục chỉnh sửa"
           confirmLabel="Bỏ thay đổi"
           variant="danger"
-          mobileTouchTargets
           onCancel={unsavedGuard.cancelDiscard}
           onConfirm={unsavedGuard.confirmDiscard}
         />
@@ -584,23 +567,23 @@ function RecurringSeriesRow({
   onCancel: () => void
 }) {
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-surface p-4 sm:flex-row sm:items-center">
+    <article className="flex flex-col gap-3 rounded-xl border border-card-border bg-card-background p-4 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-semibold text-text-heading">{series.title}</h3>
+          <h3 className="font-medium text-text-primary">{series.title}</h3>
           <ScheduleStatusBadge status={series.status} />
         </div>
-        <p className="mt-1 text-sm text-text-muted">
+        <p className="mt-1 text-sm text-text-tertiary">
           {series.teacherName} · {weekdayLabels[series.dayOfWeek] ?? series.dayOfWeek} · {series.startTime.slice(0, 5)}–{series.endTime.slice(0, 5)}
           {series.sectionTitle ? ' · ' + series.sectionTitle : ''}
         </p>
-        <p className="mt-1 text-xs text-text-secondary">
+        <p className="mt-1 text-xs text-text-tertiary">
           {localDateLabel(series.startDate, { day: 'numeric', month: 'short', year: 'numeric' })}
           {' – '}{localDateLabel(series.endDate, { day: 'numeric', month: 'short', year: 'numeric' })}
           {' · '}{series.sessions.length} buổi
         </p>
       </div>
-      <Button size="sm" variant="danger" appearance="outline" className="max-[767px]:min-h-11" onClick={onCancel}>
+      <Button size="sm" variant="danger" appearance="outline" onClick={onCancel}>
         <Trash2 size={14} />
         Hủy cả chuỗi
       </Button>

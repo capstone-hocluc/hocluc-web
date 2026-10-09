@@ -1,5 +1,8 @@
-import { ArrowLeft, LockKeyhole } from 'lucide-react'
-import Notice from '../ui/Notice'
+import { ArrowLeft, LockKeyhole } from '../console/icons'
+import Notice from '../console/notice'
+import Button from '../console/button'
+import Panel from '../console/panel'
+import TeacherPageHeader from './TeacherPageHeader'
 
 interface TeacherLessonEditorProps {
   course: { name: string }
@@ -12,66 +15,43 @@ interface TeacherLessonEditorProps {
   onBack: () => void
 }
 
+const fieldClass =
+  'w-full rounded-lg border border-card-border bg-background-gray-secondary px-3.5 py-2.5 text-sm text-text-primary outline-none'
+
 function TeacherLessonEditor({ course, lesson, onBack }: TeacherLessonEditorProps) {
   const lessonTitle = lesson.lesson || lesson.title || 'Bài học'
   const lessonContent = lesson.content || lesson.description || ''
 
   return (
-    <section className="hl-teacher-lesson-editor">
-      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
-        <ArrowLeft size={16} />
-        Quay lại nội dung khóa học
-      </button>
-
-      <div className="hl-teacher-title">
-        <div>
-          <h1>Chi tiết bài học</h1>
-          <p>
-            {course.name} · {lessonTitle}
-          </p>
-        </div>
+    <section className="flex flex-col gap-5">
+      <div>
+        <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
+          <ArrowLeft size={16} />
+          Quay lại
+        </Button>
       </div>
+      <TeacherPageHeader title="Chi tiết bài học" description={`${course.name} · ${lessonTitle}`} />
+      <Notice tone="warning">Chỉ xem: chưa có API lưu bài học.</Notice>
 
-      <Notice tone="warning" className="mb-4">
-        Màn hình này đang dùng dữ liệu khóa học mẫu. BE chưa có API lưu nội dung bài học, nên
-        chỉnh sửa và xuất bản đang tạm khóa.
-      </Notice>
-
-      <section className="hl-teacher-panel">
-        <div className="hl-teacher-panel-heading">
-          <div>
-            <h2>Nội dung bài học</h2>
-            <p className="hl-teacher-lesson-note">Chỉ xem cho tới khi có API lưu bài học.</p>
-          </div>
-        </div>
-        <div className="hl-teacher-lesson-form">
-          <label>
+      <Panel title="Nội dung bài học">
+        <div className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Tên bài học
-            <input value={lessonTitle} readOnly aria-readonly="true" />
+            <input className={fieldClass} value={lessonTitle} readOnly aria-readonly="true" />
           </label>
-          <label>
-            Nội dung chi tiết
-            <textarea value={lessonContent} readOnly aria-readonly="true" />
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
+            Nội dung
+            <textarea className={`${fieldClass} min-h-32`} value={lessonContent} readOnly aria-readonly="true" />
           </label>
         </div>
-      </section>
+      </Panel>
 
-      <section className="hl-teacher-panel mt-4">
-        <div className="hl-teacher-panel-heading">
-          <div>
-            <h2>Tài liệu và video</h2>
-            <p className="hl-teacher-lesson-note">Tải lên và chỉnh sửa media đang tạm khóa.</p>
-          </div>
-        </div>
+      <Panel title="Tài liệu và video">
         <Notice tone="info" className="items-start">
           <LockKeyhole aria-hidden="true" className="mt-0.5 shrink-0" size={17} />
-          <span>
-            Chưa thể thêm hoặc xóa media: màn hình chưa có lesson ID thật, và endpoint upload của BE
-            chưa xác thực quyền sở hữu bài học. PDF/Office cũng chưa được BE hỗ trợ trong contract
-            hiện tại.
-          </span>
+          <span>Tải lên media đang tạm khóa.</span>
         </Notice>
-      </section>
+      </Panel>
     </section>
   )
 }

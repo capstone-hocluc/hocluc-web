@@ -9,8 +9,17 @@ import {
   Layers3,
   PlayCircle,
   Users,
-} from 'lucide-react'
+} from '../console/icons'
 import TeacherLessonEditor from './TeacherLessonEditor'
+import TeacherPageHeader from './TeacherPageHeader'
+import Button from '../console/button'
+import Panel from '../console/panel'
+import ConsoleDialog from '../console/dialog'
+import { Input } from '../tailgrids/core/input'
+import { Label } from '../tailgrids/core/label'
+import { TextField } from '../tailgrids/core/text-field'
+import { Progress } from '../tailgrids/core/progress'
+import { cn } from '../../lib/cn'
 
 const courseModules = [
   { title: 'Chương 01 · Hàm số và đồ thị', lesson: 'Bài 06 · Hàm số bậc hai', lessons: 6, status: 'Đã hoàn thành', progress: 100 },
@@ -26,48 +35,45 @@ const courseModules = [
 
 function CourseCard({ course, onOpen }) {
   return (
-    <button type="button" className="hl-teacher-assigned-card" onClick={() => onOpen(course)}>
-      <div className="hl-teacher-assigned-cover">
-        <BookOpen size={25} />
-        <span>{course.subject}</span>
+    <button
+      type="button"
+      onClick={() => onOpen(course)}
+      className="group flex flex-col gap-4 rounded-xl border border-card-border bg-card-background p-5 text-left transition-colors hover:bg-background-gray-secondary"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="grid size-11 place-items-center rounded-full bg-badge-blue-background text-badge-blue-icon-color">
+          <BookOpen size={20} />
+        </span>
+        <ArrowRight size={16} className="mt-1 text-icon-tertiary transition-transform group-hover:translate-x-0.5" />
       </div>
-      <div className="hl-teacher-assigned-body">
-        <span className="hl-teacher-eyebrow">KHÓA HỌC ĐƯỢC PHÂN CÔNG</span>
-        <h2>{course.name}</h2>
-        <p>{course.description || `Lộ trình ${course.subject.toLowerCase()} dành cho học viên.`}</p>
-        <div>
-          <span>
-            <Users size={15} />
-            {course.students} học viên
-          </span>
-          <span>
-            <CalendarDays size={15} />
-            {course.sessions || '24'} buổi học
-          </span>
-        </div>
-        <i>
-          <b style={{ width: `${course.progress}%` }} />
-        </i>
-        <small>{course.progress}% chương trình đã triển khai</small>
+      <div>
+        <h3 className="text-base font-medium text-text-primary">{course.name}</h3>
+        <p className="mt-0.5 text-sm text-text-tertiary">{course.subject}</p>
       </div>
-      <span className="hl-teacher-assigned-arrow">
-        <ArrowRight size={19} />
-      </span>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-text-tertiary">
+        <span className="inline-flex items-center gap-1.5">
+          <Users size={15} />
+          {course.students} học viên
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <CalendarDays size={15} />
+          {course.sessions} buổi
+        </span>
+      </div>
+      <Progress progress={course.progress} withLabel className="max-w-none" />
     </button>
   )
 }
 
+const quickActionClass =
+  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-text-primary transition-colors hover:bg-background-gray-secondary'
+
 function CourseDetail({ course, onBack, onAction, onOpenQuiz, onOpenAssignments }) {
   const [activeModule, setActiveModule] = useState(courseModules[0].title)
-  const [activeQuickAction, setActiveQuickAction] = useState('')
   const [modules, setModules] = useState(courseModules)
   const [contentModalOpen, setContentModalOpen] = useState(false)
   const [contentTitle, setContentTitle] = useState('')
   const [editingLesson, setEditingLesson] = useState(null)
-  const selectQuickAction = (label, message) => {
-    setActiveQuickAction(label)
-    onAction(message)
-  }
   const addContent = (event) => {
     event.preventDefault()
     if (!contentTitle.trim()) return
@@ -82,198 +88,130 @@ function CourseDetail({ course, onBack, onAction, onOpenQuiz, onOpenAssignments 
     setActiveModule(newModule.title)
     setContentTitle('')
     setContentModalOpen(false)
-    onAction(`Đã thêm “${newModule.title}” vào nội dung lớp.`)
+    onAction(`Đã thêm “${newModule.title}”.`)
   }
   if (editingLesson) return <TeacherLessonEditor course={course} lesson={editingLesson} onBack={() => setEditingLesson(null)} />
   return (
-    <section className="hl-teacher-course-management">
-      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
-        <ArrowLeft size={16} />
-        Quay lại lớp học của tôi
-      </button>
-      <section className="hl-teacher-course-hero">
-        <div className="hl-teacher-course-hero-icon">
-          <BookOpen size={28} />
-        </div>
-        <div>
-          <h1>{course.name}</h1>
-          <p>
-            {course.subject} · {course.students} học viên · {course.sessions || '24'} buổi học
-          </p>
-        </div>
-        <button
-          type="button"
-          className="hl-teacher-primary"
-          onClick={() => setContentModalOpen(true)}
-        >
-          <Layers3 size={16} />
-          Thêm nội dung
-        </button>
-      </section>
-      <div className="hl-teacher-course-detail-grid">
-        <section className="hl-teacher-panel">
-          <div className="hl-teacher-panel-heading">
-            <div>
-              <h2>Nội dung khóa học</h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveModule(modules[0].title)
-                onAction('Đã hiển thị toàn bộ nội dung khóa học.')
-              }}
-            >
-              Xem tất cả
-            </button>
-          </div>
-          <div className="hl-teacher-module-list">
+    <section className="flex flex-col gap-5">
+      <div>
+        <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
+          <ArrowLeft size={16} />
+          Quay lại
+        </Button>
+      </div>
+      <TeacherPageHeader
+        title={course.name}
+        description={`${course.subject} · ${course.students} học viên · ${course.sessions} buổi`}
+        actions={
+          <Button type="button" onClick={() => setContentModalOpen(true)}>
+            <Layers3 size={16} />
+            Thêm nội dung
+          </Button>
+        }
+      />
+      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+        <Panel title="Nội dung khóa học">
+          <div className="flex flex-col gap-3">
             {modules.map((module) => (
               <article
                 key={module.title}
-                className={activeModule === module.title ? 'is-selected' : ''}
+                className={cn(
+                  'rounded-lg border p-4',
+                  activeModule === module.title
+                    ? 'border-brand-500 bg-background-gray-secondary'
+                    : 'border-card-border',
+                )}
               >
-                <span className={module.progress === 100 ? 'is-done' : ''}>
-                  {module.progress === 100 ? <CheckCircle2 size={18} /> : <Layers3 size={18} />}
-                </span>
-                <div>
-                  <h3>{module.title}</h3>
-                  <p>
-                    {module.lessons} bài học · {module.status}
-                  </p>
-                  <i>
-                    <b style={{ width: `${module.progress}%` }} />
-                  </i>
-                </div>
-                <button
-                  type="button"
-                  aria-label={`Mở ${module.title}`}
-                  onClick={() => setEditingLesson(module)}
-                >
-                  <ArrowRight size={17} />
-                </button>
-                {activeModule === module.title && (
+                <div className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      'grid size-9 shrink-0 place-items-center rounded-full',
+                      module.progress === 100
+                        ? 'bg-badge-success-background text-badge-success-icon-color'
+                        : 'bg-badge-blue-background text-badge-blue-icon-color',
+                    )}
+                  >
+                    {module.progress === 100 ? <CheckCircle2 size={18} /> : <Layers3 size={18} />}
+                  </span>
                   <button
                     type="button"
-                    className="hl-teacher-module-assignment"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => setActiveModule(module.title)}
+                  >
+                    <h3 className="truncate text-sm font-medium text-text-primary">{module.title}</h3>
+                    <p className="text-xs text-text-tertiary">
+                      {module.lessons} bài · {module.status}
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Mở ${module.title}`}
+                    className="rounded-md p-1.5 text-icon-tertiary hover:text-text-primary"
+                    onClick={() => setEditingLesson(module)}
+                  >
+                    <ArrowRight size={17} />
+                  </button>
+                </div>
+                <Progress progress={module.progress} className="mt-3 max-w-none" />
+                {activeModule === module.title && (
+                  <Button
+                    type="button"
+                    appearance="outline"
+                    size="sm"
+                    className="mt-3"
                     onClick={() => onOpenAssignments(course, module)}
                   >
                     <ClipboardList size={14} />
-                    Giao bài tập theo bài học
-                  </button>
+                    Giao bài tập
+                  </Button>
                 )}
               </article>
             ))}
           </div>
-        </section>
-        <aside className="hl-teacher-course-side">
-          <section className="hl-teacher-panel">
-            <h2>Tiến độ triển khai</h2>
-            <div className="hl-teacher-course-progress">
-              <strong>{course.progress}%</strong>
-              <p>Đã hoàn thành chương trình</p>
-              <i>
-                <b style={{ width: `${course.progress}%` }} />
-              </i>
-            </div>
-            <div className="hl-teacher-course-facts">
-              <span>
-                <b>12</b>Bài học đã mở
-              </span>
-              <span>
-                <b>08</b>Buổi đã dạy
-              </span>
-            </div>
-          </section>
-          <section className="hl-teacher-panel">
-            <h2>Thao tác nhanh</h2>
-            <div className="hl-teacher-quick-actions">
-              <button
-                type="button"
-                className={activeQuickAction === 'schedule' ? 'is-active' : ''}
-                onClick={() => selectQuickAction('schedule', 'Đã mở lịch học của lớp.')}
-              >
-                <CalendarDays size={17} />
-                Quản lý lịch học
+        </Panel>
+
+        <aside className="flex flex-col gap-5">
+          <Panel title="Tiến độ">
+            <p className="text-2xl leading-8 font-semibold text-text-primary">{course.progress}%</p>
+            <Progress progress={course.progress} className="mt-3 max-w-none" />
+          </Panel>
+          <Panel title="Thao tác nhanh">
+            <div className="-mx-2 flex flex-col">
+              <button type="button" className={quickActionClass} onClick={() => onOpenAssignments(course)}>
+                <ClipboardList size={17} className="text-icon-tertiary" />
+                Bài tập
               </button>
-              <button
-                type="button"
-                className={activeQuickAction === 'assignments' ? 'is-active' : ''}
-                onClick={() => onOpenAssignments(course)}
-              >
-                <ClipboardList size={17} />
-                Quản lý bài tập
+              <button type="button" className={quickActionClass} onClick={() => onOpenQuiz(course)}>
+                <ClipboardList size={17} className="text-icon-tertiary" />
+                Bài kiểm tra
               </button>
-              <button
-                type="button"
-                className={activeQuickAction === 'quiz' ? 'is-active' : ''}
-                onClick={() => onOpenQuiz(course)}
-              >
-                <ClipboardList size={17} />
-                Quản lý bài kiểm tra
+              <button type="button" className={quickActionClass} onClick={() => onAction('Đã mở danh sách học viên.')}>
+                <Users size={17} className="text-icon-tertiary" />
+                Học viên
               </button>
-              <button
-                type="button"
-                className={activeQuickAction === 'students' ? 'is-active' : ''}
-                onClick={() => selectQuickAction('students', 'Đã mở danh sách học viên.')}
-              >
-                <Users size={17} />
-                Xem học viên
-              </button>
-              <button
-                type="button"
-                className={activeQuickAction === 'live' ? 'is-active' : ''}
-                onClick={() => selectQuickAction('live', 'Đã mở không gian lớp trực tuyến.')}
-              >
-                <PlayCircle size={17} />
-                Vào lớp trực tuyến
+              <button type="button" className={quickActionClass} onClick={() => onAction('Đã mở lớp trực tuyến.')}>
+                <PlayCircle size={17} className="text-icon-tertiary" />
+                Lớp trực tuyến
               </button>
             </div>
-          </section>
+          </Panel>
         </aside>
       </div>
-      {contentModalOpen && (
-        <div
-          className="hl-teacher-modal-backdrop"
-          role="presentation"
-          onMouseDown={() => setContentModalOpen(false)}
-        >
-          <form
-            className="hl-teacher-modal"
-            onSubmit={addContent}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className="hl-teacher-modal-close"
-              onClick={() => setContentModalOpen(false)}
-              aria-label="Đóng"
-            >
-              <span>×</span>
-            </button>
-            <h2>Thêm nội dung</h2>
-            <p>Tạo một chương mới cho lớp học này.</p>
-            <label>
-              Tên chương
-              <input
-                autoFocus
-                required
-                value={contentTitle}
-                onChange={(event) => setContentTitle(event.target.value)}
-                placeholder="Ví dụ: Chương 04 · Hình học không gian"
-              />
-            </label>
-            <div className="hl-teacher-modal-actions">
-              <button type="button" onClick={() => setContentModalOpen(false)}>
-                Hủy
-              </button>
-              <button type="submit" className="hl-teacher-primary">
-                <Layers3 size={15} />
-                Thêm nội dung
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+
+      <ConsoleDialog open={contentModalOpen} onClose={() => setContentModalOpen(false)} title="Thêm nội dung" maxWidth={480}>
+        <form className="flex flex-col gap-4" onSubmit={addContent}>
+          <TextField className="gap-2" autoFocus required value={contentTitle} onChange={setContentTitle}>
+            <Label>Tên chương</Label>
+            <Input className="w-full" placeholder="Ví dụ: Chương 04 · Hình học" />
+          </TextField>
+          <div className="flex justify-end gap-2 border-t border-card-border pt-4">
+            <Button appearance="outline" type="button" onClick={() => setContentModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button type="submit">Thêm</Button>
+          </div>
+        </form>
+      </ConsoleDialog>
     </section>
   )
 }
@@ -282,50 +220,13 @@ function TeacherCourses({ courses, selectedCourse, onOpenCourse, onBack, onActio
   if (selectedCourse)
     return <CourseDetail course={selectedCourse} onBack={onBack} onAction={onAction} onOpenQuiz={onOpenQuiz} onOpenAssignments={onOpenAssignments} />
   return (
-    <section className="hl-teacher-courses-page">
-      <div className="hl-teacher-title">
-        <div>
-          <h1>Lớp học</h1>
-          <p>Các lớp được phân công.</p>
-        </div>
+    <section className="flex flex-col gap-5">
+      <TeacherPageHeader title="Lớp học" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {courses.map((course) => (
+          <CourseCard key={course.id} course={course} onOpen={onOpenCourse} />
+        ))}
       </div>
-      <section className="hl-teacher-courses-summary">
-        <div>
-          <BookOpen size={21} />
-          <span>
-            <strong>{courses.length} khóa học</strong>
-            <small>Đang được phân công</small>
-          </span>
-        </div>
-        <div>
-          <Users size={21} />
-          <span>
-            <strong>
-              {courses.reduce((total, course) => total + course.students, 0)} học viên
-            </strong>
-            <small>Đang theo học</small>
-          </span>
-        </div>
-        <div>
-          <CalendarDays size={21} />
-          <span>
-            <strong>08 buổi học</strong>
-            <small>Trong tuần này</small>
-          </span>
-        </div>
-      </section>
-      <section className="hl-teacher-panel">
-        <div className="hl-teacher-panel-heading">
-          <div>
-            <h2>Danh sách lớp học được phân công</h2>
-          </div>
-        </div>
-        <div className="hl-teacher-assigned-grid">
-          {courses.map((course) => (
-            <CourseCard key={course.id} course={course} onOpen={onOpenCourse} />
-          ))}
-        </div>
-      </section>
     </section>
   )
 }

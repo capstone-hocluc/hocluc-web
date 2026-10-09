@@ -1,10 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { ShieldAlert, LoaderCircle } from 'lucide-react'
+import { ShieldAlert, LoaderCircle } from '../console/icons'
 import { clearTokens, getAccessToken } from '../../lib/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useActiveRole } from '../../hooks/useActiveRole'
 import type { UserRole } from '../../services/userService'
-import Button from '../ui/Button'
+import Button from '../console/button'
 
 export type ManagementRole = Extract<
   UserRole,

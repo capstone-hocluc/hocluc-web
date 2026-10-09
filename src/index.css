@@ -8,12 +8,9 @@
 @import './styles/base/keyframes.css';
 @import './styles/base/hover-utilities.css';
 @import './styles/auth/auth.css';
-@import './styles/staff/staff-dashboard.css';
 @import './styles/student/onboarding.css';
 @import './styles/student/student-app.css';
 @import './styles/student/student-app-responsive.css';
-@import './styles/teacher/teacher-dashboard.css';
-@import './styles/staff/staff-features.css';
 @import './styles/components/shared.css';
 @import './styles/scheduling/scheduling.css';
 
@@ -28,4 +25,7 @@
 @import './styles/landing/payment-instructions.css';
 @import './styles/landing/landing-v2-embed.css';
 @import './styles/base/theme-overrides.css';
+@import './styles/tailgrids/tailgrids-theme.css';
+@import './styles/tailgrids/tailgrids-default.css';
+@import './styles/tailgrids/tailgrids-dark.css';
 @custom-variant dark (&:where(html[data-theme='dark'], html[data-theme='dark'] *));

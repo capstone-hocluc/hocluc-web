@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // tailgrids is vendored from the NextAdmin kit and kept close to upstream.
+  globalIgnores(['dist', 'src/components/tailgrids']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

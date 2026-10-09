@@ -1,25 +1,18 @@
 import type { ReactNode } from 'react'
 
 interface TeacherPageHeaderProps {
-  eyebrow?: ReactNode
   title: ReactNode
   description?: ReactNode
   actions?: ReactNode
 }
 
-/** Reuse the teacher dashboard's existing title rhythm for feature pages. */
-export default function TeacherPageHeader({
-  eyebrow,
-  title,
-  description,
-  actions,
-}: TeacherPageHeaderProps) {
+/** NextAdmin page title with an optional muted line and actions. */
+export default function TeacherPageHeader({ title, description, actions }: TeacherPageHeaderProps) {
   return (
-    <header className="hl-teacher-title">
+    <header className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        {eyebrow && <span className="hl-teacher-eyebrow">{eyebrow}</span>}
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
+        <h1 className="text-[28px] leading-8 font-medium text-text-primary">{title}</h1>
+        {description && <p className="mt-1 text-sm text-text-tertiary">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>

@@ -10,7 +10,7 @@ import {
   Send,
   Trash2,
   X,
-} from 'lucide-react'
+} from '../console/icons'
 import { getCourseDetail, getMainCourses, type Course, type CourseDetail, type CourseLesson } from '../../services/courseService'
 import {
   addTeacherQuizQuestions,
@@ -33,15 +33,16 @@ import {
 import { getErrorMessage } from '../../lib/errors'
 import { ApiError } from '../../lib/api'
 import { usePageResource } from '../../hooks/usePageResource'
-import Button from '../ui/Button'
-import Card, { CardEyebrow, CardTitle } from '../ui/Card'
-import ConfirmDialog from '../ui/ConfirmDialog'
-import DropdownField from '../ui/DropdownField'
-import SearchFilterBar from '../ui/SearchFilterBar'
-import Skeleton from '../ui/Skeleton'
-import Notice from '../ui/Notice'
-import StatusBadge from '../ui/StatusBadge'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/DropdownMenu'
+import Button from '../console/button'
+import TeacherPageHeader from './TeacherPageHeader'
+import Card, { CardEyebrow, CardTitle } from '../console/card'
+import ConfirmDialog from '../console/confirm-dialog'
+import DropdownField from '../console/dropdown-field'
+import SearchFilterBar from '../console/search-filter-bar'
+import { Skeleton } from '../tailgrids/core/skeleton'
+import Notice from '../console/notice'
+import StatusBadge from '../console/status'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
 
 interface TeacherQuizProps {
   course: { id: string; name: string }
@@ -170,20 +171,12 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
 
   return (
     <section className="flex flex-col gap-5">
-      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
+      <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
         <ArrowLeft size={16} />Quay lại lớp học
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>Bài kiểm tra</h1>
-          <p>Tất cả quiz bạn được quyền quản lý.</p>
-        </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus size={16} />Tạo quiz
-        </Button>
-      </div>
+      </Button>
+      <TeacherPageHeader title="Bài kiểm tra" actions={<Button onClick={() => setCreating(true)}><Plus size={16} />Tạo quiz</Button>} />
 
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="teacher-quiz-list-title">
+      <Card as="section" padding="lg" aria-labelledby="teacher-quiz-list-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardEyebrow>SOẠN VÀ QUẢN LÝ</CardEyebrow>
@@ -207,41 +200,40 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
             <Skeleton className="h-20" />
           </div>
         ) : quizzes.status !== 'ready' ? (
-          <div className="rounded-xl border border-line-soft bg-surface-soft p-4" role="alert">
-            <p className="m-0 text-sm text-text-secondary">{quizzes.errorMessage || 'Không thể tải danh sách quiz.'}</p>
+          <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
+            <p className="m-0 text-sm text-text-tertiary">{quizzes.errorMessage || 'Không thể tải danh sách quiz.'}</p>
             <Button appearance="outline" className="mt-3 min-h-11" onClick={refresh}>Thử lại</Button>
           </div>
         ) : quizItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-line-blue bg-surface-soft px-5 py-8 text-center">
+          <div className="rounded-xl border border-dashed border-card-border bg-background-gray-secondary px-5 py-8 text-center">
             <FilePlus2 className="mx-auto mb-2 text-primary" size={24} aria-hidden="true" />
-            <strong className="block text-sm text-text-heading">
+            <strong className="block text-sm text-text-primary">
               {hasActiveFilters ? 'Không tìm thấy quiz phù hợp' : 'Chưa có quiz nào'}
             </strong>
-            <p className="mt-1 mb-0 text-sm text-text-secondary">
+            <p className="mt-1 mb-0 text-sm text-text-tertiary">
               {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : 'Tạo quiz nhanh gắn với một bài học để bắt đầu.'}
             </p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {quizItems.map((quiz) => (
-              <article key={quiz.id} className="flex flex-col gap-3 rounded-xl border border-line-blue bg-surface p-4 md:flex-row md:items-center md:justify-between">
+              <article key={quiz.id} className="flex flex-col gap-3 rounded-xl border border-card-border bg-card-background p-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="m-0 truncate text-sm font-bold text-text-heading">{quiz.title}</h2>
+                    <h2 className="m-0 truncate text-sm font-medium text-text-primary">{quiz.title}</h2>
                     <StatusBadge
                       tone={quiz.status === 'PUBLISHED' ? 'success' : quiz.status === 'DRAFT' ? 'warning' : 'neutral'}
-                      size="sm"
                     >
                     {quiz.status === 'PUBLISHED' ? 'Đã xuất bản' : quiz.status === 'DRAFT' ? 'Bản nháp' : 'Đã lưu trữ'}
                   </StatusBadge>
-                    {quizIsLocked(quiz) && <StatusBadge tone="locked" size="sm">Đã có lượt thi</StatusBadge>}
+                    {quizIsLocked(quiz) && <StatusBadge tone="neutral">Đã có lượt thi</StatusBadge>}
                   </div>
-                  <p className="mt-1 mb-0 text-xs text-text-secondary">
+                  <p className="mt-1 mb-0 text-xs text-text-tertiary">
                     {[quiz.courseTitle, quiz.lessonTitle, `${quiz.questionCount} câu`, quiz.durationMinutes ? `${quiz.durationMinutes} phút` : null]
                       .filter(Boolean).join(' · ')}
                   </p>
                   {quiz.status === 'DRAFT' && (quiz.publishProblems?.length ?? 0) > 0 && (
-                    <p className="mt-1 mb-0 text-xs text-text-muted">
+                    <p className="mt-1 mb-0 text-xs text-text-tertiary">
                       Cần hoàn thiện: {quiz.publishProblems?.join(', ')}
                     </p>
                   )}
@@ -287,20 +279,16 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
                     {quiz.status === 'PUBLISHED' ? 'Ẩn quiz' : 'Xuất bản'}
                   </Button>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button appearance="outline" className="min-h-11" disabled={busyId !== null} aria-label={`Thao tác khác với ${quiz.title}`}>
-                        <MoreHorizontal size={16} />
-                      </Button>
-                    </DropdownMenuTrigger>
+                    <DropdownMenuTrigger isDisabled={busyId !== null} aria-label={`Thao tác khác với ${quiz.title}`} className="grid size-9 place-items-center rounded-lg border border-card-border text-icon-tertiary hover:bg-background-gray-secondary data-disabled:opacity-50"><MoreHorizontal size={16} /></DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      <DropdownMenuItem disabled={busyId !== null} onSelect={() => void runQuizAction(quiz, () => duplicateTeacherQuiz(quiz.id), 'Đã sao chép quiz thành bản nháp.')}>
+                      <DropdownMenuItem isDisabled={busyId !== null} onAction={() => void runQuizAction(quiz, () => duplicateTeacherQuiz(quiz.id), 'Đã sao chép quiz thành bản nháp.')}>
                         <Copy size={15} />Sao chép thành bản nháp
                       </DropdownMenuItem>
                       {!quizIsLocked(quiz) && (
                         <DropdownMenuItem
-                          disabled={busyId !== null}
-                          className="text-danger data-[highlighted]:text-danger"
-                          onSelect={() => setConfirmDelete(quiz)}
+                          isDisabled={busyId !== null}
+                          className="text-badge-error-text focus:text-badge-error-text"
+                          onAction={() => setConfirmDelete(quiz)}
                         >
                           <Trash2 size={15} />Xóa quiz
                         </DropdownMenuItem>
@@ -362,8 +350,8 @@ function TeacherQuizEditorScreen({
   }
   if (quizId && (editor.status !== 'ready' || !editor.data)) {
     return (
-      <div className="rounded-xl border border-line-soft bg-surface-soft p-4" role="alert">
-        <p className="m-0 text-sm text-text-secondary">{editor.errorMessage || 'Không thể tải nội dung quiz.'}</p>
+      <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
+        <p className="m-0 text-sm text-text-tertiary">{editor.errorMessage || 'Không thể tải nội dung quiz.'}</p>
         <div className="mt-3 flex gap-2">
           <Button appearance="outline" className="min-h-11" onClick={editor.reload}>Thử lại</Button>
           <Button appearance="outline" className="min-h-11" onClick={onCancel}>Quay lại</Button>
@@ -573,15 +561,10 @@ function TeacherQuizEditorForm({
 
   return (
     <section className="flex flex-col gap-4">
-      <button type="button" className="hl-teacher-text-back" onClick={onCancel}>
+      <Button appearance="ghost" size="sm" type="button" onClick={onCancel}>
         <ArrowLeft size={16} />Quay lại danh sách quiz
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>{initialQuiz ? 'Chỉnh sửa quiz' : serverQuizId ? 'Hoàn thiện quiz nháp' : 'Tạo quiz nhanh'}</h1>
-          <p>Quiz nhanh được gắn với một bài học trong khóa học.</p>
-        </div>
-      </div>
+      </Button>
+      <TeacherPageHeader title={initialQuiz ? 'Chỉnh sửa quiz' : serverQuizId ? 'Hoàn thiện quiz nháp' : 'Tạo quiz nhanh'} />
 
       {ambiguousCreate && (
         <Notice tone="warning" role="alert" aria-live="assertive">
@@ -595,10 +578,10 @@ function TeacherQuizEditorForm({
       )}
 
       {!initialQuiz && (
-        <Card as="section" padding="lg" radius="lg" aria-labelledby="quiz-target-title">
+        <Card as="section" padding="lg" aria-labelledby="quiz-target-title">
           <CardTitle id="quiz-target-title" className="mb-3 text-base">Chọn vị trí quiz</CardTitle>
           <div className="grid gap-3 md:grid-cols-2">
-            <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
               Khóa học chính
               <DropdownField
                 ariaLabel="Khóa học chính"
@@ -621,7 +604,7 @@ function TeacherQuizEditorForm({
                 }}
               />
             </label>
-            <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
               Bài học
               <DropdownField
                 ariaLabel="Bài học"
@@ -644,29 +627,29 @@ function TeacherQuizEditorForm({
               />
             </label>
           </div>
-          {fieldErrors.target && <p id="teacher-quiz-target-error" className="mt-2 mb-0 text-sm font-medium text-text-danger" role="alert">{fieldErrors.target}</p>}
-          {courseCatalog.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-secondary" role="status">Đang tải khóa học...</p>}
+          {fieldErrors.target && <p id="teacher-quiz-target-error" className="mt-2 mb-0 text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.target}</p>}
+          {courseCatalog.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-tertiary" role="status">Đang tải khóa học...</p>}
           {courseCatalogHasError && (
             <div className="mt-2 flex flex-wrap items-center gap-2" role="alert">
-              <p className="m-0 text-sm text-text-danger">{courseCatalogError}</p>
+              <p className="m-0 text-sm text-badge-error-text">{courseCatalogError}</p>
               {courseCatalog.status === 'error' && <Button appearance="outline" className="min-h-11" onClick={courseCatalog.reload}>Thử lại</Button>}
             </div>
           )}
           {courseCatalog.status === 'ready' && (courseCatalog.data?.length ?? 0) === 0 && (
-            <p className="mt-2 mb-0 text-sm text-text-secondary">Hiện chưa có khóa học đang mở để gắn quiz.</p>
+            <p className="mt-2 mb-0 text-sm text-text-tertiary">Hiện chưa có khóa học đang mở để gắn quiz.</p>
           )}
           {activeCourseId && courseDetail.status === 'ready' && lessonOptions.length === 0 && (
-            <p className="mt-2 mb-0 text-sm text-text-secondary">Khóa học này chưa có bài học để gắn quiz.</p>
+            <p className="mt-2 mb-0 text-sm text-text-tertiary">Khóa học này chưa có bài học để gắn quiz.</p>
           )}
-          {activeCourseId && courseDetail.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-secondary" role="status">Đang tải bài học...</p>}
+          {activeCourseId && courseDetail.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-tertiary" role="status">Đang tải bài học...</p>}
           {activeCourseId && courseDetailHasError && (
             <div className="mt-2 flex flex-wrap items-center gap-2" role="alert">
-              <p className="m-0 text-sm text-text-danger">{courseDetailError}</p>
+              <p className="m-0 text-sm text-badge-error-text">{courseDetailError}</p>
               {courseDetail.status === 'error' && <Button appearance="outline" className="min-h-11" onClick={courseDetail.reload}>Thử lại</Button>}
             </div>
           )}
           {courseCatalog.status === 'ready' && (
-            <p className="mt-2 mb-0 text-xs text-text-secondary" role="note">
+            <p className="mt-2 mb-0 text-xs text-text-tertiary" role="note">
               {routeCourseId && activeCourseId === routeCourseId && activeCourseDetail
                 ? 'Đã điền sẵn khóa học theo đường dẫn. Máy chủ sẽ xác thực quyền quản lý khi lưu.'
                 : routeCourseId && activeCourseId === routeCourseId && courseDetailHasError
@@ -676,39 +659,39 @@ function TeacherQuizEditorForm({
                 : 'Khóa học từ đường dẫn không xuất hiện trong danh mục hiện có. Hãy chọn khóa học và bài học bạn được phép quản lý; máy chủ sẽ xác thực quyền khi lưu.'}
             </p>
           )}
-          {serverQuizId && <p className="mt-2 mb-0 text-xs text-text-secondary">Quiz đã được tạo nháp. Nếu cần đổi vị trí, hãy tạo quiz mới.</p>}
+          {serverQuizId && <p className="mt-2 mb-0 text-xs text-text-tertiary">Quiz đã được tạo nháp. Nếu cần đổi vị trí, hãy tạo quiz mới.</p>}
         </Card>
       )}
 
       {initialQuiz && (
-        <div className="rounded-xl border border-line-blue bg-primary-soft px-4 py-3 text-sm text-text-secondary">
+        <div className="rounded-xl border border-card-border bg-badge-blue-background px-4 py-3 text-sm text-text-tertiary">
           {[initialQuiz.courseTitle, initialQuiz.lessonTitle, initialQuiz.type].filter(Boolean).join(' · ')}
-          {quizIsLocked(initialQuiz) && <p className="mt-1 mb-0 font-semibold">Quiz đã có lượt thi; câu hỏi và quy định làm bài đang khóa.</p>}
+          {quizIsLocked(initialQuiz) && <p className="mt-1 mb-0 font-medium">Quiz đã có lượt thi; câu hỏi và quy định làm bài đang khóa.</p>}
         </div>
       )}
 
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="quiz-settings-title">
+      <Card as="section" padding="lg" aria-labelledby="quiz-settings-title">
         <CardTitle id="quiz-settings-title" className="mb-3 text-base">Thông tin quiz</CardTitle>
         <div className="grid gap-3 md:grid-cols-3">
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading md:col-span-1">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-1">
             Tên quiz
-            <input id="teacher-quiz-title" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate || ambiguousQuestionSave} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
-            {fieldErrors.title && <span id="teacher-quiz-title-error" className="text-sm font-medium text-text-danger" role="alert">{fieldErrors.title}</span>}
+            <input id="teacher-quiz-title" className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal aria-invalid:border-input-error-focus-border" value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate || ambiguousQuestionSave} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
+            {fieldErrors.title && <span id="teacher-quiz-title-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.title}</span>}
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Thời gian (phút)
-            <input id="teacher-quiz-duration" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" type="number" min="1" max="600" value={duration} onChange={(event) => { setDuration(event.target.value); clearFieldError('duration') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.duration ? true : undefined} aria-describedby={fieldErrors.duration ? 'teacher-quiz-duration-error' : undefined} />
-            {fieldErrors.duration && <span id="teacher-quiz-duration-error" className="text-sm font-medium text-text-danger" role="alert">{fieldErrors.duration}</span>}
+            <input id="teacher-quiz-duration" className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal aria-invalid:border-input-error-focus-border" type="number" min="1" max="600" value={duration} onChange={(event) => { setDuration(event.target.value); clearFieldError('duration') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.duration ? true : undefined} aria-describedby={fieldErrors.duration ? 'teacher-quiz-duration-error' : undefined} />
+            {fieldErrors.duration && <span id="teacher-quiz-duration-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.duration}</span>}
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Số lần làm tối đa
-            <input id="teacher-quiz-attempts" className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal aria-invalid:border-danger" type="number" min="1" max="999" value={attempts} onChange={(event) => { setAttempts(event.target.value); clearFieldError('attempts') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.attempts ? true : undefined} aria-describedby={fieldErrors.attempts ? 'teacher-quiz-attempts-error' : undefined} />
-            {fieldErrors.attempts && <span id="teacher-quiz-attempts-error" className="text-sm font-medium text-text-danger" role="alert">{fieldErrors.attempts}</span>}
+            <input id="teacher-quiz-attempts" className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal aria-invalid:border-input-error-focus-border" type="number" min="1" max="999" value={attempts} onChange={(event) => { setAttempts(event.target.value); clearFieldError('attempts') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.attempts ? true : undefined} aria-describedby={fieldErrors.attempts ? 'teacher-quiz-attempts-error' : undefined} />
+            {fieldErrors.attempts && <span id="teacher-quiz-attempts-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.attempts}</span>}
           </label>
         </div>
       </Card>
 
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}>
+      <Card as="section" padding="lg" aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <CardTitle id="quiz-questions-title" className="text-base">Câu hỏi ({questions.length})</CardTitle>
           <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={() => { clearFieldError('questions'); setQuestions((items) => [...items, createDraftQuestion()]) }}>
@@ -716,14 +699,14 @@ function TeacherQuizEditorForm({
           </Button>
         </div>
         {questions.length === 0 ? (
-          <p className="rounded-xl bg-surface-soft p-4 text-sm text-text-secondary">Quiz nháp chưa có câu hỏi. Hãy thêm câu hỏi trước khi xuất bản.</p>
+          <p className="rounded-xl bg-background-gray-secondary p-4 text-sm text-text-tertiary">Quiz nháp chưa có câu hỏi. Hãy thêm câu hỏi trước khi xuất bản.</p>
         ) : (
           <div className="flex flex-col gap-3">
             {questions.map((question, questionIndex) => (
-              <article key={question.clientId} className="rounded-xl border border-line-soft bg-surface-soft p-4">
+              <article key={question.clientId} className="rounded-xl border border-card-border bg-background-gray-secondary p-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <strong className="text-sm text-text-heading">Câu {questionIndex + 1}</strong>
-                  {!question.editable && <StatusBadge tone="warning" size="sm">Định dạng chỉ đọc</StatusBadge>}
+                  <strong className="text-sm text-text-primary">Câu {questionIndex + 1}</strong>
+                  {!question.editable && <StatusBadge tone="warning">Định dạng chỉ đọc</StatusBadge>}
                   {question.editable && !questionsLocked && (
                     <Button variant="danger" appearance="ghost" aria-label={`Xóa câu ${questionIndex + 1}`} className="min-h-11" disabled={busy} onClick={() => { clearFieldError('questions'); setQuestions((items) => items.filter((item) => item.clientId !== question.clientId)) }}>
                       <Trash2 size={15} />
@@ -731,20 +714,20 @@ function TeacherQuizEditorForm({
                   )}
                 </div>
                 {!question.editable ? (
-                  <div className="text-sm text-text-secondary">
+                  <div className="text-sm text-text-tertiary">
                     <p className="mt-0 mb-2 whitespace-pre-wrap">{question.questionText}</p>
                     <ul className="m-0 pl-5">{question.options.map((option, index) => <li key={`${question.clientId}-${index}`}>{option.text}{option.correct ? ' ✓' : ''}</li>)}</ul>
                     <p className="mt-2 mb-0">Câu hỏi loại {question.questionType} chưa được hỗ trợ chỉnh sửa ở màn hình này.</p>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+                    <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                       Nội dung câu hỏi
-                      <textarea className="min-h-20 rounded-xl border border-line-blue bg-surface px-3 py-2 text-sm font-normal" value={question.questionText} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { questionText: event.target.value })} />
+                      <textarea className="min-h-20 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm font-normal" value={question.questionText} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { questionText: event.target.value })} />
                     </label>
-                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+                    <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                       Dạng đáp án
-                      <select className="min-h-11 rounded-xl border border-line-blue bg-surface px-3 text-sm font-normal md:max-w-64" value={question.questionType} disabled={questionsLocked || busy} onChange={(event) => {
+                      <select className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal md:max-w-64" value={question.questionType} disabled={questionsLocked || busy} onChange={(event) => {
                         const questionType = event.target.value as TeacherQuestionType
                         const options = questionType === 'SINGLE_CHOICE'
                           ? question.options.map((option, index) => ({ ...option, correct: option.correct && question.options.findIndex((item) => item.correct) === index }))
@@ -770,8 +753,8 @@ function TeacherQuizEditorForm({
                               } else updateOption(question, optionIndex, { correct: !option.correct })
                             }}
                           />
-                          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-xs font-bold text-text-secondary">{String.fromCharCode(65 + optionIndex)}</span>
-                          <input className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-blue bg-surface px-3 text-sm" value={option.text} placeholder={`Lựa chọn ${String.fromCharCode(65 + optionIndex)}`} aria-label={`Nội dung lựa chọn ${String.fromCharCode(65 + optionIndex)} cho câu ${questionIndex + 1}`} disabled={questionsLocked || busy} onChange={(event) => updateOption(question, optionIndex, { text: event.target.value })} />
+                          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-card-background text-xs font-medium text-text-tertiary">{String.fromCharCode(65 + optionIndex)}</span>
+                          <input className="min-h-11 min-w-0 flex-1 rounded-xl border border-card-border bg-card-background px-3 text-sm" value={option.text} placeholder={`Lựa chọn ${String.fromCharCode(65 + optionIndex)}`} aria-label={`Nội dung lựa chọn ${String.fromCharCode(65 + optionIndex)} cho câu ${questionIndex + 1}`} disabled={questionsLocked || busy} onChange={(event) => updateOption(question, optionIndex, { text: event.target.value })} />
                           {question.options.length > 2 && !questionsLocked && (
                             <Button appearance="ghost" className="min-h-11" aria-label={`Xóa lựa chọn ${String.fromCharCode(65 + optionIndex)}`} disabled={busy} onClick={() => updateQuestion(question.clientId, { options: question.options.filter((_, index) => index !== optionIndex) })}>
                               <X size={15} />
@@ -785,9 +768,9 @@ function TeacherQuizEditorForm({
                         </Button>
                       )}
                     </div>
-                    <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+                    <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                       Giải thích (không bắt buộc)
-                      <textarea className="min-h-16 rounded-xl border border-line-blue bg-surface px-3 py-2 text-sm font-normal" value={question.explanation} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { explanation: event.target.value })} />
+                      <textarea className="min-h-16 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm font-normal" value={question.explanation} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { explanation: event.target.value })} />
                     </label>
                   </div>
                 )}
@@ -795,9 +778,9 @@ function TeacherQuizEditorForm({
             ))}
           </div>
         )}
-        {fieldErrors.questions && <p id="teacher-quiz-questions-error" className="mt-4 mb-0 text-sm font-medium text-text-danger" role="alert">{fieldErrors.questions}</p>}
-        {error && <p className="mt-4 mb-0 text-sm font-medium text-text-danger" role="alert">{error}</p>}
-        <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line-soft pt-4">
+        {fieldErrors.questions && <p id="teacher-quiz-questions-error" className="mt-4 mb-0 text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.questions}</p>}
+        {error && <p className="mt-4 mb-0 text-sm font-medium text-badge-error-text" role="alert">{error}</p>}
+        <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-card-border pt-4">
           <Button appearance="outline" className="min-h-11" disabled={busy} onClick={onCancel}>{ambiguousCreate || ambiguousQuestionSave ? 'Quay về danh sách quiz' : 'Hủy'}</Button>
           <Button appearance="outline" className="min-h-11" disabled={busy || ambiguousCreate || ambiguousQuestionSave} onClick={() => void saveQuiz(false)}>
             {busy ? 'Đang lưu...' : initialQuiz || serverQuizId ? 'Lưu thay đổi' : 'Lưu bản nháp'}

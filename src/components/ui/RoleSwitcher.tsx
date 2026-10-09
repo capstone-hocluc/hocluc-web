@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Repeat2 } from 'lucide-react'
+import { Check, ChevronDown, Repeat2 } from '../console/icons'
 import { useActiveRole } from '../../hooks/useActiveRole'
 import { ROLE_LABELS } from '../../lib/role-home'
 import { cn } from '../../lib/cn'

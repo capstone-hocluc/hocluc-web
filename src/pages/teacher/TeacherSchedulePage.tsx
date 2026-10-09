@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, Info } from 'lucide-react'
+import { CalendarDays } from '../../components/console/icons'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { getTeachingSchedules } from '../../services/scheduleService'
@@ -15,17 +15,17 @@ import {
   sortScheduleItems,
   startOfLocalWeek,
 } from '../../lib/scheduling'
-import Notice from '../../components/ui/Notice'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import Notice from '../../components/console/notice'
+import ConfirmDialog from '../../components/console/confirm-dialog'
 import TeacherPageHeader from '../../components/teacher/TeacherPageHeader'
-import Button from '../../components/ui/Button'
-import ScheduleCalendar from '../../components/scheduling/ScheduleCalendar'
-import ScheduleDetailsSheet from '../../components/scheduling/ScheduleDetailsSheet'
-import ScheduleFilters, { type ScheduleViewMode } from '../../components/scheduling/ScheduleFilters'
-import ScheduleList from '../../components/scheduling/ScheduleList'
-import ScheduleResourceState from '../../components/scheduling/ScheduleResourceState'
-import ClassSessionRecordingsPanel from '../../components/scheduling/ClassSessionRecordingsPanel'
-import ScheduleAttendancePanel from '../../components/scheduling/ScheduleAttendancePanel'
+import Button from '../../components/console/button'
+import ScheduleCalendar from '../../components/console/schedule/schedule-calendar'
+import ScheduleDetailsSheet from '../../components/console/schedule/schedule-details-sheet'
+import ScheduleFilters, { type ScheduleViewMode } from '../../components/console/schedule/schedule-filters'
+import ScheduleList from '../../components/console/schedule/schedule-list'
+import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
+import ClassSessionRecordingsPanel from '../../components/console/schedule/class-session-recordings-panel'
+import ScheduleAttendancePanel from '../../components/console/schedule/schedule-attendance-panel'
 
 export default function TeacherSchedulePage() {
   const { profile } = useCurrentUser()
@@ -76,22 +76,16 @@ export default function TeacherSchedulePage() {
   const closeDetails = () => setSelectedItem(null)
 
   return (
-    <div className="hl-scheduling space-y-5">
+    <div className="space-y-5">
       <TeacherPageHeader
-        eyebrow="GIẢNG DẠY"
         title="Lịch dạy"
-        description="Lịch dạy gồm lịch đơn và các buổi học thuộc chuỗi."
-        actions={<Button appearance="outline" className="max-[767px]:min-h-11" disabled={attendancePanelState.busy} onClick={() => runWithUnsavedActionGuard(() => {
+        actions={<Button appearance="outline" disabled={attendancePanelState.busy} onClick={() => runWithUnsavedActionGuard(() => {
           setSelectedItem(null)
           resource.reload()
         })}><CalendarDays size={16} />Tải lại</Button>}
       />
-      <Notice tone="info">
-        <Info size={17} aria-hidden="true" />
-        Lịch được tải theo tài khoản giáo viên đang đăng nhập. Chỉ lịch đơn có danh sách điểm danh.
-      </Notice>
       {attendancePanelState.busy && (
-        <Notice tone="info">Đang lưu điểm danh. Hãy đợi hoàn tất trước khi rời trang.</Notice>
+        <Notice tone="info">Đang lưu điểm danh…</Notice>
       )}
       <ScheduleFilters
         date={date}
@@ -105,7 +99,7 @@ export default function TeacherSchedulePage() {
         status={resource.status}
         errorMessage={resource.errorMessage}
         empty={!items.length}
-        emptyMessage={query.trim() ? 'Không tìm thấy lịch phù hợp trong tuần này.' : 'Bạn chưa có lịch dạy trong tuần này.'}
+        emptyMessage={query.trim() ? 'Không có lịch phù hợp.' : 'Chưa có lịch dạy trong tuần này.'}
         onRetry={resource.reload}
       >
         {view === 'agenda' ? (
@@ -125,13 +119,11 @@ export default function TeacherSchedulePage() {
       />
       {unsavedGuard.hasPendingAction && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
-          title="Bỏ thay đổi điểm danh chưa lưu?"
-          description="Các trạng thái bạn vừa chỉnh chưa được gửi lên máy chủ. Nếu tiếp tục, những thay đổi này sẽ bị bỏ."
+          title="Bỏ thay đổi chưa lưu?"
+          description="Điểm danh vừa chỉnh chưa được lưu."
           cancelLabel="Tiếp tục chỉnh sửa"
           confirmLabel="Bỏ thay đổi"
           variant="danger"
-          mobileTouchTargets
           onCancel={unsavedGuard.cancelDiscard}
           onConfirm={unsavedGuard.confirmDiscard}
         />

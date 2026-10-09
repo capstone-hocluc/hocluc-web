@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, BookOpen, RefreshCw } from 'lucide-react'
+import { AlertCircle, BookOpen, RefreshCw } from '../console/icons'
 import type { ColumnDef } from '@tanstack/react-table'
 import { getMainCourses, type Course } from '../../services/courseService'
-import Button from '../ui/Button'
-import DataTable from '../ui/DataTable'
-import Status from '../ui/Status'
+import Button from '../console/button'
+import DataTable from '../console/data-table'
+import Status from '../console/status'
 
 const TRACK_LABELS: Record<string, string> = {
   LONG: 'Dài hạn',
@@ -95,8 +95,8 @@ function ManagementCourseList() {
         header: 'Khóa học',
         cell: ({ row }) => (
           <div className="min-w-56">
-            <strong className="block font-semibold text-text-heading">{row.original.title}</strong>
-            <span className="mt-1 block max-w-[360px] truncate text-sm text-text-muted">
+            <strong className="block font-semibold text-text-primary">{row.original.title}</strong>
+            <span className="mt-1 block max-w-[360px] truncate text-sm text-text-tertiary">
               {row.original.description || 'Chưa có mô tả'}
             </span>
           </div>
@@ -136,15 +136,15 @@ function ManagementCourseList() {
   )
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border-subtle bg-surface">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-subtle px-5 py-5 sm:px-6">
+    <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-card-border px-5 py-5 sm:px-6">
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-badge-info-bg text-primary">
             <BookOpen size={20} aria-hidden="true" />
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-text-heading">Danh sách khóa học</h2>
-            <p className="mt-1 text-sm text-text-muted">
+            <h2 className="text-lg font-semibold text-text-primary">Danh sách khóa học</h2>
+            <p className="mt-1 text-sm text-text-tertiary">
               Các khóa học đang mở được trả về từ catalog hiện tại.
             </p>
           </div>
@@ -161,7 +161,7 @@ function ManagementCourseList() {
         </Button>
       </div>
 
-      <div className="flex items-start gap-3 border-b border-border-subtle bg-badge-warning-bg px-5 py-4 text-sm text-badge-warning-text sm:px-6">
+      <div className="flex items-start gap-3 border-b border-card-border bg-badge-warning-bg px-5 py-4 text-sm text-badge-warning-text sm:px-6">
         <AlertCircle size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
         <p>
           Backend hiện chưa có API tạo, chỉnh sửa, xuất bản hoặc xóa khóa học. Màn này chỉ hiển thị dữ liệu
@@ -170,7 +170,7 @@ function ManagementCourseList() {
       </div>
 
       {error && (
-        <div role="alert" className="border-b border-border-subtle bg-badge-danger-bg px-5 py-4 text-sm text-danger sm:px-6">
+        <div role="alert" className="border-b border-card-border bg-badge-danger-bg px-5 py-4 text-sm text-danger sm:px-6">
           {error}
         </div>
       )}

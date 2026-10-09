@@ -9,12 +9,12 @@ import {
 } from '../../services/timetableProposalService'
 import type { DeliveryMode, TimetableProposalResponse } from '../../types/scheduling'
 import type { ScheduleResourceStatus } from '../../hooks/useScheduleResource'
-import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import Notice from '../../components/ui/Notice'
+import Button from '../../components/console/button'
+import { fieldControlClass } from '../../components/console/form-field'
+import Card from '../../components/console/card'
+import Notice from '../../components/console/notice'
 
-const fieldClass =
-  'h-10 rounded-xl border border-border-subtle bg-surface-input px-3 text-sm text-text-heading outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60'
+const fieldClass = fieldControlClass
 
 const weekdays: Record<string, string> = {
   MONDAY: 'Thứ Hai',
@@ -187,10 +187,7 @@ export default function TimetableProposalPanel({
   return (
     <Card as="section" padding="lg" className="space-y-4">
       <div>
-        <h2 className="text-base font-semibold text-text-heading">Đề xuất thời khóa biểu</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Chọn môn, khoảng thời gian và số buổi cần học. Hệ thống tìm khung giờ dựa trên lịch rảnh của giáo viên.
-        </p>
+        <h2 className="text-base font-medium text-text-primary">Đề xuất thời khóa biểu</h2>
       </div>
 
       {sectionsMessage && (
@@ -200,7 +197,7 @@ export default function TimetableProposalPanel({
       )}
       {confirmationLocked && (
         <Notice tone="warning">
-          {errorMessage || 'Kết quả xác nhận chưa rõ. Nút gửi đã khóa để tránh tạo trùng; hãy tải lại lịch và kiểm tra chuỗi lịch lặp.'}
+          {errorMessage || 'Kết quả chưa rõ. Hãy tải lại lịch và kiểm tra trước khi tạo tiếp.'}
         </Notice>
       )}
       {errorMessage && !confirmationLocked && <Notice tone="danger">{errorMessage}</Notice>}
@@ -208,7 +205,7 @@ export default function TimetableProposalPanel({
 
       <form className="space-y-4" onSubmit={(event) => void generate(event)}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Từ ngày
             <input
               name="proposalStartDate"
@@ -224,7 +221,7 @@ export default function TimetableProposalPanel({
               required
             />
           </label>
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Đến ngày
             <input
               name="proposalEndDate"
@@ -244,7 +241,7 @@ export default function TimetableProposalPanel({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Buổi mỗi tuần
             <input
               name="sessionsPerWeek"
@@ -263,7 +260,7 @@ export default function TimetableProposalPanel({
               required
             />
           </label>
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Thời lượng (phút)
             <input
               name="durationMinutes"
@@ -281,7 +278,7 @@ export default function TimetableProposalPanel({
               required
             />
           </label>
-          <label className="text-sm font-medium text-text-heading">
+          <label className="text-sm font-medium text-text-primary">
             Hình thức
             <select
               name="preferredMode"
@@ -302,7 +299,7 @@ export default function TimetableProposalPanel({
         </div>
 
         <fieldset className="space-y-2" disabled={controlsDisabled}>
-          <legend className="text-sm font-medium text-text-heading">Môn cần xếp lịch</legend>
+          <legend className="text-sm font-medium text-text-primary">Môn cần xếp lịch</legend>
           <Button type="button" size="sm" appearance="ghost" onClick={toggleAllSections} disabled={controlsDisabled}>
             {selectedSectionIds.length === sections.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
           </Button>
@@ -310,7 +307,7 @@ export default function TimetableProposalPanel({
             {sections.map((section) => (
               <label
                 key={section.sectionCourseId}
-                className="flex min-h-11 items-center gap-3 rounded-xl border border-border-subtle bg-surface px-3 py-2 text-sm text-text-heading"
+                className="flex min-h-11 items-center gap-3 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm text-text-primary"
               >
                 <input
                   type="checkbox"
@@ -322,18 +319,13 @@ export default function TimetableProposalPanel({
               </label>
             ))}
           </div>
-          {sections.length > 0 && (
-            <p className="m-0 text-xs text-text-muted">
-              Mặc định máy chủ tìm từ thứ Hai đến thứ Bảy và tự chọn giáo viên đủ điều kiện của khóa học.
-            </p>
-          )}
         </fieldset>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-4">
-          <p className="m-0 text-xs text-text-muted">Múi giờ: {SCHEDULING_TIMEZONE}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border pt-4">
+          <p className="m-0 text-xs text-text-tertiary">Múi giờ: {SCHEDULING_TIMEZONE}</p>
           <Button
             type="submit"
-            className="max-[767px]:min-h-11"
+           
             disabled={controlsDisabled || selectedSectionIds.length === 0 || !startDate || !endDate}
           >
             {busy ? 'Đang xử lý…' : 'Tạo đề xuất'}
@@ -342,29 +334,29 @@ export default function TimetableProposalPanel({
       </form>
 
       {proposal && (
-        <div className="space-y-3 border-t border-border-subtle pt-4">
+        <div className="space-y-3 border-t border-card-border pt-4">
           <div>
-            <h3 className="text-sm font-semibold text-text-heading">Kết quả đề xuất</h3>
-            <p className="mt-1 text-xs text-text-muted">
+            <h3 className="text-sm font-medium text-text-primary">Kết quả đề xuất</h3>
+            <p className="mt-1 text-xs text-text-tertiary">
               {proposal.proposedSchedules.length} lịch được đề xuất
               {proposal.unassignedSections.length > 0 ? ` · ${proposal.unassignedSections.length} môn chưa xếp đủ` : ''}
             </p>
           </div>
           {proposal.unassignedSections.length > 0 && (
             <Notice tone="warning">
-              <span className="font-semibold">Một số môn chưa xếp đủ:</span>{' '}
+              <span className="font-medium">Một số môn chưa xếp đủ:</span>{' '}
               {proposal.unassignedSections.map((section) => `${section.sectionTitle || 'Môn học'}${section.reason ? ` (${section.reason})` : ''}`).join('; ')}
             </Notice>
           )}
           {proposal.proposedSchedules.length > 0 ? (
             <div className="space-y-2">
               {proposal.proposedSchedules.map((schedule, index) => (
-                <article key={`${schedule.sectionId}-${schedule.dayOfWeek}-${schedule.startTime}-${index}`} className="rounded-xl border border-border-subtle bg-surface px-3 py-3">
-                  <p className="m-0 text-sm font-semibold text-text-heading">{schedule.sectionTitle}</p>
-                  <p className="mt-1 mb-0 text-sm text-text-secondary">
+                <article key={`${schedule.sectionId}-${schedule.dayOfWeek}-${schedule.startTime}-${index}`} className="rounded-xl border border-card-border bg-card-background px-3 py-3">
+                  <p className="m-0 text-sm font-medium text-text-primary">{schedule.sectionTitle}</p>
+                  <p className="mt-1 mb-0 text-sm text-text-tertiary">
                     {weekdays[schedule.dayOfWeek] ?? schedule.dayOfWeek} · {schedule.startTime.slice(0, 5)}–{schedule.endTime.slice(0, 5)} · {schedule.durationMinutes} phút · {deliveryModes[schedule.mode] ?? schedule.mode} · {schedule.teacherName}
                   </p>
-                  <p className="mt-1 mb-0 text-xs text-text-muted">
+                  <p className="mt-1 mb-0 text-xs text-text-tertiary">
                     {schedule.projectedSessionDates.length} buổi trong kỳ
                     {schedule.projectedSessionDates.length > 0
                       ? ` · ${schedule.projectedSessionDates.slice(0, 3).map((date) => localDateLabel(date, { day: 'numeric', month: 'short' })).join(', ')}`
@@ -374,15 +366,15 @@ export default function TimetableProposalPanel({
               ))}
             </div>
           ) : (
-            <Notice tone="warning">Chưa tìm thấy khung giờ phù hợp. Hãy chỉnh yêu cầu hoặc khoảng ngày rồi tạo đề xuất lại.</Notice>
+            <Notice tone="warning">Chưa có khung giờ phù hợp. Hãy đổi yêu cầu hoặc khoảng ngày.</Notice>
           )}
           <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" appearance="outline" className="max-[767px]:min-h-11" disabled={busy} onClick={clearResult}>
+            <Button type="button" appearance="outline" disabled={busy} onClick={clearResult}>
               Bỏ đề xuất
             </Button>
             <Button
               type="button"
-              className="max-[767px]:min-h-11"
+             
               disabled={busy || confirmationLocked || proposal.proposedSchedules.length === 0}
               onClick={() => void confirm()}
             >

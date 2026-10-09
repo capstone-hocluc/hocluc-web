@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, ArrowRight, BookOpen, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowRight, BookOpen, BookOpenCheck, RefreshCw, Wallet } from '../console/icons'
 import { getMainCourses, type Course } from '../../services/courseService'
-import Button from '../ui/Button'
+import Button from '../console/button'
 import StatCard from '../ui/StatCard'
 
 interface ManagerOverviewProps {
@@ -53,9 +53,7 @@ function ManagerOverview({ onNavigate }: ManagerOverviewProps) {
   return (
     <section className="space-y-5" aria-busy={loading}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm text-text-muted">Tổng quan các khóa học đang được mở trên hệ thống.</p>
-        </div>
+        <div />
         <Button
           variant="primary"
           appearance="outline"
@@ -69,9 +67,9 @@ function ManagerOverview({ onNavigate }: ManagerOverviewProps) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Khóa học đang mở" value={loading ? '—' : summary.total} />
-        <StatCard label="Khóa học miễn phí" value={loading ? '—' : summary.free} />
-        <StatCard label="Khóa học có học phí" value={loading ? '—' : summary.paid} />
+        <StatCard label="Khóa học đang mở" value={loading ? '—' : summary.total} icon={BookOpen} tone="info" />
+        <StatCard label="Khóa học miễn phí" value={loading ? '—' : summary.free} icon={BookOpenCheck} tone="success" />
+        <StatCard label="Khóa học có học phí" value={loading ? '—' : summary.paid} icon={Wallet} tone="warning" />
       </div>
 
       {error ? (
@@ -93,15 +91,15 @@ function ManagerOverview({ onNavigate }: ManagerOverviewProps) {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border-subtle bg-surface px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-card-border bg-card-background px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-xl bg-badge-info-bg text-primary">
               <BookOpen size={20} aria-hidden="true" />
             </span>
             <div>
-              <h2 className="font-semibold text-text-heading">Quản lý khóa học</h2>
-              <p className="mt-1 text-sm text-text-muted">
-                Xem catalog thật; chức năng tạo và chỉnh sửa đang chờ backend cung cấp API.
+              <h2 className="font-semibold text-text-primary">Quản lý khóa học</h2>
+              <p className="mt-1 text-sm text-text-tertiary">
+                Danh sách khóa học đang mở.
               </p>
             </div>
           </div>

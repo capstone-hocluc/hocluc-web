@@ -17,7 +17,7 @@ import {
   Trash2,
   Users,
   X,
-} from 'lucide-react'
+} from '../console/icons'
 import { getMainCourses, type Course } from '../../services/courseService'
 import {
   addTeacherQuizQuestions,
@@ -44,15 +44,16 @@ import {
 import { ApiError } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
 import { usePageResource } from '../../hooks/usePageResource'
-import Button from '../ui/Button'
-import Card, { CardEyebrow, CardTitle } from '../ui/Card'
-import ConfirmDialog from '../ui/ConfirmDialog'
-import DropdownField from '../ui/DropdownField'
-import SearchFilterBar from '../ui/SearchFilterBar'
-import Skeleton from '../ui/Skeleton'
-import Notice from '../ui/Notice'
-import StatusBadge from '../ui/StatusBadge'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/DropdownMenu'
+import Button from '../console/button'
+import TeacherPageHeader from './TeacherPageHeader'
+import Card, { CardEyebrow, CardTitle } from '../console/card'
+import ConfirmDialog from '../console/confirm-dialog'
+import DropdownField from '../console/dropdown-field'
+import SearchFilterBar from '../console/search-filter-bar'
+import { Skeleton } from '../tailgrids/core/skeleton'
+import Notice from '../console/notice'
+import StatusBadge from '../console/status'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
 
 interface TeacherMockExamsProps {
   onBack: () => void
@@ -523,35 +524,27 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
 
   return (
     <section className="flex flex-col gap-5">
-      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
+      <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
         <ArrowLeft size={16} />Quay lại tổng quan
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>Bài thi thử</h1>
-          <p>Quản lý đề thi, thời gian làm bài và lượt dự thi.</p>
-        </div>
-        <Button className="min-h-11" onClick={() => setCreating(true)}>
-          <Plus size={16} />Tạo đề thi thử
-        </Button>
-      </div>
+      </Button>
+      <TeacherPageHeader title="Bài thi thử" actions={<Button className="min-h-11" onClick={() => setCreating(true)}><Plus size={16} />Tạo đề thi thử</Button>} />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="flex items-center gap-3" padding="md" radius="lg">
+        <Card className="flex items-center gap-3" padding="md">
           <ClipboardCheck className="text-primary" size={21} aria-hidden="true" />
-          <div><strong className="block text-base text-text-heading">{allExams.length}</strong><span className="text-xs text-text-secondary">Đề thi thử</span></div>
+          <div><strong className="block text-base text-text-primary">{allExams.length}</strong><span className="text-xs text-text-tertiary">Đề thi thử</span></div>
         </Card>
-        <Card className="flex items-center gap-3" padding="md" radius="lg">
+        <Card className="flex items-center gap-3" padding="md">
           <CheckCircle2 className="text-success" size={21} aria-hidden="true" />
-          <div><strong className="block text-base text-text-heading">{allExams.filter((exam) => exam.status === 'PUBLISHED').length}</strong><span className="text-xs text-text-secondary">Đang xuất bản</span></div>
+          <div><strong className="block text-base text-text-primary">{allExams.filter((exam) => exam.status === 'PUBLISHED').length}</strong><span className="text-xs text-text-tertiary">Đang xuất bản</span></div>
         </Card>
-        <Card className="flex items-center gap-3" padding="md" radius="lg">
+        <Card className="flex items-center gap-3" padding="md">
           <Users className="text-primary" size={21} aria-hidden="true" />
-          <div><strong className="block text-base text-text-heading">{allExams.reduce((total, exam) => total + exam.attemptCount, 0)}</strong><span className="text-xs text-text-secondary">Lượt dự thi</span></div>
+          <div><strong className="block text-base text-text-primary">{allExams.reduce((total, exam) => total + exam.attemptCount, 0)}</strong><span className="text-xs text-text-tertiary">Lượt dự thi</span></div>
         </Card>
       </div>
 
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="teacher-exam-list-title">
+      <Card as="section" padding="lg" aria-labelledby="teacher-exam-list-title">
         <div className="mb-4">
           <CardEyebrow>SOẠN VÀ QUẢN LÝ</CardEyebrow>
           <CardTitle id="teacher-exam-list-title" className="text-base">Danh sách đề thi thử</CardTitle>
@@ -573,8 +566,8 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
             <Skeleton className="h-24" />
           </div>
         ) : quizzes.status !== 'ready' ? (
-          <div className="rounded-xl border border-line-soft bg-surface-soft p-4" role="alert">
-            <p className="m-0 text-sm text-text-secondary">
+          <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
+            <p className="m-0 text-sm text-text-tertiary">
               {quizzes.status === 'forbidden'
                 ? 'Tài khoản hiện tại chưa có quyền xem các đề thi được giao.'
                 : quizzes.errorMessage || 'Không thể tải danh sách đề thi.'}
@@ -582,36 +575,36 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
             <Button appearance="outline" className="mt-3 min-h-11" onClick={refresh}>Thử lại</Button>
           </div>
         ) : examItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-line-blue bg-surface-soft px-5 py-8 text-center">
+          <div className="rounded-xl border border-dashed border-card-border bg-background-gray-secondary px-5 py-8 text-center">
             <FilePlus2 className="mx-auto mb-2 text-primary" size={24} aria-hidden="true" />
-            <strong className="block text-sm text-text-heading">
+            <strong className="block text-sm text-text-primary">
               {hasActiveFilters ? 'Không tìm thấy đề thi phù hợp' : 'Chưa có đề thi thử'}
             </strong>
-            <p className="mt-1 mb-0 text-sm text-text-secondary">
+            <p className="mt-1 mb-0 text-sm text-text-tertiary">
               {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : 'Tạo đề thi thử đầu tiên cho một khóa học chính.'}
             </p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {examItems.map((exam) => (
-              <article key={exam.id} className="flex flex-col gap-3 rounded-xl border border-line-blue bg-surface p-4 md:flex-row md:items-center md:justify-between">
+              <article key={exam.id} className="flex flex-col gap-3 rounded-xl border border-card-border bg-card-background p-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="m-0 text-sm font-bold text-text-heading">{exam.title}</h2>
-                    <StatusBadge tone={statusTone(exam.status)} size="sm">{statusLabel(exam.status)}</StatusBadge>
-                    {isLocked(exam) && <StatusBadge tone="locked" size="sm">Đã có lượt thi</StatusBadge>}
+                    <h2 className="m-0 text-sm font-medium text-text-primary">{exam.title}</h2>
+                    <StatusBadge tone={statusTone(exam.status)}>{statusLabel(exam.status)}</StatusBadge>
+                    {isLocked(exam) && <StatusBadge tone="neutral">Đã có lượt thi</StatusBadge>}
                   </div>
-                  <p className="mt-1 mb-0 text-xs text-text-secondary">
+                  <p className="mt-1 mb-0 text-xs text-text-tertiary">
                     {[exam.courseTitle, exam.questionCount + ' câu', exam.durationMinutes ? exam.durationMinutes + ' phút' : null,
                       exam.passingPercentage != null ? 'Điểm đạt ' + exam.passingPercentage + '%' : null]
                       .filter(Boolean).join(' · ')}
                   </p>
-                  <p className="mt-1 mb-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
+                  <p className="mt-1 mb-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-tertiary">
                     <span className="inline-flex items-center gap-1"><CalendarClock size={13} />Hạn làm: {displayDate(exam.availableUntil)}</span>
                     <span className="inline-flex items-center gap-1"><Users size={13} />{exam.attemptCount} lượt thi</span>
                   </p>
                   {exam.status === 'DRAFT' && (exam.publishProblems?.length ?? 0) > 0 && (
-                    <p className="mt-1 mb-0 text-xs text-text-muted">Cần hoàn thiện: {exam.publishProblems?.join(', ')}</p>
+                    <p className="mt-1 mb-0 text-xs text-text-tertiary">Cần hoàn thiện: {exam.publishProblems?.join(', ')}</p>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2 md:justify-end">
@@ -642,20 +635,16 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
                     </Button>
                   )}
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button appearance="outline" className="min-h-11" disabled={busyId !== null} aria-label={'Thao tác khác với ' + exam.title}>
-                        <MoreHorizontal size={16} />
-                      </Button>
-                    </DropdownMenuTrigger>
+                    <DropdownMenuTrigger isDisabled={busyId !== null} aria-label={'Thao tác khác với ' + exam.title} className="grid size-9 place-items-center rounded-lg border border-card-border text-icon-tertiary hover:bg-background-gray-secondary data-disabled:opacity-50"><MoreHorizontal size={16} /></DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      <DropdownMenuItem disabled={busyId !== null} onSelect={() => void runAction(exam, () => duplicateTeacherQuiz(exam.id), 'Đã sao chép đề thi thành bản nháp.')}>
+                      <DropdownMenuItem isDisabled={busyId !== null} onAction={() => void runAction(exam, () => duplicateTeacherQuiz(exam.id), 'Đã sao chép đề thi thành bản nháp.')}>
                         <Copy size={15} />Sao chép thành bản nháp
                       </DropdownMenuItem>
                       {!isLocked(exam) && (
                         <DropdownMenuItem
-                          disabled={busyId !== null}
-                          className="text-danger data-[highlighted]:text-danger"
-                          onSelect={() => setConfirmDelete(exam)}
+                          isDisabled={busyId !== null}
+                          className="text-badge-error-text focus:text-badge-error-text"
+                          onAction={() => setConfirmDelete(exam)}
                         >
                           <Trash2 size={15} />Xóa đề thi
                         </DropdownMenuItem>
@@ -715,8 +704,8 @@ function TeacherMockExamEditor({
   }
   if (quizId && (editor.status !== 'ready' || !editor.data)) {
     return (
-      <div className="rounded-xl border border-line-soft bg-surface-soft p-4" role="alert">
-        <p className="m-0 text-sm text-text-secondary">
+      <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
+        <p className="m-0 text-sm text-text-tertiary">
           {editor.status === 'forbidden'
             ? 'Tài khoản hiện tại không có quyền chỉnh sửa đề thi này.'
             : editor.status === 'not-found'
@@ -1115,27 +1104,21 @@ function TeacherMockExamForm({
 
   return (
     <section className="flex flex-col gap-4">
-      <button type="button" className="hl-teacher-text-back" onClick={onCancel}>
+      <Button appearance="ghost" size="sm" type="button" onClick={onCancel}>
         <ArrowLeft size={16} />Quay lại danh sách đề thi
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>{initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'}</h1>
-          <p>Thiết lập khóa học, thời gian làm bài và cấu trúc câu hỏi.</p>
-        </div>
-        {quizSnapshot && <StatusBadge tone={statusTone(quizSnapshot.status)} size="sm">{statusLabel(quizSnapshot.status)}</StatusBadge>}
-      </div>
+      </Button>
+      <TeacherPageHeader title={initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'} actions={quizSnapshot ? <StatusBadge tone={statusTone(quizSnapshot.status)}>{statusLabel(quizSnapshot.status)}</StatusBadge> : undefined} />
 
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="exam-settings-title">
+      <Card as="section" padding="lg" aria-labelledby="exam-settings-title">
         <div className="mb-4">
           <CardEyebrow>THÔNG TIN VÀ QUY ĐỊNH</CardEyebrow>
           <CardTitle id="exam-settings-title" className="text-base">Cấu hình đề thi</CardTitle>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading md:col-span-2">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
             Tên đề thi thử
             <input
-              className="h-11 rounded-lg border border-border-primary bg-surface px-3 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
+              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
               value={settings.title}
               onChange={(event) => updateSettings('title', event.target.value)}
               placeholder="Ví dụ: Đề thi thử V-ACT số 02"
@@ -1144,7 +1127,7 @@ function TeacherMockExamForm({
             />
           </label>
           {!initialQuiz && (
-            <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading md:col-span-2">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
               Khóa học chính
               <DropdownField
                 ariaLabel="Khóa học chính"
@@ -1160,11 +1143,11 @@ function TeacherMockExamForm({
                 mobileTouchTargets
                 isDisabled={hasCreatedQuiz || busy}
               />
-              <span className="text-xs font-normal text-text-muted">
+              <span className="text-xs font-normal text-text-tertiary">
                 Chọn khóa học mà bạn được phép quản lý; quyền sẽ được xác nhận khi lưu.
               </span>
               {courseCatalogHasError && (
-                <span className="flex flex-wrap items-center gap-2 text-xs font-normal text-danger" role="alert">
+                <span className="flex flex-wrap items-center gap-2 text-xs font-normal text-badge-error-text" role="alert">
                   Không tải được danh sách khóa học chính.
                   <Button appearance="ghost" size="sm" onClick={courseCatalog.reload}>Thử tải lại</Button>
                 </span>
@@ -1172,45 +1155,45 @@ function TeacherMockExamForm({
             </label>
           )}
           {initialQuiz && (
-            <div className="rounded-lg border border-border-subtle bg-surface-soft px-3 py-2.5 text-sm md:col-span-2">
-              <span className="block text-xs font-semibold text-text-muted">Khóa học</span>
-              <strong className="mt-1 block text-text-heading">{serverCourseName}</strong>
+            <div className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm md:col-span-2">
+              <span className="block text-xs font-medium text-text-tertiary">Khóa học</span>
+              <strong className="mt-1 block text-text-primary">{serverCourseName}</strong>
             </div>
           )}
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Thời gian làm bài (phút)
             <input
-              className="h-11 rounded-lg border border-border-primary bg-surface px-3 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
+              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
               type="number" min="1" max="600"
               value={settings.duration}
               onChange={(event) => updateSettings('duration', event.target.value)}
               disabled={fieldsLocked || busy}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Số lượt làm tối đa
             <input
-              className="h-11 rounded-lg border border-border-primary bg-surface px-3 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
+              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
               type="number" min="1" max="999"
               value={settings.maxAttempts}
               onChange={(event) => updateSettings('maxAttempts', event.target.value)}
               disabled={fieldsLocked || busy}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Điểm đạt (%)
             <input
-              className="h-11 rounded-lg border border-border-primary bg-surface px-3 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
+              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
               type="number" min="0" max="100" step="0.01"
               value={settings.passingPercentage}
               onChange={(event) => updateSettings('passingPercentage', event.target.value)}
               disabled={fieldsLocked || busy}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Bắt đầu làm bài
             <input
-              className="h-11 rounded-lg border border-border-primary bg-surface px-3 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
+              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
               type="datetime-local"
               value={settings.availableFrom}
               onChange={(event) => updateSettings('availableFrom', event.target.value)}
@@ -1218,10 +1201,10 @@ function TeacherMockExamForm({
               required={Boolean(quizSnapshot?.availableFrom)}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Hạn làm bài
             <input
-              className="h-11 rounded-lg border border-border-primary bg-surface px-3 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
+              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
               type="datetime-local"
               value={settings.availableUntil}
               onChange={(event) => updateSettings('availableUntil', event.target.value)}
@@ -1231,11 +1214,11 @@ function TeacherMockExamForm({
           </label>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-heading">
+          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-card-border px-3 py-2 text-sm text-text-primary">
             <input type="checkbox" checked={settings.showAnswers} onChange={(event) => updateSettings('showAnswers', event.target.checked)} disabled={fieldsLocked || busy} />
             Cho phép xem đáp án sau khi nộp
           </label>
-          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm text-text-heading">
+          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-card-border px-3 py-2 text-sm text-text-primary">
             <input type="checkbox" checked={settings.practiceAllowed} onChange={(event) => updateSettings('practiceAllowed', event.target.checked)} disabled={fieldsLocked || busy} />
             Cho phép học viên luyện tập lại
           </label>
@@ -1252,7 +1235,7 @@ function TeacherMockExamForm({
         )}
       </Card>
 
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="exam-sections-title">
+      <Card as="section" padding="lg" aria-labelledby="exam-sections-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardEyebrow>NỘI DUNG ĐỀ THI</CardEyebrow>
@@ -1270,25 +1253,25 @@ function TeacherMockExamForm({
           </div>
         )}
         {sections.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-line-blue bg-surface-soft p-5 text-center text-sm text-text-secondary">
+          <div className="rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
             Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {sections.map((section, sectionIndex) => (
-              <section key={section.clientId} className="rounded-xl border border-line-blue bg-surface-soft p-4">
+              <section key={section.clientId} className="rounded-xl border border-card-border bg-background-gray-secondary p-4">
                 <div className="mb-3 flex items-start gap-2">
                   <div className="min-w-0 flex-1">
                     {section.unassigned ? (
                       <div>
-                        <h3 className="m-0 text-sm font-bold text-text-heading">{section.title}</h3>
-                        <p className="mt-1 mb-0 text-xs text-text-muted">Các câu hỏi này chưa được gán vào phần thi nào.</p>
+                        <h3 className="m-0 text-sm font-medium text-text-primary">{section.title}</h3>
+                        <p className="mt-1 mb-0 text-xs text-text-tertiary">Các câu hỏi này chưa được gán vào phần thi nào.</p>
                       </div>
                     ) : (
-                      <label className="flex flex-col gap-1.5 text-xs font-bold text-text-secondary">
+                      <label className="flex flex-col gap-1.5 text-xs font-medium text-text-tertiary">
                         <span>Phần {sectionIndex + 1} · {section.questions.length} câu</span>
                         <input
-                          className="h-10 rounded-lg border border-border-primary bg-surface px-3 text-sm font-semibold text-text-heading outline-none focus-visible:border-primary"
+                          className="h-10 rounded-lg border border-card-border bg-card-background px-3 text-sm font-medium text-text-primary outline-none focus-visible:border-primary"
                           value={section.title}
                           onChange={(event) => updateSection(section.clientId, { title: event.target.value })}
                           placeholder="Tên phần thi, ví dụ: Tư duy định lượng"
@@ -1313,7 +1296,7 @@ function TeacherMockExamForm({
                       const typeLabel = QUESTION_TYPE_OPTIONS.find((option) => option.id === question.questionType)?.label ??
                         (question.questionType === 'TRUE_FALSE' ? 'Đúng / sai' : 'Trả lời ngắn')
                       return (
-                        <article key={question.clientId} className="rounded-xl border border-border-subtle bg-surface p-4">
+                        <article key={question.clientId} className="rounded-xl border border-card-border bg-card-background p-4">
                           <div className="mb-3 flex items-center justify-between gap-3">
                             <strong className="text-sm text-primary">Câu {questionIndex + 1}</strong>
                             <div className="flex gap-1">
@@ -1327,7 +1310,7 @@ function TeacherMockExamForm({
                             </div>
                           </div>
                           <div className="grid gap-3">
-                            <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+                            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                               Loại câu hỏi
                               {question.editable ? (
                                 <DropdownField
@@ -1350,13 +1333,13 @@ function TeacherMockExamForm({
                                   isDisabled={!editable || busy}
                                 />
                               ) : (
-                                <span className="rounded-lg border border-border-subtle bg-surface-soft px-3 py-2.5 text-sm font-normal text-text-secondary">{typeLabel} · chỉ xem</span>
+                                <span className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm font-normal text-text-tertiary">{typeLabel} · chỉ xem</span>
                               )}
                             </label>
-                            <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+                            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                               Nội dung câu hỏi
                               <textarea
-                                className="min-h-24 rounded-lg border border-border-primary bg-surface px-3 py-2.5 text-sm font-normal leading-6 text-text-strong outline-none focus-visible:border-primary disabled:bg-surface-soft"
+                                className="min-h-24 rounded-lg border border-card-border bg-card-background px-3 py-2.5 text-sm font-normal leading-6 text-text-primary outline-none focus-visible:border-primary disabled:bg-background-gray-secondary"
                                 value={question.questionText}
                                 onChange={(event) => updateQuestion(section.clientId, question.clientId, { questionText: event.target.value })}
                                 placeholder="Nhập nội dung câu hỏi"
@@ -1366,7 +1349,7 @@ function TeacherMockExamForm({
                             {CHOICE_TYPES.includes(question.questionType) ? (
                               <div>
                                 <div className="mb-2 flex items-center justify-between gap-3">
-                                  <span className="text-xs font-bold text-text-secondary">Lựa chọn · đánh dấu đáp án đúng</span>
+                                  <span className="text-xs font-medium text-text-tertiary">Lựa chọn · đánh dấu đáp án đúng</span>
                                   {editable && question.options.length < 8 && (
                                     <Button appearance="ghost" size="sm" onClick={() => updateQuestion(section.clientId, question.clientId, { options: [...question.options, { text: '', correct: false }] })} disabled={busy}>
                                       <Plus size={14} />Thêm lựa chọn
@@ -1375,7 +1358,7 @@ function TeacherMockExamForm({
                                 </div>
                                 <div className="grid gap-2 md:grid-cols-2">
                                   {question.options.map((option, optionIndex) => (
-                                    <label key={question.clientId + '-option-' + optionIndex} className={'flex min-w-0 items-center gap-2 rounded-lg border p-2 ' + (option.correct ? 'border-badge-success-text/40 bg-badge-success-bg' : 'border-border-subtle bg-surface')}>
+                                    <label key={question.clientId + '-option-' + optionIndex} className={'flex min-w-0 items-center gap-2 rounded-lg border p-2 ' + (option.correct ? 'border-badge-success-text/40 bg-badge-success-bg' : 'border-card-border bg-card-background')}>
                                       <input
                                         type={question.questionType === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
                                         name={'correct-' + question.clientId}
@@ -1392,9 +1375,9 @@ function TeacherMockExamForm({
                                         disabled={!editable || busy}
                                         aria-label={'Đánh dấu lựa chọn ' + String.fromCharCode(65 + optionIndex) + ' là đáp án đúng'}
                                       />
-                                      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-primary-soft text-xs font-bold text-primary">{String.fromCharCode(65 + optionIndex)}</span>
+                                      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-badge-blue-background text-xs font-medium text-primary">{String.fromCharCode(65 + optionIndex)}</span>
                                       <input
-                                        className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-text-strong outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:text-text-muted"
+                                        className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-text-primary outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:text-text-tertiary"
                                         value={option.text}
                                         onChange={(event) => {
                                           const options = question.options.map((item, index) => index === optionIndex ? { ...item, text: event.target.value } : item)
@@ -1406,7 +1389,7 @@ function TeacherMockExamForm({
                                       {editable && question.options.length > 2 && (
                                         <button
                                           type="button"
-                                          className="grid size-8 shrink-0 place-items-center rounded-md text-text-muted hover:bg-badge-danger-bg hover:text-danger"
+                                          className="grid size-8 shrink-0 place-items-center rounded-md text-text-tertiary hover:bg-badge-danger-bg hover:text-badge-error-text"
                                           aria-label={'Bỏ lựa chọn ' + String.fromCharCode(65 + optionIndex)}
                                           disabled={busy}
                                           onClick={() => updateQuestion(section.clientId, question.clientId, { options: question.options.filter((_, index) => index !== optionIndex) })}
@@ -1417,10 +1400,10 @@ function TeacherMockExamForm({
                                 </div>
                               </div>
                             ) : (
-                              <label className="flex flex-col gap-1.5 text-sm font-semibold text-text-heading">
+                              <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                                 Đáp án / hướng dẫn chấm
                                 <textarea
-                                  className="min-h-20 rounded-lg border border-border-primary bg-surface px-3 py-2.5 text-sm font-normal leading-6 text-text-strong outline-none focus-visible:border-primary disabled:bg-surface-soft"
+                                  className="min-h-20 rounded-lg border border-card-border bg-card-background px-3 py-2.5 text-sm font-normal leading-6 text-text-primary outline-none focus-visible:border-primary disabled:bg-background-gray-secondary"
                                   value={question.explanation}
                                   onChange={(event) => updateQuestion(section.clientId, question.clientId, { explanation: event.target.value })}
                                   placeholder="Nhập đáp án gợi ý hoặc tiêu chí chấm điểm"
@@ -1429,17 +1412,17 @@ function TeacherMockExamForm({
                               </label>
                             )}
                             {question.imageUrl && (
-                              <a className="text-xs font-semibold text-primary underline" href={question.imageUrl} target="_blank" rel="noreferrer">Xem ảnh đính kèm</a>
+                              <a className="text-xs font-medium text-primary underline" href={question.imageUrl} target="_blank" rel="noreferrer">Xem ảnh đính kèm</a>
                             )}
                             {editable && (
-                              <div className="rounded-lg border border-border-subtle bg-surface-soft p-3">
-                                <label className="flex items-center gap-2 text-xs font-semibold text-text-heading">
+                              <div className="rounded-lg border border-card-border bg-background-gray-secondary p-3">
+                                <label className="flex items-center gap-2 text-xs font-medium text-text-primary">
                                   <input type="checkbox" checked={question.needsReview} onChange={(event) => updateQuestion(section.clientId, question.clientId, { needsReview: event.target.checked })} disabled={busy} />
                                   Câu hỏi cần rà soát trước khi xuất bản
                                 </label>
                                 {question.needsReview && (
                                   <textarea
-                                    className="mt-2 min-h-16 w-full rounded-lg border border-border-primary bg-surface px-3 py-2 text-sm font-normal text-text-strong outline-none focus-visible:border-primary"
+                                    className="mt-2 min-h-16 w-full rounded-lg border border-card-border bg-card-background px-3 py-2 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
                                     value={question.reviewNote}
                                     onChange={(event) => updateQuestion(section.clientId, question.clientId, { reviewNote: event.target.value })}
                                     placeholder="Ghi chú nội bộ về nội dung cần rà soát"
@@ -1454,7 +1437,7 @@ function TeacherMockExamForm({
                     })}
                   </div>
                 ) : (
-                  <p className="m-0 rounded-lg border border-dashed border-border-subtle px-3 py-4 text-center text-xs text-text-muted">Phần này chưa có câu hỏi.</p>
+                  <p className="m-0 rounded-lg border border-dashed border-card-border px-3 py-4 text-center text-xs text-text-tertiary">Phần này chưa có câu hỏi.</p>
                 )}
                 {canEditQuestions && (
                   <Button appearance="outline" className="mt-3 min-h-10" onClick={() => updateSection(section.clientId, { questions: [...section.questions, createDraftQuestion()] })} disabled={busy}>
@@ -1467,22 +1450,22 @@ function TeacherMockExamForm({
         )}
       </Card>
 
-      {error && <p className="m-0 rounded-xl border border-badge-danger-text/25 bg-badge-danger-bg p-3 text-sm font-semibold text-badge-danger-text" role="alert">{error}</p>}
+      {error && <p className="m-0 rounded-xl border border-badge-danger-text/25 bg-badge-danger-bg p-3 text-sm font-medium text-badge-danger-text" role="alert">{error}</p>}
       {ambiguousQuestionSave && (
         <Notice tone="warning" role="alert" aria-live="assertive">
           Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
         </Notice>
       )}
       {ambiguousCreate && (
-        <Card as="section" padding="md" radius="lg" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
-          <p className="m-0 text-sm text-text-secondary">Kết quả tạo đề chưa rõ. Kiểm tra lại danh sách trước khi gửi thao tác tạo lần nữa.</p>
+        <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
+          <p className="m-0 text-sm text-text-tertiary">Kết quả tạo đề chưa rõ. Kiểm tra lại danh sách trước khi gửi thao tác tạo lần nữa.</p>
           <Button appearance="outline" className="min-h-11" onClick={() => void checkPendingCreate()} disabled={busy}>
             {busy ? 'Đang kiểm tra...' : 'Kiểm tra kết quả tạo'}
           </Button>
         </Card>
       )}
-      <Card as="section" padding="md" radius="lg" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="m-0 text-xs leading-5 text-text-muted">
+      <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="m-0 text-xs leading-5 text-text-tertiary">
           Đề mới được lưu ở trạng thái bản nháp. Có thể xuất bản sau khi đã đủ câu hỏi và đáp án.
         </p>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

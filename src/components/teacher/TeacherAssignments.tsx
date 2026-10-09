@@ -10,8 +10,18 @@ import {
   Send,
   Trash2,
   Users,
-} from 'lucide-react'
-import DropdownField from '../ui/DropdownField'
+} from '../console/icons'
+import { fieldControlClass } from '../console/form-field'
+import DropdownField from '../console/dropdown-field'
+import Button from '../console/button'
+import Panel from '../console/panel'
+import Status from '../console/status'
+import StatCard from '../ui/StatCard'
+import TeacherPageHeader from './TeacherPageHeader'
+import { cn } from '../../lib/cn'
+
+const labelClass = 'flex flex-col gap-1.5 text-sm font-medium text-text-primary'
+const inputClass = fieldControlClass
 
 const mockAssignments = [
   {
@@ -122,47 +132,30 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
     })
   }
   const questionSection = (
-    <section className="hl-teacher-panel hl-teacher-assignment-quiz-settings">
-      <div className="hl-teacher-panel-heading">
-        <div>
-          <h2>Thiết lập làm bài</h2>
-        </div>
-      </div>
-      <div className="hl-teacher-assignment-form">
-        <label>
-          Thời gian làm bài (phút)
-          <input
-            type="number"
-            min="1"
-            value={duration}
-            onChange={(event) => setDuration(event.target.value)}
-          />
+    <div className="mt-6 flex flex-col gap-4 border-t border-card-border pt-6">
+      <h3 className="text-base font-medium text-text-primary">Thiết lập làm bài</h3>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className={labelClass}>
+          Thời gian (phút)
+          <input className={inputClass} type="number" min="1" value={duration} onChange={(event) => setDuration(event.target.value)} />
         </label>
-        <label>
+        <label className={labelClass}>
           Số lần làm tối đa
-          <input
-            type="number"
-            min="1"
-            value={attempts}
-            onChange={(event) => setAttempts(event.target.value)}
-          />
+          <input className={inputClass} type="number" min="1" value={attempts} onChange={(event) => setAttempts(event.target.value)} />
         </label>
       </div>
-      <div className="hl-teacher-panel-heading hl-teacher-assignment-questions-head">
-        <div>
-          <h2>Câu hỏi ({questions.length})</h2>
-          <small className="hl-teacher-drag-hint">Kéo biểu tượng ⋮⋮ để đổi thứ tự câu hỏi.</small>
-        </div>
-        <button type="button" onClick={() => setQuestions((items) => [...items, emptyQuestion()])}>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-base font-medium text-text-primary">Câu hỏi ({questions.length})</h3>
+        <Button type="button" appearance="outline" size="sm" onClick={() => setQuestions((items) => [...items, emptyQuestion()])}>
           <Plus size={15} />
           Thêm câu hỏi
-        </button>
+        </Button>
       </div>
-      <div className="hl-teacher-question-list">
+      <div className="flex flex-col gap-4">
         {questions.map((question, index) => (
           <article
             key={question.id}
-            className={draggedQuestionIndex === index ? 'is-dragging' : ''}
+            className={cn('flex flex-col gap-3 rounded-lg border border-card-border p-4', draggedQuestionIndex === index && 'opacity-50')}
             onDragOver={(event) => event.preventDefault()}
             onDrop={(event) => {
               event.preventDefault()
@@ -170,11 +163,11 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
               setDraggedQuestionIndex(null)
             }}
           >
-            <div className="hl-teacher-question-top">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 draggable
-                className="hl-teacher-question-drag-handle"
+                className="cursor-grab text-icon-tertiary"
                 title="Kéo để đổi thứ tự"
                 onDragStart={(event) => {
                   setDraggedQuestionIndex(index)
@@ -184,78 +177,57 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
               >
                 <GripVertical size={18} />
               </button>
-              <strong>Câu {index + 1}</strong>
-              <div className="hl-teacher-question-type-tabs">
-                <button
-                  type="button"
-                  className={question.type !== 'essay' ? 'is-active' : ''}
-                  onClick={() => updateQuestion(question.id, { type: 'multiple-choice' })}
-                >
+              <strong className="text-sm font-medium text-text-primary">Câu {index + 1}</strong>
+              <div className="flex gap-1.5">
+                <Button type="button" size="sm" appearance={question.type !== 'essay' ? 'fill' : 'outline'} onClick={() => updateQuestion(question.id, { type: 'multiple-choice' })}>
                   Trắc nghiệm
-                </button>
-                <button
-                  type="button"
-                  className={question.type === 'essay' ? 'is-active' : ''}
-                  onClick={() => updateQuestion(question.id, { type: 'essay' })}
-                >
+                </Button>
+                <Button type="button" size="sm" appearance={question.type === 'essay' ? 'fill' : 'outline'} onClick={() => updateQuestion(question.id, { type: 'essay' })}>
                   Tự luận
-                </button>
+                </Button>
               </div>
               {questions.length > 1 && (
                 <button
                   type="button"
-                  onClick={() =>
-                    setQuestions((items) => items.filter((item) => item.id !== question.id))
-                  }
+                  className="ml-auto text-icon-tertiary hover:text-text-primary"
+                  onClick={() => setQuestions((items) => items.filter((item) => item.id !== question.id))}
                   aria-label={`Xóa câu ${index + 1}`}
                 >
                   <Trash2 size={15} />
                 </button>
               )}
             </div>
-            <label>
-              Nội dung câu hỏi
-              <input
-                value={question.text}
-                onChange={(event) => updateQuestion(question.id, { text: event.target.value })}
-                placeholder="Nhập nội dung câu hỏi"
-              />
+            <label className={labelClass}>
+              Nội dung
+              <input className={inputClass} value={question.text} onChange={(event) => updateQuestion(question.id, { text: event.target.value })} placeholder="Nhập câu hỏi" />
             </label>
             {question.type !== 'essay' ? (
               <>
-                <div className="hl-teacher-option-list">
+                <div className="flex flex-col gap-2">
                   {question.options.map((option, optionIndex) => (
-                    <label
-                      key={`${question.id}-${optionIndex}`}
-                      className={question.correct === optionIndex ? 'is-correct' : ''}
-                    >
+                    <div key={`${question.id}-${optionIndex}`} className="flex items-center gap-2">
                       <input
                         type="radio"
                         name={`correct-${question.id}`}
                         checked={question.correct === optionIndex}
                         onChange={() => updateQuestion(question.id, { correct: optionIndex })}
+                        aria-label={`Đáp án đúng ${String.fromCharCode(65 + optionIndex)}`}
                       />
-                      <span>{String.fromCharCode(65 + optionIndex)}</span>
+                      <span className="w-5 text-sm font-medium text-text-tertiary">{String.fromCharCode(65 + optionIndex)}</span>
                       <input
+                        className={inputClass}
                         value={option}
-                        onChange={(event) =>
-                          updateOption(question.id, optionIndex, event.target.value)
-                        }
+                        onChange={(event) => updateOption(question.id, optionIndex, event.target.value)}
                         placeholder={`Lựa chọn ${String.fromCharCode(65 + optionIndex)}`}
                       />
                       {question.options.length > 2 && (
                         <button
                           type="button"
-                          className="hl-teacher-remove-option"
+                          className="px-1 text-lg text-icon-tertiary hover:text-text-primary"
                           onClick={() =>
                             updateQuestion(question.id, {
-                              options: question.options.filter(
-                                (_, optionPosition) => optionPosition !== optionIndex
-                              ),
-                              correct:
-                                question.correct >= question.options.length - 1
-                                  ? 0
-                                  : question.correct,
+                              options: question.options.filter((_, optionPosition) => optionPosition !== optionIndex),
+                              correct: question.correct >= question.options.length - 1 ? 0 : question.correct,
                             })
                           }
                           aria-label={`Xóa lựa chọn ${String.fromCharCode(65 + optionIndex)}`}
@@ -263,75 +235,54 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
                           ×
                         </button>
                       )}
-                    </label>
+                    </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  className="hl-teacher-add-option"
-                  onClick={() =>
-                    updateQuestion(question.id, { options: [...question.options, ''] })
-                  }
-                >
-                  <Plus size={14} />
-                  Thêm đáp án
-                </button>
+                <div>
+                  <Button type="button" appearance="ghost" size="sm" onClick={() => updateQuestion(question.id, { options: [...question.options, ''] })}>
+                    <Plus size={14} />
+                    Thêm đáp án
+                  </Button>
+                </div>
               </>
             ) : (
-              <div className="hl-teacher-essay-answer">
-                <label>
-                  Câu trả lời tự luận của học sinh
-                  <textarea
-                    disabled
-                    placeholder="Học sinh sẽ nhập câu trả lời vào ô này khi làm bài."
-                  />
-                </label>
-                <label>
-                  Đáp án gợi ý / hướng dẫn chấm
-                  <textarea
-                    value={question.answerGuide || ''}
-                    onChange={(event) =>
-                      updateQuestion(question.id, { answerGuide: event.target.value })
-                    }
-                    placeholder="Nhập đáp án gợi ý hoặc tiêu chí chấm điểm."
-                  />
-                </label>
-              </div>
+              <label className={labelClass}>
+                Đáp án gợi ý
+                <textarea
+                  className={`${inputClass} min-h-24`}
+                  value={question.answerGuide || ''}
+                  onChange={(event) => updateQuestion(question.id, { answerGuide: event.target.value })}
+                  placeholder="Hướng dẫn chấm"
+                />
+              </label>
             )}
           </article>
         ))}
       </div>
-    </section>
+    </div>
   )
   return (
-    <section className="hl-teacher-assignment-editor">
-      <button type="button" className="hl-teacher-text-back" onClick={onCancel}>
-        <ArrowLeft size={16} />
-        Quay lại danh sách bài tập
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>{assignment ? 'Chỉnh sửa bài tập' : 'Tạo bài tập'}</h1>
-          <p>Giao bài và đặt hạn nộp.</p>
-        </div>
+    <section className="flex flex-col gap-5">
+      <div>
+        <Button appearance="ghost" size="sm" type="button" onClick={onCancel}>
+          <ArrowLeft size={16} />
+          Quay lại
+        </Button>
       </div>
-      <section className="hl-teacher-panel">
-        <div className="hl-teacher-panel-heading">
-          <div>
-            <h2>Thiết lập bài tập</h2>
-          </div>
-        </div>
-        <div className="hl-teacher-assignment-form">
-          <label className="is-full">
+      <TeacherPageHeader title={assignment ? 'Chỉnh sửa bài tập' : 'Tạo bài tập'} />
+      <Panel title="Thiết lập bài tập">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className={`${labelClass} sm:col-span-2`}>
             Tên bài tập
             <input
+              className={inputClass}
               value={form.title}
               onChange={(event) => setForm({ ...form, title: event.target.value })}
               placeholder="Ví dụ: Bài tập hàm số bậc hai"
             />
           </label>
-          <label>
-            Gán bài tập theo
+          <label className={labelClass}>
+            Gán theo
             <DropdownField
               ariaLabel="Gán bài tập theo"
               options={[
@@ -350,7 +301,7 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
               }}
             />
           </label>
-          <label>
+          <label className={labelClass}>
             {form.targetType}
             <DropdownField
               ariaLabel={form.targetType}
@@ -361,40 +312,31 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
               }}
             />
           </label>
-          <label>
+          <label className={labelClass}>
             Hạn nộp
-            <input
-              type="datetime-local"
-              value={form.deadline}
-              onChange={(event) => setForm({ ...form, deadline: event.target.value })}
-            />
+            <input className={inputClass} type="datetime-local" value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} />
           </label>
-          <label>
+          <label className={labelClass}>
             Điểm tối đa
-            <input
-              type="number"
-              min="1"
-              value={form.maxScore}
-              onChange={(event) => setForm({ ...form, maxScore: event.target.value })}
-            />
+            <input className={inputClass} type="number" min="1" value={form.maxScore} onChange={(event) => setForm({ ...form, maxScore: event.target.value })} />
           </label>
         </div>
         {questionSection}
         {error && (
-          <p className="hl-teacher-quiz-form-error" role="alert">
+          <p className="mt-4 text-sm text-badge-error-text" role="alert">
             {error}
           </p>
         )}
-        <div className="hl-teacher-quiz-editor-actions">
-          <button type="button" onClick={onCancel}>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button appearance="outline" type="button" onClick={onCancel}>
             Hủy
-          </button>
-          <button type="button" className="hl-teacher-primary" onClick={publish}>
+          </Button>
+          <Button type="button" onClick={publish}>
             <Send size={15} />
-            Xuất bản bài tập
-          </button>
+            Xuất bản
+          </Button>
         </div>
-      </section>
+      </Panel>
     </section>
   )
 }
@@ -424,102 +366,76 @@ function TeacherAssignments({ course, onBack, onAction, assignmentPreset }) {
       />
     )
   return (
-    <section className="hl-teacher-assignments-page">
-      <button type="button" className="hl-teacher-text-back" onClick={onBack}>
-        <ArrowLeft size={16} />
-        Quay lại lớp học
-      </button>
-      <div className="hl-teacher-title">
-        <div>
-          <h1>Bài tập</h1>
-          <p>{course.name} · Giao bài và theo dõi kết quả.</p>
-        </div>
-        <button
-          type="button"
-          className="hl-teacher-primary"
-          onClick={() => setEditingAssignment({})}
-        >
-          <Plus size={16} />
-          Tạo bài tập
-        </button>
+    <section className="flex flex-col gap-5">
+      <div>
+        <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
+          <ArrowLeft size={16} />
+          Quay lại
+        </Button>
       </div>
-      <section className="hl-teacher-assignment-summary">
-        <span>
-          <ClipboardList size={20} />
-          <div>
-            <strong>{assignments.length}</strong>
-            <small>Bài tập</small>
-          </div>
-        </span>
-        <span>
-          <BookOpen size={20} />
-          <div>
-            <strong>{assignments.filter((item) => item.targetType === 'Bài học').length}</strong>
-            <small>Giao theo bài học</small>
-          </div>
-        </span>
-        <span>
-          <Users size={20} />
-          <div>
-            <strong>{assignments.reduce((total, item) => total + item.submitted, 0)}</strong>
-            <small>Lượt đã nộp</small>
-          </div>
-        </span>
-      </section>
-      <section className="hl-teacher-panel hl-teacher-assignment-list-panel">
-        <div className="hl-teacher-panel-heading">
-          <div>
-            <h2>Danh sách bài tập</h2>
-          </div>
+      <TeacherPageHeader
+        title="Bài tập"
+        description={course.name}
+        actions={
+          <Button type="button" onClick={() => setEditingAssignment({})}>
+            <Plus size={16} />
+            Tạo bài tập
+          </Button>
+        }
+      />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Bài tập" value={assignments.length} icon={ClipboardList} tone="info" />
+        <StatCard label="Giao theo bài học" value={assignments.filter((item) => item.targetType === 'Bài học').length} icon={BookOpen} tone="success" />
+        <StatCard label="Lượt đã nộp" value={assignments.reduce((total, item) => total + item.submitted, 0)} icon={Users} tone="warning" />
+      </div>
+      <Panel title="Danh sách bài tập" className="overflow-hidden">
+        <div className="-m-5 overflow-x-auto">
+          <table className="w-full min-w-170 text-left text-sm">
+            <thead>
+              <tr className="border-b border-card-border text-xs text-text-tertiary">
+                <th className="px-5 py-3 font-medium">Tên bài tập</th>
+                <th className="px-3 py-3 font-medium">Giao cho</th>
+                <th className="px-3 py-3 font-medium">Hạn nộp</th>
+                <th className="px-3 py-3 font-medium">Điểm</th>
+                <th className="px-3 py-3 font-medium">Trạng thái</th>
+                <th className="px-5 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {assignments.map((item) => (
+                <tr key={item.id} className="border-b border-card-border last:border-0">
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-text-primary">{item.title}</p>
+                    <p className="text-xs text-text-tertiary">{item.submitted} đã nộp</p>
+                  </td>
+                  <td className="px-3 py-3">
+                    <p className="text-text-primary">{item.targetType}</p>
+                    <p className="text-xs text-text-tertiary">{item.target}</p>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-text-primary">
+                    <CalendarDays size={14} className="mr-1.5 inline text-icon-tertiary" />
+                    {formatDeadline(item.deadline)}
+                  </td>
+                  <td className="px-3 py-3 text-text-primary">{item.maxScore}</td>
+                  <td className="px-3 py-3">
+                    <Status tone={item.status === 'Đã xuất bản' ? 'success' : 'neutral'}>{item.status}</Status>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex justify-end gap-1">
+                      <button type="button" className="rounded-md p-1.5 text-icon-tertiary hover:text-text-primary" onClick={() => setEditingAssignment(item)} aria-label={`Sửa ${item.title}`}>
+                        <Pencil size={15} />
+                      </button>
+                      <button type="button" className="rounded-md p-1.5 text-icon-tertiary hover:text-badge-error-text" onClick={() => removeAssignment(item.id)} aria-label={`Xóa ${item.title}`}>
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="hl-teacher-assignment-table">
-          <div className="hl-teacher-assignment-row is-head">
-            <span>Tên bài tập</span>
-            <span>Giao cho</span>
-            <span>Hạn nộp</span>
-            <span>Điểm tối đa</span>
-            <span>Trạng thái</span>
-            <span />
-          </div>
-          {assignments.map((item) => (
-            <article key={item.id} className="hl-teacher-assignment-row">
-              <span>
-                <strong>{item.title}</strong>
-                <small>{item.submitted} học viên đã nộp</small>
-              </span>
-              <span>
-                <em>{item.targetType}</em>
-                <small>{item.target}</small>
-              </span>
-              <span>
-                <CalendarDays size={14} />
-                {formatDeadline(item.deadline)}
-              </span>
-              <span>{item.maxScore} điểm</span>
-              <span>
-                <b className={item.status === 'Đã xuất bản' ? 'is-published' : ''}>{item.status}</b>
-              </span>
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setEditingAssignment(item)}
-                  aria-label={`Sửa ${item.title}`}
-                >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  type="button"
-                  className="is-delete"
-                  onClick={() => removeAssignment(item.id)}
-                  aria-label={`Xóa ${item.title}`}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      </Panel>
     </section>
   )
 }

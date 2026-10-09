@@ -1,14 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { instantToLocalDateTimeInput, localDateTimeToInstant, SCHEDULING_TIMEZONE } from '../../lib/scheduling'
 import type { ClassSessionResponse, DeliveryMode, ScheduleStatus, UpdateClassSessionRequest } from '../../types/scheduling'
-import Button from '../../components/ui/Button'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import Notice from '../../components/ui/Notice'
-import { Sheet, SheetBody } from '../../components/ui/Sheet'
+import Button from '../../components/console/button'
+import ConfirmDialog from '../../components/console/confirm-dialog'
+import Notice from '../../components/console/notice'
+import ConsoleSheet from '../../components/console/sheet'
+import Field, { fieldControlClass } from '../../components/console/form-field'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
-
-const fieldClass =
-  'mt-1 h-10 max-[767px]:h-11 w-full rounded-xl border border-border-subtle bg-surface-input px-3 text-sm text-text-heading outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
 
 interface Props {
   session: ClassSessionResponse
@@ -78,81 +76,69 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
 
   return (
     <>
-      <Sheet open onClose={requestClose} closeDisabled={busy} className="hl-scheduling" closeButtonClassName="max-[767px]:size-11" title="Chỉnh sửa buổi học">
-        <SheetBody className="p-4">
-        <form className="space-y-4" onSubmit={submit} onChange={updateFieldDraft}>
+      <ConsoleSheet open onClose={requestClose} closeDisabled={busy} title="Chỉnh sửa buổi học">
+        <form className="flex flex-col gap-4" onSubmit={submit} onChange={updateFieldDraft}>
           {errorMessage && <Notice tone="danger">{errorMessage}</Notice>}
-          {validationMessage && <p className="text-sm text-danger" role="alert">{validationMessage}</p>}
-          <label className="block text-sm font-medium text-text-heading">
-            Tên buổi
-            <input name="title" autoComplete="off" required disabled={busy} defaultValue={session.title} className={fieldClass} />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-text-heading">
-              Bắt đầu
-              <input name="startDateTime" autoComplete="off" type="datetime-local" required disabled={busy} value={start} onChange={(event) => setStart(event.target.value)} className={fieldClass} />
-            </label>
-            <label className="block text-sm font-medium text-text-heading">
-              Kết thúc
-              <input name="endDateTime" autoComplete="off" type="datetime-local" required disabled={busy} value={end} onChange={(event) => setEnd(event.target.value)} className={fieldClass} />
-            </label>
+          {validationMessage && <p className="text-sm text-badge-error-text" role="alert">{validationMessage}</p>}
+          <Field label="Tên buổi">
+            <input name="title" autoComplete="off" required disabled={busy} defaultValue={session.title} className={fieldControlClass} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Bắt đầu">
+              <input name="startDateTime" autoComplete="off" type="datetime-local" required disabled={busy} value={start} onChange={(event) => setStart(event.target.value)} className={fieldControlClass} />
+            </Field>
+            <Field label="Kết thúc">
+              <input name="endDateTime" autoComplete="off" type="datetime-local" required disabled={busy} value={end} onChange={(event) => setEnd(event.target.value)} className={fieldControlClass} />
+            </Field>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-text-heading">
-              Hình thức
-              <select name="mode" disabled={busy} defaultValue={session.mode} className={fieldClass}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Hình thức">
+              <select name="mode" disabled={busy} defaultValue={session.mode} className={fieldControlClass}>
                 <option value="PHYSICAL">Trực tiếp</option>
                 <option value="ONLINE">Trực tuyến</option>
                 <option value="HYBRID">Kết hợp</option>
                 <option value="OFFLINE">Ngoại tuyến</option>
               </select>
-            </label>
-            <label className="block text-sm font-medium text-text-heading">
-              Trạng thái
-              <select name="status" disabled={busy} defaultValue={session.status} className={fieldClass}>
+            </Field>
+            <Field label="Trạng thái">
+              <select name="status" disabled={busy} defaultValue={session.status} className={fieldControlClass}>
                 <option value="SCHEDULED">Sắp diễn ra</option>
                 <option value="ONGOING">Đang diễn ra</option>
                 <option value="COMPLETED">Đã hoàn thành</option>
                 <option value="CANCELLED">Đã hủy</option>
               </select>
-            </label>
+            </Field>
           </div>
-          <label className="block text-sm font-medium text-text-heading">
-            Phòng học
-            <input name="classroom" autoComplete="off" disabled={busy} defaultValue={session.classroom ?? ''} className={fieldClass} />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm font-medium text-text-heading">
-              Nền tảng họp
-              <select name="meetingProvider" disabled={busy} defaultValue={session.meetingProvider ?? 'ZOOM'} className={fieldClass}>
+          <Field label="Phòng học">
+            <input name="classroom" autoComplete="off" disabled={busy} defaultValue={session.classroom ?? ''} className={fieldControlClass} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nền tảng họp">
+              <select name="meetingProvider" disabled={busy} defaultValue={session.meetingProvider ?? 'ZOOM'} className={fieldControlClass}>
                 <option value="ZOOM">Zoom</option>
                 <option value="GOOGLE_MEET">Google Meet</option>
                 <option value="MICROSOFT_TEAMS">Microsoft Teams</option>
                 <option value="OTHER">Khác</option>
               </select>
-            </label>
-            <label className="block text-sm font-medium text-text-heading">
-              Link phòng
-              <input name="meetingLink" autoComplete="off" type="url" disabled={busy} defaultValue={session.meetingLink ?? ''} className={fieldClass} />
-            </label>
+            </Field>
+            <Field label="Link phòng">
+              <input name="meetingLink" autoComplete="off" type="url" disabled={busy} defaultValue={session.meetingLink ?? ''} className={fieldControlClass} />
+            </Field>
           </div>
-          <p className="text-xs text-text-muted">Thời gian theo {SCHEDULING_TIMEZONE}. Thay đổi chỉ áp dụng cho buổi này, không làm đổi cả chuỗi.</p>
-          <div className="flex justify-end gap-2 border-t border-border-subtle pt-4">
-            <Button appearance="outline" className="max-[767px]:min-h-11" disabled={busy} onClick={requestClose}>Đóng</Button>
-            <Button type="submit" className="max-[767px]:min-h-11" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu buổi học'}</Button>
+          <p className="text-xs text-text-tertiary">Múi giờ: {SCHEDULING_TIMEZONE}. Chỉ áp dụng cho buổi này.</p>
+          <div className="flex justify-end gap-2 border-t border-card-border pt-4">
+            <Button type="button" appearance="outline" disabled={busy} onClick={requestClose}>Đóng</Button>
+            <Button type="submit" disabled={busy}>{busy ? 'Đang lưu…' : 'Lưu'}</Button>
           </div>
         </form>
-        </SheetBody>
-      </Sheet>
+      </ConsoleSheet>
       {unsavedGuard.hasPendingAction && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
-          title="Bỏ thay đổi buổi học chưa lưu?"
-          description="Các trường bạn vừa chỉnh chưa được gửi lên máy chủ. Nếu tiếp tục, những thay đổi này sẽ bị bỏ."
+          title="Bỏ thay đổi chưa lưu?"
+          description="Các chỉnh sửa chưa được gửi sẽ bị bỏ."
           cancelLabel="Tiếp tục chỉnh sửa"
           confirmLabel="Bỏ thay đổi"
           variant="danger"
-          mobileTouchTargets
           onCancel={unsavedGuard.cancelDiscard}
           onConfirm={unsavedGuard.confirmDiscard}
         />

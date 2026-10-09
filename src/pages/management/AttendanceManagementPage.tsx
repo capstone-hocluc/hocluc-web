@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, ClipboardCheck, RefreshCw } from 'lucide-react'
+import { Check, ClipboardCheck, RefreshCw } from '../../components/console/icons'
 import { getMainCourses, type Course } from '../../services/courseService'
 import { getCourseSchedules } from '../../services/scheduleService'
 import {
@@ -9,13 +9,14 @@ import {
 import type { AttendanceResponse, AttendanceStatus, BatchAttendanceRequest } from '../../types/scheduling'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
-import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import DropdownField from '../../components/ui/DropdownField'
-import Notice from '../../components/ui/Notice'
+import Button from '../../components/console/button'
+import { fieldControlClass } from '../../components/console/form-field'
+import Card from '../../components/console/card'
+import ConfirmDialog from '../../components/console/confirm-dialog'
+import DropdownField from '../../components/console/dropdown-field'
+import Notice from '../../components/console/notice'
 import PageHeading from '../../components/ui/PageHeading'
-import ScheduleResourceState from '../../components/scheduling/ScheduleResourceState'
+import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
 import { getErrorMessage } from '../../lib/errors'
 
 const statuses: Array<{ value: AttendanceStatus; label: string }> = [
@@ -102,7 +103,7 @@ export default function AttendanceManagementPage() {
     try {
       await saveScheduleAttendances(selectedScheduleId, payload)
       setDrafts({})
-      setNotice('Đã lưu điểm danh. Đang tải lại dữ liệu từ máy chủ.')
+      setNotice('Đã lưu điểm danh.')
       attendance.reload()
     } catch (reason) {
       setError(getErrorMessage(reason))
@@ -112,11 +113,10 @@ export default function AttendanceManagementPage() {
   }
 
   return (
-    <div className="hl-scheduling space-y-5">
+    <div className="space-y-5">
       <PageHeading
-        eyebrow="NHÂN SỰ VẬN HÀNH"
         title="Điểm danh"
-        subtitle="Điểm danh áp dụng cho lịch đơn; các buổi thuộc chuỗi không thể điểm danh tại đây."
+        subtitle="Chỉ áp dụng cho lịch đơn."
         action={
           <>
             <RefreshCw size={16} />
@@ -127,31 +127,24 @@ export default function AttendanceManagementPage() {
         actionDisabled={busy}
       />
 
-      {busy && <Notice tone="info">Đang lưu điểm danh. Hãy đợi hoàn tất trước khi rời trang.</Notice>}
-      <Notice tone="warning">
-        Danh sách chỉ gồm các khóa học đang công khai và mở. Khóa chưa mở hoặc đã kết thúc có thể không xuất hiện; chỉ lịch của các khóa trong danh sách mới được hiển thị.
-      </Notice>
+      {busy && <Notice tone="info">Đang lưu điểm danh…</Notice>}
       {error && <Notice tone="danger">{error}</Notice>}
       {notice && <Notice tone="info">{notice}</Notice>}
       {(courses.status === 'error' || courses.status === 'forbidden') && (
         <Notice tone={courses.status === 'forbidden' ? 'warning' : 'danger'}>
           Không tải được danh sách khóa học.
-          <Button size="sm" appearance="outline" className="max-[767px]:min-h-11" onClick={courses.reload}>Thử lại</Button>
+          <Button size="sm" appearance="outline" onClick={courses.reload}>Thử lại</Button>
         </Notice>
       )}
-      <Notice tone="warning">
-        Danh sách hiện chưa phân biệt “Chưa điểm danh” với “Vắng”. Hãy xác nhận trạng thái của từng học viên trước khi lưu để tránh ghi nhận nhầm.
-      </Notice>
+      <Notice tone="warning">Kiểm tra từng học viên trước khi lưu. Danh sách chưa phân biệt “Chưa điểm danh” với “Vắng”.</Notice>
 
       <Card as="section" padding="lg" className="space-y-4">
-        <label className="block max-w-xl text-sm font-medium text-text-heading">
+        <label className="block max-w-xl text-sm font-medium text-text-primary">
           Khóa học
           <div className="mt-2">
             <DropdownField
-              contentClassName="hl-scheduling"
               ariaLabel="Chọn khóa học để điểm danh"
               options={courseOptions}
-              mobileTouchTargets
               value={activeCourseId || null}
               onChange={(value) => requestNavigation({ kind: 'course', value: value ?? '' })}
               isSearchable
@@ -169,7 +162,7 @@ export default function AttendanceManagementPage() {
           status={schedules.status}
           errorMessage={schedules.errorMessage}
           empty={!schedules.data?.length}
-          emptyMessage="Khóa học chưa có lịch đơn để điểm danh."
+          emptyMessage="Chưa có lịch đơn."
           onRetry={schedules.reload}
         >
           <div className="space-y-2">
@@ -181,14 +174,14 @@ export default function AttendanceManagementPage() {
                 disabled={busy}
                 onClick={() => requestNavigation({ kind: 'schedule', value: schedule.id })}
                 className={
-                  'w-full rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus-ring ' +
+                  'w-full rounded-xl border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500 ' +
                   (selectedScheduleId === schedule.id
-                    ? 'border-primary bg-surface-hover'
-                    : 'border-border-subtle bg-surface hover:bg-surface-soft')
+                    ? 'border-brand-500 bg-background-gray-secondary'
+                    : 'border-card-border bg-card-background hover:bg-background-gray-secondary')
                 }
               >
-                <span className="block text-sm font-semibold text-text-heading">{schedule.title}</span>
-                <span className="mt-1 block text-xs text-text-muted">
+                <span className="block text-sm font-medium text-text-primary">{schedule.title}</span>
+                <span className="mt-1 block text-xs text-text-tertiary">
                   {schedule.instructorName} · {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short', timeZone: schedule.timezone || 'Asia/Ho_Chi_Minh' }).format(new Date(schedule.startTime))}
                 </span>
               </button>
@@ -199,13 +192,13 @@ export default function AttendanceManagementPage() {
 
       {selectedScheduleId && (
         <Card as="section" padding="none" className="overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-card-border p-4">
             <div className="flex items-center gap-2">
               <ClipboardCheck size={19} className="text-primary" aria-hidden="true" />
-              <h2 className="font-semibold text-text-heading">Danh sách điểm danh</h2>
-              <span className="text-xs text-text-muted">Mã lịch</span>
+              <h2 className="font-medium text-text-primary">Danh sách điểm danh</h2>
+              
             </div>
-            <Button className="max-[767px]:min-h-11" onClick={save} disabled={busy || !dirty || !attendance.data?.length}>
+            <Button onClick={save} disabled={busy || !dirty || !attendance.data?.length}>
               <Check size={16} />
               {busy ? 'Đang lưu…' : 'Lưu điểm danh'}
             </Button>
@@ -214,10 +207,10 @@ export default function AttendanceManagementPage() {
             status={attendance.status}
             errorMessage={attendance.errorMessage}
             empty={!attendance.data?.length}
-            emptyMessage="Chưa có danh sách điểm danh cho lịch này."
+            emptyMessage="Chưa có danh sách điểm danh."
             onRetry={attendance.reload}
           >
-            <div className="divide-y divide-border-subtle">
+            <div className="divide-y divide-card-border">
               {(attendance.data ?? []).map((record) => (
                 <AttendanceRow
                   key={record.studentId}
@@ -233,13 +226,11 @@ export default function AttendanceManagementPage() {
       )}
       {unsavedGuard.hasPendingAction && (
         <ConfirmDialog
-          contentClassName="hl-scheduling"
-          title="Bỏ thay đổi điểm danh chưa lưu?"
-          description="Các trạng thái bạn vừa chỉnh chưa được gửi lên máy chủ. Nếu tiếp tục, những thay đổi này sẽ bị bỏ."
+          title="Bỏ thay đổi chưa lưu?"
+          description="Điểm danh vừa chỉnh chưa được lưu."
           cancelLabel="Tiếp tục chỉnh sửa"
           confirmLabel="Bỏ thay đổi"
           variant="danger"
-          mobileTouchTargets
           onCancel={unsavedGuard.cancelDiscard}
           onConfirm={unsavedGuard.confirmDiscard}
         />
@@ -260,13 +251,13 @@ function AttendanceRow({
   disabled: boolean
 }) {
   return (
-    <div className="hl-scheduling-roster-row flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-text-heading">{record.studentName}</p>
-        <p className="truncate text-xs text-text-muted">{record.studentEmail}</p>
+        <p className="truncate text-sm font-medium text-text-primary">{record.studentName}</p>
+        <p className="truncate text-xs text-text-tertiary">{record.studentEmail}</p>
       </div>
-      <label className="flex items-center gap-2 text-sm text-text-muted">
-          <span>Trạng thái</span>
+      <label className="flex items-center gap-2 text-sm text-text-tertiary">
+          <span className="sr-only">Trạng thái</span>
         <select
           name="attendanceStatus"
           autoComplete="off"
@@ -274,7 +265,7 @@ function AttendanceRow({
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value as AttendanceStatus)}
-          className="h-10 max-[767px]:h-11 min-w-36 rounded-xl border border-border-subtle bg-surface-input px-3 text-sm text-text-heading outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          className={`${fieldControlClass} min-w-36`}
         >
           {statuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
         </select>

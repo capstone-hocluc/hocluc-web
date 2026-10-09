@@ -13,7 +13,6 @@ import StudentOnboarding from './components/student/StudentOnboarding'
 import StudentRouteGuard from './components/student/StudentRouteGuard'
 import StudentRoutes from './pages/student/StudentRoutes'
 import AdminLoginPage from './pages/AdminLoginPage'
-import StaffDashboard from './components/staff/StaffDashboard'
 import ManagementDashboard from './components/management/ManagementDashboard'
 import ManagementRouteGuard, {
   type ManagementRole,
@@ -49,6 +48,8 @@ function App() {
   const { clearCurrentUser } = useCurrentUser()
   const getAuthMode = useCallback(() => {
     const path = window.location.pathname.replace(/\/$/, '')
+    const profileMatch = path.match(/^\/(admin|staff|manager|mentor|teacher)\/profile$/)
+    if (profileMatch) return `${profileMatch[1]}-profile`
     if (path === '/staff/dashboard') return 'staff-dashboard'
     if (path === '/admin/login') {
       replaceHistoryEntry('/management/login')
@@ -83,7 +84,6 @@ function App() {
     if (/^\/teacher\/my-courses\/[^/]+\/assignments$/.test(path)) {
       return `teacher-assignments-${path.split('/')[3]}`
     }
-    if (path === '/teacher/information') return 'teacher-information'
     if (path === '/staff/students') return 'staff-students'
     if (path === '/staff/students/hs-24091') return 'staff-detail'
     if (path === '/staff/enrollments') return 'staff-enrollments'
@@ -186,10 +186,12 @@ function App() {
   const navigateManagement = (scope: 'admin' | 'staff' | 'manager' | 'mentor', page: string) => {
     const paths = {
       admin: {
+        profile: '/admin/profile',
         dashboard: '/admin/dashboard',
         users: '/admin/users',
       },
       staff: {
+        profile: '/staff/profile',
         dashboard: '/staff/dashboard',
         users: '/staff/users',
         students: '/staff/students',
@@ -204,6 +206,7 @@ function App() {
         'batch-detail': '/staff/batches/batch-12a-k24',
       },
       manager: {
+        profile: '/manager/profile',
         dashboard: '/manager/dashboard',
         courses: '/manager/courses',
         students: '/manager/students',
@@ -216,6 +219,7 @@ function App() {
         batches: '/manager/batches',
       },
       mentor: {
+        profile: '/mentor/profile',
         dashboard: '/mentor/dashboard',
       },
     } as const
@@ -230,11 +234,11 @@ function App() {
   const navigateTeacher = (page) => {
     const paths = {
       dashboard: '/teacher/dashboard',
+      profile: '/teacher/profile',
       courses: '/teacher/my-courses',
       schedule: '/teacher/schedule',
       availability: '/teacher/availability',
       'mock-exams': '/teacher/mock-exams',
-      information: '/teacher/information',
     }
     const path = page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page]
     runWithUnsavedActionGuard(() => {
@@ -423,23 +427,8 @@ function App() {
     return renderManagement('MANAGER', authMode.replace('manager-', ''), 'manager')
   if (authMode?.startsWith('mentor-'))
     return renderManagement('MENTOR', authMode.replace('mentor-', ''), 'mentor')
-  if (authMode === 'admin-dashboard' || authMode === 'admin-users')
-    return (
-      <ThemeProvider>
-        <ManagementRouteGuard
-          allowedRoles={['ADMINISTRATOR']}
-          onLogin={() => navigateTo('/management/login')}
-          onExit={handleLogout}
-        >
-          <StaffDashboard
-            page={authMode.replace('admin-', '')}
-            onNavigate={(nextPage) => navigateManagement('admin', nextPage)}
-            onBack={backToLanding}
-            adminArea
-          />
-        </ManagementRouteGuard>
-      </ThemeProvider>
-    )
+  if (authMode?.startsWith('admin-'))
+    return renderManagement('ADMINISTRATOR', authMode.replace('admin-', ''), 'admin')
   if (authMode === 'management-login')
     return (
       <ThemeProvider>
