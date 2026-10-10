@@ -18,6 +18,10 @@ import ProfilePage from '../console/profile-page'
 import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
+import CategoryManagement from './crud/category-management'
+import OrderManagement from './crud/order-management'
+import EnrollmentManagement from './crud/enrollment-management'
+import StudyGroupManagement from './crud/study-group-management'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import PageHeading from '../console/page-heading'
@@ -31,9 +35,6 @@ import {
   MentorOverview,
   MentorSolutionQueue,
   MentorStudents,
-  StaffEnrollments,
-  StaffGroups,
-  StaffOrders,
 } from './role-screens'
 import { QuestionReview } from './quiz-review-screens'
 
@@ -59,7 +60,11 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   },
   courses: {
     title: 'Khóa học',
-    subtitle: 'Danh sách khóa học đang mở.',
+    subtitle: 'Khóa trọn bộ và khóa nhỏ.',
+  },
+  categories: {
+    title: 'Danh mục',
+    subtitle: 'Phân loại khóa học và nội dung.',
   },
   students: {
     title: 'Học viên',
@@ -68,6 +73,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   enrollments: {
     title: 'Ghi danh',
     subtitle: 'Đăng ký học và học phí.',
+  },
+  orders: {
+    title: 'Đơn hàng',
+    subtitle: 'Thanh toán và đối soát.',
   },
   batches: {
     title: 'Lớp học',
@@ -97,6 +106,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: 'Tổng quan mentor',
     subtitle: 'Khu vực dành cho mentor.',
   },
+  groups: {
+    title: 'Nhóm học',
+    subtitle: 'Nhóm học theo khóa học và mentor.',
+  },
 }
 
 const NAV_ITEMS = [
@@ -106,6 +119,11 @@ const NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   ...NAV_ITEMS,
+  { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'categories', label: 'Danh mục', icon: Layers3 },
+  { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
+  { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
+  { page: 'groups', label: 'Nhóm học', icon: Users },
   { page: 'blueprints', label: 'Blueprint đề thi', icon: FileText },
   { page: 'taxonomy', label: 'Phân loại kiến thức', icon: Layers3 },
   { page: 'audit-log', label: 'Nhật ký hoạt động', icon: ClipboardList },
@@ -113,6 +131,8 @@ const ADMIN_NAV_ITEMS = [
 
 const STAFF_NAV_ITEMS = [
   ...NAV_ITEMS,
+  { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'categories', label: 'Danh mục', icon: Layers3 },
   { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
   { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
   { page: 'groups', label: 'Nhóm học', icon: Users },
@@ -131,6 +151,10 @@ const MENTOR_NAV_ITEMS = [
 const MANAGER_NAV_ITEMS = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'categories', label: 'Danh mục', icon: Layers3 },
+  { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
+  { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
+  { page: 'groups', label: 'Nhóm học', icon: Users },
   { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
 ]
 
@@ -142,9 +166,6 @@ const ROLE_SCREENS: Partial<Record<ManagementRole, Record<string, (props: { onNa
     'audit-log': () => <AdminAuditLog />,
   },
   STAFF: {
-    orders: () => <StaffOrders />,
-    enrollments: () => <StaffEnrollments />,
-    groups: () => <StaffGroups />,
     'question-review': () => <QuestionReview />,
   },
   MENTOR: {
@@ -224,10 +245,30 @@ function ManagementDashboard({
         <ProfilePage />
       ) : ROLE_SCREENS[role]?.[effectivePage] ? (
         ROLE_SCREENS[role][effectivePage]({ onNavigate })
-      ) : effectivePage === 'courses' && role === 'MANAGER' ? (
+      ) : effectivePage === 'courses' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
         <>
           <PageHeading title={meta.title} />
-          <ManagementCourseList />
+          <ManagementCourseList readOnly={role === 'MANAGER'} />
+        </>
+      ) : effectivePage === 'categories' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} />
+          <CategoryManagement readOnly={role === 'MANAGER'} />
+        </>
+      ) : effectivePage === 'orders' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} subtitle={meta.subtitle} />
+          <OrderManagement readOnly={role === 'MANAGER'} canConfirm={role === 'ADMINISTRATOR'} />
+        </>
+      ) : effectivePage === 'enrollments' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} subtitle={meta.subtitle} />
+          <EnrollmentManagement readOnly={role === 'MANAGER'} />
+        </>
+      ) : effectivePage === 'groups' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} subtitle={meta.subtitle} />
+          <StudyGroupManagement readOnly={role === 'MANAGER'} />
         </>
       ) : effectivePage === 'users' && role === 'ADMINISTRATOR' ? (
         <>

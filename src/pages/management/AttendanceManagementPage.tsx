@@ -15,7 +15,7 @@ import Card from '../../components/console/card'
 import ConfirmDialog from '../../components/console/confirm-dialog'
 import DropdownField from '../../components/console/dropdown-field'
 import Notice from '../../components/console/notice'
-import PageHeading from '../../components/ui/PageHeading'
+import PageHeading from '../../components/console/page-heading'
 import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
 import { getErrorMessage } from '../../lib/errors'
 
@@ -118,13 +118,16 @@ export default function AttendanceManagementPage() {
         title="Điểm danh"
         subtitle="Chỉ áp dụng cho lịch đơn."
         action={
-          <>
+          <Button
+            size="sm"
+            appearance="outline"
+            onClick={() => requestNavigation({ kind: 'reload' })}
+            disabled={busy}
+          >
             <RefreshCw size={16} />
             Tải lại
-          </>
+          </Button>
         }
-        onAction={() => requestNavigation({ kind: 'reload' })}
-        actionDisabled={busy}
       />
 
       {busy && <Notice tone="info">Đang lưu điểm danh…</Notice>}

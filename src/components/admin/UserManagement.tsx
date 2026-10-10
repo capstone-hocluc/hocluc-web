@@ -15,10 +15,12 @@ import {
   deleteUser,
   getUserById,
   getUsers,
+  updateUser,
   updateUserRoles,
   updateUserStatus,
   USER_ROLES,
   USER_STATUSES,
+  type UpdateUserRequest,
   type UserListPage,
   type UserProfile,
   type UserRole,
@@ -84,6 +86,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [grantingRoles, setGrantingRoles] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [deletingUser, setDeletingUser] = useState<UserSummary | null>(null)
   const [deleteUserLoading, setDeleteUserLoading] = useState(false)
@@ -181,6 +184,19 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
       setFeedback('Đã cập nhật vai trò được cấp.')
     } finally {
       setGrantingRoles(false)
+    }
+  }, [updateUserInPage])
+
+  const handleProfileChange = useCallback(async (user: UserProfile, payload: UpdateUserRequest) => {
+    setSavingProfile(true)
+    setError('')
+    try {
+      const updated = await updateUser(user.id, payload)
+      updateUserInPage(user.id, updated)
+      setReloadKey((key) => key + 1)
+      setFeedback('Đã lưu thông tin tài khoản.')
+    } finally {
+      setSavingProfile(false)
     }
   }, [updateUserInPage])
 
@@ -432,8 +448,11 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
         loading={detailLoading}
         canGrantRoles={canCreateUsers && !readOnly}
         grantingRoles={grantingRoles}
-        onClose={() => { if (!grantingRoles) setSelectedUser(null) }}
+        canEditProfile={canCreateUsers && !readOnly}
+        savingProfile={savingProfile}
+        onClose={() => { if (!grantingRoles && !savingProfile) setSelectedUser(null) }}
         onSaveRoles={handleGrantedRolesChange}
+        onSaveProfile={handleProfileChange}
       />
 
       {deletingUser && (

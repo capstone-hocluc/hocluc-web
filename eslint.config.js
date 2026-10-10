@@ -7,7 +7,9 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   // tailgrids is vendored from the NextAdmin kit and kept close to upstream.
-  globalIgnores(['dist', 'src/components/tailgrids']),
+  // .deepcode holds vendored agent tooling (its own scripts and rules), not app source - linting it
+  // made `npm run lint` report errors nobody here can fix.
+  globalIgnores(['dist', 'src/components/tailgrids', '.deepcode']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

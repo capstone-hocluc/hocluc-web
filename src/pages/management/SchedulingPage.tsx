@@ -3,7 +3,7 @@ import { CalendarPlus, Pencil, RefreshCw, Trash2 } from '../../components/consol
 import type { Course, CourseSection } from '../../services/courseService'
 import { getCourseDetail, getMainCourses } from '../../services/courseService'
 import { getUsers, type UserSummary } from '../../services/userService'
-import { cancelRecurringClass, createRecurringClass, getCourseRecurringClasses } from '../../services/recurringClassService'
+import { cancelRecurringClass, createRecurringClass, getCourseRecurringClasses, updateRecurringClass } from '../../services/recurringClassService'
 import { ApiError } from '../../lib/api'
 import {
   createSchedule,
@@ -24,13 +24,14 @@ import type {
   ScheduleCalendarItem,
   ScheduleResponse,
   UpdateClassSessionRequest,
+  UpdateRecurringClassRequest,
   UpdateScheduleRequest,
 } from '../../types/scheduling'
 import Button from '../../components/console/button'
 import ConfirmDialog from '../../components/console/confirm-dialog'
 import DropdownField from '../../components/console/dropdown-field'
 import Notice from '../../components/console/notice'
-import PageHeading from '../../components/ui/PageHeading'
+import PageHeading from '../../components/console/page-heading'
 import ScheduleCalendar from '../../components/console/schedule/schedule-calendar'
 import ScheduleDetailsSheet from '../../components/console/schedule/schedule-details-sheet'
 import ScheduleFilters, { type ScheduleViewMode } from '../../components/console/schedule/schedule-filters'
@@ -88,7 +89,8 @@ export default function SchedulingPage({ role }: Props) {
   const [selectedItem, setSelectedItem] = useState<ScheduleCalendarItem | null>(null)
   const [scheduleEditor, setScheduleEditor] = useState<ScheduleResponse | null | 'create'>(null)
   const [classSessionEditor, setClassSessionEditor] = useState<ClassSessionResponse | null>(null)
-  const [recurringEditorOpen, setRecurringEditorOpen] = useState(false)
+  const [cancelSession, setCancelSession] = useState<ClassSessionResponse | null>(null)
+  const [recurringEditor, setRecurringEditor] = useState<RecurringClassResponse | 'create' | null>(null)
   const [cancelSeries, setCancelSeries] = useState<RecurringClassResponse | null>(null)
   const [deleteSchedule, setDeleteSchedule] = useState<ScheduleResponse | null>(null)
   const [mutationBusy, setMutationBusy] = useState(false)
@@ -155,7 +157,7 @@ export default function SchedulingPage({ role }: Props) {
       setSelectedItem(null)
       setScheduleEditor(null)
       setClassSessionEditor(null)
-      setRecurringEditorOpen(false)
+      setRecurringEditor(null)
     })
   }
   const changeDate = (nextDate: string) => {
@@ -201,25 +203,43 @@ export default function SchedulingPage({ role }: Props) {
     if (saved) setScheduleEditor(null)
   }
 
-  const saveRecurringClass = async (payload: CreateRecurringClassRequest) => {
-    if (!activeCourseId || recurringCreateUnknown || mutationBusy) return
+  const saveRecurringClass = async (payload: CreateRecurringClassRequest | UpdateRecurringClassRequest) => {
+    if (!activeCourseId || mutationBusy) return
+    const editingSeries = recurringEditor !== null && recurringEditor !== 'create' ? recurringEditor : null
+    if (!editingSeries && recurringCreateUnknown) return
     setMutationBusy(true)
     setMutationError('')
     setNotice('')
     try {
-      await createRecurringClass(activeCourseId, payload)
-      setNotice('Đã tạo chuỗi lịch lặp.')
+      if (editingSeries) {
+        await updateRecurringClass(editingSeries.id, payload)
+        setNotice('Đã cập nhật chuỗi lịch lặp; các buổi chưa diễn ra đã được sinh lại.')
+      } else {
+        await createRecurringClass(activeCourseId, payload as CreateRecurringClassRequest)
+        setNotice('Đã tạo chuỗi lịch lặp.')
+      }
       calendar.reload()
-      setRecurringEditorOpen(false)
+      setRecurringEditor(null)
     } catch (error) {
       setMutationError(getErrorMessage(error))
-      if (!(error instanceof ApiError) || error.status === 408 || error.status >= 500) {
+      // An edit is a safe retry (the BE keys off the current state), so only a create can end
+      // with an unknown outcome.
+      if (!editingSeries && (!(error instanceof ApiError) || error.status === 408 || error.status >= 500)) {
         setRecurringCreateUnknown(true)
         calendar.reload()
       }
     } finally {
       setMutationBusy(false)
     }
+  }
+
+  const cancelOneSession = async () => {
+    if (!cancelSession) return
+    const saved = await runMutation(
+      () => updateClassSession(cancelSession.id, { status: 'CANCELLED' }),
+      'Đã hủy buổi học.'
+    )
+    if (saved) setCancelSession(null)
   }
 
   const saveClassSession = async (payload: UpdateClassSessionRequest) => {
@@ -308,7 +328,8 @@ export default function SchedulingPage({ role }: Props) {
             title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch lặp.' : recurringCreateButtonReason || undefined}
             onClick={() => runWithUnsavedActionGuard(() => {
               setMutationError('')
-              setRecurringEditorOpen(true)
+              setSelectedItem(null)
+              setRecurringEditor('create')
             })}
           >
             <CalendarPlus size={16} />
@@ -405,7 +426,16 @@ export default function SchedulingPage({ role }: Props) {
             >
               <div className="space-y-2">
                 {(calendar.data?.recurringClasses ?? []).map((series) => (
-                  <RecurringSeriesRow key={series.id} series={series} onCancel={() => setCancelSeries(series)} />
+                  <RecurringSeriesRow
+                    key={series.id}
+                    series={series}
+                    onEdit={() => runWithUnsavedActionGuard(() => {
+                      setMutationError('')
+                      setSelectedItem(null)
+                      setRecurringEditor(series)
+                    })}
+                    onCancel={() => setCancelSeries(series)}
+                  />
                 ))}
               </div>
             </ScheduleResourceState>
@@ -460,17 +490,32 @@ export default function SchedulingPage({ role }: Props) {
               </>
             )}
             {selectedItem.kind === 'classSession' && (
-              <Button
-                appearance="outline"
-               
-                onClick={() => runWithUnsavedActionGuard(() => {
-                  setClassSessionEditor(selectedItem.item)
-                  setSelectedItem(null)
-                })}
-              >
-                <Pencil size={15} />
-                Sửa buổi học
-              </Button>
+              <>
+                <Button
+                  appearance="outline"
+                 
+                  onClick={() => runWithUnsavedActionGuard(() => {
+                    setClassSessionEditor(selectedItem.item)
+                    setSelectedItem(null)
+                  })}
+                >
+                  <Pencil size={15} />
+                  Sửa buổi học
+                </Button>
+                {selectedItem.item.status !== 'CANCELLED' && (
+                  <Button
+                    variant="danger"
+                    appearance="outline"
+                    onClick={() => runWithUnsavedActionGuard(() => {
+                      setCancelSession(selectedItem.item)
+                      setSelectedItem(null)
+                    })}
+                  >
+                    <Trash2 size={15} />
+                    Hủy buổi
+                  </Button>
+                )}
+              </>
             )}
           </div>
         )}
@@ -506,16 +551,21 @@ export default function SchedulingPage({ role }: Props) {
         />
       )}
 
-      {recurringEditorOpen && (
+      {recurringEditor !== null && (
         <RecurringClassEditor
+          key={recurringEditor === 'create' ? 'create' : recurringEditor.id}
+          initial={recurringEditor === 'create' ? undefined : recurringEditor}
           teachers={teachers}
           sections={courseSections}
           sectionsLoading={courseDetails.status === 'loading'}
-          disabledReason={recurringCreateDisabledReason}
-          outcomeUnknown={recurringCreateUnknown}
+          disabledReason={recurringEditor === 'create' ? recurringCreateDisabledReason : ''}
+          outcomeUnknown={recurringEditor === 'create' && recurringCreateUnknown}
           busy={mutationBusy}
           errorMessage={mutationError}
-          onClose={() => setRecurringEditorOpen(false)}
+          onClose={() => {
+            setRecurringEditor(null)
+            setMutationError('')
+          }}
           onSave={(payload) => void saveRecurringClass(payload)}
         />
       )}
@@ -544,6 +594,18 @@ export default function SchedulingPage({ role }: Props) {
           onConfirm={cancelRecurringSeries}
         />
       )}
+      {cancelSession && (
+        <ConfirmDialog
+          title="Hủy buổi học này?"
+          description={<>Buổi “{cancelSession.title}” sẽ chuyển sang trạng thái đã hủy. Chuỗi lịch lặp không bị ảnh hưởng.</>}
+          cancelLabel="Giữ lại"
+          confirmLabel="Hủy buổi"
+          variant="danger"
+          busy={mutationBusy}
+          onCancel={() => setCancelSession(null)}
+          onConfirm={cancelOneSession}
+        />
+      )}
       {unsavedGuard.hasPendingAction && (
         <ConfirmDialog
           title="Bỏ thay đổi chưa lưu?"
@@ -561,11 +623,14 @@ export default function SchedulingPage({ role }: Props) {
 
 function RecurringSeriesRow({
   series,
+  onEdit,
   onCancel,
 }: {
   series: RecurringClassResponse
+  onEdit: () => void
   onCancel: () => void
 }) {
+  const overriddenCount = series.sessions.filter((session) => session.overridden).length
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-card-border bg-card-background p-4 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
@@ -581,12 +646,19 @@ function RecurringSeriesRow({
           {localDateLabel(series.startDate, { day: 'numeric', month: 'short', year: 'numeric' })}
           {' – '}{localDateLabel(series.endDate, { day: 'numeric', month: 'short', year: 'numeric' })}
           {' · '}{series.sessions.length} buổi
+          {overriddenCount ? ' (' + overriddenCount + ' buổi đã sửa riêng)' : ''}
         </p>
       </div>
-      <Button size="sm" variant="danger" appearance="outline" onClick={onCancel}>
-        <Trash2 size={14} />
-        Hủy cả chuỗi
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" appearance="outline" onClick={onEdit}>
+          <Pencil size={14} />
+          Sửa chuỗi
+        </Button>
+        <Button size="sm" variant="danger" appearance="outline" onClick={onCancel}>
+          <Trash2 size={14} />
+          Hủy cả chuỗi
+        </Button>
+      </div>
     </article>
   )
 }

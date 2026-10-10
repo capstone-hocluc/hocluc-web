@@ -89,17 +89,3 @@
   font-weight: 600;
   cursor: pointer;
 }
-
-/* ============================================================
-   Shared staff UI primitives (src/components/ui/) — one set of
-   classes reused by every staff screen instead of near-duplicate
-   per-screen CSS (status pills, stat tiles, filter bars, tables).
-   ============================================================ */
-
-
-
-
-
-/* Form validation error text (react-hook-form + zod) */
-.hl-form-error { display: block; margin-top: 4px; color: var(--color-badge-danger-text); font-size: 14px; font-weight: 600; }
-

@@ -180,6 +180,8 @@ export async function changePassword(payload: ChangePasswordRequest) {
 export interface UserListQuery {
   role?: UserRole
   status?: UserStatus
+  /** Case-insensitive fragment of the name or email; a picker needs it to find anyone past page 1. */
+  query?: string
   page?: number
   size?: number
   sort?: string
@@ -194,6 +196,7 @@ export async function getUsers(query: UserListQuery = {}): Promise<UserListPage>
   const params = new URLSearchParams()
   if (query.role) params.set('role', query.role)
   if (query.status) params.set('status', query.status)
+  if (query.query?.trim()) params.set('query', query.query.trim())
   params.set('page', (query.page ?? 0).toString())
   params.set('size', (query.size ?? 10).toString())
   params.set('sort', query.sort ?? 'createdAt,desc')
@@ -214,6 +217,27 @@ export async function createUser(payload: CreateUserRequest): Promise<UserProfil
 export async function getUserById(id: string): Promise<UserProfile> {
   const response = await request<UserProfile>(`/api/v1/users/${id}`, { auth: true })
   return requireResponseData(response, 'Không thể tải thông tin người dùng.')
+}
+
+export interface UpdateUserRequest {
+  firstName: string
+  lastName: string
+  email: string
+  /** An empty string clears the number. */
+  phone?: string
+}
+
+/**
+ * Administrator edit of another account's identity fields. Role and status have their own
+ * endpoints, so this request can never widen access.
+ */
+export async function updateUser(id: string, payload: UpdateUserRequest): Promise<UserProfile> {
+  const response = await request<UserProfile>(`/api/v1/users/${id}`, {
+    method: 'PUT',
+    auth: true,
+    body: payload,
+  })
+  return requireResponseData(response, 'Không thể cập nhật tài khoản người dùng.')
 }
 
 export async function deleteUser(id: string): Promise<void> {

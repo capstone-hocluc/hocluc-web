@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react'
 import Button from '../console/button'
 import { grantedRoles as getGrantedRoles } from '../../lib/role-home'
 import { LoaderCircle } from '../console/icons'
-import type { UserProfile, UserRole } from '../../services/userService'
+import type { UpdateUserRequest, UserProfile, UserRole } from '../../services/userService'
 import Status from '../console/status'
 import ConsoleDialog from '../console/dialog'
+import FormField, { fieldControlClass } from '../console/form-field'
 import { Checkbox } from '../tailgrids/core/checkbox'
 import {
   ROLE_LABELS,
@@ -20,8 +21,12 @@ interface UserDetailDialogProps {
   loading: boolean
   canGrantRoles: boolean
   grantingRoles: boolean
+  /** Administrators may edit the identity fields of any account. */
+  canEditProfile: boolean
+  savingProfile: boolean
   onClose: () => void
   onSaveRoles: (user: UserProfile, roles: UserRole[]) => Promise<void>
+  onSaveProfile: (user: UserProfile, payload: UpdateUserRequest) => Promise<void>
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -33,12 +38,23 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function UserDetailDialog({ user, loading, canGrantRoles, grantingRoles, onClose, onSaveRoles }: UserDetailDialogProps) {
+function UserDetailDialog({
+  user,
+  loading,
+  canGrantRoles,
+  grantingRoles,
+  canEditProfile,
+  savingProfile,
+  onClose,
+  onSaveRoles,
+  onSaveProfile,
+}: UserDetailDialogProps) {
   const grantedRoles = user ? getGrantedRoles(user) : []
+  const busy = grantingRoles || savingProfile
 
   return (
-    <ConsoleDialog open={Boolean(user)} onClose={onClose} title="Chi tiết tài khoản" description={user?.email} maxWidth={600} dismissable={!grantingRoles}
-      footer={<Button appearance="outline" onClick={onClose} disabled={grantingRoles}>Đóng</Button>}>
+    <ConsoleDialog open={Boolean(user)} onClose={onClose} title="Chi tiết tài khoản" description={user?.email} maxWidth={600} dismissable={!busy}
+      footer={<Button appearance="outline" onClick={onClose} disabled={busy}>Đóng</Button>}>
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-text-tertiary">
           <LoaderCircle size={18} className="animate-spin" />
@@ -59,6 +75,14 @@ function UserDetailDialog({ user, loading, canGrantRoles, grantingRoles, onClose
             <Field label="Ngày tạo">{formatDate(user.createdAt)}</Field>
             <Field label="Đăng nhập gần nhất">{formatDate(user.lastLoginAt, 'Chưa đăng nhập')}</Field>
           </dl>
+          {canEditProfile && (
+            <AccountEditor
+              key={user.id}
+              user={user}
+              saving={savingProfile}
+              onSave={onSaveProfile}
+            />
+          )}
           {canGrantRoles && user.role !== 'STUDENT' ? (
             <RoleEditor key={`${user.id}:${grantedRoles.join(',')}`} user={user} saving={grantingRoles} onSave={onSaveRoles} />
           ) : user.role === 'STUDENT' ? (
@@ -67,6 +91,97 @@ function UserDetailDialog({ user, loading, canGrantRoles, grantingRoles, onClose
         </div>
       ) : null}
     </ConsoleDialog>
+  )
+}
+
+function AccountEditor({
+  user,
+  saving,
+  onSave,
+}: {
+  user: UserProfile
+  saving: boolean
+  onSave: (user: UserProfile, payload: UpdateUserRequest) => Promise<void>
+}) {
+  const initial = {
+    firstName: user.firstName ?? '',
+    lastName: user.lastName ?? '',
+    email: user.email,
+    phone: user.phone ?? '',
+  }
+  const [draft, setDraft] = useState(initial)
+  const [error, setError] = useState('')
+  const trimmed = {
+    firstName: draft.firstName.trim(),
+    lastName: draft.lastName.trim(),
+    email: draft.email.trim(),
+    phone: draft.phone.trim(),
+  }
+  const dirty =
+    trimmed.firstName !== initial.firstName.trim() ||
+    trimmed.lastName !== initial.lastName.trim() ||
+    trimmed.email.toLowerCase() !== initial.email.toLowerCase() ||
+    trimmed.phone !== initial.phone.trim()
+  const complete = Boolean(trimmed.firstName && trimmed.lastName && trimmed.email)
+  const save = async () => {
+    setError('')
+    try {
+      await onSave(user, trimmed)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể lưu tài khoản.')
+    }
+  }
+  return (
+    <fieldset className="border-t border-card-border pt-4" disabled={saving}>
+      <legend className="text-sm font-medium text-text-primary">Thông tin tài khoản</legend>
+      <p className="mt-2 text-xs leading-5 text-text-tertiary">
+        Đổi email sẽ đặt lại xác thực và kết thúc các phiên đăng nhập của tài khoản này. Vai trò và trạng thái có mục riêng.
+      </p>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <FormField label="Họ">
+          <input
+            value={draft.firstName}
+            maxLength={100}
+            className={fieldControlClass}
+            onChange={(event) => setDraft((current) => ({ ...current, firstName: event.target.value }))}
+          />
+        </FormField>
+        <FormField label="Tên">
+          <input
+            value={draft.lastName}
+            maxLength={100}
+            className={fieldControlClass}
+            onChange={(event) => setDraft((current) => ({ ...current, lastName: event.target.value }))}
+          />
+        </FormField>
+        <FormField label="Email">
+          <input
+            type="email"
+            value={draft.email}
+            maxLength={255}
+            className={fieldControlClass}
+            onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))}
+          />
+        </FormField>
+        <FormField label="Số điện thoại" hint="Để trống nếu chưa có.">
+          <input
+            value={draft.phone}
+            maxLength={20}
+            className={fieldControlClass}
+            onChange={(event) => setDraft((current) => ({ ...current, phone: event.target.value }))}
+          />
+        </FormField>
+      </div>
+      {error && <p role="alert" className="mt-3 text-sm text-badge-danger-text">{error}</p>}
+      <div className="mt-4 flex justify-end gap-2">
+        <Button appearance="outline" disabled={!dirty || saving} onClick={() => { setDraft(initial); setError('') }}>
+          Hủy thay đổi
+        </Button>
+        <Button disabled={!dirty || saving || !complete} onClick={() => void save()}>
+          {saving ? 'Đang lưu...' : 'Lưu thông tin'}
+        </Button>
+      </div>
+    </fieldset>
   )
 }
 

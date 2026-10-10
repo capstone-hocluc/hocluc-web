@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react'
 import { Breadcrumbs } from '../tailgrids/core/breadcrumbs'
 
-// NextAdmin page header: 28/32 title on the left, "Home > page" breadcrumb on the right.
+// NextAdmin page header: 28/32 title on the left, optional action plus "Home > page" breadcrumb on the right.
 interface PageHeadingProps {
   title: string
   subtitle?: ReactNode
+  /** Page-level control (for example a reload button); the caller supplies its own Button. */
+  action?: ReactNode
 }
 
-function PageHeading({ title, subtitle }: PageHeadingProps) {
+function PageHeading({ title, subtitle, action }: PageHeadingProps) {
   // Role areas live under /<area>/..., so "Home" is the area root.
   const homeHref = `/${window.location.pathname.split('/')[1] ?? ''}`
   return (
@@ -16,13 +18,16 @@ function PageHeading({ title, subtitle }: PageHeadingProps) {
         <h1 className="text-[28px] leading-8 font-medium text-text-primary">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-text-tertiary">{subtitle}</p>}
       </div>
-      <Breadcrumbs
-        dividerType="chevron"
-        items={[
-          { href: homeHref, label: 'Trang chủ' },
-          { href: '#', label: title },
-        ]}
-      />
+      <div className="flex flex-wrap items-center gap-3">
+        {action}
+        <Breadcrumbs
+          dividerType="chevron"
+          items={[
+            { href: homeHref, label: 'Trang chủ' },
+            { href: '#', label: title },
+          ]}
+        />
+      </div>
     </div>
   )
 }
