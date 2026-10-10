@@ -46,10 +46,10 @@ export const ENROLLMENTS = [
 ]
 
 export const GROUPS = [
-  { id: 'gr-01', name: 'Nhóm A1', course: 'ĐGNL 12A · K24', mentor: 'Nam Lê', students: 12, progress: 74, next: 'Hôm nay · 19:00' },
-  { id: 'gr-02', name: 'Nhóm A2', course: 'ĐGNL 12A · K24', mentor: 'Mai Trần', students: 11, progress: 61, next: 'Thứ Năm · 19:00' },
-  { id: 'gr-03', name: 'Nhóm B1', course: 'ĐGNL 12B · K24', mentor: 'Long Nguyễn', students: 13, progress: 55, next: 'Thứ Sáu · 18:30' },
-  { id: 'gr-04', name: 'Nhóm C1', course: 'ĐGNL 11A · K25', mentor: 'Nam Lê', students: 10, progress: 42, next: 'Thứ Bảy · 09:00' },
+  { id: 'gr-01', name: 'Nhóm A1', course: 'ĐGNL 12A · K24', mentor: 'Nam Lê', students: 12, progress: 74 },
+  { id: 'gr-02', name: 'Nhóm A2', course: 'ĐGNL 12A · K24', mentor: 'Mai Trần', students: 11, progress: 61 },
+  { id: 'gr-03', name: 'Nhóm B1', course: 'ĐGNL 12B · K24', mentor: 'Long Nguyễn', students: 13, progress: 55 },
+  { id: 'gr-04', name: 'Nhóm C1', course: 'ĐGNL 11A · K25', mentor: 'Nam Lê', students: 10, progress: 42 },
 ]
 
 export const MENTOR_STUDENTS = [

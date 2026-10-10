@@ -18,6 +18,7 @@ import ProfilePage from '../console/profile-page'
 import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
+import CategoryManagement from './crud/category-management'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import PageHeading from '../console/page-heading'
@@ -59,7 +60,11 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   },
   courses: {
     title: 'Khóa học',
-    subtitle: 'Danh sách khóa học đang mở.',
+    subtitle: 'Khóa trọn bộ và khóa nhỏ.',
+  },
+  categories: {
+    title: 'Danh mục',
+    subtitle: 'Phân loại khóa học và nội dung.',
   },
   students: {
     title: 'Học viên',
@@ -106,6 +111,8 @@ const NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   ...NAV_ITEMS,
+  { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'categories', label: 'Danh mục', icon: Layers3 },
   { page: 'blueprints', label: 'Blueprint đề thi', icon: FileText },
   { page: 'taxonomy', label: 'Phân loại kiến thức', icon: Layers3 },
   { page: 'audit-log', label: 'Nhật ký hoạt động', icon: ClipboardList },
@@ -113,6 +120,8 @@ const ADMIN_NAV_ITEMS = [
 
 const STAFF_NAV_ITEMS = [
   ...NAV_ITEMS,
+  { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'categories', label: 'Danh mục', icon: Layers3 },
   { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
   { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
   { page: 'groups', label: 'Nhóm học', icon: Users },
@@ -131,6 +140,7 @@ const MENTOR_NAV_ITEMS = [
 const MANAGER_NAV_ITEMS = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
+  { page: 'categories', label: 'Danh mục', icon: Layers3 },
   { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
 ]
 
@@ -224,10 +234,15 @@ function ManagementDashboard({
         <ProfilePage />
       ) : ROLE_SCREENS[role]?.[effectivePage] ? (
         ROLE_SCREENS[role][effectivePage]({ onNavigate })
-      ) : effectivePage === 'courses' && role === 'MANAGER' ? (
+      ) : effectivePage === 'courses' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
         <>
           <PageHeading title={meta.title} />
-          <ManagementCourseList />
+          <ManagementCourseList readOnly={role === 'MANAGER'} />
+        </>
+      ) : effectivePage === 'categories' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} />
+          <CategoryManagement readOnly={role === 'MANAGER'} />
         </>
       ) : effectivePage === 'users' && role === 'ADMINISTRATOR' ? (
         <>

@@ -302,7 +302,6 @@ export function MentorGroups() {
       text<Group>('course', 'Khóa học'),
       text<Group>('students', 'Học viên'),
       progressColumn<Group>('Tiến độ trung bình'),
-      text<Group>('next', 'Buổi tiếp theo'),
     ],
     []
   )
