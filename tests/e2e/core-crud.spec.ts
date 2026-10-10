@@ -442,3 +442,128 @@ test('staff suspends an enrollment and rewrites its expiry', async ({ page }) =>
     state.requests.find((r) => r.method === 'PATCH' && r.path.endsWith('/expiry'))!.body
   ).toMatchObject({ expiresAt: '2027-01-15T23:59:59+07:00' })
 })
+
+test('staff creates a study group for the selected course', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/groups')
+  await expect(page.getByRole('row', { name: /Nhóm A/ })).toBeVisible()
+  await page.getByRole('main').getByRole('button', { name: 'Tạo nhóm', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo nhóm học', exact: true })
+  await dialog.getByLabel('Tên nhóm').fill('Nhóm C')
+  await selectOption(dialog, page, 'Nhà của nhóm', 'Nhà Bứt Phá')
+  await dialog.getByLabel('Sĩ số tối đa').fill('5')
+  await dialog.getByRole('button', { name: 'Lưu nhóm', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('row', { name: /Nhóm C/ })).toBeVisible()
+  expect(
+    state.requests.find((r) => r.method === 'POST' && r.path.endsWith('/study-groups'))!.body
+  ).toMatchObject({ name: 'Nhóm C', houseType: 'BUT_PHA', level: null, capacity: 5 })
+})
+
+test('staff assigns a mentor and moves a student into a group', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/groups')
+  await page
+    .getByRole('row', { name: /Nhóm A/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Nhóm A', exact: true })
+  await selectOption(dialog, page, 'Mentor cần gán', 'Giáo viên QA')
+  await dialog.getByRole('button', { name: 'Gán mentor', exact: true }).click()
+  await expect(dialog.getByText('Đã gán mentor.')).toBeVisible()
+  expect(
+    state.requests.find((r) => r.method === 'PUT' && r.path.endsWith(`/mentors/${IDS.teacher}`))!.body
+  ).toEqual({ primary: false })
+
+  await selectOption(dialog, page, 'Học viên cần thêm', 'Học viên QA')
+  await dialog.getByRole('button', { name: 'Thêm học viên', exact: true }).click()
+  await expect(dialog.getByText('Đã thêm học viên vào nhóm.')).toBeVisible()
+  await expect(dialog.getByText('Học viên (1)')).toBeVisible()
+  expect(
+    state.requests.find((r) => r.method === 'PUT' && r.path.endsWith(`/members/${IDS.student}`))
+  ).toBeTruthy()
+  // One active group per course: the student leaves Nhóm B when joining Nhóm A.
+  expect(state.groups.find((group) => group.id === IDS.group2)!.members[0].status).toBe('DROPPED')
+})
+
+test('a group with active students is not deleted and explains why', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/groups')
+  await page
+    .getByRole('row', { name: /Nhóm B/ })
+    .getByRole('button', { name: 'Xóa', exact: true })
+    .click()
+  const confirm = page.getByRole('dialog', { name: 'Xóa nhóm học?' })
+  await confirm.getByRole('button', { name: 'Xóa nhóm', exact: true }).click()
+  await expect(confirm.getByRole('alert')).toContainText(/còn học viên đang học/i)
+  await expect(confirm).toBeVisible()
+  expect(state.requests.filter((r) => r.method === 'DELETE')).toHaveLength(1)
+  expect(state.groups.some((group) => group.id === IDS.group2)).toBe(true)
+})
+
+test('staff replaces a mentor strengths set', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/groups')
+  await page
+    .getByRole('row', { name: /Nhóm A/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Nhóm A', exact: true })
+  // react-aria hides the real input behind the styled box, so force the click at its point.
+  await dialog.getByRole('checkbox', { name: 'Đại số' }).click({ force: true })
+  await dialog.getByRole('button', { name: 'Lưu môn mạnh', exact: true }).click()
+  await expect(dialog.getByText('Đã lưu môn mạnh của mentor.')).toBeVisible()
+  expect(
+    state.requests.find(
+      (r) => r.method === 'PUT' && r.path.endsWith(`/mentors/${IDS.mentor}/strengths`)
+    )!.body
+  ).toEqual({ categoryIds: [IDS.child] })
+})
+
+test('manager reads the group console without write affordances', async ({ page }) => {
+  const state = await installCrudFixture(page, 'MANAGER')
+  await page.goto('/manager/groups')
+  await expect(page.getByRole('row', { name: /Nhóm A/ })).toBeVisible()
+  const main = page.getByRole('main')
+  await expect(main.getByRole('button', { name: 'Tạo nhóm', exact: true })).toHaveCount(0)
+  await expect(main.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
+  await page
+    .getByRole('row', { name: /Nhóm A/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Nhóm A', exact: true })
+  await expect(dialog.getByRole('button', { name: 'Gán mentor', exact: true })).toHaveCount(0)
+  await expect(dialog.getByRole('button', { name: 'Thêm học viên', exact: true })).toHaveCount(0)
+  expect(state.requests.filter((r) => r.method !== 'GET')).toHaveLength(0)
+})
+
+test('administrator edits an account identity and a changed email resets verification', async ({
+  page,
+}) => {
+  const state = await installCrudFixture(page, 'ADMINISTRATOR')
+  await page.goto('/admin/users')
+  await page.getByRole('row', { name: /Giáo viên QA/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
+  await dialog.getByLabel('Họ', { exact: true }).fill('Nguyễn')
+  await dialog.getByLabel('Tên', { exact: true }).fill('An')
+  await dialog.getByLabel('Email', { exact: true }).fill('an.nguyen@example.invalid')
+  await dialog.getByRole('button', { name: 'Lưu thông tin', exact: true }).click()
+  await expect(dialog.getByText('Nguyễn An')).toBeVisible()
+  await expect(page.getByText('Đã lưu thông tin tài khoản.')).toBeVisible()
+  expect(
+    state.requests.find((r) => r.method === 'PUT' && r.path === `/api/v1/users/${IDS.teacher}`)!.body
+  ).toMatchObject({
+    firstName: 'Nguyễn',
+    lastName: 'An',
+    email: 'an.nguyen@example.invalid',
+  })
+  expect(state.users[IDS.teacher].emailVerified).toBe(false)
+})
+
+test('staff sees account details without the administrator editor', async ({ page }) => {
+  await installCrudFixture(page)
+  await page.goto('/staff/users')
+  await page.getByRole('row', { name: /Giáo viên QA/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
+  await expect(dialog.getByRole('button', { name: 'Lưu thông tin', exact: true })).toHaveCount(0)
+})

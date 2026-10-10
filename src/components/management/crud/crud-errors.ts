@@ -38,6 +38,18 @@ const messages: Record<string, string> = {
   'Course not found.': 'Không tìm thấy khóa học.',
   'User not found.': 'Không tìm thấy người dùng.',
   'Management request is invalid.': 'Yêu cầu không hợp lệ. Kiểm tra lại thông tin đã nhập.',
+  'A study group with this name already exists in the course.':
+    'Tên nhóm đã tồn tại trong khóa học.',
+  'Capacity cannot be lower than the number of active students.':
+    'Sĩ số tối đa không thể thấp hơn số học viên đang học.',
+  'This group still has active students. Move them before deleting it.':
+    'Nhóm còn học viên đang học. Hãy chuyển họ sang nhóm khác trước.',
+  'This student is not an active member of the group.': 'Học viên không còn trong nhóm này.',
+  'This mentor is not assigned to the group.': 'Mentor không được gán cho nhóm này.',
+  'This study group is already at capacity.': 'Nhóm đã đủ sĩ số.',
+  'Choose an account whose active role is MENTOR.': 'Chọn tài khoản có vai trò Mentor.',
+  'Choose an account whose active role is STUDENT.': 'Chọn tài khoản có vai trò Học viên.',
+  'Email is already registered and active.': 'Email đã được dùng cho tài khoản khác.',
 }
 export function crudError(error: unknown): string {
   const message = getErrorMessage(error)

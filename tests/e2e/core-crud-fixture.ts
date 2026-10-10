@@ -9,6 +9,8 @@ import type {
   OrderStatus,
 } from '../../src/services/orderAdminService'
 import type { EnrollmentAdmin } from '../../src/services/enrollmentAdminService'
+import type { StudyGroupAdmin, StudyGroupAdminDetail, MentorStrength } from '../../src/services/studyGroupAdminService'
+import type { UserProfile } from '../../src/services/userService'
 
 export const IDS = {
   main: '10000000-0000-0000-0000-000000000001',
@@ -19,6 +21,9 @@ export const IDS = {
   phase2: '30000000-0000-0000-0000-000000000002',
   teacher: '40000000-0000-0000-0000-000000000001',
   student: '40000000-0000-0000-0000-000000000002',
+  mentor: '40000000-0000-0000-0000-000000000003',
+  group: '50000000-0000-0000-0000-000000000001',
+  group2: '50000000-0000-0000-0000-000000000002',
   orderPending: '70000000-0000-0000-0000-000000000001',
   orderPaid: '70000000-0000-0000-0000-000000000002',
   enrollment: '80000000-0000-0000-0000-000000000001',
@@ -114,6 +119,71 @@ const enrollmentRow = (overrides: Partial<EnrollmentAdmin> = {}): EnrollmentAdmi
   updatedAt: STAMP,
   ...overrides,
 })
+const HOUSE_LABELS: Record<StudyGroupAdmin['houseType'], string> = {
+  NEN_MONG: 'Nhà Nền Móng',
+  VUNG_VANG: 'Nhà Vững Vàng',
+  BUT_PHA: 'Nhà Bứt Phá',
+}
+
+/** The list endpoint has no roster, so the fixture answers with the same shape minus members. */
+const stripMembers = (group: StudyGroupAdminDetail): StudyGroupAdmin => ({
+  id: group.id,
+  courseId: group.courseId,
+  courseTitle: group.courseTitle,
+  name: group.name,
+  houseType: group.houseType,
+  houseLabel: group.houseLabel,
+  level: group.level,
+  capacity: group.capacity,
+  activeStudentCount: group.activeStudentCount,
+  remainingCapacity: group.remainingCapacity,
+  mentors: group.mentors,
+})
+
+const groupDetail = (overrides: Partial<StudyGroupAdminDetail> = {}): StudyGroupAdminDetail => ({
+  id: IDS.group,
+  courseId: IDS.main,
+  courseTitle: 'MAIN Toán',
+  name: 'Nhóm A',
+  houseType: 'NEN_MONG',
+  houseLabel: 'Nhà Nền Móng',
+  level: null,
+  capacity: 12,
+  activeStudentCount: 0,
+  remainingCapacity: 12,
+  mentors: [
+    { id: IDS.mentor, fullName: 'Mentor QA', primaryMentor: true, strongSubjects: ['Toán'] },
+  ],
+  members: [],
+  ...overrides,
+})
+
+const groupMember = (
+  overrides: Partial<StudyGroupAdminDetail['members'][number]> = {}
+): StudyGroupAdminDetail['members'][number] => ({
+  groupStudentId: '50000000-0000-0000-0000-000000000009',
+  studentId: IDS.student,
+  studentEmail: 'student@example.invalid',
+  studentName: 'Học viên QA',
+  status: 'ACTIVE',
+  joinedAt: STAMP,
+  ...overrides,
+})
+
+const userProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
+  id: IDS.teacher,
+  email: 'teacher@example.invalid',
+  firstName: 'Giáo viên',
+  lastName: 'QA',
+  displayName: 'Giáo viên QA',
+  phone: '0900000000',
+  role: 'TEACHER',
+  roles: ['TEACHER'],
+  status: 'ACTIVE',
+  emailVerified: true,
+  ...overrides,
+})
+
 export interface CapturedRequest {
   path: string
   method: string
@@ -173,6 +243,22 @@ export async function installCrudFixture(
       }),
     ] as OrderAdminDetail[],
     enrollments: [enrollmentRow()] as EnrollmentAdmin[],
+    groups: [
+      groupDetail(),
+      groupDetail({
+        id: IDS.group2,
+        name: 'Nhóm B',
+        houseType: 'BUT_PHA',
+        houseLabel: 'Nhà Bứt Phá',
+        capacity: 1,
+        activeStudentCount: 1,
+        remainingCapacity: 0,
+        mentors: [],
+        members: [groupMember()],
+      }),
+    ] as StudyGroupAdminDetail[],
+    users: {} as Record<string, UserProfile>,
+    mentorStrengths: {} as Record<string, MentorStrength>,
     requests: [] as CapturedRequest[],
     failNext: '' as '' | 'conflict' | 'network',
     sequence: 10,
@@ -397,6 +483,146 @@ export async function installCrudFixture(
       totalPages: content.length ? 1 : 0,
       last: true,
     })
+    if (path.startsWith('/api/v1/admin/courses/') && path.includes('/study-groups')) {
+      const parts = path.split('/').slice(5)
+      const group = () => state.groups.find((item) => item.id === parts[2])
+      if (parts.length === 2) {
+        if (method === 'GET') return answer(state.groups.map(stripMembers))
+        const created = groupDetail({
+          id: nextId('a0000000'),
+          name: String(body.name),
+          houseType: body.houseType as StudyGroupAdmin['houseType'],
+          houseLabel: HOUSE_LABELS[body.houseType as StudyGroupAdmin['houseType']],
+          level: (body.level as StudyGroupAdminDetail['level']) ?? null,
+          capacity: (body.capacity as number | null) ?? null,
+          activeStudentCount: 0,
+          remainingCapacity: (body.capacity as number | null) ?? null,
+          mentors: [],
+          members: [],
+        })
+        state.groups.push(created)
+        return answer(stripMembers(created))
+      }
+      const current = group()
+      if (!current) return answer(null, 404, 'Study group not found.')
+      if (parts.length === 3) {
+        if (method === 'GET') return answer(current)
+        if (method === 'PUT') {
+          current.name = String(body.name)
+          current.houseType = body.houseType as StudyGroupAdmin['houseType']
+          current.houseLabel = HOUSE_LABELS[current.houseType]
+          current.level = (body.level as StudyGroupAdminDetail['level']) ?? null
+          current.capacity = (body.capacity as number | null) ?? null
+          current.remainingCapacity =
+            current.capacity === null ? null : current.capacity - current.activeStudentCount
+          return answer(stripMembers(current))
+        }
+        if (method === 'DELETE') {
+          if (current.activeStudentCount > 0)
+            return answer(null, 409, 'This group still has active students. Move them before deleting it.')
+          state.groups = state.groups.filter((item) => item !== current)
+          return answer(null)
+        }
+      }
+      if (parts[3] === 'mentors' && parts[4]) {
+        if (method === 'DELETE') {
+          if (!current.mentors.some((mentor) => mentor.id === parts[4]))
+            return answer(null, 404, 'This mentor is not assigned to the group.')
+          current.mentors = current.mentors.filter((mentor) => mentor.id !== parts[4])
+          if (current.mentors.length && !current.mentors.some((mentor) => mentor.primaryMentor))
+            current.mentors[0].primaryMentor = true
+          return answer(stripMembers(current))
+        }
+        const primary = Boolean(body.primary) || current.mentors.length === 0
+        const assigned = current.mentors.find((mentor) => mentor.id === parts[4])
+        if (primary) current.mentors.forEach((mentor) => (mentor.primaryMentor = false))
+        if (assigned) assigned.primaryMentor = primary
+        else
+          current.mentors.push({
+            id: parts[4],
+            fullName: 'Mentor QA',
+            primaryMentor: primary,
+            strongSubjects: [],
+          })
+        return answer(stripMembers(current))
+      }
+      if (parts[3] === 'members' && parts[4]) {
+        const membership = current.members.find(
+          (member) => member.studentId === parts[4] && member.status === 'ACTIVE'
+        )
+        if (method === 'DELETE') {
+          if (!membership) return answer(null, 404, 'This student is not an active member of the group.')
+          membership.status = 'DROPPED'
+        } else {
+          if (membership) return answer(current)
+          if (current.capacity !== null && current.activeStudentCount >= current.capacity)
+            return answer(null, 409, 'This study group is already at capacity.')
+          // One active group per course: joining here leaves the previous group.
+          state.groups.forEach((candidate) => {
+            if (candidate.id === current.id) return
+            candidate.members
+              .filter((member) => member.studentId === parts[4] && member.status === 'ACTIVE')
+              .forEach((member) => {
+                member.status = 'DROPPED'
+                candidate.activeStudentCount -= 1
+                candidate.remainingCapacity =
+                  candidate.capacity === null ? null : candidate.capacity - candidate.activeStudentCount
+              })
+          })
+          current.members.push(groupMember())
+        }
+        current.activeStudentCount = current.members.filter((member) => member.status === 'ACTIVE').length
+        current.remainingCapacity =
+          current.capacity === null ? null : current.capacity - current.activeStudentCount
+        return answer(current)
+      }
+    }
+    if (path.startsWith('/api/v1/admin/courses/') && path.includes('/mentors/')) {
+      const parts = path.split('/').slice(5)
+      const mentorId = parts[2]
+      if (method === 'GET')
+        return answer(
+          state.mentorStrengths[mentorId] ?? {
+            mentorId,
+            fullName: 'Mentor QA',
+            categoryIds: [],
+            subjectNames: [],
+          }
+        )
+      const wanted = (body.categoryIds as string[]) ?? []
+      const names = wanted.map((id) => state.categories.find((category) => category.id === id)?.name)
+      if (names.some((name) => !name)) return answer(null, 404, 'Category not found.')
+      state.mentorStrengths[mentorId] = {
+        mentorId,
+        fullName: 'Mentor QA',
+        categoryIds: wanted,
+        subjectNames: names as string[],
+      }
+      state.groups.forEach((candidate) =>
+        candidate.mentors
+          .filter((mentor) => mentor.id === mentorId)
+          .forEach((mentor) => (mentor.strongSubjects = names as string[]))
+      )
+      return answer(state.mentorStrengths[mentorId])
+    }
+    if (path.startsWith('/api/v1/users/') && /^[0-9a-f-]{36}$/.test(path.split('/').at(-1) ?? '')) {
+      const id = path.split('/').at(-1)!
+      if (method === 'GET') return answer(state.users[id] ?? userProfile({ id }))
+      if (method === 'PUT') {
+        const current = state.users[id] ?? userProfile({ id })
+        const emailChanged = current.email !== body.email
+        Object.assign(current, {
+          firstName: String(body.firstName),
+          lastName: String(body.lastName),
+          displayName: `${String(body.firstName)} ${String(body.lastName)}`.trim(),
+          email: String(body.email),
+          phone: (body.phone as string) || null,
+          emailVerified: emailChanged ? false : current.emailVerified,
+        })
+        state.users[id] = current
+        return answer(current)
+      }
+    }
     if (path === '/api/v1/admin/orders') {
       const status = url.searchParams.get('status')
       const courseId = url.searchParams.get('courseId')

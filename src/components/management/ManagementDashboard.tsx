@@ -21,6 +21,7 @@ import ManagementCourseList from './ManagementCourseList'
 import CategoryManagement from './crud/category-management'
 import OrderManagement from './crud/order-management'
 import EnrollmentManagement from './crud/enrollment-management'
+import StudyGroupManagement from './crud/study-group-management'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import PageHeading from '../console/page-heading'
@@ -34,7 +35,6 @@ import {
   MentorOverview,
   MentorSolutionQueue,
   MentorStudents,
-  StaffGroups,
 } from './role-screens'
 import { QuestionReview } from './quiz-review-screens'
 
@@ -106,6 +106,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: 'Tổng quan mentor',
     subtitle: 'Khu vực dành cho mentor.',
   },
+  groups: {
+    title: 'Nhóm học',
+    subtitle: 'Nhóm học theo khóa học và mentor.',
+  },
 }
 
 const NAV_ITEMS = [
@@ -119,6 +123,7 @@ const ADMIN_NAV_ITEMS = [
   { page: 'categories', label: 'Danh mục', icon: Layers3 },
   { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
   { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
+  { page: 'groups', label: 'Nhóm học', icon: Users },
   { page: 'blueprints', label: 'Blueprint đề thi', icon: FileText },
   { page: 'taxonomy', label: 'Phân loại kiến thức', icon: Layers3 },
   { page: 'audit-log', label: 'Nhật ký hoạt động', icon: ClipboardList },
@@ -149,6 +154,7 @@ const MANAGER_NAV_ITEMS = [
   { page: 'categories', label: 'Danh mục', icon: Layers3 },
   { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
   { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
+  { page: 'groups', label: 'Nhóm học', icon: Users },
   { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
 ]
 
@@ -160,7 +166,6 @@ const ROLE_SCREENS: Partial<Record<ManagementRole, Record<string, (props: { onNa
     'audit-log': () => <AdminAuditLog />,
   },
   STAFF: {
-    groups: () => <StaffGroups />,
     'question-review': () => <QuestionReview />,
   },
   MENTOR: {
@@ -259,6 +264,11 @@ function ManagementDashboard({
         <>
           <PageHeading title={meta.title} subtitle={meta.subtitle} />
           <EnrollmentManagement readOnly={role === 'MANAGER'} />
+        </>
+      ) : effectivePage === 'groups' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} subtitle={meta.subtitle} />
+          <StudyGroupManagement readOnly={role === 'MANAGER'} />
         </>
       ) : effectivePage === 'users' && role === 'ADMINISTRATOR' ? (
         <>

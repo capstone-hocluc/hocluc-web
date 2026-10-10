@@ -136,32 +136,6 @@ export function AdminAuditLog() {
   )
 }
 
-/* ---------- Staff ---------- */
-
-export function StaffGroups() {
-  const columns = useMemo<ColumnDef<Group>[]>(
-    () => [
-      text<Group>('name', 'Nhóm', 'font-medium text-text-primary'),
-      text<Group>('course', 'Khóa học'),
-      text<Group>('mentor', 'Mentor'),
-      text<Group>('students', 'Học viên'),
-      progressColumn<Group>('Tiến độ'),
-    ],
-    []
-  )
-  return (
-    <Page title="Nhóm học">
-      <ListCard
-        data={GROUPS}
-        columns={columns}
-        getRowKey={(row) => row.id}
-        searchPlaceholder="Tìm nhóm, mentor..."
-        searchText={(row) => `${row.name} ${row.course} ${row.mentor}`}
-      />
-    </Page>
-  )
-}
-
 /* ---------- Duyệt: câu hỏi (staff, teacher) và lời giải AI (mentor) ---------- */
 
 function ReviewMenu({ label, onChange }: { label: string; onChange: (status: ReviewStatus) => void }) {

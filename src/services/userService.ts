@@ -216,6 +216,27 @@ export async function getUserById(id: string): Promise<UserProfile> {
   return requireResponseData(response, 'Không thể tải thông tin người dùng.')
 }
 
+export interface UpdateUserRequest {
+  firstName: string
+  lastName: string
+  email: string
+  /** An empty string clears the number. */
+  phone?: string
+}
+
+/**
+ * Administrator edit of another account's identity fields. Role and status have their own
+ * endpoints, so this request can never widen access.
+ */
+export async function updateUser(id: string, payload: UpdateUserRequest): Promise<UserProfile> {
+  const response = await request<UserProfile>(`/api/v1/users/${id}`, {
+    method: 'PUT',
+    auth: true,
+    body: payload,
+  })
+  return requireResponseData(response, 'Không thể cập nhật tài khoản người dùng.')
+}
+
 export async function deleteUser(id: string): Promise<void> {
   await request<void>(`/api/v1/users/${id}`, {
     method: 'DELETE',
