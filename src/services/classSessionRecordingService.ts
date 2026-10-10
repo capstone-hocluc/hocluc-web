@@ -9,11 +9,12 @@ import type {
 const API = '/api/v1'
 
 /**
- * Caller must enforce the documented release gates:
- * - do not expose section recordings to students until enrollment and course/section
- *   authorization is enforced by BE;
- * - do not allow Teacher attach until teacher assignment is checked by BE;
- * - never attach fileId until BE verifies its ownership and scope.
+ * The BE now enforces the gates this file used to defer to the caller:
+ * - section recordings are authorized on the section actually read, and the section must belong to
+ *   the course in the path (an enrolled student can no longer pull another course's recordings);
+ * - attaching, editing or deleting a recording is scoped to the teacher's own courses.
+ * Still open: a `fileId` is only checked for existence, so do not send one until the BE verifies
+ * that the caller owns and may use that file.
  */
 export function getClassSessionRecordings(
   classSessionId: string
