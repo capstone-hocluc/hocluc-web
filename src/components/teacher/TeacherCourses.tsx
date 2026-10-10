@@ -1,14 +1,12 @@
-import { useState } from 'react'
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, ClipboardList, Layers3 } from '../console/icons'
-import TeacherLessonEditor from './TeacherLessonEditor'
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, ClipboardList } from '../console/icons'
 import TeacherPageHeader from './TeacherPageHeader'
 import Button from '../console/button'
 import Panel from '../console/panel'
 import ScheduleResourceState from '../console/schedule/schedule-resource-state'
 import { Progress } from '../tailgrids/core/progress'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getCourseDetail, getMainCourses, type Course, type CourseChapter } from '../../services/courseService'
-import { cn } from '../../lib/cn'
+import { getCourseDetail, getMainCourses, type Course } from '../../services/courseService'
+import CourseContentPanel from '../management/crud/course-content-panel'
 
 const formatDate = (value?: string) => (value ? new Intl.DateTimeFormat('vi-VN').format(new Date(value)) : '')
 
@@ -51,13 +49,10 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
     if (!response.data) throw new Error('Không thể tải nội dung khóa học.')
     return response.data
   }, [course.id])
-  const [activeChapter, setActiveChapter] = useState('')
-  const [editingLesson, setEditingLesson] = useState<CourseChapter | null>(null)
-
-  const chapters = (data?.phases ?? []).flatMap((phase) => phase.sections.flatMap((section) => section.chapters))
+  const phases = data?.phases ?? []
+  const sections = phases.flatMap((phase) => phase.sections.map((section) => ({ phase, section })))
   const title = data?.title ?? course.name ?? course.title
 
-  if (editingLesson) return <TeacherLessonEditor course={{ name: title }} lesson={editingLesson} onBack={() => setEditingLesson(null)} />
   return (
     <section className="flex flex-col gap-5">
       <div>
@@ -68,60 +63,32 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
       </div>
       <TeacherPageHeader
         title={title}
-        description={data ? `${data.chapterCount ?? chapters.length} chương · ${data.lessonCount ?? 0} bài học` : undefined}
+        description={data ? `${phases.length} giai đoạn · ${sections.length} phần nội dung` : undefined}
       />
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
-        <Panel title="Nội dung khóa học">
+        <div className="flex min-w-0 flex-col gap-5">
           <ScheduleResourceState
             status={status}
             errorMessage={errorMessage}
             onRetry={reload}
-            empty={status === 'ready' && chapters.length === 0}
-            emptyMessage="Khóa học chưa có nội dung."
+            empty={status === 'ready' && sections.length === 0}
+            emptyMessage="Khóa học chưa có phần nội dung. Nhân sự cần gắn SECTION vào khóa."
           >
-            <div className="flex flex-col gap-3">
-              {chapters.map((chapter) => (
-                <article
-                  key={chapter.id}
-                  className={cn(
-                    'rounded-lg border p-4',
-                    activeChapter === chapter.id ? 'border-brand-500 bg-background-gray-secondary' : 'border-card-border',
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-badge-blue-background text-badge-blue-icon-color">
-                      <Layers3 size={18} />
-                    </span>
-                    <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setActiveChapter(chapter.id)}>
-                      <h3 className="truncate text-sm font-medium text-text-primary">{chapter.title}</h3>
-                      <p className="text-xs text-text-tertiary">{chapter.lessons.length} bài</p>
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={`Mở ${chapter.title}`}
-                      className="rounded-md p-1.5 text-icon-tertiary hover:text-text-primary"
-                      onClick={() => setEditingLesson(chapter)}
-                    >
-                      <ArrowRight size={17} />
-                    </button>
-                  </div>
-                  {activeChapter === chapter.id && (
-                    <Button
-                      type="button"
-                      appearance="outline"
-                      size="sm"
-                      className="mt-3"
-                      onClick={() => onOpenAssignments(course, chapter)}
-                    >
-                      <ClipboardList size={14} />
-                      Giao bài tập
-                    </Button>
-                  )}
-                </article>
-              ))}
-            </div>
+            {sections.map(({ phase, section }) => (
+              <CourseContentPanel
+                key={section.sectionCourseId}
+                courseId={section.sectionCourseId}
+                title={`${phase.name} · ${section.title}`}
+                chapterAction={(chapter) => (
+                  <Button size="sm" appearance="ghost" onClick={() => onOpenAssignments(course, chapter)}>
+                    <ClipboardList size={14} />
+                    Giao bài tập
+                  </Button>
+                )}
+              />
+            ))}
           </ScheduleResourceState>
-        </Panel>
+        </div>
 
         <aside className="flex flex-col gap-5">
           <Panel title="Thao tác nhanh">

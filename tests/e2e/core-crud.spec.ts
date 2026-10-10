@@ -251,3 +251,52 @@ test('manager has read-only category/course detail on a narrow viewport', async 
   )
   await page.screenshot({ path: testInfo.outputPath('manager-mobile.png'), fullPage: true })
 })
+
+test('SECTION content authoring creates and publishes a lesson with edit tokens', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/courses')
+  await page
+    .getByRole('row', { name: /SECTION Đại số/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  await expect(page.getByRole('heading', { name: 'Chương và bài học', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Thêm chương', exact: true }).click()
+  const chapterDialog = page.getByRole('dialog', { name: 'Thêm chương', exact: true })
+  await chapterDialog.getByLabel('Tên chương', { exact: true }).fill('Chương 1')
+  await chapterDialog.getByRole('button', { name: 'Lưu chương', exact: true }).click()
+  await expect(chapterDialog).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Chương 1', exact: true })).toBeVisible()
+  expect(
+    state.requests.find(
+      (r) => r.method === 'POST' && r.path === `/api/v1/courses/${IDS.section}/chapters`
+    )!.body
+  ).toMatchObject({ title: 'Chương 1', description: null })
+
+  await page.getByRole('button', { name: 'Mở Chương 1', exact: true }).click()
+  await page.getByRole('button', { name: 'Thêm bài học', exact: true }).click()
+  const lessonDialog = page.getByRole('dialog', { name: 'Thêm bài học', exact: true })
+  await lessonDialog.getByLabel('Tên bài học', { exact: true }).fill('Bài 1')
+  await lessonDialog.getByLabel('Nội dung bài học').fill('Nội dung bài 1')
+  await lessonDialog.getByRole('button', { name: 'Lưu bài học', exact: true }).click()
+  await expect(lessonDialog).toBeHidden()
+  await expect(page.getByText('Bài 1', { exact: true })).toBeVisible()
+
+  const chapterId = state.chapters[0].id
+  expect(
+    state.requests.find(
+      (r) => r.method === 'POST' && r.path === `/api/v1/chapters/${chapterId}/lessons`
+    )!.body
+  ).toMatchObject({ title: 'Bài 1', contentType: 'TEXT', content: 'Nội dung bài 1' })
+
+  const lessonId = state.lessons[chapterId][0].id
+  await page.getByRole('button', { name: 'Xuất bản bài học Bài 1', exact: true }).click()
+  await expect.poll(() => state.lessons[chapterId][0].published).toBe(true)
+  expect(
+    state.requests.find(
+      (r) =>
+        r.method === 'PATCH' &&
+        r.path === `/api/v1/chapters/${chapterId}/lessons/${lessonId}/published`
+    )!.body
+  ).toMatchObject({ published: true, preview: false, expectedUpdatedAt: STAMP })
+})

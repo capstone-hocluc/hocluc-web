@@ -11,6 +11,7 @@ import { getAdminCourse, mutateCourse } from '../../../services/courseAdminServi
 import CoursePhasesPanel from './course-phases-panel'
 import CourseSectionsPanel from './course-sections-panel'
 import CourseInstructorsPanel from './course-instructors-panel'
+import CourseContentPanel from './course-content-panel'
 import { COURSE_STATUS_LABELS, type CourseMutation } from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
 
@@ -151,6 +152,9 @@ export default function CourseDetailScreen({
                   remove={remove}
                 />
               </>
+            )}
+            {course.courseType === 'SECTION' && (
+              <CourseContentPanel courseId={course.id} readOnly={readOnly} title="Chương và bài học" />
             )}
             <CourseInstructorsPanel
               course={course}

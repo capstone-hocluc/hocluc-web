@@ -17,6 +17,15 @@ const messages: Record<string, string> = {
     'Chuyển các SECTION ra khỏi giai đoạn trước khi xóa.',
   'This operation conflicts with referenced or concurrently changed data.':
     'Dữ liệu bị xung đột. Tải lại và kiểm tra các tham chiếu.',
+  'Chapter has lessons, quizzes or student progress. Unpublish it or remove unreferenced children first.':
+    'Chương còn bài học, quiz hoặc tiến độ học sinh. Hãy ẩn hoặc gỡ các mục con chưa tham chiếu trước.',
+  'Publish at least one lesson before publishing this chapter.':
+    'Cần ít nhất một bài học đã xuất bản trước khi xuất bản chương.',
+  'Lesson not found.': 'Không tìm thấy bài học.',
+  'Lesson has progress, quizzes, assignments, videos or enrollment references. Unpublish it instead.':
+    'Bài học còn tiến độ, quiz, bài tập, video hoặc ghi danh tham chiếu. Hãy ẩn thay vì xóa.',
+  'Lesson needs content or a video before publication. Unpublish its chapter before hiding the last published lesson.':
+    'Bài học cần nội dung hoặc video trước khi xuất bản. Ẩn chương trước khi ẩn bài học đã xuất bản cuối cùng.',
 }
 export function crudError(error: unknown): string {
   const message = getErrorMessage(error)

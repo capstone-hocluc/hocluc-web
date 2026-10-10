@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test'
 import type { Category } from '../../src/services/categoryService'
 import type { CourseAdmin } from '../../src/services/courseAdminService'
+import type { ChapterAdmin } from '../../src/services/chapterAdminService'
+import type { LessonAdmin } from '../../src/services/lessonAdminService'
 
 export const IDS = {
   main: '10000000-0000-0000-0000-000000000001',
@@ -86,6 +88,8 @@ export async function installCrudFixture(
       course(IDS.main, 'MAIN Toán', 'MAIN'),
       course(IDS.section, 'SECTION Đại số', 'SECTION'),
     ],
+    chapters: [] as ChapterAdmin[],
+    lessons: {} as Record<string, LessonAdmin[]>,
     requests: [] as CapturedRequest[],
     failNext: '' as '' | 'conflict' | 'network',
     sequence: 10,
@@ -286,6 +290,123 @@ export async function installCrudFixture(
           },
         ]
         return answer(current)
+      }
+    }
+    const nextId = (prefix: string) =>
+      `${prefix}-0000-0000-0000-${String(++state.sequence).padStart(12, '0')}`
+    if (path.startsWith('/api/v1/courses/') && path.includes('/chapters')) {
+      const parts = path.split('/').slice(4)
+      const courseId = parts[0]
+      const rows = () => state.chapters.filter((chapter) => chapter.courseId === courseId)
+      if (parts[1] === 'chapters' && parts.length === 2) {
+        if (method === 'GET') return answer(rows())
+        if (method === 'POST') {
+          const chapter: ChapterAdmin = {
+            id: nextId('90000000'),
+            courseId,
+            title: String(body.title),
+            description: (body.description as string | null) ?? null,
+            sequence: rows().length + 1,
+            published: false,
+            updatedAt: STAMP,
+          }
+          state.chapters.push(chapter)
+          return answer(chapter)
+        }
+      }
+      if (parts[1] === 'chapters' && parts[2] === 'order' && method === 'PUT') {
+        ;(body.ids as string[]).forEach((id, index) => {
+          const chapter = state.chapters.find((item) => item.id === id)
+          if (chapter) chapter.sequence = index + 1
+        })
+        return answer(rows())
+      }
+      if (parts[1] === 'chapters') {
+        const chapter = state.chapters.find((item) => item.id === parts[2])
+        if (!chapter) return answer(null, 404, 'Chapter does not belong to this course.')
+        if (parts.length === 3) {
+          if (method === 'PUT') {
+            Object.assign(chapter, {
+              title: String(body.title),
+              description: (body.description as string | null) ?? null,
+            })
+            return answer(chapter)
+          }
+          if (method === 'DELETE') {
+            state.chapters = state.chapters.filter((item) => item !== chapter)
+            delete state.lessons[chapter.id]
+            return answer(null)
+          }
+        }
+        if (parts[3] === 'published' && method === 'PATCH') {
+          chapter.published = Boolean(body.published)
+          return answer(chapter)
+        }
+      }
+    }
+    if (path.startsWith('/api/v1/chapters/') && path.includes('/lessons')) {
+      const parts = path.split('/').slice(4)
+      const chapterId = parts[0]
+      const rows = () => state.lessons[chapterId] ?? []
+      if (parts[1] === 'lessons' && parts.length === 2) {
+        if (method === 'GET') return answer(rows())
+        if (method === 'POST') {
+          const lesson: LessonAdmin = {
+            id: nextId('91000000'),
+            chapterId,
+            title: String(body.title),
+            description: (body.description as string | null) ?? null,
+            contentType: (body.contentType as LessonAdmin['contentType']) ?? 'TEXT',
+            content: (body.content as string | null) ?? null,
+            videoUrl: (body.videoUrl as string | null) ?? null,
+            durationSeconds: (body.durationSeconds as number | null) ?? null,
+            sequence: rows().length + 1,
+            published: false,
+            preview: false,
+            instructorContent: (body.instructorContent as string | null) ?? null,
+            instructorNotes: (body.instructorNotes as string | null) ?? null,
+            updatedAt: STAMP,
+          }
+          state.lessons[chapterId] = [...rows(), lesson]
+          return answer(lesson)
+        }
+      }
+      if (parts[1] === 'lessons' && parts[2] === 'order' && method === 'PUT') {
+        const current = rows()
+        ;(body.ids as string[]).forEach((id, index) => {
+          const lesson = current.find((item) => item.id === id)
+          if (lesson) lesson.sequence = index + 1
+        })
+        state.lessons[chapterId] = current
+        return answer(current)
+      }
+      if (parts[1] === 'lessons') {
+        const current = rows()
+        const lesson = current.find((item) => item.id === parts[2])
+        if (!lesson) return answer(null, 404, 'Lesson not found.')
+        if (parts.length === 3) {
+          if (method === 'PUT') {
+            Object.assign(lesson, {
+              title: String(body.title),
+              description: (body.description as string | null) ?? null,
+              content: (body.content as string | null) ?? null,
+              videoUrl: (body.videoUrl as string | null) ?? null,
+              durationSeconds: (body.durationSeconds as number | null) ?? null,
+              instructorContent: (body.instructorContent as string | null) ?? null,
+              instructorNotes: (body.instructorNotes as string | null) ?? null,
+            })
+            return answer(lesson)
+          }
+          if (method === 'DELETE') {
+            state.lessons[chapterId] = current.filter((item) => item !== lesson)
+            return answer(null)
+          }
+        }
+        if (parts[3] === 'published' && method === 'PATCH') {
+          lesson.published = Boolean(body.published)
+          lesson.preview = Boolean(body.preview)
+          return answer(lesson)
+        }
       }
     }
     state.unmatchedRequests.push(`${method} ${request.url()}`)
