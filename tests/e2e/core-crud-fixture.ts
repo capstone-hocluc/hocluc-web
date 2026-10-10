@@ -34,6 +34,8 @@ const course = (id: string, title: string, courseType: 'MAIN' | 'SECTION'): Cour
   endDate: null,
   targetExam: null,
   examSessionDate: null,
+  accessMode: 'FIXED_END_DATE',
+  accessDays: null,
   publishedAt: null,
   updatedAt: STAMP,
   phases: [],

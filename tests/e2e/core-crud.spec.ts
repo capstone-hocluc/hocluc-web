@@ -99,6 +99,8 @@ test('SECTION metadata create works without MAIN calendar fields', async ({ page
   await dialog.getByText('Khóa có học phí', { exact: true }).click()
   await expect(dialog.getByRole('checkbox', { name: 'Khóa có học phí', exact: true })).toBeChecked()
   await dialog.getByLabel('Học phí (VND)', { exact: true }).fill('150000')
+  await selectOption(dialog, page, 'Hạn dùng khóa', 'N ngày kể từ khi mua')
+  await dialog.getByLabel('Số ngày truy cập').fill('120')
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true
@@ -117,6 +119,8 @@ test('SECTION metadata create works without MAIN calendar fields', async ({ page
     track: null,
     startDate: null,
     endDate: null,
+    accessMode: 'DAYS_FROM_PURCHASE',
+    accessDays: 120,
   })
 })
 

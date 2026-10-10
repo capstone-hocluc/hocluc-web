@@ -2,6 +2,7 @@ import { request } from '../lib/api'
 
 export type CourseType = 'MAIN' | 'SECTION'
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+export type AccessMode = 'FIXED_END_DATE' | 'DAYS_FROM_PURCHASE'
 export interface CourseAdmin {
   id: string
   courseType: CourseType
@@ -21,6 +22,8 @@ export interface CourseAdmin {
   endDate: string | null
   targetExam: string | null
   examSessionDate: string | null
+  accessMode: AccessMode | null
+  accessDays: number | null
   publishedAt: string | null
   updatedAt: string
   phases: CourseAdminPhase[]
@@ -81,6 +84,8 @@ export type SaveCourseRequest = Pick<
   | 'endDate'
   | 'targetExam'
   | 'examSessionDate'
+  | 'accessMode'
+  | 'accessDays'
 > & { slug?: string; expectedUpdatedAt?: string }
 
 const path = (id?: string) => `/api/v1/admin/courses${id ? `/${encodeURIComponent(id)}` : ''}`

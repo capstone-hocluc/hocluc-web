@@ -7,6 +7,7 @@ import Notice from '../../console/notice'
 import { Checkbox } from '../../tailgrids/core/checkbox'
 import {
   saveAdminCourse,
+  type AccessMode,
   type CourseAdmin,
   type CourseType,
 } from '../../../services/courseAdminService'
@@ -27,6 +28,7 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
   const [paid, setPaid] = useState(course?.paid ?? false)
   const [track, setTrack] = useState(course?.track ?? 'NONE')
   const [targetExam, setTargetExam] = useState(course?.targetExam ?? 'NONE')
+  const [accessMode, setAccessMode] = useState<AccessMode>(course?.accessMode ?? 'FIXED_END_DATE')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
@@ -56,6 +58,8 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
         targetExam: targetExam === 'NONE' ? null : targetExam,
         examSessionDate:
           courseType === 'MAIN' ? text('examSessionDate') : (course?.examSessionDate ?? null),
+        accessMode,
+        accessDays: accessMode === 'DAYS_FROM_PURCHASE' ? Number(data.get('accessDays')) : null,
         expectedUpdatedAt: course?.updatedAt,
       })
       onSaved()
@@ -254,6 +258,41 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
             </Field>
           </div>
         )}
+        <div className="flex flex-col gap-3 border-t border-card-border pt-4">
+          <Field label="Hạn dùng khóa">
+            <SelectField
+              ariaLabel="Hạn dùng khóa học"
+              value={accessMode}
+              onChange={(value) => setAccessMode(value as AccessMode)}
+              disabled={busy}
+              options={[
+                { id: 'FIXED_END_DATE', label: 'Theo ngày kết thúc khóa' },
+                { id: 'DAYS_FROM_PURCHASE', label: 'N ngày kể từ khi mua' },
+              ]}
+            />
+          </Field>
+          {accessMode === 'DAYS_FROM_PURCHASE' ? (
+            <Field label="Số ngày truy cập" hint="Tính từ lúc thanh toán thành công hoặc ghi danh tay.">
+              <input
+                name="accessDays"
+                type="number"
+                min={1}
+                max={3650}
+                step={1}
+                required
+                defaultValue={course?.accessDays ?? 90}
+                className={fieldControlClass}
+                aria-invalid={!!fields.accessDays}
+              />
+            </Field>
+          ) : (
+            <p className="text-xs text-text-tertiary">
+              {courseType === 'MAIN'
+                ? 'Quyền truy cập kết thúc vào cuối ngày kết thúc của khóa.'
+                : 'SECTION không có ngày kết thúc — chọn “N ngày kể từ khi mua” nếu muốn giới hạn thời gian học.'}
+            </p>
+          )}
+        </div>
         {Object.entries(fields).map(([field, message]) => (
           <p key={field} role="alert" className="text-sm text-danger">
             {field}: {message}
