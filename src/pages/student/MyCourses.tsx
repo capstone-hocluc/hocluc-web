@@ -32,15 +32,26 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
   } = usePageResource(() => getMyCourses(), [], { forbidden: false, notFound: false })
   const enrollments = useMemo<MyCourseEnrollment[]>(() => response?.data || [], [response])
 
+  const isMain = tab === 'main'
+  // A SECTION bought on its own is a supplementary course; the entries that open a whole roadmap
+  // are the main ones.
+  const tabEnrollments = useMemo(
+    () =>
+      enrollments.filter((enrollment) =>
+        isMain
+          ? enrollment.course.courseType !== 'SECTION'
+          : enrollment.course.courseType === 'SECTION'
+      ),
+    [enrollments, isMain]
+  )
+
   const visibleEnrollments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    if (!normalizedQuery) return enrollments
-    return enrollments.filter((enrollment) =>
+    if (!normalizedQuery) return tabEnrollments
+    return tabEnrollments.filter((enrollment) =>
       enrollment.course.title.toLowerCase().includes(normalizedQuery)
     )
-  }, [enrollments, query])
-
-  const isMain = tab === 'main'
+  }, [tabEnrollments, query])
 
   return (
     <StudentPageContainer>
@@ -70,21 +81,14 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
           <h2 className="text-xl font-black text-text-heading">
             {isMain ? 'Khóa học chính' : 'Khóa học bổ trợ'}
           </h2>
-          {isMain && status === 'ready' && (
+          {status === 'ready' && (
             <span className="text-[13px] font-extrabold text-text-secondary">
               {visibleEnrollments.length} khóa học
             </span>
           )}
         </div>
 
-        {!isMain && (
-          <MascotState
-            title="Khóa học bổ trợ sắp ra mắt"
-            message="Các khóa học bổ trợ sẽ sớm có mặt tại đây."
-          />
-        )}
-
-        {isMain && status === 'loading' && (
+        {status === 'loading' && (
           <div className={courseGrid}>
             {Array.from({ length: 3 }).map((_, index) => (
               <Skeleton key={index} className="h-80 rounded-[18px]" />
@@ -92,7 +96,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
           </div>
         )}
 
-        {isMain && status === 'error' && (
+        {status === 'error' && (
           <MascotState
             title="Không thể tải khóa học của bạn"
             message={errorMessage}
@@ -101,26 +105,27 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
           />
         )}
 
-        {isMain && status === 'ready' && enrollments.length === 0 && (
+        {status === 'ready' && tabEnrollments.length === 0 && (
           <MascotState
-            title="Bạn chưa có khóa học nào"
-            message="Khám phá các khóa học phù hợp để bắt đầu hành trình học tập của bạn."
-            actionLabel="Khám phá khóa học"
-            onAction={onBrowseCourses}
+            title={isMain ? 'Bạn chưa có khóa học nào' : 'Bạn chưa có khóa học bổ trợ nào'}
+            message={
+              isMain
+                ? 'Khám phá các khóa học phù hợp để bắt đầu hành trình học tập của bạn.'
+                : 'Khóa học lẻ bạn đã mua sẽ xuất hiện ở đây để học riêng phần đó.'
+            }
+            actionLabel={isMain ? 'Khám phá khóa học' : undefined}
+            onAction={isMain ? onBrowseCourses : undefined}
           />
         )}
 
-        {isMain &&
-          status === 'ready' &&
-          enrollments.length > 0 &&
-          visibleEnrollments.length === 0 && (
-            <MascotState
-              title="Không tìm thấy khóa học"
-              message="Thử thay đổi từ khóa tìm kiếm của bạn."
-            />
-          )}
+        {status === 'ready' && tabEnrollments.length > 0 && visibleEnrollments.length === 0 && (
+          <MascotState
+            title="Không tìm thấy khóa học"
+            message="Thử thay đổi từ khóa tìm kiếm của bạn."
+          />
+        )}
 
-        {isMain && status === 'ready' && visibleEnrollments.length > 0 && (
+        {status === 'ready' && visibleEnrollments.length > 0 && (
           <div className={courseGrid}>
             {visibleEnrollments.map((enrollment) => (
               <MyCourseCard

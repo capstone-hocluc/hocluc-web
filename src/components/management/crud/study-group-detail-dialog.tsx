@@ -3,12 +3,13 @@ import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
 import Status from '../../console/status'
 import SelectField from '../../console/select-field'
+import SearchSelectField from '../../console/search-select-field'
 import Notice from '../../console/notice'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import { Checkbox } from '../../tailgrids/core/checkbox'
 import { useScheduleResource, type ScheduleResourceStatus } from '../../../hooks/useScheduleResource'
 import { getCategories, type Category } from '../../../services/categoryService'
-import { getUsers, type UserSummary } from '../../../services/userService'
+import { getUsers } from '../../../services/userService'
 import {
   addGroupMember,
   assignGroupMentor,
@@ -43,6 +44,8 @@ interface Props {
 const nameOf = (user: { displayName?: string; firstName?: string; lastName?: string; email: string }) =>
   user.displayName || `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.email
 
+const PICKER_PAGE_SIZE = 20
+
 export default function StudyGroupDetailDialog({ courseId, groupId, readOnly, onClose, onChanged }: Props) {
   const [version, setVersion] = useState(0)
   const [mentorId, setMentorId] = useState('NONE')
@@ -56,12 +59,6 @@ export default function StudyGroupDetailDialog({ courseId, groupId, readOnly, on
     getAdminStudyGroup(courseId, groupId)
   )
   const categories = useScheduleResource('study-group-categories', getCategories)
-  const mentors = useScheduleResource(readOnly ? null : 'study-group-mentors', () =>
-    getUsers({ role: 'MENTOR', status: 'ACTIVE', size: 100 })
-  )
-  const students = useScheduleResource(readOnly ? null : 'study-group-students', () =>
-    getUsers({ role: 'STUDENT', status: 'ACTIVE', size: 100 })
-  )
   // The strengths panel follows the first mentor until the operator picks another one.
   const activeStrengthMentor = strengthMentorId || detail.data?.mentors[0]?.id || ''
   const strengths = useScheduleResource(
@@ -91,12 +88,6 @@ export default function StudyGroupDetailDialog({ courseId, groupId, readOnly, on
     (detail.data?.members ?? [])
       .filter((member) => member.status === 'ACTIVE')
       .map((member) => member.studentId)
-  )
-  const mentorOptions = (mentors.data?.content ?? []).filter(
-    (mentor) => !assignedMentorIds.has(mentor.id)
-  )
-  const studentOptions = (students.data?.content ?? []).filter(
-    (student) => !activeMemberIds.has(student.id)
   )
 
   return (
@@ -135,11 +126,9 @@ export default function StudyGroupDetailDialog({ courseId, groupId, readOnly, on
               readOnly={readOnly}
               busy={busy}
               mentorId={mentorId}
-              mentorOptions={mentorOptions}
-              mentorsReady={mentors.status === 'ready'}
+              assignedMentorIds={assignedMentorIds}
               studentId={studentId}
-              studentOptions={studentOptions}
-              studentsReady={students.status === 'ready'}
+              activeMemberIds={activeMemberIds}
               onMentorId={setMentorId}
               onStudentId={setStudentId}
               onAssignMentor={() =>
@@ -186,11 +175,11 @@ interface GroupDetailProps {
   readOnly: boolean
   busy: boolean
   mentorId: string
-  mentorOptions: UserSummary[]
-  mentorsReady: boolean
+  /** Mentors already on the group, kept out of the picker's results. */
+  assignedMentorIds: Set<string>
   studentId: string
-  studentOptions: UserSummary[]
-  studentsReady: boolean
+  /** Students already active in the group, kept out of the picker's results. */
+  activeMemberIds: Set<string>
   onMentorId: (value: string) => void
   onStudentId: (value: string) => void
   onAssignMentor: () => void
@@ -210,11 +199,9 @@ function GroupDetail({
   readOnly,
   busy,
   mentorId,
-  mentorOptions,
-  mentorsReady,
+  assignedMentorIds,
   studentId,
-  studentOptions,
-  studentsReady,
+  activeMemberIds,
   onMentorId,
   onStudentId,
   onAssignMentor,
@@ -245,15 +232,25 @@ function GroupDetail({
         <h3 className="text-sm font-medium text-text-primary">Mentor</h3>
         {!readOnly && (
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-            <SelectField
+            <SearchSelectField
               ariaLabel="Mentor cần gán"
-              value={mentorId}
+              value={mentorId === 'NONE' ? '' : mentorId}
               onChange={onMentorId}
-              disabled={busy || !mentorsReady}
-              options={[
-                { id: 'NONE', label: 'Chọn mentor' },
-                ...mentorOptions.map((mentor) => ({ id: mentor.id, label: nameOf(mentor) })),
-              ]}
+              disabled={busy}
+              placeholder="Chọn mentor"
+              searchPlaceholder="Tìm mentor theo tên hoặc email"
+              className="min-w-0 flex-1"
+              triggerClassName="w-full"
+              loadPage={(term, page) =>
+                getUsers({ role: 'MENTOR', status: 'ACTIVE', query: term, page, size: PICKER_PAGE_SIZE }).then(
+                  (result) => ({
+                    options: result.content
+                      .filter((mentor) => !assignedMentorIds.has(mentor.id))
+                      .map((mentor) => ({ id: mentor.id, label: nameOf(mentor) })),
+                    last: result.last,
+                  })
+                )
+              }
             />
             <Button disabled={busy || mentorId === 'NONE'} onClick={onAssignMentor}>
               Gán mentor
@@ -310,15 +307,25 @@ function GroupDetail({
         </h3>
         {!readOnly && (
           <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-            <SelectField
+            <SearchSelectField
               ariaLabel="Học viên cần thêm"
-              value={studentId}
+              value={studentId === 'NONE' ? '' : studentId}
               onChange={onStudentId}
-              disabled={busy || !studentsReady}
-              options={[
-                { id: 'NONE', label: 'Chọn học viên' },
-                ...studentOptions.map((student) => ({ id: student.id, label: nameOf(student) })),
-              ]}
+              disabled={busy}
+              placeholder="Chọn học viên"
+              searchPlaceholder="Tìm học viên theo tên hoặc email"
+              className="min-w-0 flex-1"
+              triggerClassName="w-full"
+              loadPage={(term, page) =>
+                getUsers({ role: 'STUDENT', status: 'ACTIVE', query: term, page, size: PICKER_PAGE_SIZE }).then(
+                  (result) => ({
+                    options: result.content
+                      .filter((student) => !activeMemberIds.has(student.id))
+                      .map((student) => ({ id: student.id, label: nameOf(student) })),
+                    last: result.last,
+                  })
+                )
+              }
             />
             <Button disabled={busy || studentId === 'NONE'} onClick={onAddMember}>
               Thêm học viên

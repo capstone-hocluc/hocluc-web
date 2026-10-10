@@ -32,6 +32,9 @@ const TABS: { key: StudyTab; label: string }[] = [
   { key: 'plan', label: 'Lộ trình học' },
 ]
 
+// A SECTION bought on its own has no roadmap, live-class series or mock exam of its own.
+const MAIN_ONLY_TABS: StudyTab[] = ['exams', 'live', 'plan']
+
 function isStudyTab(value: string | null): value is StudyTab {
   return TABS.some((tab) => tab.key === value)
 }
@@ -56,6 +59,11 @@ function CourseStudyPage({
     const tab = new URLSearchParams(window.location.search).get('tab')
     return isStudyTab(tab) ? tab : 'content'
   })
+
+  // A course bought as a single SECTION has no roadmap, live-class series or mock exam tabs.
+  const isSection = study?.courseType === 'SECTION'
+  const visibleTabs = isSection ? TABS.filter((tab) => !MAIN_ONLY_TABS.includes(tab.key)) : TABS
+  const effectiveTab = visibleTabs.some((tab) => tab.key === activeTab) ? activeTab : 'content'
 
   const handleTabChange = (value: string) => {
     if (!isStudyTab(value)) return
@@ -104,14 +112,14 @@ function CourseStudyPage({
 
       {status === 'ready' && study && (
         <Tabs
-          value={activeTab}
+          value={effectiveTab}
           onValueChange={handleTabChange}
           className="flex flex-col gap-5"
         >
           <CourseOverview study={study} onBack={onBackToMyCourses} onOpenLesson={onOpenLesson} />
 
           <TabsList>
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <TabsTrigger key={tab.key} value={tab.key}>
                 {tab.label}
               </TabsTrigger>
@@ -124,14 +132,15 @@ function CourseStudyPage({
                 <NextLiveClassCard liveClass={study.nextLiveClass} />
               </div>
             )}
-            <StudyGroupCard
-              key={`${courseId}-${study.activeStudyGroupId ?? 'none'}`}
-              courseId={courseId}
-              initialGroupId={study.activeStudyGroupId}
-              onCompleteProfile={onEditProfile}
-              onRefreshStudy={reload}
-            />
-            <StudyCurriculum
+            {!isSection && (
+              <StudyGroupCard
+                key={`${courseId}-${study.activeStudyGroupId ?? 'none'}`}
+                courseId={courseId}
+                initialGroupId={study.activeStudyGroupId}
+                onCompleteProfile={onEditProfile}
+                onRefreshStudy={reload}
+              />
+            )}            <StudyCurriculum
               phases={study.phases}
               currentLessonId={study.continueLessonId}
               onOpenLesson={onOpenLesson}
