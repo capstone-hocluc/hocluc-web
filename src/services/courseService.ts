@@ -5,6 +5,8 @@ export interface Course {
   title: string
   description?: string
   track?: string
+  /** MAIN for a whole roadmap, SECTION for one part of it bought on its own. */
+  courseType?: string
   startDate?: string
   endDate?: string
   examSessionDate?: string
@@ -232,6 +234,8 @@ export interface CourseStudyLiveClass {
 export interface CourseStudy {
   courseId: string
   title: string
+  /** MAIN for a roadmap study page, SECTION for one part bought on its own. */
+  courseType?: string | null
   track?: string | null
   startDate?: string | null
   endDate?: string | null
