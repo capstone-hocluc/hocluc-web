@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
-import SelectField from '../../console/select-field'
+import SearchSelectField from '../../console/search-select-field'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
@@ -19,8 +19,10 @@ import { LEVEL_LABELS } from './study-group-labels'
 import StudyGroupEditorDialog from './study-group-editor-dialog'
 import StudyGroupDetailDialog from './study-group-detail-dialog'
 
+const PICKER_PAGE_SIZE = 20
+
 export default function StudyGroupManagement({ readOnly = false }: { readOnly?: boolean }) {
-  const [courseChoice, setCourseChoice] = useState('NONE')
+  const [courseChoice, setCourseChoice] = useState('')
   const [editor, setEditor] = useState<{ group: StudyGroupAdmin | null } | null>(null)
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<StudyGroupAdmin | null>(null)
@@ -28,11 +30,13 @@ export default function StudyGroupManagement({ readOnly = false }: { readOnly?: 
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
-  const courses = useScheduleResource('study-group-courses', () =>
-    getAdminCourses({ type: 'MAIN', size: 100 })
+  // Only MAIN courses host groups, so the picker searches that type. The console still opens on the
+  // first MAIN course while nothing has been chosen, so the list is useful straight away.
+  const firstCourse = useScheduleResource('study-group-first-course', () =>
+    getAdminCourses({ type: 'MAIN', size: 1 })
   )
-  // Only MAIN courses host groups, so the picker defaults to the first one offered.
-  const courseId = courseChoice === 'NONE' ? courses.data?.content[0]?.id ?? '' : courseChoice
+  const courseId = courseChoice || firstCourse.data?.content[0]?.id || ''
+  const defaultCourseTitle = courseChoice ? '' : firstCourse.data?.content[0]?.title ?? ''
   const groups = useScheduleResource(courseId ? `study-groups:${courseId}` : null, () =>
     getAdminStudyGroups(courseId)
   )
@@ -148,15 +152,24 @@ export default function StudyGroupManagement({ readOnly = false }: { readOnly?: 
     <section className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <SelectField
+          <SearchSelectField
             ariaLabel="Khóa học của nhóm"
-            value={courseId || 'NONE'}
+            value={courseId}
             onChange={setCourseChoice}
-            disabled={courses.status !== 'ready'}
-            options={[
-              ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
-              ...(courseId ? [] : [{ id: 'NONE', label: 'Chưa có khóa trọn bộ' }]),
-            ]}
+            disabled={busy}
+            placeholder="Chọn khóa trọn bộ"
+            selectedLabel={defaultCourseTitle}
+            searchPlaceholder="Tìm khóa trọn bộ theo tên"
+            triggerClassName="w-full"
+            className="min-w-56"
+            loadPage={(term, page) =>
+              getAdminCourses({ type: 'MAIN', query: term, page, size: PICKER_PAGE_SIZE }).then(
+                (result) => ({
+                  options: result.content.map((course) => ({ id: course.id, label: course.title })),
+                  last: result.last,
+                })
+              )
+            }
           />
           <Button appearance="outline" onClick={groups.reload} disabled={busy}>
             <RefreshCw size={16} />
@@ -182,15 +195,8 @@ export default function StudyGroupManagement({ readOnly = false }: { readOnly?: 
         </Notice>
       )}
 
-      {courses.status === 'error' ? (
-        <Notice tone="warning">
-          Không tải được danh sách khóa.{' '}
-          <Button appearance="outline" size="sm" onClick={courses.reload}>
-            Thử lại
-          </Button>
-        </Notice>
-      ) : courses.status === 'ready' && !courseId ? (
-        <Notice tone="warning">Chưa có khóa trọn bộ (MAIN) nào để quản lý nhóm.</Notice>
+      {!courseId ? (
+        <Notice tone="warning">Chọn khóa trọn bộ (MAIN) để quản lý nhóm.</Notice>
       ) : (
         <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
           <ScheduleResourceState

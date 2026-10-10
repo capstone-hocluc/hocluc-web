@@ -2,13 +2,17 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import Notice from '../../console/notice'
-import SelectField from '../../console/select-field'
-import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import SearchSelectField from '../../console/search-select-field'
 import { getAdminCourses } from '../../../services/courseAdminService'
 import { getUsers } from '../../../services/userService'
 import { createManualEnrollment } from '../../../services/enrollmentAdminService'
 import { crudError } from './crud-errors'
 import { COURSE_TYPE_LABELS } from './enrollment-labels'
+
+const PAGE_SIZE = 20
+
+const studentLabel = (student: { displayName?: string; firstName?: string; lastName?: string }) =>
+  student.displayName || `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim()
 
 // A picker needs a visible label and a hint, but a <label> wrapping the select button would
 // hijack clicks, so the label sits beside the control and the control keeps its aria-label.
@@ -34,13 +38,6 @@ export default function ManualEnrollmentDialog({
   const [courseId, setCourseId] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const students = useScheduleResource('enroll-students', () =>
-    getUsers({ role: 'STUDENT', size: 100, sort: 'displayName,asc' })
-  )
-  const courses = useScheduleResource('enroll-courses', () => getAdminCourses({ size: 100 }))
-
-  const ready = students.status === 'ready' && courses.status === 'ready'
-  const loadFailed = students.status === 'error' || courses.status === 'error'
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -73,7 +70,7 @@ export default function ManualEnrollmentDialog({
           <Button appearance="outline" onClick={onClose} disabled={busy}>
             Hủy
           </Button>
-          <Button type="submit" disabled={busy || !ready}>
+          <Button type="submit" disabled={busy}>
             {busy ? 'Đang ghi danh...' : 'Ghi danh'}
           </Button>
         </>
@@ -81,49 +78,48 @@ export default function ManualEnrollmentDialog({
       onSubmit={submit}
     >
       <div className="flex flex-col gap-4">
-        <Picker label="Học viên" hint="Chỉ tài khoản có vai trò đang hoạt động là STUDENT.">
-          <SelectField
+        <Picker label="Học viên" hint="Tìm theo tên hoặc email; chỉ tài khoản có vai trò đang hoạt động là STUDENT.">
+          <SearchSelectField
             ariaLabel="Học viên"
             value={studentId}
             onChange={setStudentId}
-            disabled={busy || students.status !== 'ready'}
+            disabled={busy}
             placeholder="Chọn học viên"
+            searchPlaceholder="Tìm học viên theo tên hoặc email"
             triggerClassName="w-full"
-            options={(students.data?.content ?? []).map((student) => ({
-              id: student.id,
-              label: student.displayName || `${student.firstName} ${student.lastName}`.trim(),
-            }))}
+            loadPage={(term, page) =>
+              getUsers({ role: 'STUDENT', query: term, page, size: PAGE_SIZE, sort: 'displayName,asc' }).then(
+                (result) => ({
+                  options: result.content.map((student) => ({
+                    id: student.id,
+                    label: studentLabel(student),
+                  })),
+                  last: result.last,
+                })
+              )
+            }
           />
         </Picker>
         <Picker label="Khóa học" hint="Khóa trọn bộ mở cả lộ trình; khóa nhỏ chỉ mở chính nó.">
-          <SelectField
+          <SearchSelectField
             ariaLabel="Khóa học"
             value={courseId}
             onChange={setCourseId}
-            disabled={busy || courses.status !== 'ready'}
+            disabled={busy}
             placeholder="Chọn khóa học"
+            searchPlaceholder="Tìm khóa học theo tên"
             triggerClassName="w-full"
-            options={(courses.data?.content ?? []).map((course) => ({
-              id: course.id,
-              label: `${course.title} · ${COURSE_TYPE_LABELS[course.courseType]}`,
-            }))}
+            loadPage={(term, page) =>
+              getAdminCourses({ query: term, page, size: PAGE_SIZE }).then((result) => ({
+                options: result.content.map((course) => ({
+                  id: course.id,
+                  label: `${course.title} · ${COURSE_TYPE_LABELS[course.courseType]}`,
+                })),
+                last: result.last,
+              }))
+            }
           />
         </Picker>
-        {loadFailed && (
-          <Notice tone="warning">
-            Không tải được danh sách.{' '}
-            <Button
-              appearance="outline"
-              size="sm"
-              onClick={() => {
-                students.reload()
-                courses.reload()
-              }}
-            >
-              Thử lại
-            </Button>
-          </Notice>
-        )}
         {error && (
           <Notice tone="danger">
             <span role="alert">{error}</span>

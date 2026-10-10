@@ -46,7 +46,11 @@ export function canCancelOrder(status: OrderStatus): boolean {
   return status === 'PENDING' || status === 'EXPIRED' || status === 'FAILED'
 }
 
-/** Manual settlement covers the missing / late / mismatched cases; a paid or closed order is left alone. */
+/**
+ * Manual settlement rescues a transfer that arrived outside the normal flow - missing, late or
+ * mismatched - and the money is what makes it real, so an order staff already closed can still be
+ * settled. Only a PAID order is left alone, matching what the backend accepts.
+ */
 export function canConfirmOrder(status: OrderStatus): boolean {
-  return canCancelOrder(status)
+  return status !== 'PAID'
 }
