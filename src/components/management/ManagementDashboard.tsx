@@ -19,6 +19,8 @@ import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
 import CategoryManagement from './crud/category-management'
+import OrderManagement from './crud/order-management'
+import EnrollmentManagement from './crud/enrollment-management'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import PageHeading from '../console/page-heading'
@@ -32,9 +34,7 @@ import {
   MentorOverview,
   MentorSolutionQueue,
   MentorStudents,
-  StaffEnrollments,
   StaffGroups,
-  StaffOrders,
 } from './role-screens'
 import { QuestionReview } from './quiz-review-screens'
 
@@ -73,6 +73,10 @@ const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   enrollments: {
     title: 'Ghi danh',
     subtitle: 'Đăng ký học và học phí.',
+  },
+  orders: {
+    title: 'Đơn hàng',
+    subtitle: 'Thanh toán và đối soát.',
   },
   batches: {
     title: 'Lớp học',
@@ -113,6 +117,8 @@ const ADMIN_NAV_ITEMS = [
   ...NAV_ITEMS,
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
   { page: 'categories', label: 'Danh mục', icon: Layers3 },
+  { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
+  { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
   { page: 'blueprints', label: 'Blueprint đề thi', icon: FileText },
   { page: 'taxonomy', label: 'Phân loại kiến thức', icon: Layers3 },
   { page: 'audit-log', label: 'Nhật ký hoạt động', icon: ClipboardList },
@@ -141,6 +147,8 @@ const MANAGER_NAV_ITEMS = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
   { page: 'categories', label: 'Danh mục', icon: Layers3 },
+  { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
+  { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
   { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
 ]
 
@@ -152,8 +160,6 @@ const ROLE_SCREENS: Partial<Record<ManagementRole, Record<string, (props: { onNa
     'audit-log': () => <AdminAuditLog />,
   },
   STAFF: {
-    orders: () => <StaffOrders />,
-    enrollments: () => <StaffEnrollments />,
     groups: () => <StaffGroups />,
     'question-review': () => <QuestionReview />,
   },
@@ -243,6 +249,16 @@ function ManagementDashboard({
         <>
           <PageHeading title={meta.title} />
           <CategoryManagement readOnly={role === 'MANAGER'} />
+        </>
+      ) : effectivePage === 'orders' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} subtitle={meta.subtitle} />
+          <OrderManagement readOnly={role === 'MANAGER'} canConfirm={role === 'ADMINISTRATOR'} />
+        </>
+      ) : effectivePage === 'enrollments' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (
+        <>
+          <PageHeading title={meta.title} subtitle={meta.subtitle} />
+          <EnrollmentManagement readOnly={role === 'MANAGER'} />
         </>
       ) : effectivePage === 'users' && role === 'ADMINISTRATOR' ? (
         <>

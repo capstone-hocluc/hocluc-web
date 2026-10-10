@@ -3,6 +3,12 @@ import type { Category } from '../../src/services/categoryService'
 import type { CourseAdmin } from '../../src/services/courseAdminService'
 import type { ChapterAdmin } from '../../src/services/chapterAdminService'
 import type { LessonAdmin } from '../../src/services/lessonAdminService'
+import type {
+  OrderAdminDetail,
+  OrderPayment,
+  OrderStatus,
+} from '../../src/services/orderAdminService'
+import type { EnrollmentAdmin } from '../../src/services/enrollmentAdminService'
 
 export const IDS = {
   main: '10000000-0000-0000-0000-000000000001',
@@ -12,6 +18,10 @@ export const IDS = {
   phase1: '30000000-0000-0000-0000-000000000001',
   phase2: '30000000-0000-0000-0000-000000000002',
   teacher: '40000000-0000-0000-0000-000000000001',
+  student: '40000000-0000-0000-0000-000000000002',
+  orderPending: '70000000-0000-0000-0000-000000000001',
+  orderPaid: '70000000-0000-0000-0000-000000000002',
+  enrollment: '80000000-0000-0000-0000-000000000001',
 }
 // Tokens are opaque strings: preserve all six PostgreSQL fractional-second digits.
 export const STAMP = '2026-10-10T00:00:00.123456Z'
@@ -41,6 +51,68 @@ const course = (id: string, title: string, courseType: 'MAIN' | 'SECTION'): Cour
   phases: [],
   sections: [],
   instructors: [],
+})
+const orderDetail = (
+  id: string,
+  orderCode: string,
+  status: OrderStatus,
+  overrides: Partial<OrderAdminDetail> = {}
+): OrderAdminDetail => ({
+  id,
+  orderCode,
+  paymentCode: 'HLPAY0001',
+  status,
+  totalAmount: 1800000,
+  studentId: IDS.student,
+  studentEmail: 'student@example.invalid',
+  studentName: 'Học viên QA',
+  createdAt: STAMP,
+  expiresAt: '2026-10-11T00:00:00.123456Z',
+  paidAt: null,
+  paymentAttempts: 1,
+  items: [{ courseId: IDS.section, courseTitle: 'SECTION Đại số', unitPrice: 1800000 }],
+  payments: [],
+  confirmedByEmail: null,
+  confirmReason: null,
+  confirmedAt: null,
+  cancelledByEmail: null,
+  cancelledAt: null,
+  ...overrides,
+})
+const paymentRow = (overrides: Partial<OrderPayment> = {}): OrderPayment => ({
+  id: '90000000-0000-0000-0000-000000000001',
+  provider: 'SEPAY',
+  status: 'SUCCESS',
+  amount: 1800000,
+  transactionNo: 'TXN-1',
+  sepayTransactionId: 1,
+  bankCode: 'VCB',
+  payDate: '2026-10-10',
+  paidAt: STAMP,
+  manual: false,
+  confirmedByEmail: null,
+  confirmReason: null,
+  createdAt: STAMP,
+  ...overrides,
+})
+const enrollmentRow = (overrides: Partial<EnrollmentAdmin> = {}): EnrollmentAdmin => ({
+  id: IDS.enrollment,
+  studentId: IDS.student,
+  studentEmail: 'student@example.invalid',
+  studentName: 'Học viên QA',
+  courseId: IDS.section,
+  courseTitle: 'SECTION Đại số',
+  courseType: 'SECTION',
+  mainCourseId: null,
+  status: 'ACTIVE',
+  enrollmentType: 'PURCHASED',
+  enrolledAt: STAMP,
+  startedAt: null,
+  completedAt: null,
+  expiresAt: '2027-06-30T16:59:59.123456Z',
+  progressPercentage: 25,
+  updatedAt: STAMP,
+  ...overrides,
 })
 export interface CapturedRequest {
   path: string
@@ -92,6 +164,15 @@ export async function installCrudFixture(
     ],
     chapters: [] as ChapterAdmin[],
     lessons: {} as Record<string, LessonAdmin[]>,
+    orders: [
+      orderDetail(IDS.orderPending, 'HL20261010001', 'PENDING'),
+      orderDetail(IDS.orderPaid, 'HL20261010002', 'PAID', {
+        paymentCode: 'HLPAY0002',
+        paidAt: STAMP,
+        payments: [paymentRow()],
+      }),
+    ] as OrderAdminDetail[],
+    enrollments: [enrollmentRow()] as EnrollmentAdmin[],
     requests: [] as CapturedRequest[],
     failNext: '' as '' | 'conflict' | 'network',
     sequence: 10,
@@ -170,17 +251,29 @@ export async function installCrudFixture(
     if (path === '/api/v1/users')
       return answer({
         content: [
-          {
-            id: IDS.teacher,
-            role: 'TEACHER',
-            roles: ['TEACHER'],
-            status: 'ACTIVE',
-            firstName: 'Giáo viên',
-            lastName: 'QA',
-            displayName: 'Giáo viên QA',
-            email: 'teacher@example.invalid',
-            emailVerified: true,
-          },
+          url.searchParams.get('role') === 'STUDENT'
+            ? {
+                id: IDS.student,
+                role: 'STUDENT',
+                roles: ['STUDENT'],
+                status: 'ACTIVE',
+                firstName: 'Học viên',
+                lastName: 'QA',
+                displayName: 'Học viên QA',
+                email: 'student@example.invalid',
+                emailVerified: true,
+              }
+            : {
+                id: IDS.teacher,
+                role: 'TEACHER',
+                roles: ['TEACHER'],
+                status: 'ACTIVE',
+                firstName: 'Giáo viên',
+                lastName: 'QA',
+                displayName: 'Giáo viên QA',
+                email: 'teacher@example.invalid',
+                emailVerified: true,
+              },
         ],
         pageNumber: 0,
         pageSize: 20,
@@ -296,6 +389,123 @@ export async function installCrudFixture(
     }
     const nextId = (prefix: string) =>
       `${prefix}-0000-0000-0000-${String(++state.sequence).padStart(12, '0')}`
+    const pageOf = (content: unknown[]) => ({
+      content,
+      pageNumber: 0,
+      pageSize: 20,
+      totalElements: content.length,
+      totalPages: content.length ? 1 : 0,
+      last: true,
+    })
+    if (path === '/api/v1/admin/orders') {
+      const status = url.searchParams.get('status')
+      const courseId = url.searchParams.get('courseId')
+      const reference = (url.searchParams.get('reference') ?? '').toLowerCase()
+      const content = state.orders.filter(
+        (order) =>
+          (!status || order.status === status) &&
+          (!courseId || order.items.some((item) => item.courseId === courseId)) &&
+          (!reference ||
+            order.orderCode.toLowerCase().includes(reference) ||
+            (order.paymentCode ?? '').toLowerCase().includes(reference))
+      )
+      return answer(pageOf(content))
+    }
+    if (path.startsWith('/api/v1/admin/orders/')) {
+      const parts = path.split('/').slice(5)
+      const order = state.orders.find((item) => item.id === parts[0])
+      if (!order) return answer(null, 404, 'Order not found.')
+      if (parts.length === 1 && method === 'GET') return answer(order)
+      if (parts[1] === 'cancel' && method === 'POST') {
+        if (order.status === 'PAID' || order.status === 'CANCELLED')
+          return answer(null, 409, 'This order is no longer awaiting payment.')
+        order.status = 'CANCELLED'
+        order.cancelledByEmail = `${role.toLowerCase()}@example.invalid`
+        order.cancelledAt = STAMP
+        return answer(order)
+      }
+      if (parts[1] === 'confirm-payment' && method === 'POST') {
+        const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+        if (!reason)
+          return answer(null, 400, 'A reason is required when confirming a payment by hand.')
+        if (order.status === 'PAID') return answer(null, 409, 'This order has already been paid.')
+        const received =
+          typeof body.receivedAmount === 'number' ? body.receivedAmount : order.totalAmount
+        order.payments.push(
+          paymentRow({
+            id: nextId('90000000'),
+            provider: 'MANUAL',
+            amount: received,
+            manual: true,
+            confirmedByEmail: 'admin@example.invalid',
+            confirmReason: reason,
+            transactionNo: null,
+            sepayTransactionId: null,
+            bankCode: null,
+            payDate: null,
+          })
+        )
+        order.status = 'PAID'
+        order.paidAt = STAMP
+        order.confirmedByEmail = 'admin@example.invalid'
+        order.confirmReason = reason
+        order.confirmedAt = STAMP
+        return answer(order)
+      }
+    }
+    if (path === '/api/v1/admin/enrollments') {
+      if (method === 'GET') {
+        const studentId = url.searchParams.get('studentId')
+        const courseId = url.searchParams.get('courseId')
+        const status = url.searchParams.get('status')
+        const type = url.searchParams.get('type')
+        const content = state.enrollments.filter(
+          (row) =>
+            (!studentId || row.studentId === studentId) &&
+            (!courseId || row.courseId === courseId) &&
+            (!status || row.status === status) &&
+            (!type || row.enrollmentType === type)
+        )
+        return answer(pageOf(content))
+      }
+      const studentId = String(body.studentId)
+      const courseId = String(body.courseId)
+      const course = state.courses.find((item) => item.id === courseId)
+      if (!course) return answer(null, 404, 'Course not found.')
+      if (
+        state.enrollments.some(
+          (row) => row.studentId === studentId && row.courseId === courseId && row.status === 'ACTIVE'
+        )
+      )
+        return answer(null, 409, 'This student already has an active enrollment on the course.')
+      const created = enrollmentRow({
+        id: nextId('80000000'),
+        studentId,
+        courseId,
+        courseTitle: course.title,
+        courseType: course.courseType,
+        status: 'ACTIVE',
+        enrollmentType: 'ADMIN_ENROLLED',
+        progressPercentage: 0,
+      })
+      state.enrollments.unshift(created)
+      return answer(created)
+    }
+    if (path.startsWith('/api/v1/admin/enrollments/')) {
+      const parts = path.split('/').slice(5)
+      const row = state.enrollments.find((item) => item.id === parts[0])
+      if (!row) return answer(null, 404, 'Enrollment not found.')
+      if (parts[1] === 'status' && method === 'PATCH') {
+        row.status = body.status as EnrollmentAdmin['status']
+        row.updatedAt = STAMP
+        return answer(row)
+      }
+      if (parts[1] === 'expiry' && method === 'PATCH') {
+        row.expiresAt = (body.expiresAt as string | null) ?? null
+        row.updatedAt = STAMP
+        return answer(row)
+      }
+    }
     if (path.startsWith('/api/v1/courses/') && path.includes('/chapters')) {
       const parts = path.split('/').slice(4)
       const courseId = parts[0]

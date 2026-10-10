@@ -26,6 +26,18 @@ const messages: Record<string, string> = {
     'Bài học còn tiến độ, quiz, bài tập, video hoặc ghi danh tham chiếu. Hãy ẩn thay vì xóa.',
   'Lesson needs content or a video before publication. Unpublish its chapter before hiding the last published lesson.':
     'Bài học cần nội dung hoặc video trước khi xuất bản. Ẩn chương trước khi ẩn bài học đã xuất bản cuối cùng.',
+  'Order not found.': 'Không tìm thấy đơn hàng.',
+  'This order is no longer awaiting payment.': 'Đơn không còn ở trạng thái chờ thanh toán.',
+  'This order has already been paid.': 'Đơn này đã được thanh toán.',
+  'A reason is required when confirming a payment by hand.':
+    'Cần nhập lý do khi xác nhận thanh toán thủ công.',
+  'Enrollment not found.': 'Không tìm thấy ghi danh.',
+  'This student already has an active enrollment on the course.':
+    'Học viên đã có ghi danh đang hoạt động cho khóa này.',
+  'Unsupported enrollment status change.': 'Không thể đổi sang trạng thái ghi danh này.',
+  'Course not found.': 'Không tìm thấy khóa học.',
+  'User not found.': 'Không tìm thấy người dùng.',
+  'Management request is invalid.': 'Yêu cầu không hợp lệ. Kiểm tra lại thông tin đã nhập.',
 }
 export function crudError(error: unknown): string {
   const message = getErrorMessage(error)

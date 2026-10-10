@@ -6,9 +6,7 @@ import {
   GraduationCap,
   ListChecks,
   MoreHorizontal,
-  ShoppingCart,
   Users,
-  Wallet,
 } from '../console/icons'
 import ListCard from '../console/list-card'
 import Page from './screen-page'
@@ -21,18 +19,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   AUDIT_LOG,
   BLUEPRINTS,
-  ENROLLMENTS,
   GROUPS,
   MENTOR_STUDENTS,
-  ORDERS,
   SOLUTION_QUEUE,
   TAXONOMY,
   type ReviewStatus,
 } from '../../data/console-mock'
 
 // Màn hình theo vai trò đang chạy bằng dữ liệu mẫu (src/data/console-mock.ts).
-
-const money = (value: number) => new Intl.NumberFormat('vi-VN').format(value) + ' đ'
 
 const REVIEW_LABELS: Record<ReviewStatus, string> = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối' }
 const REVIEW_TONES: Record<ReviewStatus, StatusTone> = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
@@ -61,8 +55,6 @@ const progressColumn = <T extends { progress: number }>(header: string): ColumnD
 type Blueprint = (typeof BLUEPRINTS)[number]
 type Domain = (typeof TAXONOMY)[number]
 type AuditEntry = (typeof AUDIT_LOG)[number]
-type Order = (typeof ORDERS)[number]
-type Enrollment = (typeof ENROLLMENTS)[number]
 type Group = (typeof GROUPS)[number]
 type MentorStudent = (typeof MENTOR_STUDENTS)[number]
 type SolutionItem = (typeof SOLUTION_QUEUE)[number]
@@ -145,66 +137,6 @@ export function AdminAuditLog() {
 }
 
 /* ---------- Staff ---------- */
-
-export function StaffOrders() {
-  const columns = useMemo<ColumnDef<Order>[]>(
-    () => [
-      text<Order>('id', 'Mã đơn', 'font-medium text-text-primary'),
-      text<Order>('student', 'Học viên'),
-      text<Order>('course', 'Khóa học'),
-      { id: 'amount', header: 'Số tiền', accessorKey: 'amount', cell: ({ row }) => <span className="whitespace-nowrap">{money(row.original.amount)}</span> },
-      statusColumn<Order>(),
-      text<Order>('createdAt', 'Ngày tạo'),
-    ],
-    []
-  )
-  const paid = ORDERS.filter((order) => order.status === 'Đã thanh toán')
-  return (
-    <Page
-      title="Đơn hàng"
-      stats={[
-        { label: 'Tổng đơn', value: ORDERS.length, icon: ShoppingCart },
-        { label: 'Đã thanh toán', value: paid.length, icon: CheckCircle2, tone: 'success' },
-        { label: 'Chờ thanh toán', value: ORDERS.filter((order) => order.status === 'Chờ thanh toán').length, icon: Clock3, tone: 'warning' },
-        { label: 'Doanh thu', value: money(paid.reduce((sum, order) => sum + order.amount, 0)), icon: Wallet, tone: 'success' },
-      ]}
-    >
-      <ListCard
-        data={ORDERS}
-        columns={columns}
-        getRowKey={(row) => row.id}
-        searchPlaceholder="Tìm mã đơn, học viên..."
-        searchText={(row) => `${row.id} ${row.student} ${row.course}`}
-        filter={{ ariaLabel: 'Lọc theo trạng thái', allLabel: 'Tất cả trạng thái', options: ['Đã thanh toán', 'Chờ thanh toán', 'Đã hủy'], get: (row) => row.status }}
-      />
-    </Page>
-  )
-}
-
-export function StaffEnrollments() {
-  const columns = useMemo<ColumnDef<Enrollment>[]>(
-    () => [
-      text<Enrollment>('student', 'Học viên', 'font-medium text-text-primary'),
-      text<Enrollment>('course', 'Khóa học'),
-      text<Enrollment>('source', 'Nguồn'),
-      text<Enrollment>('expiresAt', 'Hạn dùng'),
-      statusColumn<Enrollment>(),
-    ],
-    []
-  )
-  return (
-    <Page title="Ghi danh">
-      <ListCard
-        data={ENROLLMENTS}
-        columns={columns}
-        getRowKey={(row) => row.id}
-        searchPlaceholder="Tìm học viên, khóa học..."
-        searchText={(row) => `${row.student} ${row.course}`}
-        filter={{ ariaLabel: 'Lọc theo nguồn', allLabel: 'Tất cả nguồn', options: ['Mua online', 'Thủ công'], get: (row) => row.source }}
-      />
-    </Page>
-  )
-}
 
 export function StaffGroups() {
   const columns = useMemo<ColumnDef<Group>[]>(

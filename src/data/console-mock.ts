@@ -28,23 +28,6 @@ export const AUDIT_LOG = [
   { id: 'lg-06', time: '08/10/2026 14:48', actor: 'Staff User', role: 'Nhân viên', action: 'Ghi danh thủ công', target: 'Như Nguyễn · ĐGNL 12A' },
 ]
 
-export const ORDERS = [
-  { id: 'DH-10231', student: 'Quỳnh Như', course: 'ĐGNL 12A · K24', amount: 3200000, status: 'Đã thanh toán', createdAt: '10/10/2026' },
-  { id: 'DH-10230', student: 'Bảo Châu', course: 'Tư duy định lượng', amount: 1800000, status: 'Chờ thanh toán', createdAt: '10/10/2026' },
-  { id: 'DH-10229', student: 'Minh Khang', course: 'ĐGNL 12B · K24', amount: 3200000, status: 'Đã thanh toán', createdAt: '09/10/2026' },
-  { id: 'DH-10228', student: 'Gia Hân', course: 'Nền tảng toán học', amount: 2400000, status: 'Đã hủy', createdAt: '09/10/2026' },
-  { id: 'DH-10227', student: 'Đức Anh', course: 'ĐGNL 11A · K25', amount: 2900000, status: 'Đã thanh toán', createdAt: '08/10/2026' },
-  { id: 'DH-10226', student: 'Thu Hà', course: 'Tư duy định lượng', amount: 1800000, status: 'Chờ thanh toán', createdAt: '08/10/2026' },
-]
-
-export const ENROLLMENTS = [
-  { id: 'en-01', student: 'Quỳnh Như', course: 'ĐGNL 12A · K24', source: 'Mua online', expiresAt: '30/06/2027', status: 'Còn hạn' },
-  { id: 'en-02', student: 'Như Nguyễn', course: 'ĐGNL 12A · K24', source: 'Thủ công', expiresAt: '30/06/2027', status: 'Còn hạn' },
-  { id: 'en-03', student: 'Minh Khang', course: 'ĐGNL 12B · K24', source: 'Mua online', expiresAt: '30/06/2027', status: 'Còn hạn' },
-  { id: 'en-04', student: 'Đức Anh', course: 'ĐGNL 11A · K25', source: 'Mua online', expiresAt: '31/12/2026', status: 'Sắp hết hạn' },
-  { id: 'en-05', student: 'Lan Phương', course: 'Tư duy định lượng', source: 'Thủ công', expiresAt: '01/09/2026', status: 'Hết hạn' },
-]
-
 export const GROUPS = [
   { id: 'gr-01', name: 'Nhóm A1', course: 'ĐGNL 12A · K24', mentor: 'Nam Lê', students: 12, progress: 74 },
   { id: 'gr-02', name: 'Nhóm A2', course: 'ĐGNL 12A · K24', mentor: 'Mai Trần', students: 11, progress: 61 },

@@ -304,3 +304,141 @@ test('SECTION content authoring creates and publishes a lesson with edit tokens'
     )!.body
   ).toMatchObject({ published: true, preview: false, expectedUpdatedAt: STAMP })
 })
+
+test('staff closes an unpaid order from its detail', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/orders')
+  await page
+    .getByRole('row', { name: /HL20261010001/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  const confirmation = page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('heading', { name: 'Hủy đơn hàng?', exact: true }) })
+  await page.getByRole('button', { name: 'Hủy đơn', exact: true }).click()
+  await confirmation.getByRole('button', { name: 'Hủy đơn', exact: true }).click()
+  await expect(confirmation).toBeHidden()
+  await expect(page.getByText('Đã hủy', { exact: true })).toBeVisible()
+  expect(
+    state.requests.filter(
+      (r) => r.method === 'POST' && r.path === `/api/v1/admin/orders/${IDS.orderPending}/cancel`
+    )
+  ).toHaveLength(1)
+  expect(state.orders.find((o) => o.id === IDS.orderPending)!.status).toBe('CANCELLED')
+})
+
+test('administrator confirms a payment by hand with a reason and no double settlement', async ({
+  page,
+}) => {
+  const state = await installCrudFixture(page, 'ADMINISTRATOR')
+  await page.goto('/admin/orders')
+  await page
+    .getByRole('row', { name: /HL20261010001/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  const paymentsBefore = state.orders.find((o) => o.id === IDS.orderPending)!.payments.length
+  await page.getByRole('button', { name: 'Xác nhận thanh toán', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Xác nhận thanh toán thủ công', exact: true })
+  await dialog.getByLabel('Lý do xác nhận').fill('Khách quen chuyển khoản')
+  await dialog.getByLabel('Số tiền thực nhận (VND)').fill('1800000')
+  await dialog.getByRole('button', { name: 'Xác nhận thanh toán', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText('Đã thanh toán', { exact: true })).toBeVisible()
+  await expect(page.getByText('Khách quen chuyển khoản', { exact: true }).first()).toBeVisible()
+  expect(
+    state.requests.find((r) => r.method === 'POST' && r.path.endsWith('/confirm-payment'))!.body
+  ).toMatchObject({ reason: 'Khách quen chuyển khoản', receivedAmount: 1800000 })
+  const order = state.orders.find((o) => o.id === IDS.orderPending)!
+  expect(order.payments).toHaveLength(paymentsBefore + 1)
+  expect(order.payments.at(-1)).toMatchObject({ provider: 'MANUAL', status: 'SUCCESS', manual: true })
+  // The settlement path is one call: no second confirm was issued.
+  expect(state.requests.filter((r) => r.method === 'POST' && r.path.endsWith('/confirm-payment'))).toHaveLength(1)
+})
+
+test('only an administrator may confirm a payment; staff and manager cannot', async ({ page }) => {
+  const staffState = await installCrudFixture(page, 'STAFF')
+  await page.goto('/staff/orders')
+  await page
+    .getByRole('row', { name: /HL20261010001/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  await expect(page.getByRole('button', { name: 'Xác nhận thanh toán', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Hủy đơn', exact: true })).toHaveCount(1)
+  expect(staffState.requests.filter((r) => r.method !== 'GET')).toHaveLength(0)
+})
+
+test('manager reads orders and enrollments without write affordances', async ({ page }) => {
+  const state = await installCrudFixture(page, 'MANAGER')
+  await page.goto('/manager/orders')
+  await expect(page.getByRole('row', { name: /HL20261010001/ })).toBeVisible()
+  await page
+    .getByRole('row', { name: /HL20261010001/ })
+    .getByRole('button', { name: 'Chi tiết', exact: true })
+    .click()
+  await expect(page.getByRole('button', { name: 'Hủy đơn', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Xác nhận thanh toán', exact: true })).toHaveCount(0)
+  await page.goto('/manager/enrollments')
+  await expect(page.getByRole('row', { name: /SECTION Đại số/ })).toBeVisible()
+  const managerMain = page.getByRole('main')
+  await expect(managerMain.getByRole('button', { name: 'Ghi danh', exact: true })).toHaveCount(0)
+  await expect(managerMain.getByRole('button', { name: 'Trạng thái', exact: true })).toHaveCount(0)
+  await expect(managerMain.getByRole('button', { name: 'Hạn dùng', exact: true })).toHaveCount(0)
+  expect(state.requests.filter((r) => r.method !== 'GET')).toHaveLength(0)
+})
+
+test('staff enrolls a student by hand with the course access window', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/enrollments')
+  await page.getByRole('main').getByRole('button', { name: 'Ghi danh', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ghi danh thủ công', exact: true })
+  await selectOption(dialog, page, 'Học viên', 'Học viên QA')
+  await selectOption(dialog, page, 'Khóa học', 'MAIN Toán · Trọn bộ')
+  await dialog.getByRole('button', { name: 'Ghi danh', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('row', { name: /MAIN Toán/ })).toBeVisible()
+  expect(
+    state.requests.find((r) => r.method === 'POST' && r.path === '/api/v1/admin/enrollments')!.body
+  ).toMatchObject({ studentId: IDS.student, courseId: IDS.main })
+})
+
+test('duplicate enrollment is refused and keeps the dialog without a blind retry', async ({
+  page,
+}) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/enrollments')
+  await page.getByRole('main').getByRole('button', { name: 'Ghi danh', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ghi danh thủ công', exact: true })
+  await selectOption(dialog, page, 'Học viên', 'Học viên QA')
+  await selectOption(dialog, page, 'Khóa học', 'SECTION Đại số · Khóa nhỏ')
+  await dialog.getByRole('button', { name: 'Ghi danh', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText(/đã có ghi danh/i)
+  await expect(dialog).toBeVisible()
+  expect(state.requests.filter((r) => r.method === 'POST')).toHaveLength(1)
+})
+
+test('staff suspends an enrollment and rewrites its expiry', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/enrollments')
+  const row = page.getByRole('row', { name: /SECTION Đại số/ })
+  await row.getByRole('button', { name: 'Trạng thái', exact: true }).click()
+  const statusDialog = page.getByRole('dialog', { name: 'Đổi trạng thái ghi danh', exact: true })
+  await selectOption(statusDialog, page, 'Trạng thái', 'Tạm dừng')
+  await statusDialog.getByRole('button', { name: 'Lưu trạng thái', exact: true }).click()
+  await expect(statusDialog).toBeHidden()
+  await expect(page.getByRole('table').getByText('Tạm dừng', { exact: true })).toBeVisible()
+  expect(
+    state.requests.find((r) => r.method === 'PATCH' && r.path.endsWith('/status'))!.body
+  ).toMatchObject({ status: 'SUSPENDED' })
+
+  await page
+    .getByRole('row', { name: /SECTION Đại số/ })
+    .getByRole('button', { name: 'Hạn dùng', exact: true })
+    .click()
+  const expiryDialog = page.getByRole('dialog', { name: 'Sửa hạn truy cập', exact: true })
+  await expiryDialog.getByLabel('Hết hạn ngày').fill('2027-01-15')
+  await expiryDialog.getByRole('button', { name: 'Lưu hạn dùng', exact: true }).click()
+  await expect(expiryDialog).toBeHidden()
+  expect(
+    state.requests.find((r) => r.method === 'PATCH' && r.path.endsWith('/expiry'))!.body
+  ).toMatchObject({ expiresAt: '2027-01-15T23:59:59+07:00' })
+})
