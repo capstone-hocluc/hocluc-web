@@ -93,6 +93,7 @@ function ManagementCourseList() {
       {
         id: 'course',
         header: 'Khóa học',
+        accessorFn: (course) => course.title,
         cell: ({ row }) => (
           <div className="min-w-56">
             <strong className="block font-semibold text-text-primary">{row.original.title}</strong>
@@ -105,16 +106,19 @@ function ManagementCourseList() {
       {
         id: 'track',
         header: 'Lộ trình',
+        accessorFn: (course) => course.track ?? undefined,
         cell: ({ row }) => TRACK_LABELS[row.original.track ?? ''] ?? formatEnum(row.original.track),
       },
       {
         id: 'targetExam',
         header: 'Kỳ thi',
+        accessorFn: (course) => course.targetExam ?? undefined,
         cell: ({ row }) => formatEnum(row.original.targetExam),
       },
       {
         id: 'schedule',
         header: 'Thời gian',
+        accessorFn: (course) => course.startDate ?? undefined,
         cell: ({ row }) => (
           <span className="whitespace-nowrap text-sm text-text-body">
             {formatDate(row.original.startDate)} – {formatDate(row.original.endDate)}
@@ -124,6 +128,7 @@ function ManagementCourseList() {
       {
         id: 'price',
         header: 'Học phí',
+        accessorFn: (course) => course.price ?? undefined,
         cell: ({ row }) => <span className="whitespace-nowrap">{formatPrice(row.original.price)}</span>,
       },
       {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, Lock } from 'lucide-react'
+import { CheckCircle2, Lock } from '../../components/console/icons'
 import QuizAttemptHistory from '../../components/assessment/QuizAttemptHistory'
 import BackLink from '../../components/student/common/BackLink'
 import ResourceState from '../../components/student/common/ResourceState'

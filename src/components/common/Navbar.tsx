@@ -1,5 +1,6 @@
+import { ROLE_LABELS, roleHome } from '../../lib/role-home'
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, LogOut, PackageSearch, ShoppingCart, Sparkles, UserRound } from 'lucide-react'
+import { ChevronDown, LogOut, PackageSearch, ShoppingCart, Sparkles, UserRound } from '../console/icons'
 import { navLinks } from '../../data/content'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Logo from './Logo'
@@ -221,18 +222,18 @@ function Navbar() {
                     className="hl-nav-menu-item"
                     onClick={() => {
                       setMenuOpen(false)
-                      navigateTo('/student/dashboard')
+                      navigateTo(roleHome(profile.role))
                     }}
                   >
                     <Sparkles size={16} />
-                    Bắt đầu học
+                    {profile.role === 'STUDENT' ? 'Bắt đầu học' : `Khu vực ${ROLE_LABELS[profile.role]}`}
                   </button>
                   <button
                     type="button"
                     className="hl-nav-menu-item"
                     onClick={() => {
                       setMenuOpen(false)
-                      navigateTo('/student/profile')
+                      navigateTo(profile.role === 'STUDENT' ? '/student/profile' : roleHome(profile.role).replace('/dashboard', '/profile'))
                     }}
                   >
                     <UserRound size={16} />

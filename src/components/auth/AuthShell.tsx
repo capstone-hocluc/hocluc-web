@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { ArrowLeft, X } from 'lucide-react'
+import { ArrowLeft, X } from '../console/icons'
 import Logo from '../common/Logo'
 import ThemeToggle from '../ui/ThemeToggle'
 

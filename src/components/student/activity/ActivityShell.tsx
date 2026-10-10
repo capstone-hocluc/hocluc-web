@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ChevronRight } from '../../console/icons'
 import Button from '../../ui/Button'
 import StudentPageContainer from '../layout/StudentPageContainer'
 

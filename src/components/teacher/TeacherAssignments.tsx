@@ -1,10 +1,10 @@
+import { MenuBento1 as DragHandle } from '@tailgrids/icons'
 import { useState } from 'react'
 import {
   ArrowLeft,
   BookOpen,
   CalendarDays,
   ClipboardList,
-  GripVertical,
   Pencil,
   Plus,
   Send,
@@ -169,13 +169,14 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
                 draggable
                 className="cursor-grab text-icon-tertiary"
                 title="Kéo để đổi thứ tự"
+                aria-label="Kéo để đổi thứ tự câu hỏi"
                 onDragStart={(event) => {
                   setDraggedQuestionIndex(index)
                   event.dataTransfer.effectAllowed = 'move'
                 }}
                 onDragEnd={() => setDraggedQuestionIndex(null)}
               >
-                <GripVertical size={18} />
+                <DragHandle size={18} />
               </button>
               <strong className="text-sm font-medium text-text-primary">Câu {index + 1}</strong>
               <div className="flex gap-1.5">

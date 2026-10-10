@@ -1,5 +1,5 @@
 import { type CSSProperties, useState } from 'react'
-import { BookOpen, Brain } from 'lucide-react'
+import { BookOpen, Brain } from '../../../components/console/icons'
 import type { LearningProfileData } from '../../../data/learningProfile'
 import { cn } from '../../../lib/cn'
 import { ComparisonDropdown } from '../../../components/student/learning-profile/controls'

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from '../console/icons'
 import type { QuizQuestion } from '../../services/assessmentService'
 import type { AttemptSession } from '../../hooks/useAttemptSession'
 import BackLink from '../student/common/BackLink'

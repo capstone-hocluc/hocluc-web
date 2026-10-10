@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpenCheck, Users } from 'lucide-react'
+import { BookOpenCheck, Users } from '../../console/icons'
 import { formatStudyGroupLevel } from '../../../lib/studyGroupFormat'
 import { ApiError } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'

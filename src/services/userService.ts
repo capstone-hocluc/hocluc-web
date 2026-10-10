@@ -37,7 +37,7 @@ export interface UserProfile {
   language?: string
   status?: UserStatus
   role: UserRole
-  // Not sent by the backend yet; when it is, the role switcher lists these.
+  // Granted roles; role is the role currently in use.
   roles?: UserRole[]
   emailVerified?: boolean
   lastLoginAt?: string
@@ -70,6 +70,7 @@ export interface UserSummary {
   avatarUrl?: string
   status: UserStatus
   role: UserRole
+  roles?: UserRole[]
   emailVerified: boolean
   lastLoginAt?: string
   createdAt?: string
@@ -92,6 +93,7 @@ export interface CreateUserRequest {
   displayName?: string
   phone?: string
   role: UserRole
+  roles?: UserRole[]
 }
 
 export async function getCurrentProfile() {

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Expand, Pause, Play, Volume2 } from 'lucide-react'
+import { Expand, Pause, Play, Volume2 } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 import Progress from '../../ui/Progress'
 import type { VideoActivity } from './types'

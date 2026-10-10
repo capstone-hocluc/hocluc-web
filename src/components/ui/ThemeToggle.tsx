@@ -1,4 +1,4 @@
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from '../console/icons'
 import { cn } from '../../lib/cn'
 import { useTheme } from '../common/useTheme'
 

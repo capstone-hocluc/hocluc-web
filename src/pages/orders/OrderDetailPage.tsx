@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronLeft, SearchX } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, SearchX } from '../../components/console/icons'
 import Navbar from '../../components/common/Navbar'
 import Footer from '../../components/common/Footer'
 import Chatbot from '../../components/landing/Chatbot'

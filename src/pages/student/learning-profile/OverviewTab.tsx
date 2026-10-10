@@ -1,5 +1,5 @@
 import { type CSSProperties, useState } from 'react'
-import { Award, BarChart3, Brain, LineChart, Trophy } from 'lucide-react'
+import { Award, BarChart3, Brain, LineChart, Trophy } from '../../../components/console/icons'
 import ScrollableModal from '../../../components/student/common/ScrollableModal'
 import { cn } from '../../../lib/cn'
 import { ComparisonDropdown } from '../../../components/student/learning-profile/controls'

@@ -1,4 +1,4 @@
-import { UserRound } from 'lucide-react'
+import { UserRound } from '../console/icons'
 import { Reveal } from '../common/motion'
 import SectionHeading from '../common/SectionHeading'
 import { experts } from '../../data/content'

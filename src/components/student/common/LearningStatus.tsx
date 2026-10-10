@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CheckCircle2, Lock } from 'lucide-react'
+import { CheckCircle2, Lock } from '../../console/icons'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AlertCircle, LockKeyhole, RefreshCw } from 'lucide-react'
+import { AlertCircle, LockKeyhole, RefreshCw } from '../console/icons'
 import type { ScheduleResourceStatus } from '../../hooks/useScheduleResource'
 import Button from '../ui/Button'
 import Notice from '../ui/Notice'

@@ -9,7 +9,7 @@ import {
   Play,
   Radio,
   Target,
-} from 'lucide-react'
+} from '../../console/icons'
 import { cva } from 'class-variance-authority'
 import { getActivityRouteType } from '../../../data/courseLookup'
 import { cn } from '../../../lib/cn'

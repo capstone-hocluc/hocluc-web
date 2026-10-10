@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Clock3, FileQuestion } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Clock3, FileQuestion } from '../../console/icons'
 import { formatDate } from '../../../lib/courseFormat'
 import { getCourseExams } from '../../../services/courseService'
 import { usePageResource } from '../../../hooks/usePageResource'

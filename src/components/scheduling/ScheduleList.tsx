@@ -1,4 +1,4 @@
-import { ArrowUpRight, CalendarClock, MapPin } from 'lucide-react'
+import { ArrowUpRight, CalendarClock, MapPin } from '../console/icons'
 import type { ScheduleCalendarItem } from '../../types/scheduling'
 import { itemDateKey, itemLocation, itemSubtitle, itemTimeLabel, itemTitle, localDateLabel, sortScheduleItems } from '../../lib/scheduling'
 import Button from '../ui/Button'

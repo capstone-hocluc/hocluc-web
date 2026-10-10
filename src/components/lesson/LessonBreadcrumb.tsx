@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, ChevronRight } from '../console/icons'
 import type { LessonDetail } from '../../services/lessonService'
 import Button from '../ui/Button'
 

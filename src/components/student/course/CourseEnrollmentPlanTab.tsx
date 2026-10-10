@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react'
+import { Star } from '../../console/icons'
 import MascotState from '../../common/MascotState'
 import ResourceState from '../common/ResourceState'
 import CourseCard from '../../landing/CourseCard'

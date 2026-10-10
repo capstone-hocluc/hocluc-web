@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle } from '../console/icons'
 import type { QuizReviewQuestion } from '../../services/assessmentService'
 import { bySequence } from '../../lib/sequence'
 import { cn } from '../../lib/cn'

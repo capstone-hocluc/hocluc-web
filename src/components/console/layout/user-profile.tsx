@@ -1,5 +1,6 @@
 import { useActiveRole } from '../../../hooks/useActiveRole';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
+import { Check } from '../icons';
 import { ROLE_LABELS } from '../../../lib/role-home';
 import { Avatar, AvatarFallback, AvatarImage } from '../../tailgrids/core/avatar';
 import {
@@ -31,6 +32,7 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
   const initials = getInitials(profile);
 
   return (
+    <div className="relative">
     <DropdownMenu>
       <DropdownMenuTrigger className="group flex items-center gap-2.5 rounded-lg border-0 p-0 transition-all outline-none focus-visible:ring-4 focus-visible:ring-input-primary-focus-border/20 focus-visible:ring-offset-1">
         <Avatar>
@@ -40,7 +42,10 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
           </AvatarFallback>
         </Avatar>
 
-        <span className="text-sm leading-5 font-medium text-text-primary">{name}</span>
+        <span className="flex min-w-0 flex-col text-left">
+          <span className="max-w-40 truncate text-sm leading-5 font-medium text-text-primary">{name}</span>
+          <span className="text-xs text-text-tertiary">{switching ? 'Đang chuyển vai trò...' : `Đang dùng: ${ROLE_LABELS[profile.role]}`}</span>
+        </span>
 
         <AltArrowDownIcon className="text-icon-tertiary transition-transform duration-200 group-aria-expanded:-rotate-180" />
       </DropdownMenuTrigger>
@@ -71,33 +76,28 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
         {roles.length > 1 && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuSection className="p-1.5">
-              <span className="block px-3 pt-1.5 pb-1 text-xs text-text-tertiary uppercase">Đổi vai trò</span>
-              {roles.map((role) => (
-                <DropdownMenuItem
-                  key={role}
+            <DropdownMenuHeader className="px-4 pt-3 pb-1 text-xs text-text-tertiary">Chuyển vai trò</DropdownMenuHeader>
+            <DropdownMenuHeader className="px-4 pb-2 text-xs leading-5 text-text-tertiary">Chuyển vai trò sẽ kết thúc các phiên đăng nhập khác.</DropdownMenuHeader>
+            <DropdownMenuSection className="p-1.5" items={roles.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}>
+              {(item) => (
+                <DropdownMenuItem id={item.id} textValue={item.label}
                   className="cursor-pointer px-3 py-2.5"
-                  isDisabled={switching}
-                  onAction={() => void switchRole(role)}
-                >
-                  <span className="flex-1 leading-5 font-medium">{ROLE_LABELS[role]}</span>
-                  {role === activeRole && <span className="size-2 rounded-full bg-brand-500" aria-label="Đang dùng" />}
+                  isDisabled={switching || item.id === activeRole}
+                  onAction={() => switchRole(item.id)}>
+                  <span className="flex-1 leading-5 font-medium">{item.label}</span>
+                  {item.id === activeRole && <Check size={16} aria-label="Đang dùng" className="text-brand-500" />}
                 </DropdownMenuItem>
-              ))}
-              {error && (
-                <p role="alert" className="px-3 py-2 text-xs text-red-500">
-                  {error}
-                </p>
               )}
             </DropdownMenuSection>
           </>
         )}
 
+        {switching && <DropdownMenuHeader role="status" className="px-4 py-2 text-xs text-text-tertiary">Đang chuyển vai trò...</DropdownMenuHeader>}
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
           onAction={onLogout}
-          isDisabled={logoutLoading}
+          isDisabled={logoutLoading || switching}
           className="m-1.5 w-auto cursor-pointer px-3 py-2.5"
         >
           <span className="text-icon-secondary group-hover:text-text-primary">
@@ -107,5 +107,7 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    {error && <p role="alert" className="absolute top-full right-0 mt-2 w-70 rounded-lg border border-card-border bg-card-background p-3 text-xs text-red-500">{error}</p>}
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Clock } from 'lucide-react'
+import { Clock } from '../console/icons'
 import { cn } from '../../lib/cn'
 
 interface QuizTimerProps {

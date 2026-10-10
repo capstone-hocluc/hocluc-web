@@ -5,8 +5,10 @@ import {
   type TableOptions,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { ChevronBothDirection } from '@tailgrids/icons'
 import {
   TableBody,
   TableCell,
@@ -40,6 +42,7 @@ function DataTable<T extends RowData>({
     columns,
     getRowId: getRowKey,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     meta,
   })
   const columnCount = table.getHeaderGroups()[0]?.headers.length ?? 1
@@ -48,12 +51,31 @@ function DataTable<T extends RowData>({
     <TableRoot fullBleed>
       <TableHeader>
         {table.getHeaderGroups().map((group) => (
-          <TableRow key={group.id}>
-            {group.headers.map((header) => (
-              <TableHead key={header.id} scope="col" className="bg-background-gray-secondary whitespace-nowrap">
-                {flexRender(header.column.columnDef.header, header.getContext())}
-              </TableHead>
-            ))}
+          <TableRow key={group.id} className="[&_th]:border-t">
+            {group.headers.map((header) => {
+              const sorted = header.column.getIsSorted()
+              return (
+                <TableHead
+                  key={header.id}
+                  scope="col"
+                  aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
+                  className="px-6 py-3 text-sm leading-5 font-medium whitespace-nowrap text-text-secondary"
+                >
+                  {header.column.getCanSort() ? (
+                    <button
+                      type="button"
+                      onClick={header.column.getToggleSortingHandler()}
+                      className="flex cursor-pointer items-center gap-1.5 outline-none focus-visible:text-text-primary"
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      <ChevronBothDirection className={sorted ? 'size-4 text-text-primary' : 'size-4'} aria-hidden="true" />
+                    </button>
+                  ) : (
+                    flexRender(header.column.columnDef.header, header.getContext())
+                  )}
+                </TableHead>
+              )
+            })}
           </TableRow>
         ))}
       </TableHeader>
@@ -65,7 +87,10 @@ function DataTable<T extends RowData>({
             onClick={onRowClick ? () => onRowClick(row.original) : undefined}
           >
             {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id} className="align-middle font-normal text-text-body">
+              <TableCell
+                key={cell.id}
+                className="px-6 py-3.5 align-middle text-sm leading-5 font-normal tracking-[-0.15px] text-text-primary"
+              >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
             ))}

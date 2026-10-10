@@ -1,4 +1,4 @@
-import { Eye } from 'lucide-react'
+import { Eye } from '../../components/console/icons'
 import PlacementResultSummary from '../../components/assessment/PlacementResultSummary'
 import CourseCard from '../../components/landing/CourseCard'
 import ResourceState from '../../components/student/common/ResourceState'

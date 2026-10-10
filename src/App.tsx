@@ -1,3 +1,4 @@
+import { roleHome } from './lib/role-home'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import CourseCatalogPage from './pages/CourseCatalogPage'
@@ -95,6 +96,8 @@ function App() {
     if (path === '/staff/batches') return 'staff-batches'
     if (path === '/staff/batches/batch-12a-k24') return 'staff-batch-detail'
     if (path === '/staff/users') return 'staff-users'
+    const rolePage = path.match(/^\/(admin|staff|manager|mentor|teacher)\/([a-z-]+)$/)
+    if (rolePage) return `${rolePage[1]}-${rolePage[2]}`
     if (path === '/onboarding') return 'onboarding'
     if (path === '/verify-email') return 'verify-email'
     if (path === '/forgot-password') return 'forgot-password'
@@ -223,7 +226,7 @@ function App() {
         dashboard: '/mentor/dashboard',
       },
     } as const
-    const path = paths[scope][page as keyof (typeof paths)[typeof scope]] ?? paths[scope].dashboard
+    const path = paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${page}`
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`${scope}-${page}`)
@@ -240,7 +243,7 @@ function App() {
       availability: '/teacher/availability',
       'mock-exams': '/teacher/mock-exams',
     }
-    const path = page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page]
+    const path = page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page] ?? `/teacher/${page}`
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`teacher-${page}`)
@@ -249,33 +252,27 @@ function App() {
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
-    navigateTo(profile.role === 'MENTOR' ? '/mentor/dashboard' : '/student/dashboard')
+    navigateTo(roleHome(profile.role))
   }
 
   const goAfterManagementLogin = (profile: UserProfile) => {
-    const path =
-      profile.role === 'TEACHER'
-        ? '/teacher/dashboard'
-        : profile.role === 'MANAGER'
-          ? '/manager/dashboard'
-          : profile.role === 'STAFF'
-            ? '/staff/dashboard'
-            : '/admin/dashboard'
-    navigateTo(path)
+    navigateTo(roleHome(profile.role))
   }
 
   const performLogout = useCallback(async () => {
     if (logoutInFlight.current) return
     logoutInFlight.current = true
     setLogoutLoading(true)
+    const isManagementArea = /^\/(admin|manager|staff|teacher)(\/|$)/.test(window.location.pathname)
+    const loginPath = isManagementArea ? '/management/login' : '/login'
     try {
       await logout()
     } finally {
       clearCurrentUser()
       setPendingVerificationEmail('')
-      replaceCurrentHistoryEntry({}, '/login')
-      setAuthMode('login')
-      setCurrentPath('/login')
+      replaceCurrentHistoryEntry({}, loginPath)
+      setAuthMode(isManagementArea ? 'management-login' : 'login')
+      setCurrentPath(loginPath)
       logoutInFlight.current = false
       setLogoutLoading(false)
     }

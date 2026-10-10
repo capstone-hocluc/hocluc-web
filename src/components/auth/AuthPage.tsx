@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, NotebookPen } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, NotebookPen } from '../console/icons'
 import AuthShell from './AuthShell'
 import GoogleSignInButton from './GoogleSignInButton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, BookOpen, CalendarDays, Play } from 'lucide-react'
+import { ArrowLeft, BookOpen, CalendarDays, Play } from '../../console/icons'
 import type { CourseStudy } from '../../../services/courseService'
 import { formatDate, prettifyEnum } from '../../../lib/courseFormat'
 import Button from '../../ui/Button'

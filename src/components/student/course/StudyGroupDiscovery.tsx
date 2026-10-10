@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Check, Sparkles, Users } from 'lucide-react'
+import { ArrowRight, Check, Sparkles, Users } from '../../console/icons'
 import { ApiError } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
 import { formatStudyGroupLevel } from '../../../lib/studyGroupFormat'

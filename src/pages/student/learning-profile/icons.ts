@@ -12,7 +12,7 @@ import {
   ListChecks,
   Target,
   Trophy,
-} from 'lucide-react'
+} from '../../../components/console/icons'
 
 export const componentIcons = {
   vietnamese: Languages,

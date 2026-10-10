@@ -1,5 +1,6 @@
+import { ROLE_LABELS } from '../../lib/role-home'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { ShieldAlert, LoaderCircle } from '../console/icons'
+import { AlertTriangle, LoaderCircle } from '../console/icons'
 import { clearTokens, getAccessToken } from '../../lib/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useActiveRole } from '../../hooks/useActiveRole'
@@ -41,7 +42,7 @@ function AccessState({
               : 'mx-auto grid size-12 place-items-center rounded-full bg-badge-info-bg text-primary'
           }
         >
-          <ShieldAlert size={24} aria-hidden="true" />
+          <AlertTriangle size={24} aria-hidden="true" />
         </span>
         <h1 className="mt-5 text-xl font-semibold text-text-heading">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-text-muted">{description}</p>
@@ -77,7 +78,7 @@ function ManagementRouteGuard({
   children,
 }: ManagementRouteGuardProps) {
   const { profile, status, loadCurrentUser, clearCurrentUser } = useCurrentUser()
-  const { activeRole } = useActiveRole()
+  const { activeRole, roles, switchRole, switching, error } = useActiveRole()
   const redirecting = useRef(false)
 
   useEffect(() => {
@@ -114,6 +115,20 @@ function ManagementRouteGuard({
   if (status === 'idle' || status === 'loading' || !profile) return <LoadingState />
 
   if (!allowedRoles.includes((activeRole ?? profile.role) as ManagementRole)) {
+    const available = roles.filter((role) => allowedRoles.includes(role as ManagementRole))
+    if (available.length) return (
+      <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
+        <section className="w-full max-w-[460px] rounded-2xl border border-border-subtle bg-surface p-8 text-center">
+          <h1 className="text-xl font-semibold text-text-heading">Chuyển vai trò để tiếp tục</h1>
+          <p className="mt-2 text-sm text-text-muted">Bạn đang dùng vai trò {ROLE_LABELS[profile.role]}. Chuyển vai trò sẽ kết thúc các phiên đăng nhập khác.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {available.map((role) => <Button key={role} disabled={switching} onClick={() => switchRole(role)}>{switching ? 'Đang chuyển...' : ROLE_LABELS[role]}</Button>)}
+          </div>
+          {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+          <Button appearance="outline" className="mt-4" disabled={switching} onClick={onExit}>Đăng xuất</Button>
+        </section>
+      </main>
+    )
     return (
       <AccessState
         title="Bạn không có quyền truy cập"

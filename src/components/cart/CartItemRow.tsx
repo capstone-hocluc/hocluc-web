@@ -1,4 +1,4 @@
-import { GraduationCap, Trash2 } from 'lucide-react'
+import { GraduationCap, Trash2 } from '../console/icons'
 import type { CartItem } from '../../services/cartService'
 import { formatCoursePrice, formatDate, prettifyEnum } from '../../lib/courseFormat'
 

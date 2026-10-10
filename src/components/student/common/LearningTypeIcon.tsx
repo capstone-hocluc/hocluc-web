@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { ClipboardCheck, FileText, PlayCircle, Target, Video } from 'lucide-react'
+import { ClipboardCheck, FileText, PlayCircle, Target, Video } from '../../console/icons'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 

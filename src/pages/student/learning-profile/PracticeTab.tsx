@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Bot, ClipboardCheck, GraduationCap, Maximize2 } from 'lucide-react'
+import { Bot, ClipboardCheck, GraduationCap, Maximize2 } from '../../../components/console/icons'
 import ScrollableModal from '../../../components/student/common/ScrollableModal'
 import { SegmentedTabs } from '../../../components/student/learning-profile/controls'
 import { InsightCard, InsightList } from '../../../components/student/learning-profile/insights'

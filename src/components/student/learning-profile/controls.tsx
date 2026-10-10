@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown } from '../../console/icons'
 import { cva } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 

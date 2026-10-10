@@ -1,40 +1,35 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useCurrentUser } from './useCurrentUser'
-import { roleHome } from '../lib/role-home'
+import { grantedRoles, roleHome } from '../lib/role-home'
 import { switchRole as switchRoleRequest } from '../services/authService'
+import { runWithUnsavedActionGuard } from './useUnsavedActionGuard'
 import type { UserRole } from '../services/userService'
 
-// The backend owns the active role: profile.role is the role in use and
-// profile.roles lists the roles the account may switch between (only
-// administrator / staff / mentor accounts ever have more than one).
+// Role is account-wide. The server replaces tokens and ends other sessions.
 export function useActiveRole() {
   const { profile } = useCurrentUser()
   const [switching, setSwitching] = useState(false)
+  const inFlight = useRef(false)
   const [error, setError] = useState<string | null>(null)
+  const roles = useMemo(() => profile ? grantedRoles(profile) : [], [profile])
+  const activeRole = profile?.role ?? null
 
-  const roles = useMemo<UserRole[]>(
-    () => (profile ? Array.from(new Set([profile.role, ...(profile.roles ?? [])])) : []),
-    [profile]
-  )
-  const activeRole: UserRole | null = profile?.role ?? null
-
-  const switchRole = useCallback(
-    async (role: UserRole) => {
-      if (switching || !roles.includes(role) || role === activeRole) return
+  const switchRole = useCallback((role: UserRole) => {
+    if (inFlight.current || !roles.includes(role) || role === activeRole || activeRole === 'STUDENT') return
+    runWithUnsavedActionGuard(() => {
+      if (inFlight.current) return
+      inFlight.current = true
       setSwitching(true)
       setError(null)
-      try {
-        await switchRoleRequest(role)
-        // Full navigation: the new tokens are stored and the profile is reloaded on
-        // boot, so no guard ever renders a half-switched state.
+      void switchRoleRequest(role).then(() => {
         window.location.assign(roleHome(role))
-      } catch (err) {
+      }).catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Không đổi được vai trò.')
+        inFlight.current = false
         setSwitching(false)
-      }
-    },
-    [switching, roles, activeRole]
-  )
+      })
+    })
+  }, [roles, activeRole])
 
   return { roles, activeRole, switchRole, switching, error }
 }

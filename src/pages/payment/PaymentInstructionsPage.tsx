@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, XCircle } from '../../components/console/icons'
 import Navbar from '../../components/common/Navbar'
 import Footer from '../../components/common/Footer'
 import PaymentInstructionsCard from '../../components/payment/PaymentInstructionsCard'

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import * as AccordionPrimitive from '@radix-ui/react-accordion'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown } from '../console/icons'
 import { cn } from '../../lib/cn'
 
 // Thin wrappers over Radix Accordion: state, aria-expanded and keyboard

@@ -1,4 +1,4 @@
-import { CalendarDays, List, Search } from 'lucide-react'
+import { CalendarDays, List, Search } from '../console/icons'
 import Button from '../ui/Button'
 
 export type ScheduleViewMode = 'agenda' | 'week'

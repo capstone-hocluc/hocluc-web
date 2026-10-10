@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ClipboardList } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'
 import type { VideoActivity, VideoContext, VideoLessonItem } from './types'

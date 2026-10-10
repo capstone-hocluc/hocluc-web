@@ -1,4 +1,4 @@
-import { CalendarDays, Pencil } from 'lucide-react'
+import { CalendarDays, Pencil } from '../../console/icons'
 import Button from '../../ui/Button'
 
 // Pill button of the hero (exam date / edit profile).

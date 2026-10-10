@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BarChart3, KeyRound, User } from 'lucide-react'
+import { BarChart3, KeyRound, User } from '../../components/console/icons'
 import MascotState from '../../components/common/MascotState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Card from '../../components/ui/Card'

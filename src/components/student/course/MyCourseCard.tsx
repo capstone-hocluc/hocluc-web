@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, CircleDot, Users } from 'lucide-react'
+import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, CircleDot, Users } from '../../console/icons'
 import type { MyCourseEnrollment } from '../../../services/courseService'
 import {
   formatDate,

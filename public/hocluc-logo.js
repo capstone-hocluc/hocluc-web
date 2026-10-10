@@ -23,7 +23,7 @@
         <style>
           :host { display: inline-flex; vertical-align: middle; }
           .wordmark {
-            color: ${light ? '#fff' : 'var(--blue, var(--color-primary, #1cb0f6))'};
+            color: ${light ? '#fff' : 'var(--logo-color, var(--blue, #1cb0f6))'};
             display: inline-flex;
             align-items: baseline;
             font-family: inherit;

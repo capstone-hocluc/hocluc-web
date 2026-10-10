@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { X } from 'lucide-react'
+import { X } from '../console/icons'
 import { cn } from '../../lib/cn'
 import Button from './Button'
 

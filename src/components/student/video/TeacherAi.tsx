@@ -1,5 +1,5 @@
 import type { FormEvent } from 'react'
-import { Send, X } from 'lucide-react'
+import { Send, X } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'
 import { Input } from '../../ui/Field'

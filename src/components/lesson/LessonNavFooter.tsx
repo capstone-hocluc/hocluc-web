@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from '../console/icons'
 import Button from '../ui/Button'
 
 interface LessonNavFooterProps {

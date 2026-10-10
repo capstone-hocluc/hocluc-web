@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TrendingDown, TrendingUp } from 'lucide-react'
+import { TrendingDown, TrendingUp } from '../console/icons'
 import type { PlacementResult } from '../../services/assessmentService'
 import { formatDuration, prettifyEnum } from '../../lib/courseFormat'
 import { cn } from '../../lib/cn'

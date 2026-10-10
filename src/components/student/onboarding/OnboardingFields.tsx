@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
-import { BookOpen, Check } from 'lucide-react'
+import { BookOpen, Check } from '../../console/icons'
 import { cva } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 import DropdownField from '../../ui/DropdownField'

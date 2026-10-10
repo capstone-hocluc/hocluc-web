@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CheckCircle2, Circle, Lock, Play } from 'lucide-react'
+import { CheckCircle2, Circle, Lock, Play } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 import { Sheet, SheetBody } from '../../ui/Sheet'
 import type { VideoActivity, VideoContext, VideoLessonItem } from './types'

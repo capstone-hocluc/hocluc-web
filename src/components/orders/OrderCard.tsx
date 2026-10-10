@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight } from '../console/icons'
 import type { Order } from '../../services/orderService'
 import { formatCoursePrice, formatDate } from '../../lib/courseFormat'
 import OrderStatusBadge from './OrderStatusBadge'

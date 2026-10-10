@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CheckCircle2, Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader2 } from '../../console/icons'
 import Button from '../../ui/Button'
 import Card from '../../ui/Card'
 

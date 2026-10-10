@@ -1,6 +1,14 @@
 /* Dark-mode bridge: page background and native form controls. Component
    colours come from the theme tokens. */
 
+/* Console area: the app's blue-tinted border tokens shadow the kit's neutral
+   ones, so restore the kit values while the console shell is mounted. */
+html[data-console] {
+  --color-border-primary: var(--border-primary);
+  --color-border-subtle: var(--border-secondary);
+  --color-text-secondary: var(--text-secondary);
+}
+
 html[data-theme='dark'] body {
   background: var(--color-app-bg);
 }

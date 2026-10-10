@@ -1,4 +1,4 @@
-import { Eye } from 'lucide-react'
+import { Eye } from '../console/icons'
 import type { QuizAttemptSummary } from '../../services/assessmentService'
 import { getAttemptStatusLabel } from '../../lib/attemptStatus'
 import { formatDateTime, formatDuration } from '../../lib/courseFormat'

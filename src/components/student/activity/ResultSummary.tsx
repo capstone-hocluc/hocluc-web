@@ -1,4 +1,4 @@
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw } from '../../console/icons'
 import { cva } from 'class-variance-authority'
 import StatusBadge from '../../ui/StatusBadge'
 import ActivityButton from './ActivityButton'

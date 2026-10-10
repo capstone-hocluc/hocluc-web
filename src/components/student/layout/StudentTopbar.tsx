@@ -1,4 +1,4 @@
-import { Bell, Flame, LogOut, Menu, Settings, User, UserRound } from 'lucide-react'
+import { Bell, Flame, LogOut, Menu, Settings, User, UserRound } from '../../console/icons'
 import Logo from '../../common/Logo'
 import Avatar from '../../ui/Avatar'
 import RoleSwitcher from '../../ui/RoleSwitcher'

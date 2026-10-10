@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, FileText, HelpCircle, Lock, PlayCircle, Sparkles } from 'lucide-react'
+import { ChevronDown, FileText, HelpCircle, Lock, PlayCircle, Sparkles } from '../console/icons'
 import MascotState from '../common/MascotState'
 import type { CourseChapter, CoursePhase, CourseLesson } from '../../services/courseService'
 import { formatDuration, prettifyEnum } from '../../lib/courseFormat'

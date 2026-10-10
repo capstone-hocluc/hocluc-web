@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight } from '../console/icons'
 
 interface CourseBreadcrumbProps {
   courseTitle: string

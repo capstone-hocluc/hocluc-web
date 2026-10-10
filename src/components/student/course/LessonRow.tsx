@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react'
+import { Sparkles } from '../../console/icons'
 import type { CourseStudyLesson } from '../../../services/courseService'
 import { formatDuration, prettifyEnum } from '../../../lib/courseFormat'
 import { getLessonStatusLabel } from '../../../lib/lessonStatus'

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from '../../console/icons'
 import Button from '../../ui/Button'
 
 interface CarouselControlsProps {

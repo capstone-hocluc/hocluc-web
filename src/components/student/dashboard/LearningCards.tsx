@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowRight, Star } from 'lucide-react'
+import { ArrowRight, Star } from '../../console/icons'
 import Button from '../../ui/Button'
 import { ctaButtonClass } from './cta'
 

@@ -1,5 +1,5 @@
 import * as Popover from '@radix-ui/react-popover'
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown, Search } from '../console/icons'
 import {
   useDeferredValue,
   useId,

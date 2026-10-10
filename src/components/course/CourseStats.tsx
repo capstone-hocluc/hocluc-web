@@ -1,4 +1,4 @@
-import { Clock, Layers, ListTree, HelpCircle, BookOpen, Rows3 } from 'lucide-react'
+import { Clock, Layers, ListTree, HelpCircle, BookOpen, Rows3 } from '../console/icons'
 import type { CourseDetail } from '../../services/courseService'
 import { formatDuration } from '../../lib/courseFormat'
 

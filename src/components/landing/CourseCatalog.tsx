@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search } from '../console/icons'
 import { getMainCourses, type Course } from '../../services/courseService'
 import { getErrorMessage } from '../../lib/errors'
 import CourseCard from './CourseCard'

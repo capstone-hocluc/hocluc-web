@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, QrCode } from 'lucide-react'
+import { Copy, QrCode } from '../console/icons'
 import type { OrderPaymentData } from '../../services/orderService'
 import { copyToClipboard } from '../../lib/clipboard'
 import { formatCoursePrice } from '../../lib/courseFormat'

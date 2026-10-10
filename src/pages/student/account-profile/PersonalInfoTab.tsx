@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { Camera, Loader2, Lock } from 'lucide-react'
+import { Camera, Loader2, Lock } from '../../../components/console/icons'
 import {
   AccountForm,
   AccountPanel,

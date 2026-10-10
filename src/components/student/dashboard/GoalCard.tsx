@@ -1,4 +1,4 @@
-import { ArrowRight, Flame, Lock, Target } from 'lucide-react'
+import { ArrowRight, Flame, Lock, Target } from '../../console/icons'
 import OwlWelcome from '../../common/OwlWelcome'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'

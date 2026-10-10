@@ -1,13 +1,6 @@
-import type { UserRole, UserStatus, UserSummary } from '../../services/userService'
+import type { UserStatus, UserSummary } from '../../services/userService'
 
-export const ROLE_LABELS: Record<UserRole, string> = {
-  STUDENT: 'Học viên',
-  MENTOR: 'Mentor',
-  TEACHER: 'Giáo viên',
-  STAFF: 'Nhân viên',
-  MANAGER: 'Quản lý',
-  ADMINISTRATOR: 'Quản trị viên',
-}
+export { ROLE_LABELS, PERSONNEL_ROLES as SWITCHABLE_ROLES } from '../../lib/role-home'
 
 export const STATUS_LABELS: Record<UserStatus, string> = {
   ACTIVE: 'Đang hoạt động',
@@ -15,9 +8,6 @@ export const STATUS_LABELS: Record<UserStatus, string> = {
   SUSPENDED: 'Tạm khóa',
   PENDING: 'Chờ xác minh',
 }
-
-// Only these roles can be granted together and switched between; students never can.
-export const SWITCHABLE_ROLES: UserRole[] = ['ADMINISTRATOR', 'STAFF', 'MENTOR']
 
 export function getStatusTone(status: UserStatus) {
   if (status === 'ACTIVE') return 'success' as const

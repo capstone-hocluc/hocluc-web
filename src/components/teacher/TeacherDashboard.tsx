@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Clock3,
   LayoutDashboard,
+  ListChecks,
 } from '../console/icons'
 import TeacherCourses from './TeacherCourses'
 import ConsoleShell from '../console/console-shell'
@@ -16,45 +17,10 @@ import TeacherAssignments from './TeacherAssignments'
 import TeacherMockExams from './TeacherMockExams'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import TeacherPageHeader from './TeacherPageHeader'
+import { QuestionReview, TeacherAttempts } from '../management/quiz-review-screens'
 
 const TeacherSchedulePage = lazy(() => import('../../pages/teacher/TeacherSchedulePage'))
 const TeacherAvailabilityPage = lazy(() => import('../../pages/teacher/TeacherAvailabilityPage'))
-
-const courses = [
-  {
-    id: 'course-01',
-    subject: 'Tư duy định lượng',
-    name: 'ĐGNL 12A · K24',
-    students: 36,
-    sessions: 24,
-    progress: 72,
-    next: 'Hôm nay · 19:00',
-    color: 'blue',
-    description: 'Lộ trình luyện thi ĐGNL chuyên sâu dành cho học sinh lớp 12.',
-  },
-  {
-    id: 'course-02',
-    subject: 'Luyện đề tổng hợp',
-    name: 'ĐGNL 12B · K24',
-    students: 34,
-    sessions: 22,
-    progress: 58,
-    next: 'Thứ Năm · 19:00',
-    color: 'violet',
-    description: 'Rèn kỹ năng, chiến thuật làm đề và đánh giá năng lực định kỳ.',
-  },
-  {
-    id: 'course-03',
-    subject: 'Nền tảng toán học',
-    name: 'ĐGNL 11A · K25',
-    students: 31,
-    sessions: 28,
-    progress: 46,
-    next: 'Thứ Sáu · 17:30',
-    color: 'gold',
-    description: 'Củng cố nền tảng kiến thức và tư duy toán học cho lớp 11.',
-  },
-]
 
 function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false, page = 'dashboard' }) {
   const quizCreateMode = page.startsWith('quiz-new-')
@@ -63,11 +29,11 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
   const detailCourseId = quizCourseId || assignmentCourseId
   const [notice, setNotice] = useState('')
   const [view, setView] = useState(detailCourseId ? 'courses' : page)
-  const [selectedCourse, setSelectedCourse] = useState(() => courses.find((course) => course.id === detailCourseId) || null)
+  const [selectedCourse, setSelectedCourse] = useState(() => (detailCourseId ? { id: detailCourseId, name: 'Khóa học' } : null))
   const [quizCourse, setQuizCourse] = useState(() => quizCourseId
-    ? courses.find((course) => course.id === quizCourseId) || { id: quizCourseId, name: 'Khóa học theo đường dẫn' }
+    ? { id: quizCourseId, name: 'Khóa học theo đường dẫn' }
     : null)
-  const [assignmentCourse, setAssignmentCourse] = useState(() => courses.find((course) => course.id === assignmentCourseId) || null)
+  const [assignmentCourse, setAssignmentCourse] = useState(() => (assignmentCourseId ? { id: assignmentCourseId, name: 'Khóa học' } : null))
   const [assignmentPreset, setAssignmentPreset] = useState(null)
 
   const action = (message) => {
@@ -82,7 +48,7 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
   const openCourse = (course) => {
     setQuizCourse(null)
     setAssignmentPreset(null)
-    setSelectedCourse(course)
+    setSelectedCourse({ ...course, name: course.title })
     setView('courses')
   }
   const openQuiz = (course) => {
@@ -125,7 +91,14 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
         { key: 'availability', title: 'Giờ rảnh', icon: Clock3 },
       ],
     },
-    { label: 'Đánh giá', items: [{ key: 'mock-exams', title: 'Bài thi thử', icon: ClipboardCheck }] },
+    {
+      label: 'Đánh giá',
+      items: [
+        { key: 'mock-exams', title: 'Bài thi thử', icon: ClipboardCheck },
+        { key: 'questions', title: 'Duyệt câu hỏi', icon: ListChecks },
+        { key: 'attempts', title: 'Bài làm học viên', icon: ClipboardCheck },
+      ],
+    },
   ]
   return (
     <ConsoleShell
@@ -151,6 +124,10 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
             <Suspense fallback={<SchedulingPageFallback title="Giờ rảnh" />}>
               <TeacherAvailabilityPage />
             </Suspense>
+          ) : view === 'questions' ? (
+            <QuestionReview />
+          ) : view === 'attempts' ? (
+            <TeacherAttempts />
           ) : view === 'profile' ? (
             <ProfilePage />
           ) : view === 'mock-exams' ? (
@@ -181,11 +158,9 @@ function TeacherDashboard({ onBack, onNavigate, onLogout, logoutLoading = false,
             <TeacherQuiz course={quizCourse} startCreating={quizCreateMode} onBack={() => onNavigate ? onNavigate('courses') : setQuizCourse(null)} onAction={action} />
           ) : (
             <TeacherCourses
-              courses={courses}
               selectedCourse={selectedCourse}
               onOpenCourse={openCourse}
               onBack={openCourses}
-              onAction={action}
               onOpenQuiz={openQuiz}
               onOpenAssignments={openAssignments}
             />

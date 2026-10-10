@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from '../../console/icons'
 import Button from '../../ui/Button'
 
 interface BackLinkProps {

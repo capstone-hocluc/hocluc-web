@@ -1,4 +1,4 @@
-import { Calendar, UserRound, Video } from 'lucide-react'
+import { Calendar, UserRound, Video } from '../../console/icons'
 import type { CourseStudyLiveClass } from '../../../services/courseService'
 import { formatDateTime, formatTime, prettifyEnum } from '../../../lib/courseFormat'
 import { cn } from '../../../lib/cn'

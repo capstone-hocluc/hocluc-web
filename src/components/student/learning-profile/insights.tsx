@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CheckCircle2, Maximize2, Target } from 'lucide-react'
+import { CheckCircle2, Maximize2, Target } from '../../console/icons'
 import { cva } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 import { ProfileCard } from './primitives'

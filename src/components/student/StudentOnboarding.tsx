@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Check, GraduationCap, Target, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Check, GraduationCap, Target, TrendingUp } from '../console/icons'
 import Logo from '../common/Logo'
 import Button from '../ui/Button'
 import Card from '../ui/Card'

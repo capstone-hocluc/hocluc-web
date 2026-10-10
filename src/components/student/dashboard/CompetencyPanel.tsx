@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BookOpen, ClipboardCheck, Clock3, Flame, Trophy } from 'lucide-react'
+import { BookOpen, ClipboardCheck, Clock3, Flame, Trophy } from '../../console/icons'
 import type { DashboardDimension } from '../../../lib/studentViewModel'
 
 function LevelLine({ title, data }: { title: string; data: DashboardDimension }) {

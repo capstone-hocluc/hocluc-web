@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GraduationCap, PlayCircle, ShoppingCart } from 'lucide-react'
+import { GraduationCap, PlayCircle, ShoppingCart } from '../console/icons'
 import type { CourseDetail } from '../../services/courseService'
 import { formatCoursePrice } from '../../lib/courseFormat'
 

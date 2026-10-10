@@ -4,17 +4,17 @@ import {
   AlertCircle,
   CheckCircle2,
   Eye,
+  Filter,
   LoaderCircle,
+  MoreHorizontal,
   Plus,
-  RefreshCw,
   Search,
-  UserRoundMinus,
+  Trash2,
 } from '../console/icons'
 import {
   deleteUser,
   getUserById,
   getUsers,
-  updateUserRole,
   updateUserRoles,
   updateUserStatus,
   USER_ROLES,
@@ -25,11 +25,13 @@ import {
   type UserStatus,
   type UserSummary,
 } from '../../services/userService'
+import { grantedRoles } from '../../lib/role-home'
 import Button from '../console/button'
 import DataTable from '../console/data-table'
 import SelectField from '../console/select-field'
 import Status from '../console/status'
 import ConfirmDialog from '../console/confirm-dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
 import { Input } from '../tailgrids/core/input'
 import { Pagination } from '../tailgrids/core/pagination'
 import UserCreateDialog from './user-create-dialog'
@@ -39,7 +41,6 @@ import {
   STATUS_LABELS,
   formatDate,
   getErrorMessage,
-  getInitials,
   getStatusTone,
   getUserName,
 } from './user-labels'
@@ -73,6 +74,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL')
   const [query, setQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [pageData, setPageData] = useState<UserListPage>(emptyPage)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -121,7 +123,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
     if (!needle) return pageData.content
     return pageData.content.filter((user) =>
       normalize(
-        [user.email, user.displayName, user.firstName, user.lastName, ROLE_LABELS[user.role]]
+        [user.email, user.displayName, user.firstName, user.lastName, ...grantedRoles(user).map((role) => ROLE_LABELS[role])]
           .filter(Boolean)
           .join(' ')
       ).includes(needle)
@@ -141,6 +143,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               avatarUrl: updated.avatarUrl ?? user.avatarUrl,
               status: updated.status ?? user.status,
               role: updated.role ?? user.role,
+              roles: updated.roles ?? user.roles,
               emailVerified: updated.emailVerified ?? user.emailVerified,
               lastLoginAt: updated.lastLoginAt ?? user.lastLoginAt,
               createdAt: updated.createdAt ?? user.createdAt,
@@ -168,22 +171,18 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
     [updateUserInPage]
   )
 
-  const handleGrantedRolesChange = useCallback(async (user: UserProfile, role: UserRole, granted: boolean) => {
-    const current = new Set<UserRole>(user.roles ?? [user.role])
-    if (granted) current.add(role)
-    else current.delete(role)
+  const handleGrantedRolesChange = useCallback(async (user: UserProfile, roles: UserRole[]) => {
     setGrantingRoles(true)
     setError('')
     try {
-      const updated = await updateUserRoles(user.id, Array.from(current))
-      setSelectedUser((open) => (open?.id === user.id ? { ...open, ...updated } : open))
-      setFeedback('Đã cập nhật vai trò được đổi.')
-    } catch (requestError: unknown) {
-      setError(getErrorMessage(requestError))
+      const updated = await updateUserRoles(user.id, roles)
+      updateUserInPage(user.id, updated)
+      setReloadKey((key) => key + 1)
+      setFeedback('Đã cập nhật vai trò được cấp.')
     } finally {
       setGrantingRoles(false)
     }
-  }, [])
+  }, [updateUserInPage])
 
   const openUserDetail = useCallback(async (user: UserSummary) => {
     setSelectedUser({ ...user, phone: undefined, bio: undefined, timezone: undefined, language: undefined })
@@ -222,109 +221,85 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   const columns = useMemo<ColumnDef<UserSummary>[]>(
     () => [
       {
-        id: 'user',
-        header: 'Tài khoản',
+        id: 'name',
+        header: 'Tên',
+        accessorFn: (user) => getUserName(user),
+        cell: ({ row }) => <span className="font-medium whitespace-nowrap">{getUserName(row.original)}</span>,
+      },
+      {
+        id: 'email',
+        header: 'Email',
         accessorKey: 'email',
-        cell: ({ row }) => (
-          <div className="flex min-w-56 items-center gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-badge-blue-background text-sm font-medium text-badge-blue-text">
-              {getInitials(row.original)}
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-text-primary">{getUserName(row.original)}</span>
-              <span className="block truncate text-xs text-text-tertiary">{row.original.email}</span>
-            </span>
-          </div>
-        ),
+        cell: ({ row }) => <span className="text-text-secondary">{row.original.email}</span>,
       },
       {
         id: 'role',
         header: 'Vai trò',
-        cell: ({ row }) =>
-          readOnly ? (
-            <Status tone="info">{ROLE_LABELS[row.original.role]}</Status>
-          ) : (
-            <div onClick={(event) => event.stopPropagation()}>
-              <SelectField
-                ariaLabel={`Vai trò của ${row.original.email}`}
-                options={ROLE_OPTIONS}
-                value={row.original.role}
-                disabled={updatingUserId === row.original.id}
-                triggerClassName="h-9 min-w-36"
-                onChange={(value) => {
-                  if (value !== row.original.role) {
-                    void runUserUpdate(
-                      row.original.id,
-                      () => updateUserRole(row.original.id, value as UserRole),
-                      'Đã cập nhật vai trò.'
-                    )
-                  }
-                }}
-              />
-            </div>
-          ),
+        accessorFn: (user) => ROLE_LABELS[user.role],
+        cell: ({ row }) => {
+          const roles = grantedRoles(row.original)
+          return (
+            <span className="whitespace-nowrap text-text-secondary">
+              {ROLE_LABELS[row.original.role]}
+              {roles.length > 1 && <span className="ml-1.5 text-xs text-text-tertiary">+{roles.length - 1}</span>}
+            </span>
+          )
+        },
       },
       {
         id: 'status',
         header: 'Trạng thái',
-        cell: ({ row }) =>
-          readOnly ? (
-            <Status tone={getStatusTone(row.original.status)}>{STATUS_LABELS[row.original.status]}</Status>
-          ) : (
-            <div onClick={(event) => event.stopPropagation()}>
-              <SelectField
-                ariaLabel={`Trạng thái của ${row.original.email}`}
-                options={STATUS_OPTIONS}
-                value={row.original.status}
-                disabled={updatingUserId === row.original.id}
-                triggerClassName="h-9 min-w-40"
-                onChange={(value) => {
-                  if (value !== row.original.status) {
-                    void runUserUpdate(
-                      row.original.id,
-                      () => updateUserStatus(row.original.id, value as UserStatus),
-                      'Đã cập nhật trạng thái.'
-                    )
-                  }
-                }}
-              />
-            </div>
-          ),
+        accessorFn: (user) => STATUS_LABELS[user.status],
+        cell: ({ row }) => <Status tone={getStatusTone(row.original.status)}>{STATUS_LABELS[row.original.status]}</Status>,
       },
       {
-        accessorKey: 'lastLoginAt',
-        header: 'Đăng nhập gần nhất',
-        cell: ({ row }) => (
-          <span className="text-sm whitespace-nowrap text-text-tertiary">
-            {formatDate(row.original.lastLoginAt, 'Chưa đăng nhập')}
-          </span>
-        ),
+        id: 'createdAt',
+        header: 'Ngày tạo',
+        accessorFn: (user) => user.createdAt ?? undefined,
+        cell: ({ row }) => <span className="whitespace-nowrap text-text-secondary">{formatDate(row.original.createdAt)}</span>,
       },
       {
         id: 'actions',
-        header: '',
+        header: () => <span className="block text-right">Thao tác</span>,
+        enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center justify-end gap-1" onClick={(event) => event.stopPropagation()}>
-            <Button
-              appearance="ghost"
-              size="sm"
-              aria-label={`Chi tiết ${row.original.email}`}
-              onClick={() => void openUserDetail(row.original)}
-            >
-              <Eye size={16} />
-            </Button>
-            {!readOnly && (
-              <Button
-                variant="danger"
-                appearance="ghost"
-                size="sm"
-                aria-label={`Xóa tài khoản ${row.original.email}`}
-                onClick={() => setDeletingUser(row.original)}
-                disabled={deleteUserLoading}
+          <div className="flex justify-end" onClick={(event) => event.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={`Thao tác với ${row.original.email}`}
+                isDisabled={updatingUserId === row.original.id}
+                className="grid size-8 place-items-center rounded-md text-icon-tertiary outline-none hover:bg-background-gray-secondary data-disabled:opacity-50"
               >
-                <UserRoundMinus size={16} />
-              </Button>
-            )}
+                <MoreHorizontal size={18} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onAction={() => void openUserDetail(row.original)}>
+                  <Eye size={16} />
+                  Xem chi tiết
+                </DropdownMenuItem>
+                {!readOnly &&
+                  USER_STATUSES.filter((status) => status !== row.original.status).map((status) => (
+                    <DropdownMenuItem
+                      key={status}
+                      onAction={() =>
+                        void runUserUpdate(row.original.id, () => updateUserStatus(row.original.id, status), 'Đã cập nhật trạng thái.')
+                      }
+                    >
+                      Chuyển sang {STATUS_LABELS[status].toLocaleLowerCase('vi-VN')}
+                    </DropdownMenuItem>
+                  ))}
+                {!readOnly && (
+                  <DropdownMenuItem
+                    isDisabled={deleteUserLoading}
+                    className="text-badge-danger-text"
+                    onAction={() => setDeletingUser(row.original)}
+                  >
+                    <Trash2 size={16} />
+                    Xóa tài khoản
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ),
       },
@@ -337,52 +312,53 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
       className="overflow-hidden rounded-xl border border-card-border bg-card-background"
       aria-busy={loading}
     >
-      <div className="flex flex-wrap items-center gap-3 border-b border-card-border px-5 py-4">
-        <div className="relative w-full sm:w-72">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <div className="relative w-full sm:w-80">
           <Search size={16} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-icon-tertiary" />
           <Input
             aria-label="Tìm theo tên hoặc email"
-            placeholder="Tên hoặc email"
+            placeholder="Tìm theo tên hoặc email..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-10 w-full py-0 pl-10"
+            className="h-9 w-full py-0 pl-10 text-sm"
           />
         </div>
-        <SelectField
-          ariaLabel="Lọc theo vai trò"
-          options={ROLE_FILTER_OPTIONS}
-          value={roleFilter}
-          onChange={(value) => {
-            setRoleFilter(value as UserRole | 'ALL')
-            setPage(0)
-          }}
-        />
-        <SelectField
-          ariaLabel="Lọc theo trạng thái"
-          options={STATUS_FILTER_OPTIONS}
-          value={statusFilter}
-          onChange={(value) => {
-            setStatusFilter(value as UserStatus | 'ALL')
-            setPage(0)
-          }}
-        />
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            appearance="outline"
-            aria-label="Làm mới"
-            onClick={() => setReloadKey((current) => current + 1)}
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : undefined} />
+        <div className="flex items-center gap-2">
+          <Button size="sm" appearance="outline" aria-expanded={showFilters} onClick={() => setShowFilters((open) => !open)}>
+            <Filter size={16} />
+            Lọc
           </Button>
           {canCreateUsers && !readOnly && (
-            <Button onClick={() => setCreateUserOpen(true)}>
+            <Button size="sm" onClick={() => setCreateUserOpen(true)}>
               <Plus size={16} />
-              Tạo tài khoản
+              Thêm tài khoản
             </Button>
           )}
         </div>
       </div>
+
+      {showFilters && (
+        <div className="flex flex-wrap items-center gap-3 px-5 pb-4">
+          <SelectField
+            ariaLabel="Lọc theo vai trò"
+            options={ROLE_FILTER_OPTIONS}
+            value={roleFilter}
+            onChange={(value) => {
+              setRoleFilter(value as UserRole | 'ALL')
+              setPage(0)
+            }}
+          />
+          <SelectField
+            ariaLabel="Lọc theo trạng thái"
+            options={STATUS_FILTER_OPTIONS}
+            value={statusFilter}
+            onChange={(value) => {
+              setStatusFilter(value as UserStatus | 'ALL')
+              setPage(0)
+            }}
+          />
+        </div>
+      )}
 
       {feedback && (
         <div
@@ -456,8 +432,8 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
         loading={detailLoading}
         canGrantRoles={canCreateUsers && !readOnly}
         grantingRoles={grantingRoles}
-        onClose={() => setSelectedUser(null)}
-        onToggleRole={(user, role, granted) => void handleGrantedRolesChange(user, role, granted)}
+        onClose={() => { if (!grantingRoles) setSelectedUser(null) }}
+        onSaveRoles={handleGrantedRolesChange}
       />
 
       {deletingUser && (

@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, CheckCircle2, Sparkles } from 'lucide-react'
+import { ArrowRight, BookOpen, CheckCircle2, Sparkles } from '../console/icons'
 import type { Course } from '../../services/courseService'
 import { formatCoursePrice, formatDate, formatExamLabel, prettifyEnum } from '../../lib/courseFormat'
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AlertCircle, CheckCircle2, Circle, Eye, EyeOff, LockKeyhole } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Circle, Eye, EyeOff, LockKeyhole } from '../../../components/console/icons'
 import {
   AccountForm,
   AccountPanel,

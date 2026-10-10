@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays } from '../../components/console/icons'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { usePageResource } from '../../hooks/usePageResource'
 import { buildLearningProfileViewModel } from '../../lib/studentViewModel'

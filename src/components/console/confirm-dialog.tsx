@@ -34,16 +34,24 @@ function ConfirmDialog({
 }: ConfirmDialogProps) {
   const touch = mobileTouchTargets ? 'max-[767px]:min-h-11' : undefined
   return (
-    <ConsoleDialog open onClose={onCancel} title={title} maxWidth={440} dismissable={!busy}>
+    <ConsoleDialog
+      open
+      onClose={onCancel}
+      title={title}
+      maxWidth={440}
+      dismissable={!busy}
+      footer={
+        <>
+          <Button appearance="outline" className={touch} onClick={onCancel} disabled={busy}>
+            {cancelLabel}
+          </Button>
+          <Button variant={variant === 'danger' ? 'danger' : 'primary'} className={touch} onClick={onConfirm} disabled={busy}>
+            {busy ? busyLabel : confirmLabel}
+          </Button>
+        </>
+      }
+    >
       <p className="text-sm text-text-tertiary">{description}</p>
-      <div className="mt-5 flex justify-end gap-2">
-        <Button appearance="outline" className={touch} onClick={onCancel} disabled={busy}>
-          {cancelLabel}
-        </Button>
-        <Button variant={variant === 'danger' ? 'danger' : 'primary'} className={touch} onClick={onConfirm} disabled={busy}>
-          {busy ? busyLabel : confirmLabel}
-        </Button>
-      </div>
     </ConsoleDialog>
   )
 }

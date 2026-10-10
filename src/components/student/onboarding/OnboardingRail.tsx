@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react'
+import { Check } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 
 const railCard =

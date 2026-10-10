@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, CheckCircle2, Play } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, Play } from '../../components/console/icons'
 import { findCourseActivity, getActivityRouteType } from '../../data/courseLookup'
 import { useTransientMessage } from '../../hooks/useTransientMessage'
 import StudentToast from '../../components/student/common/StudentToast'

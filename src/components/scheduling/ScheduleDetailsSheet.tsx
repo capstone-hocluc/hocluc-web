@@ -1,4 +1,4 @@
-import { CalendarDays, ExternalLink, MapPin } from 'lucide-react'
+import { CalendarDays, ExternalLink, MapPin } from '../console/icons'
 import type { ReactNode } from 'react'
 import type { ScheduleCalendarItem } from '../../types/scheduling'
 import { itemDateKey, itemLocation, itemMeetingUrl, itemSubtitle, itemTimeLabel, itemTimezone, itemTitle, localDateLabel } from '../../lib/scheduling'

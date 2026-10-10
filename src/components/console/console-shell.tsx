@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 import ThemeProvider from '../common/ThemeProvider'
 import { SheetContent, SheetOverlay, SheetTitle } from '../tailgrids/core/sheet'
@@ -29,6 +29,14 @@ function ConsoleShell({
 }: ConsoleShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false)
+
+  // Flag on <html> so overlays rendered in portals also get the console border colours.
+  useEffect(() => {
+    document.documentElement.dataset.console = ''
+    return () => {
+      delete document.documentElement.dataset.console
+    }
+  }, [])
 
   return (
     <ThemeProvider>

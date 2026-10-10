@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 import ActivityButton from './ActivityButton'
 

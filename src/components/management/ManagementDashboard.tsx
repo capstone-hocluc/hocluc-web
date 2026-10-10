@@ -1,5 +1,18 @@
-import { lazy, Suspense } from 'react'
-import { BookOpen, CalendarDays, ClipboardCheck, LayoutDashboard, Users } from '../console/icons'
+import { lazy, Suspense, type ReactNode } from 'react'
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardCheck,
+  FileText,
+  GraduationCap,
+  Layers3,
+  LayoutDashboard,
+  ListChecks,
+  ClipboardList,
+  ShoppingCart,
+  Sparkles,
+  Users,
+} from '../console/icons'
 import ConsoleShell from '../console/console-shell'
 import ProfilePage from '../console/profile-page'
 import AdminOverview from '../admin/AdminOverview'
@@ -7,9 +20,22 @@ import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
-import PageHeading from '../ui/PageHeading'
+import PageHeading from '../console/page-heading'
 import type { ManagementRole } from './ManagementRouteGuard'
 import Notice from '../console/notice'
+import {
+  AdminAuditLog,
+  AdminBlueprints,
+  AdminTaxonomy,
+  MentorGroups,
+  MentorOverview,
+  MentorSolutionQueue,
+  MentorStudents,
+  StaffEnrollments,
+  StaffGroups,
+  StaffOrders,
+} from './role-screens'
+import { QuestionReview } from './quiz-review-screens'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
 const AttendanceManagementPage = lazy(() => import('../../pages/management/AttendanceManagementPage'))
@@ -78,10 +104,28 @@ const NAV_ITEMS = [
   { page: 'users', label: 'Người dùng', icon: Users },
 ]
 
+const ADMIN_NAV_ITEMS = [
+  ...NAV_ITEMS,
+  { page: 'blueprints', label: 'Blueprint đề thi', icon: FileText },
+  { page: 'taxonomy', label: 'Phân loại kiến thức', icon: Layers3 },
+  { page: 'audit-log', label: 'Nhật ký hoạt động', icon: ClipboardList },
+]
+
 const STAFF_NAV_ITEMS = [
   ...NAV_ITEMS,
+  { page: 'orders', label: 'Đơn hàng', icon: ShoppingCart },
+  { page: 'enrollments', label: 'Ghi danh', icon: GraduationCap },
+  { page: 'groups', label: 'Nhóm học', icon: Users },
+  { page: 'question-review', label: 'Duyệt câu hỏi', icon: ListChecks },
   { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
   { page: 'attendance', label: 'Điểm danh', icon: ClipboardCheck },
+]
+
+const MENTOR_NAV_ITEMS = [
+  { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { page: 'groups', label: 'Nhóm của tôi', icon: Users },
+  { page: 'students', label: 'Học viên', icon: GraduationCap },
+  { page: 'solution-queue', label: 'Duyệt lời giải AI', icon: Sparkles },
 ]
 
 const MANAGER_NAV_ITEMS = [
@@ -89,6 +133,27 @@ const MANAGER_NAV_ITEMS = [
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
   { page: 'schedules', label: 'Lịch học', icon: CalendarDays },
 ]
+
+// Màn hình theo vai trò chạy bằng dữ liệu mẫu (xem role-screens.tsx).
+const ROLE_SCREENS: Partial<Record<ManagementRole, Record<string, (props: { onNavigate: (page: string) => void }) => ReactNode>>> = {
+  ADMINISTRATOR: {
+    blueprints: () => <AdminBlueprints />,
+    taxonomy: () => <AdminTaxonomy />,
+    'audit-log': () => <AdminAuditLog />,
+  },
+  STAFF: {
+    orders: () => <StaffOrders />,
+    enrollments: () => <StaffEnrollments />,
+    groups: () => <StaffGroups />,
+    'question-review': () => <QuestionReview />,
+  },
+  MENTOR: {
+    'mentor-dashboard': ({ onNavigate }) => <MentorOverview onNavigate={onNavigate} />,
+    groups: () => <MentorGroups />,
+    students: () => <MentorStudents />,
+    'solution-queue': () => <MentorSolutionQueue />,
+  },
+}
 
 function UnavailablePage({ page }: { page: string }) {
   const meta = PAGE_META[page] ?? {
@@ -131,12 +196,12 @@ function ManagementDashboard({
     role === 'ADMINISTRATOR' ? 'Quản trị' : role === 'MENTOR' ? 'Mentor' : 'Vận hành'
   const navigationItems =
     role === 'MENTOR'
-      ? NAV_ITEMS.filter((item) => item.page === 'dashboard')
+      ? MENTOR_NAV_ITEMS
       : role === 'MANAGER'
         ? MANAGER_NAV_ITEMS
         : role === 'STAFF'
           ? STAFF_NAV_ITEMS
-          : NAV_ITEMS
+          : ADMIN_NAV_ITEMS
 
   const sections = [
     {
@@ -157,6 +222,8 @@ function ManagementDashboard({
     >
       {showProfile ? (
         <ProfilePage />
+      ) : ROLE_SCREENS[role]?.[effectivePage] ? (
+        ROLE_SCREENS[role][effectivePage]({ onNavigate })
       ) : effectivePage === 'courses' && role === 'MANAGER' ? (
         <>
           <PageHeading title={meta.title} />

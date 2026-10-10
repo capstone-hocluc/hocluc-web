@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { LockKeyhole, UserRound } from './icons'
+import { LockKeyhole, UserRound, type LucideIcon } from './icons'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { ROLE_LABELS } from '../../lib/role-home'
 import {
@@ -20,7 +20,7 @@ import { getDisplayName, getInitials } from './profile-utils'
 
 type Tab = 'account' | 'security'
 
-const TABS: { id: Tab; title: string; description: string; icon: typeof UserRound }[] = [
+const TABS: { id: Tab; title: string; description: string; icon: LucideIcon }[] = [
   { id: 'account', title: 'Tài khoản', description: 'Thông tin cá nhân', icon: UserRound },
   { id: 'security', title: 'Bảo mật', description: 'Mật khẩu đăng nhập', icon: LockKeyhole },
 ]

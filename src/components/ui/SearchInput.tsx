@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { Search } from 'lucide-react'
+import { Search } from '../console/icons'
 import { cn } from '../../lib/cn'
 
 // Rounded search field with a leading icon; focus ring on the wrapper.

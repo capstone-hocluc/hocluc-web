@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw } from '../console/icons'
 import MascotState from '../common/MascotState'
 import type { LessonDetail } from '../../services/lessonService'
 import { getLessonVideoStreamUrl } from '../../services/lessonService'

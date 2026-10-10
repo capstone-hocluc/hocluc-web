@@ -1,5 +1,5 @@
 import type { ComponentProps, ComponentType, ReactNode } from 'react'
-import { TrendingDown, TrendingUp } from 'lucide-react'
+import { TrendingDown, TrendingUp } from '../../console/icons'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'

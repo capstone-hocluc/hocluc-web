@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, GraduationCap, Play } from 'lucide-react'
+import { ArrowLeft, BookOpen, GraduationCap, Play } from '../../console/icons'
 import Button from '../../ui/Button'
 import Card from '../../ui/Card'
 import Progress from '../../ui/Progress'

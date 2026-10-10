@@ -1,4 +1,4 @@
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2 } from '../../console/icons'
 import type {
   CourseStudyChapter,
   CourseStudyPhase,

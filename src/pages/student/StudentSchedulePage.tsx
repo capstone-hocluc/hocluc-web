@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, Info } from 'lucide-react'
+import { CalendarDays, Info } from '../../components/console/icons'
 import type { AttendanceResponse, AttendanceStatus, ScheduleCalendarItem } from '../../types/scheduling'
 import { getMyCourses, type MyCourseEnrollment } from '../../services/courseService'
 import { getStudentSchedules } from '../../services/scheduleService'

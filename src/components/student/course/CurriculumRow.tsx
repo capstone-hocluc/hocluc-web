@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 
 interface CurriculumRowProps {

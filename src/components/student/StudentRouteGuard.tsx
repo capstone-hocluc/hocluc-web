@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { LoaderCircle, ShieldAlert } from 'lucide-react'
+import { LoaderCircle, ShieldAlert } from '../console/icons'
 import { clearTokens, getAccessToken } from '../../lib/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Button from '../ui/Button'

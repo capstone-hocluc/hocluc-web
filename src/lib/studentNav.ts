@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { BarChart3, BookOpen, CalendarDays, Home, UserRound } from 'lucide-react'
+import { BarChart3, BookOpen, CalendarDays, Home, UserRound } from '../components/console/icons'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from './studentRoutes'
 
 export type StudentNavKey = 'dashboard' | 'schedule' | 'learning-profile' | 'courses' | 'progress'

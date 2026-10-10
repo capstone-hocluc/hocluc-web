@@ -341,3 +341,46 @@ export async function deleteTeacherQuizQuestion(questionId: string): Promise<voi
 
   if (!response || response.success !== true) throw new AmbiguousTeacherQuestionSaveError()
 }
+
+export interface TeacherAttemptRecord {
+  attemptId: string
+  studentId: string
+  studentName: string | null
+  studentEmail: string | null
+  mode: string
+  status: string
+  attemptNumber: number
+  startedAt: string | null
+  submittedAt: string | null
+  autoSubmitted: boolean
+  percentage: number | null
+  correctCount: number | null
+  totalQuestions: number | null
+  passed: boolean
+  timeSpentSeconds: number | null
+}
+
+export interface TeacherQuizStats {
+  quizId: string
+  gradedAttempts: number
+  inProgressAttempts: number
+  practiceAttempts: number
+  averagePercentage: number | null
+  passRate: number | null
+}
+
+export function getTeacherQuizAttempts(quizId: string): Promise<TeacherAttemptRecord[]> {
+  return requireData(`${quizPath(quizId)}/attempts`, 'Không thể tải danh sách bài làm.')
+}
+
+export function getTeacherQuizStats(quizId: string): Promise<TeacherQuizStats> {
+  return requireData(`${quizPath(quizId)}/stats`, 'Không thể tải thống kê bài kiểm tra.')
+}
+
+// Marks the given questions as reviewed (clears their needs-review flag).
+export async function markTeacherQuestionsReviewed(quizId: string, questionIds: string[]): Promise<void> {
+  await requireData(`${quizPath(quizId)}/questions/reviewed`, 'Không thể cập nhật trạng thái duyệt.', {
+    method: 'POST',
+    body: { questionIds },
+  })
+}

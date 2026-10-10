@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from '../console/icons'
 import type { ScheduleCalendarItem } from '../../types/scheduling'
 import { addLocalDays, itemDateKey, itemTimeLabel, itemTitle, localDateLabel, localToday, sortScheduleItems, startOfLocalWeek } from '../../lib/scheduling'
 import Button from '../ui/Button'

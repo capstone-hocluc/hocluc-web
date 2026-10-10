@@ -1,4 +1,4 @@
-import { BookOpen, Trophy } from 'lucide-react'
+import { BookOpen, Trophy } from '../../console/icons'
 
 interface CourseMiniCardProps {
   title: string
