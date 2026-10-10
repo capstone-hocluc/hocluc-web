@@ -11,6 +11,11 @@ import type {
 import type { EnrollmentAdmin } from '../../src/services/enrollmentAdminService'
 import type { StudyGroupAdmin, StudyGroupAdminDetail, MentorStrength } from '../../src/services/studyGroupAdminService'
 import type { UserProfile } from '../../src/services/userService'
+import type {
+  ClassSessionRecordingResponse,
+  ClassSessionResponse,
+  RecurringClassResponse,
+} from '../../src/types/scheduling'
 
 export const IDS = {
   main: '10000000-0000-0000-0000-000000000001',
@@ -27,6 +32,10 @@ export const IDS = {
   orderPending: '70000000-0000-0000-0000-000000000001',
   orderPaid: '70000000-0000-0000-0000-000000000002',
   enrollment: '80000000-0000-0000-0000-000000000001',
+  recurring: 'b0000000-0000-0000-0000-000000000001',
+  session: 'b0000000-0000-0000-0000-000000000002',
+  sessionOverridden: 'b0000000-0000-0000-0000-000000000003',
+  recording: 'c0000000-0000-0000-0000-000000000001',
 }
 // Tokens are opaque strings: preserve all six PostgreSQL fractional-second digits.
 export const STAMP = '2026-10-10T00:00:00.123456Z'
@@ -184,6 +193,97 @@ const userProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
   ...overrides,
 })
 
+// The scheduling console filters and renders instants in the scheduling timezone, so anchor the
+// fixtures there instead of depending on the machine's timezone.
+const pad = (value: number) => String(value).padStart(2, '0')
+const fixtureDate = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+}).format(new Date())
+const instantOnLocalDate = (dateIso: string, hour: number, minute = 0) =>
+  `${dateIso}T${pad(hour)}:${pad(minute)}:00+07:00`
+
+const classSession = (overrides: Partial<ClassSessionResponse> = {}): ClassSessionResponse => ({
+  id: IDS.session,
+  recurringClassId: IDS.recurring,
+  courseId: IDS.main,
+  sectionId: IDS.section,
+  sectionTitle: 'SECTION Đại số',
+  teacherId: IDS.teacher,
+  teacherName: 'Giáo viên QA',
+  title: 'Lớp lặp Toán - Buổi 1',
+  sessionDate: fixtureDate,
+  startTime: instantOnLocalDate(fixtureDate, 18),
+  endTime: instantOnLocalDate(fixtureDate, 20),
+  mode: 'PHYSICAL',
+  classroom: 'Phòng 101',
+  meetingProvider: 'ZOOM',
+  meetingLink: null,
+  status: 'SCHEDULED',
+  overridden: false,
+  ...overrides,
+})
+
+const recurringSeries = (overrides: Partial<RecurringClassResponse> = {}): RecurringClassResponse => ({
+  id: IDS.recurring,
+  courseId: IDS.main,
+  sectionId: IDS.section,
+  sectionTitle: 'SECTION Đại số',
+  teacherId: IDS.teacher,
+  teacherName: 'Giáo viên QA',
+  title: 'Lớp lặp Toán',
+  dayOfWeek: 'MONDAY',
+  startTime: '18:00:00',
+  endTime: '20:00:00',
+  durationMinutes: 120,
+  defaultMode: 'PHYSICAL',
+  defaultLocation: 'Phòng 101',
+  defaultMeetingProvider: 'ZOOM',
+  defaultMeetingLink: null,
+  startDate: '2026-09-28',
+  endDate: '2026-12-28',
+  status: 'SCHEDULED',
+  sessions: [
+    classSession(),
+    classSession({ id: IDS.sessionOverridden, overridden: true, status: 'CANCELLED' }),
+  ],
+  ...overrides,
+})
+
+const sessionRecording = (
+  overrides: Partial<ClassSessionRecordingResponse> = {}
+): ClassSessionRecordingResponse => ({
+  id: IDS.recording,
+  classSessionId: IDS.session,
+  sessionTitle: 'Lớp lặp Toán - Buổi 1',
+  sectionId: IDS.section,
+  sectionTitle: 'SECTION Đại số',
+  fileId: null,
+  title: 'Bản ghi buổi 1',
+  videoUrl: 'https://example.invalid/rec-1.mp4',
+  streamUrl: null,
+  provider: 'ZOOM',
+  durationSeconds: 3600,
+  fileSizeBytes: null,
+  createdAt: STAMP,
+  ...overrides,
+})
+
+const courseDetail = {
+  id: IDS.main,
+  title: 'MAIN Toán',
+  phases: [
+    {
+      id: IDS.phase1,
+      name: 'Nền tảng',
+      sequence: 1,
+      sections: [{ sectionCourseId: IDS.section, title: 'SECTION Đại số', sequence: 1, chapters: [] }],
+    },
+  ],
+}
+
 export interface CapturedRequest {
   path: string
   method: string
@@ -259,6 +359,9 @@ export async function installCrudFixture(
     ] as StudyGroupAdminDetail[],
     users: {} as Record<string, UserProfile>,
     mentorStrengths: {} as Record<string, MentorStrength>,
+    recurringClasses: [] as RecurringClassResponse[],
+    classSessions: [] as ClassSessionResponse[],
+    recordings: [sessionRecording()] as ClassSessionRecordingResponse[],
     requests: [] as CapturedRequest[],
     failNext: '' as '' | 'conflict' | 'network',
     sequence: 10,
@@ -283,6 +386,17 @@ export async function installCrudFixture(
     { id: IDS.phase1, name: 'Nền tảng', description: null, sequence: 1, updatedAt: STAMP },
     { id: IDS.phase2, name: 'Luyện tập', description: null, sequence: 2, updatedAt: STAMP },
   ]
+  const seededSessions = [
+    classSession(),
+    classSession({
+      id: IDS.sessionOverridden,
+      title: 'Buổi bù đã sửa riêng',
+      overridden: true,
+      status: 'CANCELLED',
+    }),
+  ]
+  state.classSessions = seededSessions
+  state.recurringClasses = [recurringSeries({ sessions: seededSessions })]
   await page.addInitScript(() => {
     localStorage.setItem('hocluc.accessToken', 'local-fixture-token-not-a-real-credential')
     localStorage.removeItem('hocluc.refreshToken')
@@ -845,6 +959,75 @@ export async function installCrudFixture(
           lesson.preview = Boolean(body.preview)
           return answer(lesson)
         }
+      }
+    }
+    // ── console scheduling: course calendar, recurring series, class sessions, recordings ──
+    if (path === '/api/v1/courses/main')
+      return answer([{ id: IDS.main, title: 'MAIN Toán', courseType: 'MAIN' }])
+    if (path.startsWith('/api/v1/courses/')) {
+      const parts = path.split('/').slice(4)
+      if (parts[0] === IDS.main) {
+        if (parts.length === 1 && method === 'GET') return answer(courseDetail)
+        if (parts[1] === 'schedules' && method === 'GET') return answer([])
+        if (parts[1] === 'recurring-classes' && method === 'GET') return answer(state.recurringClasses)
+        if (parts[1] === 'class-sessions' && method === 'GET') return answer(state.classSessions)
+      }
+    }
+    if (path.startsWith('/api/v1/class-sessions/') && path.includes('/recordings')) {
+      const parts = path.split('/').slice(4)
+      const sessionId = parts[0]
+      if (parts.length === 2 && method === 'GET')
+        return answer(state.recordings.filter((row) => row.classSessionId === sessionId))
+      if (parts.length === 3) {
+        const row = state.recordings.find(
+          (item) => item.id === parts[2] && item.classSessionId === sessionId
+        )
+        if (!row) return answer(null, 404, 'Recording not found.')
+        if (method === 'PATCH') {
+          if (body.title !== undefined) row.title = String(body.title)
+          if (body.videoUrl !== undefined) row.videoUrl = String(body.videoUrl)
+          if (body.provider !== undefined)
+            row.provider = body.provider as ClassSessionRecordingResponse['provider']
+          return answer(row)
+        }
+        if (method === 'DELETE') {
+          state.recordings = state.recordings.filter((item) => item !== row)
+          return answer(null)
+        }
+      }
+    }
+    // Must sit after the recordings branch above, which shares the /class-sessions/ prefix.
+    if (path.startsWith('/api/v1/class-sessions/')) {
+      const sessionId = path.split('/').at(-1) ?? ''
+      const session = state.classSessions.find((item) => item.id === sessionId)
+      if (session && method === 'PATCH') {
+        if (body.status !== undefined) session.status = body.status as ClassSessionResponse['status']
+        if (body.title !== undefined) session.title = String(body.title)
+        // The BE flags any hand-edited session so a later series edit leaves it alone.
+        session.overridden = true
+        return answer(session)
+      }
+    }
+    if (path.startsWith('/api/v1/recurring-classes/')) {
+      const seriesId = path.split('/').at(-1) ?? ''
+      const series = state.recurringClasses.find((item) => item.id === seriesId)
+      if (series && method === 'PATCH') {
+        Object.assign(series, body)
+        // Model the BE regeneration: only the sessions that were not hand-edited follow the new
+        // weekly slot; the rest are kept exactly as they are.
+        const [startHour, startMinute] = String(series.startTime).split(':').map(Number)
+        const [endHour, endMinute] = String(series.endTime).split(':').map(Number)
+        state.classSessions = state.classSessions.map((session) =>
+          session.recurringClassId === series.id && !session.overridden
+            ? {
+                ...session,
+                startTime: instantOnLocalDate(session.sessionDate, startHour, startMinute),
+                endTime: instantOnLocalDate(session.sessionDate, endHour, endMinute),
+              }
+            : session
+        )
+        series.sessions = state.classSessions.filter((session) => session.recurringClassId === series.id)
+        return answer(series)
       }
     }
     state.unmatchedRequests.push(`${method} ${request.url()}`)

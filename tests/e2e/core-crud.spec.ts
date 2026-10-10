@@ -567,3 +567,114 @@ test('staff sees account details without the administrator editor', async ({ pag
   const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
   await expect(dialog.getByRole('button', { name: 'Lưu thông tin', exact: true })).toHaveCount(0)
 })
+
+test('staff edits a recurring series and only the untouched sessions follow the new slot', async ({
+  page,
+}) => {
+  // The scheduling screen is a lazily imported chunk and this is the first test that opens it, so
+  // the dev server may take a while to serve its module graph.
+  test.setTimeout(120_000)
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/schedules')
+  await expect(page.getByText('Lớp lặp Toán', { exact: true })).toBeVisible({ timeout: 90_000 })
+  await expect(page.getByText(/1 buổi đã sửa riêng/)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Sửa chuỗi', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Chỉnh sửa lớp học lặp', exact: true })
+  await expect(sheet.getByText(/sinh lại theo lịch mới/)).toBeVisible()
+  await expect(sheet.locator('[name="startTime"]')).toHaveValue('18:00')
+  await sheet.locator('[name="startTime"]').fill('19:00')
+  await sheet.locator('[name="endTime"]').fill('21:00')
+  await sheet.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
+  await expect(sheet).toBeHidden()
+
+  expect(
+    state.requests.find(
+      (request) => request.method === 'PATCH' && request.path === `/api/v1/recurring-classes/${IDS.recurring}`
+    )!.body
+  ).toMatchObject({
+    teacherId: IDS.teacher,
+    startTime: '19:00',
+    endTime: '21:00',
+    durationMinutes: 120,
+  })
+  await expect(page.getByText('19:00–21:00')).toBeVisible()
+  // The hand-edited session keeps its own slot, the other one moves with the series.
+  expect(state.classSessions.find((session) => session.id === IDS.session)!.startTime).toContain(
+    'T19:00:00+07:00'
+  )
+  expect(
+    state.classSessions.find((session) => session.id === IDS.sessionOverridden)!.startTime
+  ).toContain('T18:00:00+07:00')
+})
+
+test('staff edits then deletes a class-session recording', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/schedules')
+  await page
+    .getByRole('button', { name: 'Xem chi tiết Lớp lặp Toán - Buổi 1', exact: true })
+    .click()
+  const details = page.getByRole('dialog', { name: 'Chi tiết lịch học', exact: true })
+  await expect(details.getByText('Bản ghi buổi 1')).toBeVisible()
+
+  await details.getByRole('button', { name: 'Sửa', exact: true }).click()
+  const editor = page.getByRole('dialog', { name: 'Sửa bản ghi', exact: true })
+  await editor.locator('[name="editTitle"]').fill('Bản ghi buổi 1 (đã sửa)')
+  await editor.getByRole('button', { name: 'Lưu', exact: true }).click()
+  await expect(editor).toBeHidden()
+  await expect(details.getByText('Đã cập nhật bản ghi.')).toBeVisible()
+  await expect(details.getByText('Bản ghi buổi 1 (đã sửa)')).toBeVisible()
+  expect(
+    state.requests.find(
+      (request) =>
+        request.method === 'PATCH' && request.path.endsWith(`/recordings/${IDS.recording}`)
+    )!.body
+  ).toMatchObject({ title: 'Bản ghi buổi 1 (đã sửa)', provider: 'ZOOM' })
+
+  await details.getByRole('button', { name: 'Xoá', exact: true }).click()
+  const confirm = page.getByRole('dialog', { name: 'Xoá bản ghi?' })
+  await confirm.getByRole('button', { name: 'Xoá bản ghi', exact: true }).click()
+  await expect(details.getByText('Chưa có bản ghi.')).toBeVisible()
+  expect(
+    state.requests.some(
+      (request) =>
+        request.method === 'DELETE' && request.path.endsWith(`/recordings/${IDS.recording}`)
+    )
+  ).toBe(true)
+  expect(state.recordings).toHaveLength(0)
+})
+
+test('staff cancels one class session without touching the series', async ({ page }) => {
+  const state = await installCrudFixture(page)
+  await page.goto('/staff/schedules')
+  await page
+    .getByRole('button', { name: 'Xem chi tiết Lớp lặp Toán - Buổi 1', exact: true })
+    .click()
+  const details = page.getByRole('dialog', { name: 'Chi tiết lịch học', exact: true })
+  await details.getByRole('button', { name: 'Hủy buổi', exact: true }).click()
+  const confirm = page.getByRole('dialog', { name: 'Hủy buổi học này?' })
+  await confirm.getByRole('button', { name: 'Hủy buổi', exact: true }).click()
+  await expect(page.getByText('Đã hủy buổi học.')).toBeVisible()
+  expect(
+    state.requests.find(
+      (request) => request.method === 'PATCH' && request.path === `/api/v1/class-sessions/${IDS.session}`
+    )!.body
+  ).toEqual({ status: 'CANCELLED' })
+  expect(state.classSessions.find((session) => session.id === IDS.session)!.status).toBe('CANCELLED')
+  expect(state.requests.some((request) => request.method === 'DELETE')).toBe(false)
+  expect(state.recurringClasses[0].status).toBe('SCHEDULED')
+})
+
+// Scheduling rights were deliberately not narrowed in this pass: a MANAGER may write a series,
+// so this only proves the read path reaches the recordings.
+test('manager reads the schedule console and its recordings without mutating', async ({ page }) => {
+  const state = await installCrudFixture(page, 'MANAGER')
+  await page.goto('/manager/schedules')
+  await expect(page.getByText('Lớp lặp Toán', { exact: true })).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Xem chi tiết Lớp lặp Toán - Buổi 1', exact: true })
+    .click()
+  const details = page.getByRole('dialog', { name: 'Chi tiết lịch học', exact: true })
+  await expect(details.getByText('Bản ghi buổi 1')).toBeVisible()
+  expect(state.requests.filter((request) => request.method !== 'GET')).toHaveLength(0)
+})

@@ -1,5 +1,10 @@
+import { request } from '../lib/api'
 import { requestSchedulingData } from './schedulingApi'
-import type { AttachSessionRecordingRequest, ClassSessionRecordingResponse } from '../types/scheduling'
+import type {
+  AttachSessionRecordingRequest,
+  ClassSessionRecordingResponse,
+  UpdateSessionRecordingRequest,
+} from '../types/scheduling'
 
 const API = '/api/v1'
 
@@ -39,5 +44,32 @@ export function attachClassSessionRecording(
     API + '/class-sessions/' + encodeURIComponent(classSessionId) + '/recordings',
     { method: 'POST', auth: true, body: payload },
     'Máy chủ không trả về bản ghi vừa gắn.'
+  )
+}
+
+export function updateClassSessionRecording(
+  classSessionId: string,
+  recordingId: string,
+  payload: UpdateSessionRecordingRequest
+): Promise<ClassSessionRecordingResponse> {
+  return requestSchedulingData<ClassSessionRecordingResponse>(
+    API +
+      '/class-sessions/' + encodeURIComponent(classSessionId) +
+      '/recordings/' + encodeURIComponent(recordingId),
+    { method: 'PATCH', auth: true, body: payload },
+    'Máy chủ không trả về bản ghi đã cập nhật.'
+  )
+}
+
+/** Removes the recording row; the stored file itself stays on the server. */
+export async function deleteClassSessionRecording(
+  classSessionId: string,
+  recordingId: string
+): Promise<void> {
+  await request<void>(
+    API +
+      '/class-sessions/' + encodeURIComponent(classSessionId) +
+      '/recordings/' + encodeURIComponent(recordingId),
+    { method: 'DELETE', auth: true }
   )
 }

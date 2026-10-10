@@ -104,6 +104,26 @@ export interface CreateRecurringClassRequest {
   timezone?: string
 }
 
+/**
+ * Partial edit of a whole series (PATCH /recurring-classes/{id}). Omitted fields keep their
+ * stored value; the section is fixed for the life of the series, so it is not part of the body.
+ */
+export interface UpdateRecurringClassRequest {
+  teacherId?: string
+  title?: string
+  dayOfWeek?: DayOfWeek
+  startTime?: string
+  endTime?: string
+  durationMinutes?: number
+  defaultMode?: DeliveryMode
+  defaultLocation?: string
+  defaultMeetingProvider?: MeetingProvider
+  defaultMeetingLink?: string
+  startDate?: string
+  endDate?: string
+  timezone?: string
+}
+
 /** ClassSession has its own ID and has no scheduleId in PR #13. */
 export interface ClassSessionResponse {
   id: string
@@ -285,6 +305,15 @@ export interface ClassSessionRecordingResponse {
   durationSeconds?: number | null
   fileSizeBytes?: number | null
   createdAt: string
+}
+
+/** Partial edit of an attached recording (PATCH .../recordings/{recordingId}). */
+export interface UpdateSessionRecordingRequest {
+  title?: string
+  videoUrl?: string
+  provider?: MeetingProvider
+  durationSeconds?: number
+  fileSizeBytes?: number
 }
 
 export type ScheduleCalendarItem =

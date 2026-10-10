@@ -1,5 +1,9 @@
 import { request } from '../lib/api'
-import type { CreateRecurringClassRequest, RecurringClassResponse } from '../types/scheduling'
+import type {
+  CreateRecurringClassRequest,
+  RecurringClassResponse,
+  UpdateRecurringClassRequest,
+} from '../types/scheduling'
 import { requestSchedulingData } from './schedulingApi'
 
 const API = '/api/v1'
@@ -17,6 +21,22 @@ export function getRecurringClass(recurringClassId: string): Promise<RecurringCl
     API + '/recurring-classes/' + encodeURIComponent(recurringClassId),
     { auth: true },
     'Không thể tải thông tin lịch lặp.'
+  )
+}
+
+/**
+ * Edits the whole series. The BE re-generates the class sessions that have not happened yet and
+ * keeps the ones that already started or were edited by hand, so the response carries the full
+ * surviving session list.
+ */
+export function updateRecurringClass(
+  recurringClassId: string,
+  payload: UpdateRecurringClassRequest
+): Promise<RecurringClassResponse> {
+  return requestSchedulingData<RecurringClassResponse>(
+    API + '/recurring-classes/' + encodeURIComponent(recurringClassId),
+    { method: 'PATCH', auth: true, body: payload },
+    'Máy chủ không trả về chuỗi lịch lặp đã cập nhật.'
   )
 }
 

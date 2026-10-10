@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { SCHEDULING_TIMEZONE } from '../../lib/scheduling'
-import type { CreateRecurringClassRequest, DayOfWeek, DeliveryMode } from '../../types/scheduling'
+import type {
+  CreateRecurringClassRequest,
+  DayOfWeek,
+  DeliveryMode,
+  RecurringClassResponse,
+  UpdateRecurringClassRequest,
+} from '../../types/scheduling'
 import type { UserSummary } from '../../services/userService'
 import type { CourseSection } from '../../services/courseService'
 import Button from '../../components/console/button'
@@ -20,6 +26,8 @@ const weekdays: Array<{ id: DayOfWeek; label: string }> = [
 ]
 
 interface Props {
+  /** Present when editing an existing series; the section is fixed and only shown read-only. */
+  initial?: RecurringClassResponse
   teachers: UserSummary[]
   sections: CourseSection[]
   sectionsLoading?: boolean
@@ -28,10 +36,11 @@ interface Props {
   busy?: boolean
   errorMessage?: string
   onClose: () => void
-  onSave: (payload: CreateRecurringClassRequest) => void
+  onSave: (payload: CreateRecurringClassRequest | UpdateRecurringClassRequest) => void
 }
 
 export default function RecurringClassEditor({
+  initial,
   teachers,
   sections,
   sectionsLoading = false,
@@ -42,7 +51,8 @@ export default function RecurringClassEditor({
   onClose,
   onSave,
 }: Props) {
-  const [teacherId, setTeacherId] = useState('')
+  const editing = Boolean(initial)
+  const [teacherId, setTeacherId] = useState(initial?.teacherId ?? '')
   const [sectionId, setSectionId] = useState('')
   const [validationMessage, setValidationMessage] = useState('')
   const teacherOptions = teachers.map((teacher) => ({
@@ -69,7 +79,7 @@ export default function RecurringClassEditor({
     }
     if (!title) return reject('Nhập tên lớp.', '[name="title"]')
     if (!teacherId) return reject('Chọn giáo viên phụ trách.', '[aria-label="Chọn giáo viên cho lớp lặp"]')
-    if (!sectionId) return reject('Chọn môn học thuộc khóa.', '[aria-label="Chọn môn cho lớp lặp"]')
+    if (!editing && !sectionId) return reject('Chọn môn học thuộc khóa.', '[aria-label="Chọn môn cho lớp lặp"]')
     if (startTime >= endTime) return reject('Giờ kết thúc phải sau giờ bắt đầu.', '[name="endTime"]')
     if (!startDate || !endDate || startDate > endDate) {
       return reject('Chọn khoảng ngày hợp lệ.', !startDate ? '[name="startDate"]' : '[name="endDate"]')
@@ -84,9 +94,8 @@ export default function RecurringClassEditor({
       return reject('Thời lượng phải khớp với giờ bắt đầu và kết thúc.', '[name="durationMinutes"]')
     }
     setValidationMessage('')
-    onSave({
+    const shared = {
       teacherId,
-      sectionId,
       title,
       dayOfWeek: String(form.get('dayOfWeek') || 'MONDAY') as DayOfWeek,
       startTime,
@@ -97,36 +106,49 @@ export default function RecurringClassEditor({
       startDate,
       endDate,
       timezone: SCHEDULING_TIMEZONE,
-    })
+    }
+    onSave(editing ? shared : { ...shared, sectionId })
   }
 
   return (
-    <ConsoleSheet open onClose={onClose} title="Tạo lớp học lặp">
+    <ConsoleSheet open onClose={onClose} title={editing ? 'Chỉnh sửa lớp học lặp' : 'Tạo lớp học lặp'}>
       <form className="flex flex-col gap-4" onSubmit={submit}>
-        {disabledReason && <Notice tone="warning">{disabledReason}</Notice>}
+        {!editing && disabledReason && <Notice tone="warning">{disabledReason}</Notice>}
         {errorMessage && <Notice tone="danger">{errorMessage}</Notice>}
-        {outcomeUnknown && (
+        {!editing && outcomeUnknown && (
           <Notice tone="warning">Kết quả tạo chưa rõ. Đừng gửi lại; hãy đóng và kiểm tra lịch đã tạo.</Notice>
         )}
+        {editing && (
+          <Notice tone="info">
+            Các buổi chưa diễn ra sẽ được sinh lại theo lịch mới; buổi đã sửa riêng hoặc đã bắt đầu được giữ nguyên.
+          </Notice>
+        )}
         {validationMessage && <p className="text-sm text-badge-error-text" role="alert">{validationMessage}</p>}
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-text-primary">Môn học</span>
-          <SelectField
-            ariaLabel="Chọn môn cho lớp lặp"
-            options={sectionOptions}
-            value={sectionId}
-            onChange={setSectionId}
-            disabled={sectionsLoading || sectionOptions.length === 0}
-            placeholder={sectionsLoading ? 'Đang tải…' : 'Chọn môn học'}
-            className="w-full"
-            triggerClassName="w-full"
-          />
-          {!sectionsLoading && sectionOptions.length === 0 && (
-            <p className="text-xs text-text-tertiary">Khóa học chưa có môn để xếp lịch.</p>
-          )}
-        </div>
+        {editing ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-text-primary">Môn học</span>
+            <p className="text-sm text-text-tertiary">{initial?.sectionTitle ?? 'Toàn khóa'}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-text-primary">Môn học</span>
+            <SelectField
+              ariaLabel="Chọn môn cho lớp lặp"
+              options={sectionOptions}
+              value={sectionId}
+              onChange={setSectionId}
+              disabled={sectionsLoading || sectionOptions.length === 0}
+              placeholder={sectionsLoading ? 'Đang tải…' : 'Chọn môn học'}
+              className="w-full"
+              triggerClassName="w-full"
+            />
+            {!sectionsLoading && sectionOptions.length === 0 && (
+              <p className="text-xs text-text-tertiary">Khóa học chưa có môn để xếp lịch.</p>
+            )}
+          </div>
+        )}
         <Field label="Tên lớp">
-          <input name="title" autoComplete="off" required className={fieldControlClass} />
+          <input name="title" autoComplete="off" required defaultValue={initial?.title} className={fieldControlClass} />
         </Field>
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-text-primary">Giáo viên</span>
@@ -143,12 +165,12 @@ export default function RecurringClassEditor({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Ngày trong tuần">
-            <select name="dayOfWeek" className={fieldControlClass}>
+            <select name="dayOfWeek" defaultValue={initial?.dayOfWeek ?? 'MONDAY'} className={fieldControlClass}>
               {weekdays.map((day) => <option key={day.id} value={day.id}>{day.label}</option>)}
             </select>
           </Field>
           <Field label="Hình thức">
-            <select name="defaultMode" className={fieldControlClass}>
+            <select name="defaultMode" defaultValue={initial?.defaultMode ?? 'PHYSICAL'} className={fieldControlClass}>
               <option value="PHYSICAL">Trực tiếp</option>
               <option value="ONLINE">Trực tuyến</option>
               <option value="HYBRID">Kết hợp</option>
@@ -158,31 +180,31 @@ export default function RecurringClassEditor({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Bắt đầu">
-            <input name="startTime" autoComplete="off" type="time" required className={fieldControlClass} />
+            <input name="startTime" autoComplete="off" type="time" required defaultValue={initial?.startTime?.slice(0, 5)} className={fieldControlClass} />
           </Field>
           <Field label="Kết thúc">
-            <input name="endTime" autoComplete="off" type="time" required className={fieldControlClass} />
+            <input name="endTime" autoComplete="off" type="time" required defaultValue={initial?.endTime?.slice(0, 5)} className={fieldControlClass} />
           </Field>
         </div>
         <Field label="Thời lượng mỗi buổi (phút)">
-          <input name="durationMinutes" autoComplete="off" type="number" min="1" defaultValue="120" required className={fieldControlClass} />
+          <input name="durationMinutes" autoComplete="off" type="number" min="1" defaultValue={initial?.durationMinutes ?? 120} required className={fieldControlClass} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Ngày bắt đầu">
-            <input name="startDate" autoComplete="off" type="date" required className={fieldControlClass} />
+            <input name="startDate" autoComplete="off" type="date" required defaultValue={initial?.startDate} className={fieldControlClass} />
           </Field>
           <Field label="Ngày kết thúc">
-            <input name="endDate" autoComplete="off" type="date" required className={fieldControlClass} />
+            <input name="endDate" autoComplete="off" type="date" required defaultValue={initial?.endDate} className={fieldControlClass} />
           </Field>
         </div>
         <Field label="Phòng / địa điểm">
-          <input name="defaultLocation" autoComplete="off" className={fieldControlClass} />
+          <input name="defaultLocation" autoComplete="off" defaultValue={initial?.defaultLocation ?? ''} className={fieldControlClass} />
         </Field>
         <p className="text-xs text-text-tertiary">Múi giờ: {SCHEDULING_TIMEZONE}</p>
         <div className="flex justify-end gap-2 border-t border-card-border pt-4">
           <Button type="button" appearance="outline" onClick={onClose}>Đóng</Button>
-          <Button type="submit" disabled={busy || outcomeUnknown || Boolean(disabledReason)}>
-            {busy ? 'Đang lưu…' : 'Tạo lịch lặp'}
+          <Button type="submit" disabled={busy || (!editing && (outcomeUnknown || Boolean(disabledReason)))}>
+            {busy ? 'Đang lưu…' : editing ? 'Lưu thay đổi' : 'Tạo lịch lặp'}
           </Button>
         </div>
       </form>
