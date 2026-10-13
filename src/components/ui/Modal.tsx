@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X } from '../console/icons'
 import { cn } from '../../lib/cn'
@@ -19,6 +19,7 @@ interface ModalProps {
 }
 
 function Modal({ open, onClose, title, description, maxWidth = 480, className = '', children }: ModalProps) {
+  const openerRef = useRef<HTMLElement | null>(null)
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !next && onClose?.()}>
       <Dialog.Portal>
@@ -33,7 +34,26 @@ function Modal({ open, onClose, title, description, maxWidth = 480, className = 
               className
             )}
             style={{ width: `min(${maxWidth}px, 100%)` }}
-            onOpenAutoFocus={(event) => event.preventDefault()}
+            tabIndex={-1}
+            onOpenAutoFocus={(event) => {
+              // Radix would focus the first interactive child (e.g. an input)
+              // and the app intentionally avoids that. Focus the dialog
+              // container instead so the focus trap is active immediately and
+              // the screen reader announces the dialog.
+              openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+              event.preventDefault()
+              ;(event.currentTarget as HTMLElement).focus()
+            }}
+            onCloseAutoFocus={(event) => {
+              // Return focus to the element that opened the dialog; Radix's
+              // default target can be the (now removed) dialog container.
+              const opener = openerRef.current
+              openerRef.current = null
+              if (opener && document.body.contains(opener)) {
+                event.preventDefault()
+                opener.focus()
+              }
+            }}
           >
             <Dialog.Close className="absolute top-[15px] right-[15px] grid cursor-pointer place-items-center border-0 bg-transparent text-text-subtle" aria-label="Đóng">
               <X size={19} />

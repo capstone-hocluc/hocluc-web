@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import {
+  MailQuestion,
   BookOpen,
   CalendarDays,
   ClipboardCheck,
@@ -13,6 +14,9 @@ import {
   Sparkles,
   Users,
 } from '../console/icons'
+import MentorChatScreen from './screens/MentorChatScreen'
+import ChatAssignmentScreen from './screens/ChatAssignmentScreen'
+import ChatFeatureGate from '../chat-feature-gate'
 import ConsoleShell from '../console/console-shell'
 import ProfilePage from '../console/profile-page'
 import AdminOverview from '../admin/AdminOverview'
@@ -47,6 +51,8 @@ interface ManagementDashboardProps {
   onNavigate: (page: string) => void
   onLogout: () => void
   logoutLoading: boolean
+  conversationId?: string
+  onSelectConversation: (id?: string) => void
 }
 
 const PAGE_META: Record<string, { title: string; subtitle: string }> = {
@@ -118,6 +124,7 @@ const NAV_ITEMS = [
 ]
 
 const ADMIN_NAV_ITEMS = [
+  { page: 'chat-queue', label: 'Phân công Mentor', icon: MailQuestion },
   ...NAV_ITEMS,
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
   { page: 'categories', label: 'Danh mục', icon: Layers3 },
@@ -130,6 +137,7 @@ const ADMIN_NAV_ITEMS = [
 ]
 
 const STAFF_NAV_ITEMS = [
+  { page: 'chat-queue', label: 'Phân công Mentor', icon: MailQuestion },
   ...NAV_ITEMS,
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
   { page: 'categories', label: 'Danh mục', icon: Layers3 },
@@ -142,6 +150,7 @@ const STAFF_NAV_ITEMS = [
 ]
 
 const MENTOR_NAV_ITEMS = [
+  { page: 'chat', label: 'Hỏi Mentor', icon: MailQuestion },
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { page: 'groups', label: 'Nhóm của tôi', icon: Users },
   { page: 'students', label: 'Học viên', icon: GraduationCap },
@@ -149,6 +158,7 @@ const MENTOR_NAV_ITEMS = [
 ]
 
 const MANAGER_NAV_ITEMS = [
+  { page: 'chat-monitoring', label: 'Giám sát hỗ trợ', icon: MailQuestion },
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { page: 'courses', label: 'Khóa học', icon: BookOpen },
   { page: 'categories', label: 'Danh mục', icon: Layers3 },
@@ -210,6 +220,8 @@ function ManagementDashboard({
   onNavigate,
   onLogout,
   logoutLoading,
+  conversationId,
+  onSelectConversation,
 }: ManagementDashboardProps) {
   const effectivePage = role === 'MENTOR' && page === 'dashboard' ? 'mentor-dashboard' : page
   const meta = PAGE_META[effectivePage] ?? PAGE_META.dashboard
@@ -243,6 +255,10 @@ function ManagementDashboard({
     >
       {showProfile ? (
         <ProfilePage />
+      ) : effectivePage === 'chat' && role === 'MENTOR' ? (
+        <ChatFeatureGate console><MentorChatScreen conversationId={conversationId} onSelectConversation={onSelectConversation} /></ChatFeatureGate>
+      ) : (effectivePage === 'chat-queue' && (role === 'STAFF' || role === 'ADMINISTRATOR')) || (effectivePage === 'chat-monitoring' && role === 'MANAGER') ? (
+        <ChatFeatureGate console><ChatAssignmentScreen role={role} conversationId={conversationId} onSelectConversation={onSelectConversation} /></ChatFeatureGate>
       ) : ROLE_SCREENS[role]?.[effectivePage] ? (
         ROLE_SCREENS[role][effectivePage]({ onNavigate })
       ) : effectivePage === 'courses' && (role === 'MANAGER' || role === 'STAFF' || role === 'ADMINISTRATOR') ? (

@@ -1,12 +1,15 @@
-const BASE_URL =
+export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
   'https://developments.hocluc.com'
+const BASE_URL = API_BASE_URL
 
 const ACCESS_TOKEN_KEY = 'hocluc.accessToken'
 const REFRESH_TOKEN_KEY = 'hocluc.refreshToken'
 const REFRESH_PATH = '/api/v1/auth/refresh'
 let refreshPromise: Promise<unknown> | null = null
+let authEpoch = 0
+export const AUTH_TOKENS_EVENT = 'hocluc:tokens-changed'
 
 export interface ApiResponse<T = unknown> {
   success: boolean
@@ -54,6 +57,15 @@ function createHeaders(auth: boolean, isFormData: boolean) {
   return headers
 }
 
+function tokenIdentity(token: string | null): string | null {
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    if (!payload.sub) return null
+    return JSON.stringify([payload.sub, payload.role ?? payload.roles ?? null])
+  } catch { return null }
+}
+
 export async function request<T = unknown>(
   path: string,
   {
@@ -66,6 +78,7 @@ export async function request<T = unknown>(
 ): Promise<ApiResponse<T>> {
   const attachesToken = auth || optionalAuth
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+  const tokenAtStart = getAccessToken()
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
@@ -79,8 +92,17 @@ export async function request<T = unknown>(
   }
 
   const data = await response.json().catch(() => null)
+  if (attachesToken && response.status === 401 && tokenAtStart !== getAccessToken()) {
+    // A sibling HTTP/socket refresh may already have rotated this same actor's JWT.
+    // Never replay across a logout, account change, or active-role switch.
+    const identity = tokenIdentity(tokenAtStart)
+    if (retryOnUnauthorized && identity && identity === tokenIdentity(getAccessToken())) {
+      return request<T>(path, { method, body, auth, retryOnUnauthorized: false, optionalAuth })
+    }
+    throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+  }
   if (attachesToken && response.status === 401 && retryOnUnauthorized && path !== REFRESH_PATH) {
-    const refreshed = await refreshStoredTokens()
+    const refreshed = await refreshStoredTokens(optionalAuth)
     if (refreshed) {
       return request<T>(path, { method, body, auth, retryOnUnauthorized: false, optionalAuth })
     }
@@ -100,6 +122,48 @@ export async function request<T = unknown>(
   return data
 }
 
+/** Fetch authenticated binary content with the same token rotation rules as request(). */
+export async function requestBlob(
+  path: string,
+  { auth = false, retryOnUnauthorized = true, optionalAuth = false }: RequestOptions = {}
+): Promise<Blob> {
+  const attachesToken = auth || optionalAuth
+  const tokenAtStart = getAccessToken()
+  let response: Response
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: 'GET',
+      headers: createHeaders(attachesToken, false),
+    })
+  } catch {
+    throw new Error('Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.')
+  }
+
+  if (attachesToken && response.status === 401 && tokenAtStart !== getAccessToken()) {
+    const identity = tokenIdentity(tokenAtStart)
+    if (retryOnUnauthorized && identity && identity === tokenIdentity(getAccessToken())) {
+      return requestBlob(path, { auth, retryOnUnauthorized: false, optionalAuth })
+    }
+    throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+  }
+  if (attachesToken && response.status === 401 && retryOnUnauthorized && path !== REFRESH_PATH) {
+    const refreshed = await refreshStoredTokens(optionalAuth)
+    if (refreshed) return requestBlob(path, { auth, retryOnUnauthorized: false, optionalAuth })
+    if (!optionalAuth) handleSessionExpired()
+  }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null)
+    if (auth && response.status === 401) handleSessionExpired()
+    throw new ApiError(
+      data?.message || `Request failed with status ${response.status}`,
+      response.status,
+      data?.errors
+    )
+  }
+  return response.blob()
+}
+
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
@@ -109,13 +173,17 @@ export function getRefreshToken() {
 }
 
 export function setTokens({ accessToken, refreshToken }: { accessToken?: string; refreshToken?: string }) {
+  authEpoch++
   if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
   if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  window.dispatchEvent(new Event(AUTH_TOKENS_EVENT))
 }
 
 export function clearTokens() {
+  authEpoch++
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
+  window.dispatchEvent(new Event(AUTH_TOKENS_EVENT))
 }
 
 function getSessionLoginPath() {
@@ -137,22 +205,12 @@ function handleSessionExpired() {
   }
 }
 
-async function refreshStoredTokens() {
-  const storedRefreshToken = getRefreshToken()
-  if (!storedRefreshToken) return false
-
-  if (!refreshPromise) {
-    refreshPromise = refreshToken(storedRefreshToken).finally(() => {
-      refreshPromise = null
-    })
-  }
-
+async function refreshStoredTokens(optionalAuth = false) {
   try {
-    await refreshPromise
-    return true
-  } catch {
-    clearTokens()
-    return false
+    return Boolean(await ensureFreshAccessToken(true, !optionalAuth))
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false
+    throw error
   }
 }
 
@@ -165,6 +223,9 @@ export async function refreshToken(storedRefreshToken = getRefreshToken()) {
   if (!storedRefreshToken) {
     throw new ApiError('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.', 401)
   }
+
+  const epoch = authEpoch
+  const accessAtStart = getAccessToken()
 
   let response: Response
   try {
@@ -180,6 +241,10 @@ export async function refreshToken(storedRefreshToken = getRefreshToken()) {
   const data = await response.json().catch(() => null)
   const { accessToken, refreshToken: nextRefreshToken } = data?.data || {}
 
+  // Also guard failed responses: an old role's rejected refresh cannot log out a new session.
+  if (epoch !== authEpoch || getRefreshToken() !== storedRefreshToken || getAccessToken() !== accessAtStart) {
+    throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+  }
   if (!response.ok || data?.success !== true || !accessToken || !nextRefreshToken) {
     throw new ApiError(
       data?.message || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
@@ -190,4 +255,41 @@ export async function refreshToken(storedRefreshToken = getRefreshToken()) {
 
   setTokens({ accessToken, refreshToken: nextRefreshToken })
   return data
+}
+
+export function accessTokenExpiresAt(token = getAccessToken()): number | null {
+  if (!token) return null
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null
+  } catch { return null }
+}
+
+/** Shared by HTTP retry and STOMP; network failures leave the session intact. */
+export async function ensureFreshAccessToken(force = false, expireSession = true): Promise<string | null> {
+  const token = getAccessToken()
+  if (!token) return null
+  const expiresAt = accessTokenExpiresAt(token)
+  if (!force && (expiresAt === null || expiresAt > Date.now() + 60_000)) return token
+  if (!getRefreshToken()) { if (expireSession) handleSessionExpired(); return null }
+  if (!refreshPromise) {
+    const refreshAtStart = getRefreshToken()
+    const run = async () => {
+      // Another tab may have rotated the refresh token while this tab waited for its lock.
+      if (getRefreshToken() !== refreshAtStart) throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+      await refreshToken(refreshAtStart)
+    }
+    const refresh = typeof navigator !== 'undefined' && navigator.locks
+      ? navigator.locks.request('hocluc-token-refresh', run)
+      : run()
+    refreshPromise = refresh.finally(() => { refreshPromise = null })
+  }
+  try {
+    await refreshPromise
+    return getAccessToken()
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) throw error
+    if (expireSession && error instanceof ApiError && (error.status === 401 || error.status === 403)) handleSessionExpired()
+    throw error
+  }
 }

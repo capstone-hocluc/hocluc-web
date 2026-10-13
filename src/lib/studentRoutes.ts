@@ -13,6 +13,7 @@ const enc = encodeURIComponent
 export const studentRoutes = {
   dashboard: () => '/student/dashboard',
   schedule: () => '/student/schedule',
+  chat: (id?: string) => id ? `/student/chat/${enc(id)}` : '/student/chat',
   learningProfile: () => '/student/learning-profile',
   profile: (section?: 'student') =>
     section ? `/student/profile?section=${enc(section)}` : '/student/profile',
@@ -38,6 +39,7 @@ export const studentRoutes = {
 export type StudentRoute =
   | { name: 'dashboard' }
   | { name: 'schedule' }
+  | { name: 'chat'; conversationId?: string }
   | { name: 'learning-profile' }
   | { name: 'profile' }
   | { name: 'courses' }
@@ -85,6 +87,10 @@ export function parseStudentRoute(path: string): StudentRoute | null {
   switch (area) {
     case 'dashboard':
       return rest.length === 0 ? { name: 'dashboard' } : null
+    case 'chat':
+      if (rest.length === 0) return { name: 'chat' }
+      return rest.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(a)
+        ? { name: 'chat', conversationId: a } : null
     case 'schedule':
       return rest.length === 0 ? { name: 'schedule' } : null
     case 'learning-profile':
