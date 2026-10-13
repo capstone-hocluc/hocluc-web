@@ -668,9 +668,11 @@ test('staff cancels one class session without touching the series', async ({ pag
 // Scheduling rights were deliberately not narrowed in this pass: a MANAGER may write a series,
 // so this only proves the read path reaches the recordings.
 test('manager reads the schedule console and its recordings without mutating', async ({ page }) => {
+  // Match the staff schedule test's existing lazy-module readiness budget, not a fixed 5s wait.
+  test.setTimeout(120_000)
   const state = await installCrudFixture(page, 'MANAGER')
   await page.goto('/manager/schedules')
-  await expect(page.getByText('Lớp lặp Toán', { exact: true })).toBeVisible()
+  await expect(page.getByText('Lớp lặp Toán', { exact: true })).toBeVisible({ timeout: 90_000 })
   await page
     .getByRole('button', { name: 'Xem chi tiết Lớp lặp Toán - Buổi 1', exact: true })
     .click()

@@ -1,8 +1,8 @@
 import type { ComponentType } from 'react'
-import { BarChart3, BookOpen, CalendarDays, Home, UserRound } from '../components/console/icons'
+import { BarChart3, BookOpen, CalendarDays, Home, UserRound, MailQuestion } from '../components/console/icons'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from './studentRoutes'
 
-export type StudentNavKey = 'dashboard' | 'schedule' | 'learning-profile' | 'courses' | 'progress'
+export type StudentNavKey = 'dashboard' | 'schedule' | 'learning-profile' | 'courses' | 'progress' | 'chat'
 
 export interface StudentNavItem {
   key: StudentNavKey
@@ -23,6 +23,7 @@ export const studentNavItems: StudentNavItem[] = [
     path: studentRoutes.learningProfile(),
   },
   { key: 'courses', label: 'Khóa học', icon: BookOpen, path: studentRoutes.courses() },
+  { key: 'chat', label: 'Hỏi Mentor', icon: MailQuestion, path: studentRoutes.chat() },
   { key: 'progress', label: 'Tiến độ', icon: BarChart3 },
 ]
 
@@ -33,6 +34,8 @@ export function getStudentNavKey(route: StudentRoute | null): StudentNavKey | nu
   switch (route?.name) {
     case 'dashboard':
       return 'dashboard'
+    case 'chat':
+      return 'chat'
     case 'schedule':
       return 'schedule'
     case 'learning-profile':

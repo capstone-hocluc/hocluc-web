@@ -128,6 +128,7 @@ function App() {
     }
     return target
   })
+  const [currentSearch, setCurrentSearch] = useState(() => window.location.search)
   const historyIndexRef = useRef(getAppHistoryIndex(window.history.state) ?? 0)
   const historyRestoreInProgressRef = useRef(false)
   const ignoreNextHistoryGuardRef = useRef(false)
@@ -139,6 +140,7 @@ function App() {
     const index = historyIndexRef.current + 1
     window.history.pushState(withAppHistoryIndex(state, index), '', path)
     historyIndexRef.current = index
+    setCurrentSearch(window.location.search)
   }, [])
   const replaceCurrentHistoryEntry = useCallback((state: unknown, path: string) => {
     window.history.replaceState(
@@ -146,6 +148,7 @@ function App() {
       '',
       path
     )
+    setCurrentSearch(window.location.search)
   }, [])
 
   const navigateAuth = (mode) => {
@@ -293,6 +296,7 @@ function App() {
       })
     }
     const syncPath = () => {
+      setCurrentSearch(window.location.search)
       setAuthMode(getAuthMode())
       setCurrentPath(window.location.pathname.replace(/\/$/, '') || '/')
     }
@@ -411,6 +415,11 @@ function App() {
       <ManagementDashboard
         role={role}
         page={page}
+        conversationId={(() => {
+          const id = new URLSearchParams(currentSearch).get('conversationId')
+          return id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : undefined
+        })()}
+        onSelectConversation={(id) => navigateTo(`/${scope}/${page}${id ? `?conversationId=${encodeURIComponent(id)}` : ''}`)}
         onNavigate={(nextPage) => navigateManagement(scope, nextPage)}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}

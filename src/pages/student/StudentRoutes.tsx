@@ -2,6 +2,8 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
 import { studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
+import StudentChatPage from './StudentChatPage'
+import ChatFeatureGate from '../../components/chat-feature-gate'
 import StudentDashboard from './StudentDashboard'
 import MyCourses from './MyCourses'
 import CourseDetail from './CourseDetail'
@@ -55,6 +57,8 @@ function StudentRoutes({
             }
           />
         )
+      case 'chat':
+        return <ChatFeatureGate><StudentChatPage conversationId={route.conversationId} onSelectConversation={(id) => navigate(studentRoutes.chat(id))} /></ChatFeatureGate>
       case 'schedule':
         return <StudentSchedulePage />
       case 'learning-profile':
