@@ -34,7 +34,7 @@ interface ResultSummaryCardProps {
 
 const metaValue = 'font-[850]'
 
-// Result hero: attempt facts + actions on the left, best score with the owl on the right.
+// Result hero: attempt facts + actions on the left, Nam celebrating the best score on the right.
 function ResultSummaryCard({
   label,
   title,
@@ -88,7 +88,7 @@ function ResultSummaryCard({
           theo kết quả cao nhất
         </div>
         <img
-          src="/owl-success-celebrate.png"
+          src="/landing-v2/assets/nam-avatar-interaction.png"
           alt=""
           aria-hidden="true"
           className="pointer-events-none absolute top-[-12px] left-[calc(50%+56px)] z-1 size-28 -translate-x-1/2 object-contain drop-shadow-[0_12px_18px_rgba(28, 176, 246,0.14)] max-[760px]:top-[-6px] max-[760px]:left-[calc(50%+48px)] max-[760px]:size-[92px]"

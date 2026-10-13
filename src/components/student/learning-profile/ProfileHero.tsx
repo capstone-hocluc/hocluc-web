@@ -14,7 +14,7 @@ interface ProfileHeroProps {
   onEditProfile: () => void
 }
 
-// Title, greeting card with the owl and the "Tổng quan năng lực" summary.
+// Title, greeting card with Mai and the "Tổng quan năng lực" summary.
 function ProfileHero({
   displayName,
   exam,
@@ -41,7 +41,7 @@ function ProfileHero({
           <div className="flex min-w-0 items-center gap-3.5 max-[760px]:items-start">
             <img
               className="size-[76px] flex-none object-contain drop-shadow-[0_12px_18px_rgba(28, 176, 246,0.14)] max-[1181px]:size-[70px] max-[760px]:size-[62px]"
-              src="/owl-welcome-wave.png"
+              src="/landing-v2/assets/mai-avatar-interaction.png"
               alt=""
               aria-hidden="true"
             />

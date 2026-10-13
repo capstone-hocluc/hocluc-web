@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import SubjectAvatarIcon from '../common/SubjectAvatarIcon'
 
 function botReply(msg) {
   const m = msg.toLowerCase()
@@ -70,9 +71,8 @@ function Chatbot() {
               color: '#fff',
             }}
           >
-            <img
-              src="/owl-support-headset.png"
-              alt="Trợ lý"
+            <SubjectAvatarIcon
+              type="cloud"
               style={{
                 width: 40,
                 height: 40,
@@ -230,11 +230,7 @@ function Chatbot() {
             display: 'block',
           }}
         >
-          <img
-              src="/owl-support-headset.png"
-            alt="Trợ lý AI"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
+          <SubjectAvatarIcon type="cloud" style={{ width: '100%', height: '100%', display: 'block', padding: 15, boxSizing: 'border-box' }} />
         </button>
       )}
     </div>

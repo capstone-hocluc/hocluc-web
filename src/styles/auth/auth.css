@@ -1,4 +1,117 @@
 
+.hl-auth-dialog-overlay {
+  isolation: isolate;
+  background-color: color-mix(in srgb, var(--color-brand-soft-bg) 86%, transparent);
+  backdrop-filter: blur(5px);
+}
+.hl-auth-bot-orbit {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hl-auth-bot {
+  position: absolute;
+  display: block;
+  filter: drop-shadow(0 10px 14px rgba(24, 89, 135, 0.14));
+  animation: hl-auth-bot-float 6.8s ease-in-out infinite;
+  will-change: transform;
+}
+.hl-auth-bot__face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hl-auth-bot__art {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform 220ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+.hl-auth-bot-orbit[data-focus='email'] .hl-auth-bot--star .hl-auth-bot__art,
+.hl-auth-bot-orbit[data-focus='email'] .hl-auth-bot--round-robot .hl-auth-bot__art {
+  transform: translateX(5px) scale(1.04);
+}
+.hl-auth-bot-orbit[data-focus='email'] .hl-auth-bot--cloud .hl-auth-bot__art,
+.hl-auth-bot-orbit[data-focus='email'] .hl-auth-bot--screen-robot .hl-auth-bot__art {
+  transform: translateX(-5px) scale(1.04);
+}
+.hl-auth-bot--star {
+  top: 17%;
+  left: calc(50% - 356px);
+  width: 60px;
+  height: 60px;
+  animation-delay: -1.4s;
+}
+.hl-auth-bot--cloud {
+  top: 16%;
+  right: calc(50% - 356px);
+  width: 92px;
+  height: 92px;
+  animation-delay: -3.2s;
+}
+.hl-auth-bot--round-robot {
+  bottom: 17%;
+  left: calc(50% - 356px);
+  width: 104px;
+  height: 104px;
+  animation-delay: -2.4s;
+}
+.hl-auth-bot--screen-robot {
+  right: calc(50% - 356px);
+  bottom: 18%;
+  width: 68px;
+  height: 68px;
+  animation-delay: -4.1s;
+}
+@keyframes hl-auth-bot-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-2deg);
+  }
+  50% {
+    transform: translate3d(0, -9px, 0) rotate(2deg);
+  }
+}
+@media (max-width: 760px) {
+  .hl-auth-bot--star {
+    top: 18px;
+    left: 18px;
+    width: 48px;
+    height: 48px;
+  }
+  .hl-auth-bot--cloud {
+    top: 16px;
+    right: 18px;
+    width: 68px;
+    height: 68px;
+  }
+  .hl-auth-bot--round-robot {
+    bottom: 18px;
+    left: 20px;
+    width: 68px;
+    height: 68px;
+  }
+  .hl-auth-bot--screen-robot {
+    right: 22px;
+    bottom: 20px;
+    width: 50px;
+    height: 50px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hl-auth-bot {
+    animation: none;
+    will-change: auto;
+  }
+  .hl-auth-bot__art {
+    transition: none;
+  }
+}
+
 .hl-auth-heading {
   text-align: center;
   margin-bottom: 12px;

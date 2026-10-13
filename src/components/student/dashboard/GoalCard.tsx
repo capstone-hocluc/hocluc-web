@@ -1,5 +1,5 @@
 import { ArrowRight, Flame, Lock, Target } from '../../console/icons'
-import OwlWelcome from '../../common/OwlWelcome'
+import SubjectAvatarIcon from '../../common/SubjectAvatarIcon'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'
 import { ctaButtonClass } from './cta'
@@ -11,7 +11,7 @@ interface GoalCardProps {
   onStart: () => void
 }
 
-// "Mục tiêu hôm nay": blue hero card with the owl coach and the daily goal.
+// "Mục tiêu hôm nay": blue hero card with a friendly avatar and the daily goal.
 function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
   return (
     <section className="relative rounded-[18px] bg-linear-to-b from-primary-bright via-link to-link px-4 pt-5 pb-px shadow-[0_18px_34px_rgba(28, 176, 246,0.16)] after:absolute after:top-2 after:-right-7 after:size-[132px] after:rounded-[46%] after:bg-white/18 after:content-['']">
@@ -27,7 +27,7 @@ function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
           </div>
 
           <div className="relative z-1 grid h-[54px] w-[74px] place-items-center self-start justify-self-end max-[760px]:hidden">
-            <OwlWelcome className="block h-[150px] w-[150px] max-w-none -translate-x-[42px] -translate-y-[72px] drop-shadow-[0_16px_18px_rgba(17,24,58,0.18)]" />
+            <SubjectAvatarIcon type="flower" className="block size-[70px] drop-shadow-[0_16px_18px_rgba(17,24,58,0.18)]" />
           </div>
         </div>
       </div>

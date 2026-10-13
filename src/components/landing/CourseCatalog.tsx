@@ -4,6 +4,7 @@ import { getMainCourses, type Course } from '../../services/courseService'
 import { getErrorMessage } from '../../lib/errors'
 import CourseCard from './CourseCard'
 import DropdownField from '../ui/DropdownField'
+import SubjectAvatarIcon from '../common/SubjectAvatarIcon'
 
 function prettifyEnum(value?: string) {
   if (!value) return ''
@@ -156,7 +157,7 @@ function CourseCatalog({ onOpenCourse }: CourseCatalogProps) {
 
           {!isMain && (
             <div className="hl-catalog-state">
-              <img src="/owl-mascot4.png" alt="" aria-hidden="true" />
+              <SubjectAvatarIcon type="star" className="size-[76px]" />
               <strong>Khóa học bổ trợ sắp ra mắt</strong>
               <p>Các khóa học bổ trợ sẽ sớm có mặt tại đây.</p>
             </div>
@@ -172,7 +173,7 @@ function CourseCatalog({ onOpenCourse }: CourseCatalogProps) {
 
           {isMain && status === 'error' && (
             <div className="hl-catalog-state">
-              <img src="/owl-mascot4.png" alt="" aria-hidden="true" />
+              <SubjectAvatarIcon type="cloud" className="size-[76px]" />
               <strong>Không thể tải danh sách khóa học</strong>
               <p>{errorMessage}</p>
               <button type="button" onClick={retry}>
@@ -183,7 +184,7 @@ function CourseCatalog({ onOpenCourse }: CourseCatalogProps) {
 
           {isMain && status === 'ready' && filteredCourses.length === 0 && (
             <div className="hl-catalog-state">
-              <img src="/owl-mascot4.png" alt="" aria-hidden="true" />
+              <SubjectAvatarIcon type="hexagon" className="size-[76px]" />
               <strong>Không tìm thấy khóa học</strong>
               <p>Thử thay đổi từ khóa hoặc bộ lọc của bạn.</p>
             </div>
@@ -192,7 +193,7 @@ function CourseCatalog({ onOpenCourse }: CourseCatalogProps) {
           {isMain && status === 'ready' && filteredCourses.length > 0 && (
             <div className="hl-catalog-grid">
               {filteredCourses.map((course) => (
-                <CourseCard key={course.id} course={course} onOpen={onOpenCourse} />
+                <CourseCard key={course.id} course={course} avatarIndex={courses.findIndex((item) => item.id === course.id)} onOpen={onOpenCourse} />
               ))}
             </div>
           )}

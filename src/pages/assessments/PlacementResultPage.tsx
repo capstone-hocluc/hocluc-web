@@ -78,8 +78,8 @@ function PlacementResultPage({ onOpenReview, onOpenCourse }: PlacementResultPage
             <Card as="section" padding="none" radius="lg" className="border-border-subtle p-[22px]">
               <CardTitle className="mb-3.5 text-base">Khóa học đề xuất cho bạn</CardTitle>
               <div className="hl-catalog-grid mt-1">
-                {data.suggestedCourses.map((course) => (
-                  <CourseCard key={course.id} course={course} onOpen={onOpenCourse} />
+                {data.suggestedCourses.map((course, avatarIndex) => (
+                  <CourseCard key={course.id} course={course} avatarIndex={avatarIndex} onOpen={onOpenCourse} />
                 ))}
               </div>
             </Card>

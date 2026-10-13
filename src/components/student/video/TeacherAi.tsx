@@ -4,8 +4,9 @@ import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'
 import { Input } from '../../ui/Field'
 import { quickActions, type AiMessage } from './teacherAiMock'
+import SubjectAvatarIcon from '../../common/SubjectAvatarIcon'
 
-// Floating owl that opens the chat.
+// Floating avatar that opens the chat.
 export function TeacherAiButton({ onOpen }: { onOpen: () => void }) {
   return (
     <button
@@ -14,12 +15,7 @@ export function TeacherAiButton({ onOpen }: { onOpen: () => void }) {
       aria-label="Mở Teacher AI"
       onClick={onOpen}
     >
-      <img
-        src="/owl-support-headset.png"
-        alt=""
-        aria-hidden="true"
-        className="size-[98px] object-contain max-[760px]:size-[60px]"
-      />
+      <SubjectAvatarIcon type="cloud" className="size-[78px] max-[760px]:size-[52px]" />
     </button>
   )
 }
@@ -46,12 +42,7 @@ export function TeacherAiPanel({
   return (
     <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-[22px] border border-line-brand bg-lock-soft shadow-[0_22px_46px_rgba(28, 176, 246,0.16)] max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
       <div className="flex shrink-0 items-center justify-between gap-2.5 bg-primary-bright px-3.5 py-[15px] text-surface">
-        <img
-          src="/owl-support-headset.png"
-          alt=""
-          aria-hidden="true"
-          className="size-[46px] rounded-full bg-surface p-[5px] object-contain"
-        />
+        <SubjectAvatarIcon type="cloud" className="size-[38px] rounded-full bg-surface p-[5px]" />
         <div className="min-w-0 flex-1">
           <strong className="block text-base font-bold">Trợ lý AI HocLuc</strong>
           <span className="mt-[3px] block text-xs leading-[1.35] font-medium">

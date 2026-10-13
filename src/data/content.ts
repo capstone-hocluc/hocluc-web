@@ -281,7 +281,7 @@ export const footerCols = [
 
 // ảnh dùng trong các section
 export const media = {
-  hero: '/owl-welcome-wave.png',
+  hero: '/landing-v2/assets/mai-avatar-interaction.png',
   feature: '/features-group.jpg',
   live: '/live-stream.jpg',
   video: U('1610484826967-09c5720778c7', 800, 600),

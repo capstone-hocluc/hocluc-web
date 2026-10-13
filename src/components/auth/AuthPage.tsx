@@ -804,6 +804,7 @@ function AuthPage({
                     <Mail size={19} />
                     <input
                       type="email"
+                      data-auth-field="email"
                       placeholder="you@example.com"
                       value={authEmail}
                       onChange={(event) => {
@@ -857,6 +858,7 @@ function AuthPage({
                     <LockKeyhole size={19} />
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      data-auth-field="password"
                       placeholder="Nhập mật khẩu"
                       value={authPassword}
                       onChange={(event) => {
@@ -876,6 +878,7 @@ function AuthPage({
                     <button
                       type="button"
                       className="hl-auth-eye"
+                      data-auth-field="password"
                       onClick={() => setShowPassword((value) => !value)}
                       aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                     >

@@ -1,5 +1,6 @@
 import Button from '../ui/Button'
 import { cn } from '../../lib/cn'
+import SubjectAvatarIcon from './SubjectAvatarIcon'
 
 interface MascotStateProps {
   title: string
@@ -9,7 +10,7 @@ interface MascotStateProps {
   className?: string
 }
 
-// Shared empty / error state: owl mascot + title + hint (+ optional action).
+// Shared empty / error state: friendly avatar + title + hint (+ optional action).
 // The one implementation for "nothing to show" and "something went wrong" -
 // error states pass a retry action, empty states usually don't.
 function MascotState({ title, message, actionLabel, onAction, className }: MascotStateProps) {
@@ -20,12 +21,7 @@ function MascotState({ title, message, actionLabel, onAction, className }: Masco
         className
       )}
     >
-      <img
-        src="/owl-mascot4.png"
-        alt=""
-        aria-hidden="true"
-        className="size-[92px] object-contain drop-shadow-[0_10px_16px_rgba(28, 176, 246,0.12)]"
-      />
+      <SubjectAvatarIcon type="cloud" className="size-[76px] drop-shadow-[0_10px_16px_rgba(28,176,246,0.12)]" />
       <strong className="text-[15px] font-black text-text-heading">{title}</strong>
       {message && <p className="m-0 text-[13.5px]">{message}</p>}
       {actionLabel && onAction && (

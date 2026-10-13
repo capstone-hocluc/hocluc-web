@@ -1,13 +1,16 @@
-import { ArrowRight, BookOpen, CheckCircle2, Sparkles } from '../console/icons'
+import { ArrowRight, CheckCircle2, Sparkles } from '../console/icons'
+import SubjectAvatarIcon from '../common/SubjectAvatarIcon'
+import { SUBJECT_AVATAR_TYPES } from '../common/subjectAvatars'
 import type { Course } from '../../services/courseService'
 import { formatCoursePrice, formatDate, formatExamLabel, prettifyEnum } from '../../lib/courseFormat'
 
 interface CourseCardProps {
   course: Course
   onOpen: (course: Course) => void
+  avatarIndex?: number
 }
 
-function CourseCard({ course, onOpen }: CourseCardProps) {
+function CourseCard({ course, onOpen, avatarIndex = 0 }: CourseCardProps) {
   const badgeLabel = formatExamLabel(course.targetExam) || prettifyEnum(course.track) || 'Khóa học'
   const startLabel = formatDate(course.startDate)
 
@@ -21,7 +24,7 @@ function CourseCard({ course, onOpen }: CourseCardProps) {
           </span>
         )}
         <span className="hl-catalog-cover-badge">{badgeLabel}</span>
-        <BookOpen size={34} />
+        <SubjectAvatarIcon type={SUBJECT_AVATAR_TYPES[avatarIndex % SUBJECT_AVATAR_TYPES.length]} className="size-[54px] drop-shadow-[0_8px_10px_rgba(22,75,111,.12)]" />
       </div>
 
       <div className="hl-catalog-body">
