@@ -38,3 +38,10 @@ export async function removeCartItem(courseId: string) {
     auth: true,
   })
 }
+
+// Cart rows carry no "still on sale" flag; a course whose end date has passed is the one
+// case the cart can tell is no longer purchasable, and checkout rejects the whole order for it.
+export function getEndedCartItems(items: CartItem[], now = new Date()) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(now)
+  return items.filter((item) => !!item.endDate && item.endDate < today)
+}

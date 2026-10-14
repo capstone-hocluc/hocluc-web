@@ -1,3 +1,4 @@
+import { CONSOLE_LOGIN_PATH, isConsolePath } from './console-routes'
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
@@ -188,8 +189,7 @@ export function clearTokens() {
 
 function getSessionLoginPath() {
   const pathname = window.location.pathname.replace(/\/$/, '') || '/'
-  if (pathname === '/admin' || pathname.startsWith('/admin/')) return '/management/login'
-  if (/^\/(staff|manager|management|teacher)(\/|$)/.test(pathname)) return '/management/login'
+  if (isConsolePath(pathname)) return CONSOLE_LOGIN_PATH
   return '/login'
 }
 

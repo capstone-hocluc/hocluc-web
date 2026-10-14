@@ -4,7 +4,6 @@ import {
   clearTokens,
   getRefreshToken,
   request,
-  refreshToken as refreshTokenRequest,
   setTokens,
   type TokenData,
 } from '../lib/api'
@@ -27,6 +26,8 @@ export interface ConfirmRegistrationRequest {
 export interface LoginRequest {
   email: string
   password: string
+  /** Sign-in page the request came from; the server rejects accounts that don't belong there. */
+  audience?: 'LEARNER' | 'CONSOLE'
 }
 
 export interface RefreshTokenRequest {
@@ -77,10 +78,10 @@ export function confirmAccount(payload: ConfirmRegistrationRequest) {
   return confirmRegistration(payload)
 }
 
-export async function login({ email, password }: LoginRequest) {
+export async function login({ email, password, audience }: LoginRequest) {
   const response = await request<TokenData>('/api/v1/auth/login', {
     method: 'POST',
-    body: { email: email.trim(), password },
+    body: { email: email.trim(), password, audience },
   })
 
   return ensureTokenData(
@@ -104,15 +105,6 @@ export async function googleAuth({ idToken }: GoogleAuthRequest) {
     response,
     'Đăng nhập với Google không thành công. Máy chủ chưa trả về đầy đủ token.'
   )
-}
-
-export async function refreshSession() {
-  const response = await refreshTokenRequest(getRefreshToken())
-  return ensureTokenData(response, 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.')
-}
-
-export function refreshToken() {
-  return refreshSession()
 }
 
 export async function forgotPassword({ email }: ForgotPasswordRequest) {

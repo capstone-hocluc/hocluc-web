@@ -256,15 +256,6 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
   return requireResponseData(response, 'Không thể cập nhật trạng thái người dùng.')
 }
 
-export async function updateUserRole(id: string, role: UserRole): Promise<UserProfile> {
-  const response = await request<UserProfile>(`/api/v1/users/${id}/role`, {
-    method: 'PATCH',
-    auth: true,
-    body: { role },
-  })
-  return requireResponseData(response, 'Không thể cập nhật vai trò người dùng.')
-}
-
 export async function updateUserRoles(id: string, roles: UserRole[]): Promise<UserProfile> {
   const response = await request<UserProfile>(`/api/v1/users/${id}/roles`, {
     method: 'PUT',

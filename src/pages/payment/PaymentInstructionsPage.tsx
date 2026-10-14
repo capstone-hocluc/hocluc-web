@@ -16,6 +16,24 @@ interface PaymentInstructionsPageProps {
 
 const POLL_INTERVAL_MS = 4000
 
+function formatRemaining(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
+// Seconds until the payment window closes; null when the order carries no deadline.
+function useSecondsUntil(deadline: string | null | undefined) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!deadline) return
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [deadline])
+  if (!deadline) return null
+  return Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1000))
+}
+
 // The QR/bank-transfer instructions only ever come from the checkout/pay
 // response - GET /orders/{orderId} never returns them (confirmed contract).
 // They're handed to this page via navigation history state, which survives
@@ -40,6 +58,7 @@ function PaymentInstructionsPage({
   const [reloadKey, setReloadKey] = useState(0)
 
   const pollInFlightRef = useRef(false)
+  const secondsLeft = useSecondsUntil(order?.status === 'PENDING' ? order.expiresAt : null)
 
   useEffect(() => {
     let cancelled = false
@@ -119,8 +138,19 @@ function PaymentInstructionsPage({
 
           {order && order.status === 'PENDING' && (
             <>
-              {paymentData ? (
+              {paymentData && secondsLeft !== 0 ? (
                 <PaymentInstructionsCard paymentData={paymentData} />
+              ) : paymentData ? (
+                <div className="hl-pay-state">
+                  <AlertTriangle size={30} />
+                  <p>
+                    Đơn hàng đã hết thời gian thanh toán. Vui lòng không chuyển khoản vào mã QR này nữa; hãy
+                    mở chi tiết đơn hàng và bấm "Thanh toán" để lấy mã mới.
+                  </p>
+                  <button type="button" onClick={onGoToOrderDetail}>
+                    Xem chi tiết đơn hàng
+                  </button>
+                </div>
               ) : (
                 <div className="hl-pay-state">
                   <AlertTriangle size={30} />
@@ -134,10 +164,20 @@ function PaymentInstructionsPage({
                   </button>
                 </div>
               )}
-              <div className="hl-pay-pending-note">
-                <Clock size={16} />
-                Đang chờ thanh toán — hệ thống sẽ tự động cập nhật khi nhận được chuyển khoản.
-              </div>
+              {secondsLeft !== 0 && (
+                <>
+                  <div className="hl-pay-pending-note">
+                    <Clock size={16} />
+                    Đang chờ thanh toán — hệ thống sẽ tự động cập nhật khi nhận được chuyển khoản.
+                    {secondsLeft !== null && secondsLeft > 0 && <> Còn {formatRemaining(secondsLeft)}.</>}
+                  </div>
+                  <p className="hl-pay-warning">
+                    Chỉ chuyển khoản theo mã QR và nội dung đang hiển thị trên trang này. Nếu bạn đã tạo lại đơn hoặc
+                    bấm "Thanh toán" lần nữa, mã cũ không còn hiệu lực và khoản chuyển vào mã cũ sẽ không được tự động
+                    ghi nhận.
+                  </p>
+                </>
+              )}
             </>
           )}
 

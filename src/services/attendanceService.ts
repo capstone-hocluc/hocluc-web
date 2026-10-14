@@ -1,10 +1,9 @@
 import type {
   AttendanceResponse,
-  AttendanceStatus,
   BatchAttendanceRequest,
   CourseAttendanceSummaryResponse,
 } from '../types/scheduling'
-import { requestSchedulingData, schedulingQuery } from './schedulingApi'
+import { requestSchedulingData } from './schedulingApi'
 
 const API = '/api/v1'
 
@@ -24,22 +23,6 @@ export function saveScheduleAttendances(
     API + '/schedules/' + encodeURIComponent(scheduleId) + '/attendances',
     { method: 'PUT', auth: true, body: payload },
     'Máy chủ không trả về danh sách điểm danh đã lưu.'
-  )
-}
-
-export function updateAttendance(
-  scheduleId: string,
-  studentId: string,
-  status: AttendanceStatus,
-  attendanceMinutes?: number
-): Promise<AttendanceResponse> {
-  return requestSchedulingData<AttendanceResponse>(
-    API + '/schedules/' + encodeURIComponent(scheduleId) + '/attendances/' + encodeURIComponent(studentId) + schedulingQuery({
-      status,
-      attendanceMinutes: attendanceMinutes === undefined ? undefined : String(attendanceMinutes),
-    }),
-    { method: 'PATCH', auth: true },
-    'Máy chủ không trả về trạng thái điểm danh đã cập nhật.'
   )
 }
 

@@ -5,7 +5,7 @@ import Footer from '../../components/common/Footer'
 import Chatbot from '../../components/landing/Chatbot'
 import CartItemRow from '../../components/cart/CartItemRow'
 import CartSummary from '../../components/cart/CartSummary'
-import { getCart, removeCartItem, type Cart } from '../../services/cartService'
+import { getCart, getEndedCartItems, removeCartItem, type Cart } from '../../services/cartService'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast, showSuccessToast } from '../../lib/toastBus'
 
@@ -101,6 +101,12 @@ function CartPage({ onBrowseCourses, onGoToCheckout }: CartPageProps) {
           {status === 'ready' && cart && cart.items.length > 0 && (
             <div className="hl-cart-grid">
               <div className="hl-cart-list">
+                {getEndedCartItems(cart.items).length > 0 && (
+                  <p className="hl-pay-warning" role="alert">
+                    Có khóa học trong giỏ đã kết thúc: {getEndedCartItems(cart.items).map((item) => item.title).join(', ')}.
+                    Hãy xóa khỏi giỏ trước khi thanh toán, nếu không đơn hàng có thể bị từ chối.
+                  </p>
+                )}
                 {cart.items.map((item) => (
                   <CartItemRow
                     key={item.courseId}

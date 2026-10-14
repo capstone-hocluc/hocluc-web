@@ -3,7 +3,7 @@ import { AlertTriangle, Landmark, ShoppingBag } from '../../components/console/i
 import Navbar from '../../components/common/Navbar'
 import Footer from '../../components/common/Footer'
 import Chatbot from '../../components/landing/Chatbot'
-import { getCart, type Cart } from '../../services/cartService'
+import { getCart, getEndedCartItems, type Cart } from '../../services/cartService'
 import { checkout, type OrderPaymentData } from '../../services/orderService'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
@@ -22,6 +22,7 @@ function CheckoutPage({ onOrderCreated, onBackToCart }: CheckoutPageProps) {
   const [errorMessage, setErrorMessage] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -49,11 +50,16 @@ function CheckoutPage({ onOrderCreated, onBackToCart }: CheckoutPageProps) {
   const handleSubmit = async () => {
     if (submitting) return
     setSubmitting(true)
+    setSubmitError('')
     try {
       const result = await checkout()
       onOrderCreated(result)
     } catch (error) {
-      showErrorToast(getErrorMessage(error))
+      const message = getErrorMessage(error)
+      showErrorToast(message)
+      // Checkout rejects the whole cart when one course cannot be bought, so keep the reason on
+      // screen and point the buyer back to the cart to remove it.
+      setSubmitError(message)
     } finally {
       setSubmitting(false)
     }
@@ -157,6 +163,21 @@ function CheckoutPage({ onOrderCreated, onBackToCart }: CheckoutPageProps) {
                     <span>Tổng cộng</span>
                     <strong>{formatCoursePrice(cart.totalAmount)}</strong>
                   </div>
+                  {getEndedCartItems(cart.items).length > 0 && (
+                    <p className="hl-pay-warning" role="alert">
+                      Giỏ hàng có khóa học đã kết thúc ({getEndedCartItems(cart.items).map((item) => item.title).join(', ')}).
+                      Quay lại giỏ hàng để xóa trước khi đặt hàng.
+                    </p>
+                  )}
+                  {submitError && (
+                    <p className="hl-pay-warning" role="alert">
+                      {submitError} Nếu một khóa học trong giỏ không còn mở bán, hãy{' '}
+                      <button type="button" className="hl-checkout-link" onClick={onBackToCart}>
+                        quay lại giỏ hàng
+                      </button>{' '}
+                      để xóa khóa học đó rồi thử lại.
+                    </p>
+                  )}
                   <button
                     type="button"
                     className="hl-checkout-cta"
