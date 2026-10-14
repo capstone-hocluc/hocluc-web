@@ -18,7 +18,13 @@ import {
   resetPassword,
 } from '../../services/authService'
 
-const DEFAULT_ALLOWED_ROLES: readonly UserRole[] = ['STUDENT', 'MENTOR']
+// Tạm thời, chỉ chạy local: đăng nhập nhanh bằng tài khoản dev. Không hiện ở bản production.
+const DEV_LEARNERS = [
+  { label: 'Học viên', email: 'student@gmail.com' },
+] as const
+const DEV_PASSWORD = '123456'
+
+const DEFAULT_ALLOWED_ROLES: readonly UserRole[] = ['STUDENT']
 
 function AuthPage({
   mode: initialMode = 'login',
@@ -372,14 +378,15 @@ function AuthPage({
     }
   }
 
-  const submitLogin = async () => {
+  const submitLogin = async (credentials?: { email: string; password: string }) => {
     if (loginLoading) return
-    const email = authEmail.trim()
+    const email = (credentials?.email ?? authEmail).trim()
+    const password = credentials?.password ?? authPassword
     const nextErrors: Record<string, string> = {}
 
     if (!email) nextErrors.email = 'Vui lòng nhập email.'
     else if (!isValidEmail(email)) nextErrors.email = 'Email không hợp lệ.'
-    if (!authPassword) nextErrors.password = 'Vui lòng nhập mật khẩu.'
+    if (!password) nextErrors.password = 'Vui lòng nhập mật khẩu.'
 
     setLoginErrors(nextErrors)
     setLoginError('')
@@ -387,7 +394,7 @@ function AuthPage({
 
     setLoginLoading(true)
     try {
-      await loginAccount({ email, password: authPassword })
+      await loginAccount({ email, password, audience: 'LEARNER' })
       const profile = await loadCurrentUser()
       if (!allowedRoles.includes(profile.role)) {
         clearTokens()
@@ -747,6 +754,26 @@ function AuthPage({
                   disabled={googleLoading}
                   onCredential={handleGoogleCredential}
                 />
+                {import.meta.env.DEV && !isSignup && (
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-2" aria-label="Đăng nhập nhanh để test">
+                    {DEV_LEARNERS.map((account) => (
+                      <button
+                        key={account.email}
+                        type="button"
+                        title={`${account.email} / ${DEV_PASSWORD}`}
+                        disabled={loginLoading}
+                        onClick={() => {
+                          setAuthEmail(account.email)
+                          setAuthPassword(DEV_PASSWORD)
+                          void submitLogin({ email: account.email, password: DEV_PASSWORD })
+                        }}
+                        className="rounded-full border border-border-primary px-3 py-1 text-[12px] font-bold text-text-label transition-colors hover:bg-surface-hover disabled:opacity-60"
+                      >
+                        Đăng nhập nhanh: {account.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="hl-auth-divider">
                   <span />
                   HOẶC
@@ -947,7 +974,7 @@ function AuthPage({
                   type="button"
                   className="hl-auth-submit"
                   disabled={isSignup ? registerLoading : loginLoading}
-                  onClick={isSignup ? submitRegister : submitLogin}
+                  onClick={isSignup ? submitRegister : () => void submitLogin()}
                 >
                   {isSignup
                     ? registerLoading
@@ -963,6 +990,11 @@ function AuthPage({
                     {isSignup ? 'Đăng nhập' : 'Đăng ký'}
                   </button>
                 </p>
+                {!isSignup && (
+                  <p className="hl-auth-switch">
+                    Bạn là nhân sự? <a className="font-bold text-primary-text" href="/console/login">Đăng nhập tại đây</a>
+                  </p>
+                )}
               </>
             )}
     </AuthShell>

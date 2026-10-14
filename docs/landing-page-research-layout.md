@@ -45,9 +45,9 @@ Two-column desktop layout. Left: a plain V-ACT label, one outcome-led headline, 
 
 Suggested message direction: “Biết mình cần học gì để chuẩn bị V-ACT.” Supporting copy should explain that HocLuc helps learners identify gaps and choose the next suitable lesson or practice step.
 
-### 3. V-ACT facts strip
+### 3. What the V-ACT exam is (`#ky-thi`)
 
-Show a compact factual line: `120 câu · 150 phút · 5 nhóm học tại Học Lực`. The FAQ must distinguish the exam's 3 parts from Học Lực's 5 learning groups. Link “Tìm hiểu V-ACT” to the detailed information section. Keep this factual, with no predicted admission result or unsupported school-count headline.
+The hero is followed by a white rest band, then the `#ky-thi` section; there is no separate facts strip, so the numbers appear once. The header's V-ACT link (desktop and mobile) and the footer's "Tìm hiểu V-ACT" link open this section. It explains what ĐGNL / V-ACT is, shows the official structure as one table (Sử dụng ngôn ngữ 60 câu, Toán học 30, Tư duy khoa học 30; 120 câu and 1,200 points in total, split evenly across the four components), the IRT scoring note, and a four-step exam season. It uses the official exam wording only; Học Lực's own five learning groups stay in the catalog section below. Figures follow the Trung tâm Khảo thí ĐHQG-HCM page (cetqa.vnuhcm.edu.vn); no exam dates are stated. The illustration is an inline SVG multiple-choice answer sheet labelled "Minh họa", so it does not repeat the Mai/Nam artwork used elsewhere and does not claim to be the exact V-ACT sheet layout.
 
 ### 4. Five V-ACT knowledge groups
 
@@ -110,5 +110,6 @@ On mobile: compact header → hero copy and CTAs over the full-bleed carousel �
 
 - Which additional real course lessons are approved for public preview?
 - The landing page retains a small link to the official ClassPad.net emulator; no custom emulator is embedded.
+- The landing page is a React page (`src/pages/LandingPage.tsx`, components in `src/components/landing-page/`, copy and hero slides in `src/data/landing-content.ts`), not an iframe. Hero slides are `{ id, src, alt, label }` entries with plain URLs, so uploaded images can replace the bundled ones later.
 - The three Mai and Nam hero scenes are `hero-vact-exam.webp`, `hero-mai-nam-learning.webp`, and `hero-mai-nam-ai.webp` in `public/landing-v2/assets`. The AI scene includes cloud, star, and robot avatars. The scenes cross-fade with a slight vertical drift, rotate automatically, pause on hover/focus, and respect reduced-motion preferences; the artwork is brand illustration, not product screenshots or real student photos.
 - The application has no public support, privacy-policy or terms routes yet. The footer links support questions to the FAQ and should add policy links when those pages are available.

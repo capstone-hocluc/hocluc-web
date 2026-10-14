@@ -236,3 +236,13 @@
     padding-top: 100px;
   }
 }
+
+.hl-checkout-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
