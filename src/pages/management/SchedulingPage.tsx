@@ -14,7 +14,7 @@ import {
 import { getCourseClassSessions, updateClassSession } from '../../services/classSessionService'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { runWithUnsavedActionGuard, useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
-import { addLocalDays, itemDateKey, itemSubtitle, localDateLabel, localToday, sortScheduleItems, startOfLocalWeek } from '../../lib/scheduling'
+import { addLocalDays, findTeacherOverlaps, itemDateKey, itemSubtitle, localDateLabel, localToday, sortScheduleItems, startOfLocalWeek } from '../../lib/scheduling'
 import type {
   ClassSessionResponse,
   CreateRecurringClassRequest,
@@ -194,6 +194,27 @@ export default function SchedulingPage({ role }: Props) {
   const saveSchedule = async (payload: CreateScheduleRequest | UpdateScheduleRequest) => {
     if (scheduleEditor === null || (scheduleEditor === 'create' && !activeCourseId)) return
     const creating = scheduleEditor === 'create'
+    const current = creating ? null : scheduleEditor
+    const teacherId = payload.instructorId ?? current?.instructorId
+    const startTime = payload.startTime ?? current?.startTime
+    const endTime = payload.endTime ?? current?.endTime
+    if (teacherId && startTime && endTime) {
+      const clashes = findTeacherOverlaps(
+        allItems,
+        teacherId,
+        startTime,
+        endTime,
+        current ? { kind: 'schedule', sourceId: current.id } : undefined
+      )
+      if (clashes.length) {
+        setNotice('')
+        setMutationError(
+          'Giáo viên đã có lịch trùng giờ: ' + clashes.map((entry) => '“' + entry.item.title + '”').join(', ') +
+            '. Hãy đổi giờ hoặc giáo viên.'
+        )
+        return
+      }
+    }
     const saved = await runMutation(
       () => creating
         ? createSchedule(activeCourseId, payload as CreateScheduleRequest)
@@ -299,9 +320,7 @@ export default function SchedulingPage({ role }: Props) {
 
   return (
     <div className="space-y-5">
-      <PageHeading
-        title="Lịch học"
-      />
+      <PageHeading title="Lịch học" readOnly={role === 'MANAGER'} />
 
       <div className="flex flex-wrap justify-end gap-2">
         {role === 'STAFF' && (
@@ -396,7 +415,7 @@ export default function SchedulingPage({ role }: Props) {
             view={view}
             onViewChange={setView}
           />
-          <ScheduleResourceState
+          <ScheduleResourceState skeleton="schedule"
             status={calendar.status}
             errorMessage={calendar.errorMessage}
             empty={!visibleItems.length}
@@ -461,9 +480,9 @@ export default function SchedulingPage({ role }: Props) {
         item={selectedItem}
         onClose={closeDetails}
         body={selectedItem?.kind === 'classSession' ? (
-          <ClassSessionRecordingsPanel session={selectedItem.item} role={role} />
+          <ClassSessionRecordingsPanel session={selectedItem.item} role={role} embedded />
         ) : selectedItem?.kind === 'schedule' && role === 'STAFF' ? (
-          <ScheduleAttendancePanel scheduleId={selectedItem.item.id} onStateChange={setAttendancePanelState} />
+          <ScheduleAttendancePanel scheduleId={selectedItem.item.id} onStateChange={setAttendancePanelState} embedded />
         ) : undefined}
         footer={selectedItem && (
           <div className="flex flex-wrap gap-2 border-t border-card-border pt-4">
@@ -573,7 +592,9 @@ export default function SchedulingPage({ role }: Props) {
       {deleteSchedule && (
         <ConfirmDialog
           title="Hủy lịch học?"
-          description="Chỉ lịch này bị hủy."
+          description={deleteSchedule.deliveryMode === 'ONLINE'
+            ? 'Chỉ lịch này bị hủy. Phòng Zoom và lớp trực tuyến đã tạo cho lịch này không tự động bị hủy; hãy xử lý riêng để học viên không vào nhầm phòng.'
+            : 'Chỉ lịch này bị hủy.'}
           cancelLabel="Quay lại"
           confirmLabel="Hủy lịch"
           variant="danger"

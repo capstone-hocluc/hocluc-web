@@ -4,6 +4,7 @@ import Button from '../../console/button'
 import Field, { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import SelectField from '../../console/select-field'
 import Notice from '../../console/notice'
+import DetailSection from '../../console/detail/detail-section'
 import {
   LESSON_CONTENT_TYPES,
   saveAdminLesson,
@@ -26,6 +27,10 @@ export default function LessonEditorDialog({ chapterId, lesson, onClose, onSaved
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [uncertain, setUncertain] = useState(false)
+  // Optional blocks stay folded unless the lesson already uses them.
+  const hasOptional = Boolean(
+    lesson && (lesson.description || lesson.instructorContent || lesson.instructorNotes || lesson.durationSeconds)
+  )
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     if (busy || uncertain) return
@@ -103,15 +108,19 @@ export default function LessonEditorDialog({ chapterId, lesson, onClose, onSaved
             disabled={busy}
           />
         </Field>
-        <Field label="Mô tả">
-          <textarea
-            name="description"
-            maxLength={10000}
-            defaultValue={lesson?.description ?? ''}
-            className={textareaControlClass}
-          />
-        </Field>
-        <Field label="Nội dung bài học" hint="Hỗ trợ văn bản/markdown tuỳ loại nội dung.">
+        {contentType === 'VIDEO' && (
+          <Field label="Đường dẫn video">
+            <input
+              name="videoUrl"
+              maxLength={255}
+              defaultValue={lesson?.videoUrl ?? ''}
+              placeholder="https://…"
+              className={fieldControlClass}
+              aria-invalid={!!fieldErrors.videoUrl}
+            />
+          </Field>
+        )}
+        <Field label="Nội dung bài học" hint="Hỗ trợ văn bản/markdown tùy loại nội dung.">
           <textarea
             name="content"
             maxLength={200000}
@@ -120,18 +129,16 @@ export default function LessonEditorDialog({ chapterId, lesson, onClose, onSaved
             aria-invalid={!!fieldErrors.content}
           />
         </Field>
-        {contentType === 'VIDEO' && (
-          <>
-            <Field label="Đường dẫn video">
-              <input
-                name="videoUrl"
-                maxLength={255}
-                defaultValue={lesson?.videoUrl ?? ''}
-                placeholder="https://…"
-                className={fieldControlClass}
-                aria-invalid={!!fieldErrors.videoUrl}
-              />
-            </Field>
+        <DetailSection title="Tùy chọn thêm" collapsible defaultOpen={hasOptional}>
+          <Field label="Mô tả">
+            <textarea
+              name="description"
+              maxLength={10000}
+              defaultValue={lesson?.description ?? ''}
+              className={textareaControlClass}
+            />
+          </Field>
+          {contentType === 'VIDEO' && (
             <Field label="Thời lượng (giây)">
               <input
                 name="durationSeconds"
@@ -142,24 +149,24 @@ export default function LessonEditorDialog({ chapterId, lesson, onClose, onSaved
                 className={fieldControlClass}
               />
             </Field>
-          </>
-        )}
-        <Field label="Nội dung dành cho giảng viên" hint="Chỉ hiển thị cho người dạy, không cho học sinh.">
-          <textarea
-            name="instructorContent"
-            maxLength={200000}
-            defaultValue={lesson?.instructorContent ?? ''}
-            className={textareaControlClass}
-          />
-        </Field>
-        <Field label="Ghi chú giảng viên">
-          <textarea
-            name="instructorNotes"
-            maxLength={100000}
-            defaultValue={lesson?.instructorNotes ?? ''}
-            className={textareaControlClass}
-          />
-        </Field>
+          )}
+          <Field label="Nội dung dành cho giảng viên" hint="Chỉ hiển thị cho người dạy, không cho học sinh.">
+            <textarea
+              name="instructorContent"
+              maxLength={200000}
+              defaultValue={lesson?.instructorContent ?? ''}
+              className={textareaControlClass}
+            />
+          </Field>
+          <Field label="Ghi chú giảng viên">
+            <textarea
+              name="instructorNotes"
+              maxLength={100000}
+              defaultValue={lesson?.instructorNotes ?? ''}
+              className={textareaControlClass}
+            />
+          </Field>
+        </DetailSection>
         {Object.entries(fieldErrors).map(([field, message]) => (
           <p key={field} role="alert" className="text-sm text-danger">
             {field}: {message}

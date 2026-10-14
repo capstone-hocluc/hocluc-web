@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
 import Status from '../../console/status'
@@ -6,6 +6,10 @@ import SelectField from '../../console/select-field'
 import SearchSelectField from '../../console/search-select-field'
 import Notice from '../../console/notice'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
+import DetailHeader from '../../console/detail/detail-header'
+import DetailSection from '../../console/detail/detail-section'
+import KeyFacts from '../../console/detail/key-facts'
+import SystemInfo from '../../console/detail/system-info'
 import { Checkbox } from '../../tailgrids/core/checkbox'
 import { useScheduleResource, type ScheduleResourceStatus } from '../../../hooks/useScheduleResource'
 import { getCategories, type Category } from '../../../services/categoryService'
@@ -95,7 +99,6 @@ export default function StudyGroupDetailDialog({ courseId, groupId, readOnly, on
       open
       onClose={onClose}
       title={detail.data?.name ?? 'Nhóm học'}
-      description={detail.data ? `${detail.data.courseTitle} · ${detail.data.houseLabel}` : undefined}
       maxWidth={760}
       dismissable={!busy}
       footer={
@@ -115,7 +118,7 @@ export default function StudyGroupDetailDialog({ courseId, groupId, readOnly, on
             <span role="status">{notice}</span>
           </Notice>
         )}
-        <ScheduleResourceState
+        <ScheduleResourceState skeleton="detail"
           status={detail.status}
           errorMessage={detail.errorMessage}
           onRetry={detail.reload}
@@ -217,21 +220,37 @@ function GroupDetail({
 }: GroupDetailProps) {
   return (
     <>
-      <dl className="grid gap-4 sm:grid-cols-3">
-        <DetailField label="Nhà">{detail.houseLabel}</DetailField>
-        <DetailField label="Trình độ">
-          {detail.level ? LEVEL_LABELS[detail.level] : 'Mọi trình độ'}
-        </DetailField>
-        <DetailField label="Sĩ số">
-          {detail.activeStudentCount}
-          {detail.capacity === null ? ' · Không giới hạn' : ` / ${detail.capacity}`}
-        </DetailField>
-      </dl>
+      <DetailHeader
+        chips={
+          <>
+            <Status tone="info">{detail.houseLabel}</Status>
+            <Status tone="neutral">{detail.level ? LEVEL_LABELS[detail.level] : 'Mọi trình độ'}</Status>
+          </>
+        }
+      />
 
-      <section className="border-t border-card-border pt-4">
-        <h3 className="text-sm font-medium text-text-primary">Mentor</h3>
+      <KeyFacts
+        facts={[
+          {
+            label: 'Mentor',
+            required: true,
+            value: [...detail.mentors]
+              .sort((a, b) => Number(b.primaryMentor) - Number(a.primaryMentor))
+              .map((mentor) => mentor.fullName)
+              .join(', '),
+          },
+          {
+            label: 'Sĩ số',
+            required: true,
+            value: `${detail.activeStudentCount}${detail.capacity === null ? ' · Không giới hạn' : ` / ${detail.capacity}`}`,
+          },
+          { label: 'Khóa học', required: true, value: detail.courseTitle },
+        ]}
+      />
+
+      <DetailSection title="Mentor">
         {!readOnly && (
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <SearchSelectField
               ariaLabel="Mentor cần gán"
               value={mentorId === 'NONE' ? '' : mentorId}
@@ -258,9 +277,9 @@ function GroupDetail({
           </div>
         )}
         {!detail.mentors.length ? (
-          <p className="mt-3 text-sm text-text-tertiary">Chưa gán mentor.</p>
+          <p className="text-sm text-text-tertiary">Chưa gán mentor.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-card-border">
+          <ul className="divide-y divide-card-border">
             {detail.mentors.map((mentor) => (
               <li key={mentor.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
                 <span className="flex flex-wrap items-center gap-2">
@@ -299,14 +318,11 @@ function GroupDetail({
             ))}
           </ul>
         )}
-      </section>
+      </DetailSection>
 
-      <section className="border-t border-card-border pt-4">
-        <h3 className="text-sm font-medium text-text-primary">
-          Học viên ({detail.activeStudentCount})
-        </h3>
+      <DetailSection title={`Học viên (${detail.activeStudentCount})`}>
         {!readOnly && (
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <SearchSelectField
               ariaLabel="Học viên cần thêm"
               value={studentId === 'NONE' ? '' : studentId}
@@ -333,9 +349,9 @@ function GroupDetail({
           </div>
         )}
         {!detail.members.length ? (
-          <p className="mt-3 text-sm text-text-tertiary">Nhóm chưa có học viên.</p>
+          <p className="text-sm text-text-tertiary">Nhóm chưa có học viên.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-card-border">
+          <ul className="divide-y divide-card-border">
             {detail.members.map((member) => (
               <li
                 key={member.groupStudentId}
@@ -372,15 +388,14 @@ function GroupDetail({
             ))}
           </ul>
         )}
-      </section>
+      </DetailSection>
 
       {!readOnly && detail.mentors.length > 0 && (
-        <section className="border-t border-card-border pt-4">
-          <h3 className="text-sm font-medium text-text-primary">Môn mạnh</h3>
-          <p className="mt-1 text-xs text-text-tertiary">
+        <DetailSection title="Môn mạnh">
+          <p className="text-xs text-text-tertiary">
             Dùng để gợi ý nhóm cho học viên yếu đúng môn.
           </p>
-          <div className="mt-3">
+          <div>
             <SelectField
               ariaLabel="Mentor cần đặt môn mạnh"
               value={strengthenMentorId}
@@ -395,7 +410,7 @@ function GroupDetail({
             onRetry={strengths.reload}
           >
             {categories.status !== 'ready' || !categories.data || !strengths.data ? (
-              <p className="mt-3 text-sm text-text-tertiary">Đang tải môn mạnh...</p>
+              <p className="text-sm text-text-tertiary">Đang tải môn mạnh...</p>
             ) : (
               <StrengthEditor
                 key={`${strengthenMentorId}:${strengths.data.categoryIds.join('|')}`}
@@ -408,18 +423,11 @@ function GroupDetail({
               />
             )}
           </ScheduleResourceState>
-        </section>
+        </DetailSection>
       )}
-    </>
-  )
-}
 
-function DetailField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs text-text-tertiary">{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-text-primary">{children}</dd>
-    </div>
+      <SystemInfo id={detail.id} />
+    </>
   )
 }
 
@@ -438,7 +446,7 @@ function StrengthEditor({
   const dirty =
     draft.length !== initial.length || draft.some((categoryId) => !initial.includes(categoryId))
   return (
-    <div className="mt-3">
+    <div>
       {categories.length === 0 ? (
         <p className="text-sm text-text-tertiary">Chưa có danh mục để chọn.</p>
       ) : (

@@ -95,7 +95,7 @@ export default function TeacherSchedulePage() {
         view={view}
         onViewChange={setView}
       />
-      <ScheduleResourceState
+      <ScheduleResourceState skeleton="schedule"
         status={resource.status}
         errorMessage={resource.errorMessage}
         empty={!items.length}
@@ -112,9 +112,9 @@ export default function TeacherSchedulePage() {
         item={selectedItem}
         onClose={closeDetails}
         body={selectedItem?.kind === 'classSession' ? (
-          <ClassSessionRecordingsPanel session={selectedItem.item} role="TEACHER" />
+          <ClassSessionRecordingsPanel session={selectedItem.item} role="TEACHER" embedded />
         ) : selectedItem?.kind === 'schedule' ? (
-          <ScheduleAttendancePanel scheduleId={selectedItem.item.id} onStateChange={setAttendancePanelState} />
+          <ScheduleAttendancePanel scheduleId={selectedItem.item.id} onStateChange={setAttendancePanelState} embedded />
         ) : undefined}
       />
       {unsavedGuard.hasPendingAction && (

@@ -4,6 +4,7 @@ import Button from '../../console/button'
 import Field, { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import SelectField from '../../console/select-field'
 import Notice from '../../console/notice'
+import DetailSection from '../../console/detail/detail-section'
 import { Checkbox } from '../../tailgrids/core/checkbox'
 import { saveCategory, type Category } from '../../../services/categoryService'
 import { getFieldErrors } from '../../../lib/errors'
@@ -23,6 +24,8 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [uncertain, setUncertain] = useState(false)
+  // Optional blocks stay folded unless the category already uses them.
+  const hasOptional = Boolean(category && (category.parentId || category.imageUrl || category.description))
   const excluded = new Set(category ? [category.id] : [])
   // Exclude descendants, not just the current category. BE still owns cycle enforcement.
   for (let i = 0; i < categories.length; i++) {
@@ -38,7 +41,6 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
     try {
       await saveCategory(category?.id ?? null, {
         name: String(data.get('name') ?? '').trim(),
-        slug: String(data.get('slug') ?? '').trim() || undefined,
         description: String(data.get('description') ?? '').trim() || null,
         imageUrl: String(data.get('imageUrl') ?? '').trim() || null,
         parentId: parentId === 'NONE' ? null : parentId,
@@ -94,29 +96,6 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
             aria-invalid={!!fieldErrors.name}
           />
         </Field>
-        <Field label="Slug" hint="Để trống để tạo tự động.">
-          <input
-            name="slug"
-            maxLength={200}
-            pattern="[a-z0-9]+(-[a-z0-9]+)*"
-            defaultValue={category?.slug}
-            className={fieldControlClass}
-            aria-invalid={!!fieldErrors.slug}
-          />
-        </Field>
-        <Field label="Danh mục cha">
-          <SelectField
-            ariaLabel="Danh mục cha"
-            value={parentId}
-            onChange={setParentId}
-            options={[
-              { id: 'NONE', label: 'Không có' },
-              ...categories
-                .filter((c) => !excluded.has(c.id))
-                .map((c) => ({ id: c.id, label: c.name })),
-            ]}
-          />
-        </Field>
         <Field label="Thứ tự">
           <input
             name="sortOrder"
@@ -129,26 +108,41 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
             className={fieldControlClass}
           />
         </Field>
-        <Field label="Ảnh danh mục">
-          <input
-            name="imageUrl"
-            maxLength={2000}
-            defaultValue={category?.imageUrl ?? ''}
-            placeholder="https://…"
-            className={fieldControlClass}
-          />
-        </Field>
-        <Field label="Mô tả">
-          <textarea
-            name="description"
-            maxLength={10000}
-            defaultValue={category?.description ?? ''}
-            className={textareaControlClass}
-          />
-        </Field>
         <Checkbox isSelected={active} onChange={setActive} isDisabled={busy}>
           Đang sử dụng
         </Checkbox>
+        <DetailSection title="Tùy chọn thêm" collapsible defaultOpen={hasOptional}>
+          <Field label="Danh mục cha">
+            <SelectField
+              ariaLabel="Danh mục cha"
+              value={parentId}
+              onChange={setParentId}
+              options={[
+                { id: 'NONE', label: 'Không có' },
+                ...categories
+                  .filter((c) => !excluded.has(c.id))
+                  .map((c) => ({ id: c.id, label: c.name })),
+              ]}
+            />
+          </Field>
+          <Field label="Ảnh danh mục">
+            <input
+              name="imageUrl"
+              maxLength={2000}
+              defaultValue={category?.imageUrl ?? ''}
+              placeholder="https://…"
+              className={fieldControlClass}
+            />
+          </Field>
+          <Field label="Mô tả">
+            <textarea
+              name="description"
+              maxLength={10000}
+              defaultValue={category?.description ?? ''}
+              className={textareaControlClass}
+            />
+          </Field>
+        </DetailSection>
         {Object.entries(fieldErrors).map(([field, message]) => (
           <p key={field} role="alert" className="text-sm text-danger">
             {field}: {message}

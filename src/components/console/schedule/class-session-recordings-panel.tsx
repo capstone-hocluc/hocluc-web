@@ -31,9 +31,12 @@ const providerOptions: Array<{ id: MeetingProvider; label: string }> = [
 export default function ClassSessionRecordingsPanel({
   session,
   role,
+  embedded = false,
 }: {
   session: ClassSessionResponse
   role: ActorRole
+  /** Inside a titled DetailSection: no heading or divider of its own. */
+  embedded?: boolean
 }) {
   const resource = useScheduleResource(
     role === 'STUDENT' ? null : 'class-session-recordings:' + session.id,
@@ -138,7 +141,7 @@ export default function ClassSessionRecordingsPanel({
     try {
       await deleteClassSessionRecording(session.id, removing.id)
       setRemoving(null)
-      setNotice('Đã xoá bản ghi khỏi buổi học.')
+      setNotice('Đã xóa bản ghi khỏi buổi học.')
       resource.reload()
     } catch (reason) {
       setError(getErrorMessage(reason))
@@ -148,9 +151,9 @@ export default function ClassSessionRecordingsPanel({
   }
 
   return (
-    <section className="flex flex-col gap-3 border-t border-card-border pt-4">
+    <section className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 border-t border-card-border pt-4'}>
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium text-text-primary">Bản ghi</h3>
+        {!embedded && <h3 className="text-sm font-medium text-text-primary">Bản ghi</h3>}
         <Button size="sm" appearance="ghost" className="ml-auto" disabled={busy} onClick={resource.reload}>
           <RefreshCw size={14} />
           Làm mới link
@@ -262,10 +265,10 @@ export default function ClassSessionRecordingsPanel({
       )}
       {removing && (
         <ConfirmDialog
-          title="Xoá bản ghi?"
+          title="Xóa bản ghi?"
           description={<>Bản ghi “{removing.title}” sẽ bị gỡ khỏi buổi học.</>}
           cancelLabel="Giữ lại"
-          confirmLabel="Xoá bản ghi"
+          confirmLabel="Xóa bản ghi"
           variant="danger"
           busy={busy}
           onCancel={() => setRemoving(null)}
@@ -322,7 +325,7 @@ function RecordingRow({
         {onDelete && (
           <Button size="sm" variant="danger" appearance="outline" disabled={disabled} onClick={onDelete}>
             <Trash2 size={13} />
-            Xoá
+            Xóa
           </Button>
         )}
       </div>

@@ -19,18 +19,17 @@ test('category edit preserves metadata and sends stale-edit token', async ({ pag
   const state = await installCrudFixture(page)
   await page.goto('/staff/categories')
   await page
-    .getByRole('row', { name: /Toán toan/ })
+    .getByRole('row', { name: /^Toán / })
     .getByRole('button', { name: 'Sửa', exact: true })
     .click()
   const dialog = page.getByRole('dialog', { name: 'Sửa danh mục', exact: true })
   await dialog.getByLabel('Tên danh mục', { exact: true }).fill('Toán cập nhật')
   await dialog.getByRole('button', { name: 'Lưu danh mục', exact: true }).click()
   await expect(dialog).toBeHidden()
-  await expect(page.getByRole('row', { name: /Toán cập nhật toan/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /^Toán cập nhật / })).toBeVisible()
   const saved = state.requests.find((r) => r.method === 'PUT' && r.path.endsWith(IDS.root))!
   expect(saved.body).toMatchObject({
     name: 'Toán cập nhật',
-    slug: 'toan',
     imageUrl: 'https://example.invalid/math.png',
     parentId: null,
     active: true,
@@ -63,7 +62,7 @@ test('category creation and unknown mutation prevent blind retries', async ({ pa
   } finally {
     releaseRead()
   }
-  await expect(page.getByRole('row', { name: /Vật lý new-category/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /^Vật lý / })).toBeVisible()
   expect(
     state.requests.filter((r) => r.method === 'GET' && r.path === '/api/v1/categories').length
   ).toBeGreaterThan(getsBeforeClose)
@@ -74,7 +73,7 @@ test('stale category edit keeps input and does not automatically resend', async 
   const state = await installCrudFixture(page)
   await page.goto('/staff/categories')
   await page
-    .getByRole('row', { name: /Toán toan/ })
+    .getByRole('row', { name: /^Toán / })
     .getByRole('button', { name: 'Sửa', exact: true })
     .click()
   const dialog = page.getByRole('dialog', { name: 'Sửa danh mục', exact: true })
@@ -95,10 +94,14 @@ test('SECTION metadata create works without MAIN calendar fields', async ({ page
   const dialog = page.getByRole('dialog', { name: 'Tạo khóa học', exact: true })
   await selectOption(dialog, page, 'Loại khóa', 'SECTION · Khóa nhỏ')
   await dialog.getByLabel('Tên khóa học', { exact: true }).fill('SECTION Hình học')
-  await expect(dialog.getByLabel('Ngày bắt đầu', { exact: true })).toHaveCount(0)
+  const next = dialog.getByRole('button', { name: 'Tiếp tục', exact: true })
+  await next.click()
   await dialog.getByText('Khóa có học phí', { exact: true }).click()
   await expect(dialog.getByRole('checkbox', { name: 'Khóa có học phí', exact: true })).toBeChecked()
   await dialog.getByLabel('Học phí (VND)', { exact: true }).fill('150000')
+  await next.click()
+  // SECTION courses have no calendar step, so the next stop is the access window.
+  await expect(dialog.getByLabel('Ngày bắt đầu', { exact: true })).toHaveCount(0)
   await selectOption(dialog, page, 'Hạn dùng khóa', 'N ngày kể từ khi mua')
   await dialog.getByLabel('Số ngày truy cập').fill('120')
   await page.setViewportSize({ width: 390, height: 844 })
@@ -188,7 +191,7 @@ test('category delete confirms the chosen leaf and keeps its parent', async ({ p
   const state = await installCrudFixture(page)
   await page.goto('/staff/categories')
   await page
-    .getByRole('row', { name: /Đại số dai-so/ })
+    .getByRole('row', { name: /^Đại số / })
     .getByRole('button', { name: 'Xóa', exact: true })
     .click()
   const confirmation = page
@@ -196,8 +199,8 @@ test('category delete confirms the chosen leaf and keeps its parent', async ({ p
     .filter({ has: page.getByRole('heading', { name: 'Xóa danh mục?', exact: true }) })
   await confirmation.getByRole('button', { name: 'Xóa danh mục', exact: true }).click()
   await expect(confirmation).toBeHidden()
-  await expect(page.getByRole('row', { name: /Toán toan/ })).toBeVisible()
-  await expect(page.getByRole('row', { name: /Đại số dai-so/ })).toHaveCount(0)
+  await expect(page.getByRole('row', { name: /^Toán / })).toBeVisible()
+  await expect(page.getByRole('row', { name: /^Đại số / })).toHaveCount(0)
   expect(state.requests.filter((r) => r.method === 'DELETE')).toEqual([
     { path: `/api/v1/categories/${IDS.child}`, method: 'DELETE', body: {} },
   ])
@@ -228,7 +231,7 @@ test('manager has read-only category/course detail on a narrow viewport', async 
   const state = await installCrudFixture(page, 'MANAGER')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/manager/categories')
-  await expect(page.getByRole('row', { name: /Toán toan/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /^Toán / })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Tạo danh mục', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
@@ -544,6 +547,10 @@ test('administrator edits an account identity and a changed email resets verific
   await page.goto('/admin/users')
   await page.getByRole('row', { name: /Giáo viên QA/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
+  // Technical rows are folded away until asked for, and the form only opens on demand.
+  await expect(dialog.getByRole('button', { name: 'Thông tin hệ thống' })).toHaveAttribute('aria-expanded', 'false')
+  await expect(dialog.getByLabel('Họ', { exact: true })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Sửa thông tin', exact: true }).click()
   await dialog.getByLabel('Họ', { exact: true }).fill('Nguyễn')
   await dialog.getByLabel('Tên', { exact: true }).fill('An')
   await dialog.getByLabel('Email', { exact: true }).fill('an.nguyen@example.invalid')
@@ -565,6 +572,7 @@ test('staff sees account details without the administrator editor', async ({ pag
   await page.goto('/staff/users')
   await page.getByRole('row', { name: /Giáo viên QA/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
+  await expect(dialog.getByRole('button', { name: 'Sửa thông tin', exact: true })).toHaveCount(0)
   await expect(dialog.getByRole('button', { name: 'Lưu thông tin', exact: true })).toHaveCount(0)
 })
 
@@ -631,9 +639,9 @@ test('staff edits then deletes a class-session recording', async ({ page }) => {
     )!.body
   ).toMatchObject({ title: 'Bản ghi buổi 1 (đã sửa)', provider: 'ZOOM' })
 
-  await details.getByRole('button', { name: 'Xoá', exact: true }).click()
-  const confirm = page.getByRole('dialog', { name: 'Xoá bản ghi?' })
-  await confirm.getByRole('button', { name: 'Xoá bản ghi', exact: true }).click()
+  await details.getByRole('button', { name: 'Xóa', exact: true }).click()
+  const confirm = page.getByRole('dialog', { name: 'Xóa bản ghi?' })
+  await confirm.getByRole('button', { name: 'Xóa bản ghi', exact: true }).click()
   await expect(details.getByText('Chưa có bản ghi.')).toBeVisible()
   expect(
     state.requests.some(

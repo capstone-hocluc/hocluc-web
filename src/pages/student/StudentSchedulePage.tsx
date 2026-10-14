@@ -246,8 +246,7 @@ function StudentScheduleAttendancePanel({ scheduleId }: { scheduleId: string }) 
   const record = attendance.data
 
   return (
-    <section className="space-y-3 border-t border-border-subtle pt-4">
-      <h3 className="text-sm font-semibold text-text-heading">Điểm danh buổi học</h3>
+    <section className="space-y-3">
       {attendance.status === 'not-found' ? (
         <Notice tone="info">Chưa có ghi nhận điểm danh cho buổi học này.</Notice>
       ) : (

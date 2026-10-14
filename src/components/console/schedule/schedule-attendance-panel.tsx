@@ -19,9 +19,12 @@ const statuses: Array<{ value: AttendanceStatus; label: string }> = [
 export default function ScheduleAttendancePanel({
   scheduleId,
   onStateChange,
+  embedded = false,
 }: {
   scheduleId: string
   onStateChange?: (state: { dirty: boolean; busy: boolean }) => void
+  /** Inside a titled DetailSection: no heading or divider of its own. */
+  embedded?: boolean
 }) {
   const resource = useScheduleResource(
     'schedule-attendance:' + scheduleId,
@@ -66,8 +69,8 @@ export default function ScheduleAttendancePanel({
   }
 
   return (
-    <section className="flex flex-col gap-3 border-t border-card-border pt-4">
-      <h3 className="text-sm font-medium text-text-primary">Điểm danh</h3>
+    <section className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 border-t border-card-border pt-4'}>
+      {!embedded && <h3 className="text-sm font-medium text-text-primary">Điểm danh</h3>}
       <Notice tone="warning">Kiểm tra trạng thái từng học viên trước khi lưu. Danh sách chưa phân biệt “Chưa điểm danh” với “Vắng”.</Notice>
       {error && <Notice tone="danger">{error}</Notice>}
       {notice && <Notice tone="info">{notice}</Notice>}

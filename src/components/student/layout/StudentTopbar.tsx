@@ -12,6 +12,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/Popover'
 import type { UserProfile } from '../../../services/userService'
 import { getUserDisplayName, getUserInitials } from '../../../lib/userDisplay'
+import { ROLE_LABELS } from '../../../lib/role-home'
 import { cn } from '../../../lib/cn'
 
 interface StudentTopbarProps {
@@ -125,7 +126,23 @@ function StudentTopbar({
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
+          <DropdownMenuContent className="w-[250px]">
+            {profile && (
+              <div className="flex items-center gap-3 border-b border-line-blue px-[11px] pt-1 pb-3">
+                <Avatar
+                  src={profile.avatarUrl}
+                  alt=""
+                  fallback={getUserInitials(profile) || <User size={18} />}
+                />
+                <span className="flex min-w-0 flex-col">
+                  <strong className="truncate text-[13px] text-text-heading">{getUserDisplayName(profile)}</strong>
+                  <span className="truncate text-xs text-text-muted">{profile.email}</span>
+                  <span className="mt-1.5 self-start rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-bold text-primary-text">
+                    {ROLE_LABELS[profile.role]}
+                  </span>
+                </span>
+              </div>
+            )}
             <DropdownMenuItem onSelect={() => onNavigateProfile?.()}>
               <UserRound size={16} />
               Hồ sơ cá nhân
@@ -140,6 +157,7 @@ function StudentTopbar({
               <Settings size={16} />
               Cài đặt
             </DropdownMenuItem>
+            <div role="separator" className="my-1 h-px bg-line-blue" />
             <DropdownMenuItem disabled={logoutLoading} onSelect={() => onLogout?.()}>
               <LogOut size={16} />
               {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}

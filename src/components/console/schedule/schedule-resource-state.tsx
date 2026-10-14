@@ -3,7 +3,7 @@ import { AlertCircle, LockKeyhole, RefreshCw } from '../icons'
 import type { ScheduleResourceStatus } from '../../../hooks/useScheduleResource'
 import Button from '../button'
 import Notice from '../notice'
-import { Skeleton } from '../../tailgrids/core/skeleton'
+import ResourceSkeleton, { type ResourceSkeletonVariant } from './resource-skeletons'
 
 interface Props {
   status: ScheduleResourceStatus
@@ -11,6 +11,8 @@ interface Props {
   empty?: boolean
   emptyMessage?: string
   onRetry?: () => void
+  /** Shape of the loading placeholder; match it to what the section renders once loaded. */
+  skeleton?: ResourceSkeletonVariant
   children: ReactNode
 }
 
@@ -20,15 +22,14 @@ export default function ScheduleResourceState({
   empty = false,
   emptyMessage = 'Chưa có lịch trong khoảng thời gian này.',
   onRetry,
+  skeleton = 'list',
   children,
 }: Props) {
   if (status === 'idle') return null
   if (status === 'loading') {
     return (
-      <div className="flex flex-col gap-3" aria-label="Đang tải" role="status">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
+      <div aria-label="Đang tải" role="status">
+        <ResourceSkeleton variant={skeleton} />
       </div>
     )
   }
