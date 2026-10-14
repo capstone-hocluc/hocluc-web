@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, Ban, Clock3, MailQuestion, RefreshCw, UserCheck, Users } from '../console/icons'
+import { AlertCircle, ArrowRight, Ban, Clock3, MailQuestion, UserCheck, Users } from '../console/icons'
 import { useEffect, useState } from 'react'
 import {
   getUsers,
@@ -137,13 +137,6 @@ function AdminOverview({ onNavigate, areaLabel = 'quản trị' }: AdminOverview
 
   return (
     <section className="space-y-5" aria-busy={loading}>
-      <div className="flex justify-end">
-        <Button variant="primary" appearance="outline" size="sm" onClick={() => setReloadKey((current) => current + 1)} disabled={loading}>
-          <RefreshCw size={15} className={loading ? 'animate-spin' : undefined} />
-          Làm mới
-        </Button>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <StatCard

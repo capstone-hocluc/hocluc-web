@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { CheckCircle2, ClipboardList, Clock3, GraduationCap, ListChecks, MoreHorizontal } from '../console/icons'
+import { CheckCircle2, ClipboardList, Clock3, Eye, GraduationCap, ListChecks, MoreHorizontal } from '../console/icons'
+import { IconAction, RowActions } from '../console/icon-action'
 import ListCard from '../console/list-card'
 import ScheduleResourceState from '../console/schedule/schedule-resource-state'
 import SelectField from '../console/select-field'
+import ConsoleSheet from '../console/sheet'
 import Notice from '../console/notice'
 import StatCard from '../ui/StatCard'
 import Status from '../console/status'
@@ -11,12 +13,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { usePageResource } from '../../hooks/usePageResource'
 import { getErrorMessage } from '../../lib/errors'
 import {
+  getTeacherAttemptReview,
   getTeacherQuiz,
   getTeacherQuizAttempts,
   getTeacherQuizStats,
   getTeacherQuizzes,
   markTeacherQuestionsReviewed,
   type TeacherAttemptRecord,
+  type TeacherAttemptReview,
   type TeacherQuestionType,
 } from '../../services/teacherQuizService'
 import Page from './screen-page'
@@ -180,6 +184,59 @@ const toAttemptRow = (item: TeacherAttemptRecord): AttemptRow => ({
   passed: item.passed,
 })
 
+function AttemptReviewSheet({ row, onClose }: { row: AttemptRow | null; onClose: () => void }) {
+  const attemptId = row?.id ?? ''
+  const { data, status, errorMessage, reload } = usePageResource<TeacherAttemptReview | null>(
+    async () => (attemptId ? getTeacherAttemptReview(attemptId) : null),
+    [attemptId]
+  )
+  return (
+    <ConsoleSheet open={row !== null} onClose={onClose} title={row ? `Bài làm của ${row.student}` : 'Bài làm'}>
+      <ScheduleResourceState status={status} errorMessage={errorMessage} onRetry={reload} empty={status === 'ready' && !data} emptyMessage="Chưa có kết quả chấm cho bài làm này.">
+        {data && (
+          <div className="space-y-4">
+            <p className="text-sm text-text-secondary">
+              {data.quizTitle} · Đúng {data.correctCount}/{data.totalQuestions} ({Math.round(data.overallPercentage)}%)
+            </p>
+            <ol className="space-y-3">
+              {data.questions.map((question) => (
+                <li key={question.questionId} className="rounded-xl border border-card-border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-text-primary">
+                      Câu {question.sequence}. {question.questionText}
+                    </p>
+                    <Status tone={!question.answered ? 'neutral' : question.correct ? 'success' : 'danger'}>
+                      {!question.answered ? 'Bỏ trống' : question.correct ? 'Đúng' : 'Sai'}
+                    </Status>
+                  </div>
+                  {question.imageUrl && <img src={question.imageUrl} alt="" className="mt-2 max-h-48 rounded-lg" />}
+                  <ul className="mt-2 space-y-1">
+                    {question.options.map((option) => {
+                      const picked = option.optionId === question.selectedOptionId
+                      return (
+                        <li
+                          key={option.optionId}
+                          className={`flex items-center justify-between gap-2 rounded-md px-2 py-1 text-sm ${
+                            option.correct ? 'bg-badge-green-background text-badge-green-text' : picked ? 'bg-badge-error-background text-badge-error-text' : 'text-text-secondary'
+                          }`}
+                        >
+                          <span>{option.optionText}</span>
+                          <span className="shrink-0 text-xs">{picked ? 'Học viên chọn' : option.correct ? 'Đáp án đúng' : ''}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {question.explanation && <p className="mt-2 text-xs text-text-tertiary">Giải thích: {question.explanation}</p>}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </ScheduleResourceState>
+    </ConsoleSheet>
+  )
+}
+
 function QuizAttempts({ quizId }: { quizId: string }) {
   const { data, status, errorMessage, reload } = usePageResource(
     async () => {
@@ -189,6 +246,7 @@ function QuizAttempts({ quizId }: { quizId: string }) {
     [quizId]
   )
 
+  const [reviewing, setReviewing] = useState<AttemptRow | null>(null)
   const columns = useMemo<ColumnDef<AttemptRow>[]>(
     () => [
       {
@@ -219,6 +277,22 @@ function QuizAttempts({ quizId }: { quizId: string }) {
         accessorFn: (row) => (row.passed ? 1 : 0),
         cell: ({ row }) => <Status tone={row.original.passed ? 'success' : 'neutral'}>{row.original.passed ? 'Đạt' : 'Chưa đạt'}</Status>,
       },
+      {
+        id: 'actions',
+        header: '',
+        enableSorting: false,
+        meta: { className: 'w-14' },
+        cell: ({ row }) => (
+          <RowActions>
+            <IconAction
+              label="Xem bài làm"
+              icon={Eye}
+              disabled={row.original.status !== 'Đã chấm'}
+              onClick={() => setReviewing(row.original)}
+            />
+          </RowActions>
+        ),
+      },
     ],
     []
   )
@@ -242,6 +316,7 @@ function QuizAttempts({ quizId }: { quizId: string }) {
           searchPlaceholder="Tìm học viên..."
           searchText={(row) => `${row.student} ${row.email}`}
         />
+        <AttemptReviewSheet row={reviewing} onClose={() => setReviewing(null)} />
       </div>
     </ScheduleResourceState>
   )

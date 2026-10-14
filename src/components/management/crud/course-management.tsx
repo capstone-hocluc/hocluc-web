@@ -7,7 +7,8 @@ import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Plus, RefreshCw, Search } from '../../console/icons'
+import { Eye, PackageOpen, Pencil, Plus, Search, Send, Trash2 } from '../../console/icons'
+import { IconAction, RowActions } from '../../console/icon-action'
 import { Input } from '../../tailgrids/core/input'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
@@ -56,30 +57,31 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         accessorKey: 'title',
         header: 'Khóa học',
         enableSorting: false,
+        meta: { className: 'w-[34%]' },
         cell: ({ row }) => (
-          <div className="min-w-52 max-w-80">
-            <strong className="block truncate font-medium">{row.original.title}</strong>
-            <span className="mt-1 block truncate text-xs text-text-tertiary">
-              {row.original.slug}
-            </span>
-          </div>
+          <strong className="block max-w-80 truncate font-medium" title={row.original.title}>
+            {row.original.title}
+          </strong>
         ),
       },
-      { accessorKey: 'courseType', header: 'Loại', enableSorting: false },
+      { accessorKey: 'courseType', header: 'Loại', enableSorting: false, meta: { className: 'w-24' } },
       {
         accessorKey: 'categoryName',
         header: 'Danh mục',
         enableSorting: false,
+        meta: { className: 'w-44' },
         cell: ({ row }) => row.original.categoryName ?? 'Chưa phân loại',
       },
       {
         id: 'price',
         header: 'Học phí',
+        meta: { className: 'w-36 text-right' },
         cell: ({ row }) => <span className="whitespace-nowrap">{price(row.original)}</span>,
       },
       {
         id: 'status',
         header: 'Trạng thái',
+        meta: { className: 'w-32' },
         cell: ({ row }) => (
           <Status
             tone={
@@ -97,29 +99,17 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       {
         id: 'actions',
         header: 'Thao tác',
+        meta: { className: 'w-44 text-right' },
         cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              appearance="outline"
-              onClick={() => setSelectedId(row.original.id)}
-              disabled={busy}
-            >
-              Chi tiết
-            </Button>
+          <RowActions>
+            <IconAction label="Chi tiết" icon={Eye} onClick={() => setSelectedId(row.original.id)} disabled={busy} />
             {!readOnly && (
               <>
-                <Button
-                  size="sm"
-                  appearance="ghost"
-                  onClick={() => setEditor({ course: row.original })}
+                <IconAction label="Sửa" icon={Pencil} onClick={() => setEditor({ course: row.original })} disabled={busy} />
+                <IconAction
+                  label={row.original.status === 'PUBLISHED' ? 'Lưu trữ' : 'Xuất bản'}
+                  icon={row.original.status === 'PUBLISHED' ? PackageOpen : Send}
                   disabled={busy}
-                >
-                  Sửa
-                </Button>
-                <Button
-                  size="sm"
-                  appearance="ghost"
                   onClick={() => {
                     setError('')
                     setConfirmation({
@@ -127,27 +117,22 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
                       status: row.original.status === 'PUBLISHED' ? 'ARCHIVED' : 'PUBLISHED',
                     })
                   }}
-                  disabled={busy}
-                >
-                  {row.original.status === 'PUBLISHED' ? 'Lưu trữ' : 'Xuất bản'}
-                </Button>
+                />
                 {row.original.status === 'DRAFT' && (
-                  <Button
-                    size="sm"
-                    appearance="ghost"
+                  <IconAction
+                    label="Xóa"
+                    icon={Trash2}
                     variant="danger"
+                    disabled={busy}
                     onClick={() => {
                       setError('')
                       setConfirmation({ course: row.original })
                     }}
-                    disabled={busy}
-                  >
-                    Xóa
-                  </Button>
+                  />
                 )}
               </>
             )}
-          </div>
+          </RowActions>
         ),
       },
     ],
@@ -191,14 +176,6 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-text-tertiary">Khóa trọn bộ và khóa nhỏ, ở mọi trạng thái.</p>
         <div className="flex gap-2">
-          <Button
-            appearance="outline"
-            onClick={resource.reload}
-            disabled={busy || resource.status === 'loading'}
-          >
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
           {!readOnly && (
             <Button
               onClick={() => setEditor({ course: null })}
@@ -239,11 +216,11 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
           >
             <Input
               aria-label="Tìm khóa học"
-              placeholder="Tên hoặc slug..."
+              placeholder="Tên khóa học..."
               maxLength={200}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="min-w-0 flex-1"
+              className="h-10 min-w-0 flex-1 py-0"
             />
             <Button type="submit" appearance="outline" aria-label="Tìm kiếm">
               <Search size={16} />
@@ -279,7 +256,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
             ]}
           />
         </div>
-        <ScheduleResourceState
+        <ScheduleResourceState skeleton="table"
           status={resource.status}
           errorMessage={resource.errorMessage}
           onRetry={resource.reload}

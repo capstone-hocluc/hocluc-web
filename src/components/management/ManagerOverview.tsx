@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertCircle, ArrowRight, BookOpen, BookOpenCheck, RefreshCw, Wallet } from '../console/icons'
+import { AlertCircle, ArrowRight, BookOpen, BookOpenCheck, Wallet } from '../console/icons'
 import { getMainCourses, type Course } from '../../services/courseService'
 import Button from '../console/button'
 import StatCard from '../ui/StatCard'
@@ -52,20 +52,6 @@ function ManagerOverview({ onNavigate }: ManagerOverviewProps) {
 
   return (
     <section className="space-y-5" aria-busy={loading}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div />
-        <Button
-          variant="primary"
-          appearance="outline"
-          size="sm"
-          onClick={handleReload}
-          disabled={loading}
-        >
-          <RefreshCw size={15} className={loading ? 'animate-spin' : undefined} />
-          Làm mới
-        </Button>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Khóa học đang mở" value={loading ? '—' : summary.total} icon={BookOpen} tone="info" />
         <StatCard label="Khóa học miễn phí" value={loading ? '—' : summary.free} icon={BookOpenCheck} tone="success" />

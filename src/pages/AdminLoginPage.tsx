@@ -25,6 +25,7 @@ const DEV_ACCOUNTS = [
   { label: 'Manager', email: 'manager@gmail.com' },
   { label: 'Staff', email: 'staff@gmail.com' },
   { label: 'Teacher', email: 'teacher@gmail.com' },
+  { label: 'Mentor', email: 'mentor@gmail.com' },
 ] as const
 const DEV_PASSWORD = '123456'
 
@@ -45,9 +46,14 @@ function AdminLoginPage({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    await signIn(email, password)
+  }
+
+  const signIn = async (rawEmail: string, rawPassword: string) => {
     if (loading) return
 
-    const trimmedEmail = email.trim()
+    const trimmedEmail = rawEmail.trim()
+    const password = rawPassword
     if (!trimmedEmail || !password) {
       setError('Vui lòng nhập email và mật khẩu.')
       return
@@ -56,7 +62,7 @@ function AdminLoginPage({
     setLoading(true)
     setError('')
     try {
-      await loginAccount({ email: trimmedEmail, password })
+      await loginAccount({ email: trimmedEmail, password, audience: 'CONSOLE' })
       const profile = await loadCurrentUser()
 
       if (!allowedRoles.includes(profile.role)) {
@@ -127,10 +133,11 @@ function AdminLoginPage({
                   setPassword(DEV_PASSWORD)
                   setShowPassword(true)
                   setError('')
+                  void signIn(account.email, DEV_PASSWORD)
                 }}
                 className="rounded-full border border-border-primary px-3 py-1 text-[12px] font-bold text-text-label transition-colors hover:bg-surface-hover"
               >
-                {account.label}
+                Đăng nhập nhanh: {account.label}
               </button>
             ))}
           </div>
@@ -185,6 +192,12 @@ function AdminLoginPage({
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
         </form>
+        <p className="mt-4 text-center text-[13px] text-text-muted">
+          Bạn là học viên?{' '}
+          <a className="font-bold text-primary-text" href="/login">
+            Đăng nhập tại đây
+          </a>
+        </p>
       </section>
     </AuthShell>
   )

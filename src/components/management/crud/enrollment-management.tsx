@@ -5,7 +5,8 @@ import DataTable from '../../console/data-table'
 import SelectField from '../../console/select-field'
 import Status from '../../console/status'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Plus, RefreshCw } from '../../console/icons'
+import { CalendarClock, CheckCircle2, Plus } from '../../console/icons'
+import { IconAction, RowActions } from '../../console/icon-action'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourses } from '../../../services/courseAdminService'
@@ -121,26 +122,15 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
         id: 'actions',
         header: 'Thao tác',
         enableSorting: false,
+        meta: { className: 'w-32 text-right' },
         cell: ({ row }) =>
           readOnly ? (
             <span className="text-text-tertiary">{EMPTY}</span>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                appearance="outline"
-                onClick={() => setEditing({ kind: 'status', row: row.original })}
-              >
-                Trạng thái
-              </Button>
-              <Button
-                size="sm"
-                appearance="ghost"
-                onClick={() => setEditing({ kind: 'expiry', row: row.original })}
-              >
-                Hạn dùng
-              </Button>
-            </div>
+            <RowActions>
+              <IconAction label="Trạng thái" icon={CheckCircle2} onClick={() => setEditing({ kind: 'status', row: row.original })} />
+              <IconAction label="Hạn dùng" icon={CalendarClock} onClick={() => setEditing({ kind: 'expiry', row: row.original })} />
+            </RowActions>
           ),
       },
     ],
@@ -157,14 +147,6 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
           Quyền học của học viên, kèm nguồn ghi danh và hạn truy cập.
         </p>
         <div className="flex gap-2">
-          <Button
-            appearance="outline"
-            onClick={resource.reload}
-            disabled={resource.status === 'loading'}
-          >
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
           {!readOnly && (
             <Button onClick={() => setEnrolling(true)}>
               <Plus size={16} />
@@ -227,7 +209,7 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
             options={EXPIRY_WINDOWS}
           />
         </div>
-        <ScheduleResourceState
+        <ScheduleResourceState skeleton="table"
           status={resource.status}
           errorMessage={resource.errorMessage}
           onRetry={resource.reload}

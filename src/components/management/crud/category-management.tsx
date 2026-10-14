@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Plus, RefreshCw } from '../../console/icons'
+import { Pencil, Plus, Trash2 } from '../../console/icons'
+import { IconAction, RowActions } from '../../console/icon-action'
 import Button from '../../console/button'
 import ListCard from '../../console/list-card'
 import Status from '../../console/status'
@@ -29,7 +30,6 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
         cell: ({ row }) => (
           <div className="min-w-40">
             <strong className="font-medium">{row.original.name}</strong>
-            <p className="mt-1 text-xs text-text-tertiary">{row.original.slug}</p>
           </div>
         ),
       },
@@ -53,29 +53,21 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
             {
               id: 'actions',
               header: 'Thao tác',
+              meta: { className: 'w-32 text-right' },
               cell: ({ row }: { row: { original: Category } }) => (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    appearance="outline"
-                    disabled={busy}
-                    onClick={() => setEditor({ category: row.original })}
-                  >
-                    Sửa
-                  </Button>
-                  <Button
-                    size="sm"
-                    appearance="ghost"
+                <RowActions>
+                  <IconAction label="Sửa" icon={Pencil} disabled={busy} onClick={() => setEditor({ category: row.original })} />
+                  <IconAction
+                    label="Xóa"
+                    icon={Trash2}
                     variant="danger"
                     disabled={busy}
                     onClick={() => {
                       setError('')
                       setDeleting(row.original)
                     }}
-                  >
-                    Xóa
-                  </Button>
-                </div>
+                  />
+                </RowActions>
               ),
             },
           ]
@@ -107,14 +99,6 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-text-tertiary">Danh mục dùng chung cho khóa học và nội dung.</p>
         <div className="flex gap-2">
-          <Button
-            appearance="outline"
-            onClick={resource.reload}
-            disabled={busy || resource.status === 'loading'}
-          >
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
           {!readOnly && (
             <Button
               onClick={() => setEditor({ category: null })}
@@ -136,7 +120,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           <span role="alert">{error}</span>
         </Notice>
       )}
-      <ScheduleResourceState
+      <ScheduleResourceState skeleton="table"
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
@@ -146,7 +130,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           columns={columns}
           getRowKey={(c) => c.id}
           searchPlaceholder="Tìm danh mục..."
-          searchText={(c) => `${c.name} ${c.slug}`}
+          searchText={(c) => c.name}
           emptyMessage="Chưa có danh mục. Tạo danh mục đầu tiên để phân loại nội dung."
           filter={{
             ariaLabel: 'Trạng thái danh mục',

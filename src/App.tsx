@@ -23,6 +23,7 @@ import { useCurrentUser } from './hooks/useCurrentUser'
 import { logout } from './services/authService.ts'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
+import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
 
@@ -48,20 +49,19 @@ function replaceHistoryEntry(path: string) {
 function App() {
   const { clearCurrentUser } = useCurrentUser()
   const getAuthMode = useCallback(() => {
-    const path = window.location.pathname.replace(/\/$/, '')
+    const rawPath = window.location.pathname.replace(/\/$/, '')
+    if (isConsoleLoginPath(rawPath)) {
+      if (rawPath !== CONSOLE_LOGIN_PATH) replaceHistoryEntry(`${CONSOLE_LOGIN_PATH}${window.location.search}`)
+      return 'management-login'
+    }
+    const path = stripConsolePrefix(rawPath)
     const profileMatch = path.match(/^\/(admin|staff|manager|mentor|teacher)\/profile$/)
     if (profileMatch) return `${profileMatch[1]}-profile`
     if (path === '/staff/dashboard') return 'staff-dashboard'
-    if (path === '/admin/login') {
-      replaceHistoryEntry('/management/login')
-      return 'management-login'
-    }
-    if (path === '/management/login') return 'management-login'
     if (path === '/admin/users') return 'admin-users'
     if (path === '/admin/dashboard') return 'admin-dashboard'
     if (path === '/manager/dashboard') return 'manager-dashboard'
     if (path === '/manager/courses') return 'manager-courses'
-    if (path === '/manager/users') return 'manager-courses'
     if (path === '/manager/students') return 'manager-students'
     if (path === '/manager/enrollments') return 'manager-enrollments'
     if (path === '/manager/schedules') return 'manager-schedules'
@@ -122,9 +122,13 @@ function App() {
         window.location.href
       )
     }
-    const target = toStudentPath(path)
+    const target = toConsolePath(toStudentPath(path))
     if (target !== path) {
-      window.history.replaceState(withAppHistoryIndex(window.history.state, index), '', target)
+      window.history.replaceState(
+        withAppHistoryIndex(window.history.state, index),
+        '',
+        `${target}${window.location.search}`
+      )
     }
     return target
   })
@@ -165,7 +169,7 @@ function App() {
   // instructions) to the next page without a prop path, since it's not
   // returned by GET endpoints and would otherwise be lost on navigation.
   const navigateTo = useCallback((rawPath, state = {}) => {
-    const path = toStudentPath(rawPath)
+    const path = toConsolePath(toStudentPath(rawPath))
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry(state, path)
       setAuthMode(getAuthMode())
@@ -258,16 +262,26 @@ function App() {
     navigateTo(roleHome(profile.role))
   }
 
+  const managementLoginPath = () => {
+    const { pathname, search } = window.location
+    return `${CONSOLE_LOGIN_PATH}?next=${encodeURIComponent(toConsolePath(pathname) + search)}`
+  }
+
   const goAfterManagementLogin = (profile: UserProfile) => {
-    navigateTo(roleHome(profile.role))
+    // Resume the deep link that sent the visitor to login, but only inside their own area.
+    const next = new URLSearchParams(window.location.search).get('next')
+    const home = roleHome(profile.role)
+    const area = home.split('/')[2]
+    const resumable = !!next && next.startsWith(`/console/${area}/`) && !next.startsWith('//') && !next.includes('\\')
+    navigateTo(resumable ? next : home)
   }
 
   const performLogout = useCallback(async () => {
     if (logoutInFlight.current) return
     logoutInFlight.current = true
     setLogoutLoading(true)
-    const isManagementArea = /^\/(admin|manager|staff|teacher)(\/|$)/.test(window.location.pathname)
-    const loginPath = isManagementArea ? '/management/login' : '/login'
+    const isManagementArea = isConsolePath(window.location.pathname)
+    const loginPath = isManagementArea ? CONSOLE_LOGIN_PATH : '/login'
     try {
       await logout()
     } finally {
@@ -409,7 +423,7 @@ function App() {
   ) => (
     <ManagementRouteGuard
       allowedRoles={[role]}
-      onLogin={() => navigateTo(scope === 'mentor' ? '/login' : '/management/login')}
+      onLogin={() => navigateTo(managementLoginPath())}
       onExit={handleLogout}
     >
       <ManagementDashboard
@@ -441,7 +455,7 @@ function App() {
         <AdminLoginPage
           onBack={backToLanding}
           onSuccess={goAfterManagementLogin}
-          allowedRoles={['ADMINISTRATOR', 'MANAGER', 'STAFF', 'TEACHER']}
+          allowedRoles={['ADMINISTRATOR', 'MANAGER', 'STAFF', 'TEACHER', 'MENTOR']}
           title="Đăng nhập quản lý"
           rejectedRoleMessage="Tài khoản này không có quyền truy cập khu vực quản lý."
         />
@@ -451,7 +465,7 @@ function App() {
     return (
       <ManagementRouteGuard
         allowedRoles={['TEACHER']}
-        onLogin={() => navigateTo('/management/login')}
+        onLogin={() => navigateTo(managementLoginPath())}
         onExit={handleLogout}
       >
         <TeacherDashboard

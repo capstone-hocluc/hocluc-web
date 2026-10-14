@@ -117,6 +117,12 @@ export default function ScheduleEditor({
       <ConsoleSheet open onClose={requestClose} closeDisabled={busy} title={initial ? 'Chỉnh sửa lịch học' : 'Tạo lịch học'}>
         <form className="flex flex-col gap-4" onSubmit={submit} onChange={updateFieldDraft}>
           {courseName && <Notice tone="info">Khóa: {courseName}</Notice>}
+          {initial?.deliveryMode === 'ONLINE' && (
+            <Notice tone="warning">
+              Lịch trực tuyến đã gắn phòng Zoom. Sửa giờ hoặc giáo viên ở đây không cập nhật phòng Zoom và lớp
+              trực tuyến đã tạo; hãy kiểm tra lại link họp sau khi lưu.
+            </Notice>
+          )}
           {errorMessage && <Notice tone="danger">{errorMessage}</Notice>}
           {validationMessage && <p className="text-sm text-badge-error-text" role="alert">{validationMessage}</p>}
           <Field label="Tên buổi học">

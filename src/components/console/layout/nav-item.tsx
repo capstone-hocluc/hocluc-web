@@ -29,11 +29,16 @@ export default function NavItem({ item, active, collapsed, onSelect }: NavItemPr
                   : 'text-icon-tertiary transition-colors duration-200 hover:bg-sidebar-navigation-nav-item-nav-hover-background hover:text-icon-primary',
               )}
             >
-              <Icon size={20} />
+              <span className="relative">
+                <Icon size={20} />
+                {!!item.badge && (
+                  <span className="absolute -top-1 -right-1 size-2 rounded-full bg-brand-500" aria-hidden />
+                )}
+              </span>
             </button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{item.title}</p>
+            <p>{item.badge ? `${item.title} · ${item.badge} đang chờ` : item.title}</p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -55,7 +60,15 @@ export default function NavItem({ item, active, collapsed, onSelect }: NavItemPr
       <span className="text-icon-tertiary">
         <Icon size={20} />
       </span>
-      <span>{item.title}</span>
+      <span className="min-w-0 flex-1">{item.title}</span>
+      {!!item.badge && (
+        <span
+          className="ml-auto min-w-5 rounded-full bg-badge-blue-background px-1.5 text-center text-xs leading-5 font-medium text-badge-blue-text"
+          aria-label={`${item.badge} đang chờ`}
+        >
+          {item.badge}
+        </span>
+      )}
     </button>
   );
 }

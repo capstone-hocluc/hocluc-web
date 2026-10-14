@@ -4,7 +4,7 @@ import Panel from '../../console/panel'
 import Notice from '../../console/notice'
 import Status from '../../console/status'
 import ConfirmDialog from '../../console/confirm-dialog'
-import { ArrowLeft, RefreshCw } from '../../console/icons'
+import { ArrowLeft } from '../../console/icons'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourse, mutateCourse } from '../../../services/courseAdminService'
@@ -62,14 +62,6 @@ export default function CourseDetailScreen({
           <ArrowLeft size={16} />
           Danh sách khóa
         </Button>
-        <Button
-          appearance="outline"
-          onClick={resource.reload}
-          disabled={busy || resource.status === 'loading'}
-        >
-          <RefreshCw size={16} />
-          Làm mới
-        </Button>
       </div>
       {notice && (
         <Notice tone="info">
@@ -81,7 +73,7 @@ export default function CourseDetailScreen({
           <span role="alert">{error}</span>
         </Notice>
       )}
-      <ScheduleResourceState
+      <ScheduleResourceState skeleton="detail"
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
@@ -122,10 +114,6 @@ export default function CourseDetailScreen({
                       ? new Intl.NumberFormat('vi-VN').format(course.price ?? 0) + ' đ'
                       : 'Miễn phí'}
                   </dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Slug</dt>
-                  <dd className="mt-1 break-words font-medium text-text-primary">{course.slug}</dd>
                 </div>
               </dl>
               {course.shortIntroduction && (

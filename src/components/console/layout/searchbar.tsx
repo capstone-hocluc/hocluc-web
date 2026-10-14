@@ -11,13 +11,13 @@ interface SearchBarProps {
 
 const KBD = 'rounded border border-card-border bg-card-background px-1.5 py-0.5 font-mono text-[10px] shadow-xs';
 
-// NextAdmin command palette (Ctrl/Cmd+K), searching the role's own pages.
+// NextAdmin command palette (Ctrl+K), searching the role's own pages.
 export default function SearchBar({ sections, onSelect }: SearchBarProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      if (event.ctrlKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setOpen((prev) => !prev);
       }
@@ -55,11 +55,6 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
               className="pointer-events-none cursor-pointer pl-2 text-sm select-none"
               readOnly
             />
-            <InputGroupAddon align="inline-end">
-              <div className="rounded-md border border-card-border bg-background-gray-primary/50 px-2 py-0.75 text-xs text-text-tertiary">
-                <span className="font-medium">⌘</span> K
-              </div>
-            </InputGroupAddon>
           </InputGroup>
         </button>
       </div>

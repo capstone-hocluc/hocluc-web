@@ -61,7 +61,6 @@ function StudentLayout({
         activeKey={getStudentNavKeyForPath(currentPath)}
         onNavigate={onNavigate}
         collapsed={sidebarCollapsed}
-        onNotify={notify}
       />
       <main className="col-start-2 row-start-2 min-w-0 p-[35px] max-[760px]:px-3.5 max-[760px]:pt-5 max-[760px]:pb-7">
         {children}

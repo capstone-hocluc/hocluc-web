@@ -9,6 +9,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import { ChevronBothDirection } from '@tailgrids/icons'
+import { cn } from '../../lib/cn'
 import {
   TableBody,
   TableCell,
@@ -17,6 +18,14 @@ import {
   TableRoot,
   TableRow,
 } from '../tailgrids/core/table'
+
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Width / alignment classes applied to the column's header and cells. */
+    className?: string
+  }
+}
 
 // Management-area table: NextAdmin table parts driven by tanstack-table,
 // same props as ui/DataTable.
@@ -59,7 +68,10 @@ function DataTable<T extends RowData>({
                   key={header.id}
                   scope="col"
                   aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
-                  className="px-6 py-3 text-sm leading-5 font-medium whitespace-nowrap text-text-secondary"
+                  className={cn(
+                    'px-6 py-3 text-sm leading-5 font-medium whitespace-nowrap text-text-secondary',
+                    header.column.columnDef.meta?.className
+                  )}
                 >
                   {header.column.getCanSort() ? (
                     <button
@@ -89,7 +101,10 @@ function DataTable<T extends RowData>({
             {row.getVisibleCells().map((cell) => (
               <TableCell
                 key={cell.id}
-                className="px-6 py-3.5 align-middle text-sm leading-5 font-normal tracking-[-0.15px] text-text-primary"
+                className={cn(
+                  'px-6 py-3.5 align-middle text-sm leading-5 font-normal tracking-[-0.15px] text-text-primary',
+                  cell.column.columnDef.meta?.className
+                )}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
