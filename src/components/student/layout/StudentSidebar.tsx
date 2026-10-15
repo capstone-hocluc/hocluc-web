@@ -16,8 +16,8 @@ function StudentSidebar({ activeKey, onNavigate, collapsed = false }: StudentSid
     <aside
       data-collapsed={collapsed}
       className={cn(
-        'group/sidebar sticky top-[86px] col-start-1 row-start-2 flex h-[calc(100vh-86px)] flex-col gap-6 border-r border-line-shell bg-surface/90 shadow-[10px_0_34px_rgba(17,24,58,0.04)]',
-        collapsed ? 'items-center px-3.5 pt-[30px] pb-5' : 'px-[18px] pt-[30px] pb-6',
+        'group/sidebar sticky top-[72px] col-start-1 row-start-2 flex h-[calc(100vh-72px)] flex-col gap-6 border-r border-line-shell bg-surface',
+        collapsed ? 'items-center px-3.5 pt-6 pb-5' : 'px-4 pt-6 pb-6',
         'max-[1180px]:items-center max-[1180px]:px-3.5 max-[1180px]:py-5',
         'max-[760px]:static max-[760px]:z-40 max-[760px]:h-auto max-[760px]:flex-row max-[760px]:border-r-0 max-[760px]:border-b max-[760px]:px-3 max-[760px]:py-2.5'
       )}
@@ -34,7 +34,7 @@ function StudentSidebar({ activeKey, onNavigate, collapsed = false }: StudentSid
                 'group-data-[collapsed=true]/sidebar:border-t group-data-[collapsed=true]/sidebar:border-line-shell group-data-[collapsed=true]/sidebar:pt-4 max-[1180px]:border-t max-[1180px]:border-line-shell max-[1180px]:pt-4 max-[760px]:border-t-0 max-[760px]:border-l max-[760px]:pt-0 max-[760px]:pl-1'
             )}
           >
-            <p className="px-3.5 pb-0.5 text-[11px] font-extrabold tracking-wide text-text-muted uppercase group-data-[collapsed=true]/sidebar:hidden max-[1180px]:hidden">
+            <p className="px-3.5 pb-1 text-xs font-extrabold tracking-[0.08em] text-text-muted uppercase group-data-[collapsed=true]/sidebar:hidden max-[1180px]:hidden">
               {group.label}
             </p>
             {group.items.map((item) => {
@@ -48,15 +48,15 @@ function StudentSidebar({ activeKey, onNavigate, collapsed = false }: StudentSid
                   aria-current={active ? 'page' : undefined}
                   onClick={() => onNavigate(item.path)}
                   className={cn(
-                    'flex min-h-[46px] w-full cursor-pointer items-center gap-[11px] rounded-[15px] border px-3.5 text-[13px] font-extrabold transition duration-200',
+                    'flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-2xl border-2 px-3.5 text-[15px] font-extrabold transition duration-200 focus-visible:outline-3 focus-visible:outline-offset-2',
                     'group-data-[collapsed=true]/sidebar:justify-center group-data-[collapsed=true]/sidebar:px-0',
-                    'max-[1180px]:justify-center max-[1180px]:px-0 max-[760px]:min-h-[40px] max-[760px]:w-[40px] max-[760px]:shrink-0 max-[760px]:rounded-[14px]',
+                    'max-[1180px]:justify-center max-[1180px]:px-0 max-[760px]:min-h-11 max-[760px]:w-11 max-[760px]:shrink-0',
                     active
-                      ? 'border-line-brand bg-linear-to-br from-badge-info-bg to-surface-sky text-primary shadow-[0_10px_22px_rgba(28, 176, 246,0.08)]'
-                      : 'border-transparent text-text-body hover:-translate-y-px hover:border-line-blue hover:bg-surface-brand hover:text-primary'
+                      ? 'border-transparent bg-surface-brand text-primary-text'
+                      : 'border-transparent text-text-body hover:bg-surface-brand hover:text-primary-text'
                   )}
                 >
-                  <Icon size={18} className="shrink-0" />
+                  <Icon size={20} className="shrink-0" />
                   <span className="group-data-[collapsed=true]/sidebar:hidden max-[1180px]:hidden">
                     {item.label}
                   </span>

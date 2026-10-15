@@ -30,7 +30,7 @@ function VideoPlayer({ activity }: { activity: VideoActivity }) {
     <div
       ref={playerRef}
       className={cn(
-        'relative grid aspect-video place-items-center overflow-hidden rounded-[18px] border border-white/14 bg-ink bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-[0_28px_70px_rgba(0,0,0,0.38)]',
+        'relative grid aspect-video place-items-center overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-ink bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] shadow-card',
         expanded
           ? 'fixed inset-5 z-90 h-auto w-auto max-w-none'
           : 'w-[min(100%,calc((100vh_-_264px)*16/9))] max-w-[1280px] max-[760px]:max-h-[calc(100dvh_-_260px)] max-[760px]:w-full'
@@ -44,7 +44,7 @@ function VideoPlayer({ activity }: { activity: VideoActivity }) {
         />
       )}
       <div className="absolute top-4 left-4 grid gap-[3px] text-surface">
-        <span className="text-[13px] font-medium">
+        <span className="text-sm font-bold">
           {activity.type === 'Buổi giải đề' ? 'Buổi giải đề' : 'Video'} · {activity.title}
         </span>
       </div>
@@ -52,14 +52,14 @@ function VideoPlayer({ activity }: { activity: VideoActivity }) {
         type="button"
         className={cn(
           glassButton,
-          'size-[84px] rounded-full border border-white/26 bg-white/12 backdrop-blur-[12px]'
+          'size-[84px] rounded-full border-2 border-white/30 bg-white/14 backdrop-blur-[12px]'
         )}
         aria-label={playing ? 'Tạm dừng video' : 'Phát video'}
         onClick={() => setPlaying((current) => !current)}
       >
         {playing ? <Pause size={42} /> : <Play size={46} />}
       </button>
-      <div className="absolute inset-x-[18px] bottom-[18px] grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 rounded-[14px] border border-white/16 bg-[rgba(6,10,20,0.72)] px-3 py-2.5 text-line-blue opacity-[0.92] backdrop-blur-[14px] max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
+      <div className="absolute inset-x-[18px] bottom-[18px] grid grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 rounded-2xl border border-white/16 bg-[rgba(6,10,20,0.72)] px-3 py-2.5 text-line-blue opacity-[0.92] backdrop-blur-[14px] max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
         <button
           type="button"
           className={glassButton}
@@ -68,7 +68,7 @@ function VideoPlayer({ activity }: { activity: VideoActivity }) {
         >
           {playing ? <Pause size={18} /> : <Play size={18} />}
         </button>
-        <span className="text-xs">
+        <span className="text-sm font-semibold">
           {playing ? '03:24' : '00:00'} / {formatDuration(activity.duration)}
         </span>
         <Progress

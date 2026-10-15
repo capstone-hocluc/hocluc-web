@@ -3,11 +3,11 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/cn'
 
-// Same variant x appearance x size cva structure as the reference CRM's
-// Button (tailgrids/core/button.tsx) - flat colors, no gradient/heavy
-// shadow. Tailwind utility classes only - no index.css rule.
+// Landing-page buttons: solid colour with a 4px "ledge" under it that the button
+// presses into on :active. Same variant x appearance x size cva structure as
+// before; Tailwind utility classes only - no index.css rule.
 const button = cva(
-  'inline-flex items-center justify-center gap-2 rounded-lg border border-transparent font-medium whitespace-nowrap transition-colors [&>svg]:shrink-0 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+  'inline-flex items-center justify-center gap-2 rounded-[13px] border-2 border-transparent font-extrabold whitespace-nowrap transition-[transform,box-shadow,background-color] duration-150 [&>svg]:shrink-0 not-disabled:hover:-translate-y-0.5 not-disabled:active:translate-y-[3px] not-disabled:active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
   {
     variants: {
       variant: {
@@ -18,13 +18,13 @@ const button = cva(
       appearance: {
         fill: '',
         outline: 'bg-surface',
-        ghost: 'bg-transparent',
+        ghost: 'bg-transparent hover:shadow-none not-disabled:hover:translate-y-0 not-disabled:active:translate-y-0',
       },
       size: {
-        sm: 'h-8.5 gap-1.5 px-3 text-sm [&>svg]:size-4',
-        md: 'h-10 px-4 text-sm [&>svg]:size-[17px]',
-        lg: 'h-11 px-4 text-[13px] font-black rounded-xl [&>svg]:size-[15px]',
-        icon: 'size-9 rounded-xl p-0 [&>svg]:size-[18px]',
+        sm: 'h-9 gap-1.5 px-3.5 text-sm [&>svg]:size-4',
+        md: 'h-11 px-5 text-[15px] [&>svg]:size-[18px]',
+        lg: 'h-[50px] px-6 text-base [&>svg]:size-[18px]',
+        icon: 'size-10 p-0 [&>svg]:size-[18px]',
       },
       shape: {
         default: '',
@@ -35,27 +35,27 @@ const button = cva(
       {
         variant: 'primary',
         appearance: 'fill',
-        className: 'bg-primary text-white hover:bg-primary-dark',
+        className: 'bg-primary text-white shadow-[0_4px_0_#0797d6] hover:bg-[#48c2fa]',
       },
       {
         variant: 'primary',
         appearance: 'outline',
-        className: 'border-border-primary text-primary hover:bg-surface-hover',
+        className: 'border-line text-text-heading hover:bg-surface-brand',
       },
       {
         variant: 'primary',
         appearance: 'ghost',
-        className: 'text-primary hover:bg-surface-hover',
+        className: 'text-primary-text hover:bg-surface-brand',
       },
       {
         variant: 'danger',
         appearance: 'fill',
-        className: 'bg-danger text-white hover:bg-badge-danger-text',
+        className: 'bg-danger text-white shadow-[0_4px_0_#b8243a] hover:brightness-110',
       },
       {
         variant: 'danger',
         appearance: 'outline',
-        className: 'border-danger text-danger hover:bg-badge-danger-bg',
+        className: 'border-danger-line text-danger hover:bg-badge-danger-bg',
       },
       {
         variant: 'danger',
@@ -65,12 +65,12 @@ const button = cva(
       {
         variant: 'success',
         appearance: 'fill',
-        className: 'bg-success text-white hover:bg-badge-success-text',
+        className: 'bg-success text-white shadow-[0_4px_0_#0f7a43] hover:brightness-110',
       },
       {
         variant: 'success',
         appearance: 'outline',
-        className: 'border-success text-success hover:bg-badge-success-bg',
+        className: 'border-line-practice text-practice hover:bg-badge-success-bg',
       },
       {
         variant: 'success',

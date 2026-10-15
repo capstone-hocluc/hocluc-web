@@ -13,10 +13,10 @@ function BackLink({ onClick, children }: BackLinkProps) {
     <Button
       appearance="ghost"
       size="sm"
-      className="h-auto gap-1.5 self-start p-0 text-[13px] font-bold text-text-secondary hover:bg-transparent hover:text-primary"
+      className="h-auto gap-1.5 self-start p-0 text-[15px] font-extrabold text-text-secondary hover:bg-transparent hover:text-primary-text"
       onClick={onClick}
     >
-      <ArrowLeft size={15} />
+      <ArrowLeft size={17} />
       {children}
     </Button>
   )

@@ -4,23 +4,23 @@ import { cn } from '../../lib/cn'
 
 // The white bordered surface used across Student screens. `live` is the
 // amber-tinted variant for live-class content.
-const card = cva('min-w-0 border', {
+const card = cva('min-w-0 border-[1.5px]', {
   variants: {
     variant: {
       default: 'border-line bg-surface',
       elevated: 'border-line-card bg-surface shadow-card-soft',
-      panel: 'border-line-card bg-surface/95 shadow-card',
+      panel: 'border-line-card bg-surface shadow-card',
       live: 'border-live-line bg-live-tint',
     },
     padding: {
       none: '',
-      md: 'px-[18px] py-4',
-      lg: 'p-[18px]',
+      md: 'px-5 py-[18px]',
+      lg: 'p-5',
     },
     radius: {
-      md: 'rounded-[14px]',
-      lg: 'rounded-[18px]',
-      xl: 'rounded-[22px]',
+      md: 'rounded-2xl',
+      lg: 'rounded-[20px]',
+      xl: 'rounded-3xl',
     },
   },
   defaultVariants: { variant: 'default', padding: 'md', radius: 'md' },
@@ -43,7 +43,7 @@ export function CardEyebrow({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       className={cn(
-        'mb-1.5 block text-[11.5px] font-semibold tracking-[0.04em] text-text-secondary uppercase',
+        'mb-1.5 block text-xs font-extrabold tracking-[0.08em] text-text-secondary uppercase',
         className
       )}
       {...props}
@@ -53,6 +53,6 @@ export function CardEyebrow({ className, ...props }: ComponentProps<'span'>) {
 
 export function CardTitle({ className, ...props }: ComponentProps<'h2'>) {
   return (
-    <h2 className={cn('mb-2 text-[15px] font-semibold text-text-heading', className)} {...props} />
+    <h2 className={cn('mb-2 text-[17px] font-extrabold tracking-[-0.2px] text-text-heading', className)} {...props} />
   )
 }

@@ -40,21 +40,21 @@ export function TeacherAiPanel({
   onQuickAction,
 }: TeacherAiPanelProps) {
   return (
-    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-[22px] border border-line-brand bg-lock-soft shadow-[0_22px_46px_rgba(28, 176, 246,0.16)] max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
-      <div className="flex shrink-0 items-center justify-between gap-2.5 bg-primary-bright px-3.5 py-[15px] text-surface">
+    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-lock-soft shadow-card max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
+      <div className="flex shrink-0 items-center justify-between gap-2.5 bg-primary px-4 py-4 text-white">
         <SubjectAvatarIcon type="cloud" className="size-[38px] rounded-full bg-surface p-[5px]" />
         <div className="min-w-0 flex-1">
-          <strong className="block text-base font-bold">Trợ lý AI HocLuc</strong>
-          <span className="mt-[3px] block text-xs leading-[1.35] font-medium">
+          <strong className="block text-lg font-black">Trợ lý AI HocLuc</strong>
+          <span className="mt-[3px] block text-[13px] leading-[1.35] font-bold">
             <i className="mr-1.5 inline-block size-2 rounded-full bg-success" /> Đang hoạt động
           </span>
-          <small className="mt-0.5 block truncate text-[10.5px] text-white/78">
+          <small className="mt-0.5 block truncate text-xs font-semibold text-white/85">
             Đang hỗ trợ: {lessonTitle}
           </small>
         </div>
         <Button
           size="icon"
-          className="shrink-0 border-0 bg-white/16 text-surface hover:bg-white/24"
+          className="shrink-0 border-0 bg-white/20 text-white shadow-none hover:bg-white/30"
           aria-label="Đóng Teacher AI"
           onClick={onClose}
         >
@@ -67,10 +67,10 @@ export function TeacherAiPanel({
           <p
             key={message.id}
             className={cn(
-              'max-w-[90%] rounded-[18px] px-[15px] py-[13px] text-[13px] leading-[1.48] shadow-[0_10px_22px_rgba(17,24,58,0.06)]',
+              'max-w-[90%] rounded-2xl px-4 py-3 text-[15px] leading-[1.5]',
               message.role === 'ai'
-                ? 'self-start bg-surface text-text-dim'
-                : 'self-end bg-primary text-surface'
+                ? 'self-start border-[1.5px] border-line-card bg-surface text-text-body shadow-card-soft'
+                : 'self-end bg-primary font-semibold text-white'
             )}
           >
             {message.text}
@@ -78,14 +78,14 @@ export function TeacherAiPanel({
         ))}
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-line bg-surface px-[18px] pt-3.5 pb-2">
+      <div className="flex shrink-0 flex-wrap gap-1.5 border-t-[1.5px] border-line bg-surface px-[18px] pt-3.5 pb-2">
         {quickActions.map((action) => (
           <Button
             key={action}
             appearance="outline"
             shape="pill"
             size="sm"
-            className="h-auto border-line-blue bg-surface-brand px-[9px] py-[7px] text-[11px] font-semibold"
+            className="h-auto px-3 py-1.5 text-[13px]"
             onClick={() => onQuickAction(action)}
           >
             {action}
@@ -94,14 +94,14 @@ export function TeacherAiPanel({
       </div>
 
       <form
-        className="grid shrink-0 grid-cols-[minmax(0,1fr)_36px] gap-2 bg-surface px-[18px] pt-2 pb-4"
+        className="grid shrink-0 grid-cols-[minmax(0,1fr)_46px] gap-2 bg-surface px-[18px] pt-2 pb-4"
         onSubmit={onSend}
       >
         <Input
           value={input}
           onChange={(event) => onInput(event.target.value)}
           placeholder="Hỏi trợ lý AI..."
-          className="h-[46px] min-w-0 rounded-full px-4 text-[12.5px]"
+          className="h-[46px] min-w-0 rounded-full px-4 text-[15px]"
         />
         <Button
           type="submit"

@@ -11,7 +11,7 @@ const stateLabel: Record<AnswerState, string> = {
 }
 
 // Pill at the top-right of a question ("Chọn 1 đáp án" / review result).
-const topPill = cva('rounded-full px-[9px] py-[5px] text-[11px] font-bold', {
+const topPill = cva('rounded-full px-3 py-1 text-xs font-extrabold', {
   variants: {
     state: {
       neutral: 'bg-lock-soft text-text-secondary',
@@ -29,7 +29,7 @@ const reviewBorder: Record<AnswerState, string> = {
   unanswered: 'border-live-line',
 }
 
-const optionLetter = 'grid place-items-center bg-primary-soft text-[12px] text-primary'
+const optionLetter = 'grid place-items-center bg-primary-soft text-sm font-black text-primary-text'
 
 interface QuestionCardProps {
   question: ActivityQuestion
@@ -41,14 +41,14 @@ interface QuestionCardProps {
 export function QuestionCard({ question, selectedId, onChoose }: QuestionCardProps) {
   return (
     <ActivityCard className="grid gap-3">
-      <div className="flex items-center justify-between gap-3 text-[12px] font-semibold text-text-secondary">
+      <div className="flex items-center justify-between gap-3 text-sm font-extrabold text-text-secondary">
         <span>Câu {question.number}</span>
         <small className={topPill()}>
           {question.type === 'single-choice' ? 'Chọn 1 đáp án' : question.type}
         </small>
       </div>
       <ActivityCardTitle>{question.content}</ActivityCardTitle>
-      <div className="grid gap-[9px]">
+      <div className="grid gap-2.5">
         {question.options.map((option) => {
           const selected = selectedId === option.id
           return (
@@ -56,16 +56,16 @@ export function QuestionCard({ question, selectedId, onChoose }: QuestionCardPro
               key={option.id}
               type="button"
               className={cn(
-                'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[13px] border border-line-card bg-surface-tint px-[11px] py-[9px] text-left text-[13px] font-medium text-text-dim',
-                selected && 'border-primary bg-primary-soft shadow-[0_0_0_3px_rgba(28, 176, 246,0.08)]'
+                'flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border-2 border-line bg-surface px-3.5 py-2.5 text-left text-[15px] font-semibold text-text-body transition-colors hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+                selected && 'border-primary bg-primary-soft text-text-heading'
               )}
               onClick={() => onChoose(option.id)}
             >
               <b
                 className={cn(
                   optionLetter,
-                  'size-[26px] rounded-[9px]',
-                  selected && 'bg-primary text-surface'
+                  'size-8 rounded-xl',
+                  selected && 'bg-primary text-white'
                 )}
               >
                 {option.id}
@@ -80,7 +80,7 @@ export function QuestionCard({ question, selectedId, onChoose }: QuestionCardPro
 }
 
 const reviewOption = cva(
-  'flex min-h-10 items-center gap-[9px] rounded-xl border border-line-card bg-surface-tint px-2.5 py-2 text-[13px] font-medium text-text-dim',
+  'flex min-h-11 items-center gap-2.5 rounded-2xl border-2 border-line bg-surface px-3 py-2 text-[15px] font-semibold text-text-body',
   {
     variants: {
       tone: {
@@ -110,7 +110,7 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
       id={`review-question-${question.number}`}
       className={cn('grid gap-3', reviewBorder[state])}
     >
-      <div className="flex items-center justify-between gap-3 text-[12px] font-semibold text-text-secondary">
+      <div className="flex items-center justify-between gap-3 text-sm font-extrabold text-text-secondary">
         <span>Câu {question.number}</span>
         <small className={topPill({ state })}>{stateLabel[state]}</small>
       </div>
@@ -128,7 +128,7 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
                 })
               )}
             >
-              <b className={cn(optionLetter, 'size-[25px] shrink-0 rounded-lg font-extrabold')}>
+              <b className={cn(optionLetter, 'size-8 shrink-0 rounded-xl')}>
                 {option.id}
               </b>
               <span>{option.text}</span>
@@ -136,25 +136,27 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
           )
         })}
       </div>
-      <div className="grid gap-[7px]">
+      <div className="grid gap-2">
         <p>
-          <span className="block text-[11px] font-extrabold text-text-secondary">
+          <span className="block text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase">
             Đáp án của bạn:
           </span>
-          <strong className="mt-0.5 block text-[13px] font-bold text-text-heading">
+          <strong className="mt-0.5 block text-[15px] font-extrabold text-text-heading">
             {selectedOption ? `${selectedOption.id}. ${selectedOption.text}` : 'Chưa trả lời'}
           </strong>
         </p>
         <p>
-          <span className="block text-[11px] font-extrabold text-text-secondary">Đáp án đúng:</span>
-          <strong className="mt-0.5 block text-[13px] font-bold text-text-heading">
+          <span className="block text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase">
+            Đáp án đúng:
+          </span>
+          <strong className="mt-0.5 block text-[15px] font-extrabold text-text-heading">
             {correctOption.id}. {correctOption.text}
           </strong>
         </p>
       </div>
-      <div className="rounded-xl bg-surface-sky p-2.5">
-        <strong className="text-[12px] font-extrabold text-text-heading">Giải thích</strong>
-        <p className="mt-1 text-[13px] leading-[1.5] text-text-dim">{question.explanation}</p>
+      <div className="rounded-2xl bg-surface-brand p-3.5">
+        <strong className="text-sm font-extrabold text-text-heading">Giải thích</strong>
+        <p className="mt-1 text-[15px] leading-[1.5] text-text-body">{question.explanation}</p>
       </div>
     </ActivityCard>
   )

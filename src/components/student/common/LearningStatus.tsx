@@ -4,14 +4,14 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 
 // Inline status label for a lesson / quiz row. Icons are implied by status.
-const status = cva('inline-flex items-center gap-[5px] text-[11.5px] whitespace-nowrap', {
+const status = cva('inline-flex items-center gap-1.5 text-xs whitespace-nowrap', {
   variants: {
     status: {
-      completed: 'font-semibold text-practice',
-      current: 'font-extrabold text-primary',
-      action: 'font-extrabold text-primary',
-      locked: 'font-semibold text-lock',
-      idle: 'font-semibold text-text-secondary',
+      completed: 'font-bold text-practice',
+      current: 'font-extrabold text-primary-text',
+      action: 'font-extrabold text-primary-text',
+      locked: 'font-bold text-lock',
+      idle: 'font-bold text-text-secondary',
     },
   },
   defaultVariants: { status: 'idle' },

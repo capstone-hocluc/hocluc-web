@@ -56,13 +56,13 @@ function SheetContent({ item, timezone, showMeetingLink, body, footer }: Omit<Pr
     <SheetBody className="space-y-5 p-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
         <div className="min-w-0 flex-1 basis-56">
-          <h2 className="text-lg font-semibold break-words text-text-heading">{itemTitle(item)}</h2>
+          <h2 className="text-xl font-black tracking-[-0.3px] break-words text-text-heading">{itemTitle(item)}</h2>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <ScheduleStatusBadge status={item.item.status} />
             {item.kind === 'classSession' && item.item.overridden && (
               <StatusBadge tone="info" size="sm">Đã điều chỉnh</StatusBadge>
             )}
-            <span className="rounded-full bg-badge-neutral-bg px-2 py-0.5 text-[11px] font-medium text-badge-neutral-text">
+            <span className="rounded-full bg-badge-neutral-bg px-2.5 py-0.5 text-xs font-extrabold text-badge-neutral-text">
               {item.kind === 'classSession' ? 'Buổi trong chuỗi' : item.kind === 'liveClass' ? 'Lớp trực tuyến' : 'Lịch đơn'}
             </span>
           </div>
@@ -77,11 +77,11 @@ function SheetContent({ item, timezone, showMeetingLink, body, footer }: Omit<Pr
         )}
       </div>
 
-      <dl className="grid grid-cols-1 gap-4 rounded-2xl bg-surface-soft p-4 text-sm sm:grid-cols-2">
+      <dl className="grid grid-cols-1 gap-4 rounded-3xl border-[1.5px] border-line-card bg-surface-brand p-4 text-sm sm:grid-cols-2">
         {facts(item, displayTimezone).map((fact) => (
           <div key={fact.label} className="min-w-0">
-            <dt className="text-xs text-text-muted">{fact.label}</dt>
-            <dd className="mt-1 font-medium break-words text-text-heading">{fact.value}</dd>
+            <dt className="text-[13px] font-bold text-text-muted">{fact.label}</dt>
+            <dd className="mt-1 font-extrabold break-words text-text-heading">{fact.value}</dd>
           </div>
         ))}
       </dl>

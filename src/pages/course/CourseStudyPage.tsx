@@ -114,7 +114,7 @@ function CourseStudyPage({
         <Tabs
           value={effectiveTab}
           onValueChange={handleTabChange}
-          className="flex flex-col gap-5"
+          className="flex flex-col gap-6"
         >
           <CourseOverview study={study} onBack={onBackToMyCourses} onOpenLesson={onOpenLesson} />
 
@@ -128,7 +128,7 @@ function CourseStudyPage({
 
           <TabsContent value="content" className="flex flex-col gap-5">
             {study.nextLiveClass && (
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-5">
                 <NextLiveClassCard liveClass={study.nextLiveClass} />
               </div>
             )}
@@ -140,7 +140,8 @@ function CourseStudyPage({
                 onCompleteProfile={onEditProfile}
                 onRefreshStudy={reload}
               />
-            )}            <StudyCurriculum
+            )}
+            <StudyCurriculum
               phases={study.phases}
               currentLessonId={study.continueLessonId}
               onOpenLesson={onOpenLesson}

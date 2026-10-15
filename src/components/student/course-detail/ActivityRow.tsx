@@ -37,23 +37,23 @@ const statusMeta = {
 // type has no colour of its own (the typed colours win, as before).
 const typeTone: Record<string, string> = {
   Video: 'bg-primary-soft text-primary',
-  'Bài tập': 'bg-practice-soft text-success',
-  'Mini Test': 'bg-assess-soft text-violet',
-  'Mock Test': 'bg-danger-soft text-danger',
-  'Buổi giải đề': 'bg-danger-soft text-danger',
+  'Bài tập': 'bg-practice-soft text-practice',
+  'Mini Test': 'bg-assess-soft text-assess',
+  'Mock Test': 'bg-assess-soft text-assess',
+  'Buổi giải đề': 'bg-live-soft text-live',
 }
 
 const row = cva(
-  'grid w-full cursor-pointer grid-cols-[34px_minmax(0,1fr)_auto_18px] items-center gap-[11px] border-b border-lock-soft bg-surface px-3 py-[11px] text-left last:border-b-0 hover:bg-surface-sky max-[760px]:grid-cols-[34px_minmax(0,1fr)]',
+  'grid w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_auto_18px] items-center gap-3.5 rounded-2xl border-[1.5px] border-line bg-surface px-3.5 py-3 text-left transition duration-150 hover:border-[#84d8ff] hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd] max-[760px]:grid-cols-[40px_minmax(0,1fr)]',
   {
     variants: {
       status: {
         completed: '',
         'not-started': '',
-        locked: 'cursor-default hover:bg-surface',
+        locked: 'cursor-default bg-surface-soft hover:border-line hover:bg-surface-soft',
         'in-progress':
-          'bg-surface-brand shadow-[inset_3px_0_0_var(--color-primary)] hover:bg-surface-brand',
-        overdue: 'bg-danger-soft hover:bg-danger-soft',
+          'border-transparent bg-surface-brand hover:bg-surface-brand',
+        overdue: 'border-danger-line bg-danger-soft hover:border-danger-line hover:bg-danger-soft',
       },
     },
   }
@@ -95,26 +95,31 @@ function ActivityRow({ activity, onAction, onOpenActivity }: ActivityRowProps) {
     >
       <span
         className={cn(
-          'grid size-8 place-items-center rounded-[11px]',
+          'grid size-10 place-items-center rounded-xl',
           typeTone[activity.type] ??
             (isLocked ? 'bg-lock-soft text-text-subtle' : 'bg-primary-soft text-primary')
         )}
       >
-        <Icon size={15} />
+        <Icon size={20} />
       </span>
       <span className="grid min-w-0 gap-0.5">
-        <small className={cn('text-[11px] font-semibold text-text-secondary', lockedText)}>
+        <small
+          className={cn(
+            'text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase',
+            lockedText
+          )}
+        >
           {activity.type}
         </small>
         <strong
-          className={cn('text-[13px] leading-[1.35] font-semibold text-text-heading', lockedText)}
+          className={cn('text-[15px] leading-[1.35] font-extrabold text-text-heading', lockedText)}
         >
           {activity.title}
         </strong>
         {meta.length > 0 && (
           <em
             className={cn(
-              'text-[11.5px] leading-[1.4] font-normal text-text-secondary not-italic',
+              'text-[13px] leading-[1.4] font-semibold text-text-secondary not-italic',
               lockedText
             )}
           >
@@ -123,18 +128,18 @@ function ActivityRow({ activity, onAction, onOpenActivity }: ActivityRowProps) {
         )}
       </span>
       <span className="flex items-center gap-2 justify-self-end whitespace-nowrap max-[760px]:col-start-2 max-[760px]:flex-wrap max-[760px]:justify-self-start max-[760px]:text-center">
-        {activity.score && <b className="text-[12px] font-bold text-success">{activity.score}</b>}
-        <span className="inline-flex items-center gap-[5px] text-[11px] font-medium text-text-secondary">
-          <StatusIcon size={14} />
+        {activity.score && <b className="text-sm font-black text-practice">{activity.score}</b>}
+        <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-text-secondary">
+          <StatusIcon size={16} />
           {statusMeta[activity.status]?.label || activity.status}
         </span>
         {isCurrent && (
-          <StatusBadge tone="primary" size="sm" className="px-[7px] py-1 text-[10px] font-bold">
+          <StatusBadge tone="primary" size="sm" className="text-xs">
             Đang học
           </StatusBadge>
         )}
       </span>
-      {canOpen && <ChevronRight className="text-text-subtle max-[760px]:hidden" size={16} />}
+      {canOpen && <ChevronRight className="text-text-subtle max-[760px]:hidden" size={18} />}
     </button>
   )
 }

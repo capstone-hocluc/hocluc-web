@@ -96,9 +96,8 @@ export default function StudentSchedulePage() {
   }))
 
   return (
-    <StudentPageContainer width="wide" className="hl-scheduling space-y-5">
+    <StudentPageContainer width="wide" className="space-y-6">
       <StudentPageHeader
-        className="mb-0"
         title="Lịch học"
         description="Theo dõi các lịch học đã đăng ký trong tài khoản của bạn."
         actions={
@@ -145,10 +144,10 @@ export default function StudentSchedulePage() {
         )}
       </ScheduleResourceState>
 
-      <Card as="section" padding="lg" className="space-y-4">
+      <Card as="section" variant="elevated" radius="xl" padding="lg" className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-text-heading">Chuyên cần</h2>
-          <p className="mt-1 text-sm text-text-muted">Tổng số buổi, trạng thái và tỷ lệ chuyên cần theo khóa học.</p>
+          <h2 className="text-xl font-black tracking-[-0.3px] text-text-heading">Chuyên cần</h2>
+          <p className="mt-1 text-[15px] text-text-body">Tổng số buổi, trạng thái và tỷ lệ chuyên cần theo khóa học.</p>
         </div>
         <Notice tone="warning">
           Tỷ lệ = (có mặt + 0,8 × đi muộn) ÷ tổng số buổi. Tổng số hiện có thể bao gồm cả buổi học trong tương lai.
@@ -156,17 +155,12 @@ export default function StudentSchedulePage() {
         {(courses.status === 'error' || courses.status === 'forbidden') && (
           <Notice tone={courses.status === 'forbidden' ? 'warning' : 'danger'}>
             Không tải được khóa học đã ghi danh.
-            <button
-              type="button"
-              className="max-[767px]:min-h-11 rounded-lg border border-border-primary px-3 py-1.5 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus-ring"
-              onClick={courses.reload}
-            >
+            <Button size="sm" appearance="outline" className="max-[767px]:min-h-11" onClick={courses.reload}>
               Thử lại
-            </button>
+            </Button>
           </Notice>
         )}
         <DropdownField
-          contentClassName="hl-scheduling"
           ariaLabel="Chọn khóa học để xem chuyên cần"
           options={courseOptions}
           mobileTouchTargets
@@ -213,9 +207,9 @@ export default function StudentSchedulePage() {
 
 function AttendanceMetric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl bg-surface-soft p-3">
-      <p className="text-xs text-text-muted">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-text-heading">{value}</p>
+    <div className="rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-3.5">
+      <p className="text-[13px] font-bold text-text-muted">{label}</p>
+      <p className="mt-1 text-2xl font-black tracking-[-0.4px] text-text-heading">{value}</p>
     </div>
   )
 }
@@ -270,27 +264,27 @@ function AttendanceDetail({ record }: { record: AttendanceResponse }) {
   const leftAt = formatAttendanceTime(record.leftAt)
 
   return (
-    <dl className="grid gap-3 rounded-xl bg-surface-soft p-3 text-sm sm:grid-cols-2">
+    <dl className="grid gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-3.5 text-sm sm:grid-cols-2">
       <div>
-        <dt className="text-xs text-text-muted">Trạng thái</dt>
+        <dt className="text-[13px] font-bold text-text-muted">Trạng thái</dt>
         <dd className="mt-1"><StatusBadge tone={presentation.tone} size="sm">{presentation.label}</StatusBadge></dd>
       </div>
       {record.attendanceMinutes != null && (
         <div>
-          <dt className="text-xs text-text-muted">Thời gian tham gia</dt>
-          <dd className="mt-1 font-medium text-text-heading">{record.attendanceMinutes} phút</dd>
+          <dt className="text-[13px] font-bold text-text-muted">Thời gian tham gia</dt>
+          <dd className="mt-1 font-extrabold text-text-heading">{record.attendanceMinutes} phút</dd>
         </div>
       )}
       {joinedAt && (
         <div>
-          <dt className="text-xs text-text-muted">Tham gia lúc</dt>
-          <dd className="mt-1 font-medium text-text-heading">{joinedAt}</dd>
+          <dt className="text-[13px] font-bold text-text-muted">Tham gia lúc</dt>
+          <dd className="mt-1 font-extrabold text-text-heading">{joinedAt}</dd>
         </div>
       )}
       {leftAt && (
         <div>
-          <dt className="text-xs text-text-muted">Rời buổi học lúc</dt>
-          <dd className="mt-1 font-medium text-text-heading">{leftAt}</dd>
+          <dt className="text-[13px] font-bold text-text-muted">Rời buổi học lúc</dt>
+          <dd className="mt-1 font-extrabold text-text-heading">{leftAt}</dd>
         </div>
       )}
     </dl>

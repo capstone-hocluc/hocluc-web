@@ -12,7 +12,7 @@ export function ProfileCard({ className, ...props }: ComponentProps<typeof Card>
   return (
     <Card
       padding="none"
-      className={cn('rounded-2xl border-line-card bg-white/92 shadow-card', className)}
+      className={cn('rounded-3xl border-line-card bg-surface shadow-card', className)}
       {...props}
     />
   )
@@ -45,19 +45,15 @@ export function ProfileHeading({
       )}
     >
       <div>
-        <h2 className={cn('text-[17px] leading-[1.25] font-black text-text-dark', titleClassName)}>
+        <h2 className={cn('text-xl leading-[1.25] font-black tracking-[-0.3px] text-text-heading', titleClassName)}>
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-[5px] text-[13px] leading-[1.5] text-text-faint">{subtitle}</p>
+          <p className="mt-1 text-sm leading-[1.5] text-text-body">{subtitle}</p>
         )}
       </div>
       {action && (
-        <Button
-          appearance="outline"
-          className="h-auto min-h-[34px] rounded-[10px] border-line-brand px-3 text-[12px] font-black transition hover:-translate-y-px hover:border-primary hover:bg-surface-brand"
-          onClick={onAction}
-        >
+        <Button appearance="outline" size="sm" onClick={onAction}>
           {action}
         </Button>
       )}
@@ -70,7 +66,7 @@ export function TextButton({ className, ...props }: ComponentProps<typeof Button
   return (
     <Button
       appearance="ghost"
-      className={cn('h-auto border-0 p-0 text-[12px] font-black hover:bg-transparent', className)}
+      className={cn('h-auto min-h-8 border-0 p-0 text-[13px] font-extrabold text-primary-text hover:bg-transparent', className)}
       {...props}
     />
   )
@@ -93,7 +89,7 @@ export function TrendBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-[5px] text-[12px] font-extrabold',
+        'inline-flex items-center gap-[5px] text-[13px] font-extrabold',
         positive ? 'text-success' : 'text-danger'
       )}
     >
@@ -108,7 +104,7 @@ export function TrendBadge({
 const tile = cva('grid shrink-0 place-items-center', {
   variants: {
     tone: {
-      blue: 'bg-primary-soft text-primary',
+      blue: 'bg-primary-soft text-primary-text',
       amber: 'bg-badge-warning-bg text-warning',
       green: 'bg-practice-soft text-success',
       violet: 'bg-assess-soft text-violet',
@@ -148,9 +144,9 @@ export function IconTile({
 }
 
 const metricBase =
-  'flex min-h-[102px] min-w-0 flex-col justify-center gap-1.5 rounded-[14px] border border-line-shell bg-surface p-4'
-const metricLabel = 'text-[12px] leading-[1.35] font-extrabold text-text-secondary'
-const metricValue = 'text-[21px] leading-[1.1] font-black text-text-heading'
+  'flex min-h-[102px] min-w-0 flex-col justify-center gap-1.5 rounded-2xl border-[1.5px] border-line-card bg-surface p-4 shadow-card-soft'
+const metricLabel = 'text-[13px] leading-[1.35] font-bold text-text-body'
+const metricValue = 'text-2xl leading-[1.1] font-black tracking-[-0.4px] text-text-heading'
 
 interface MetricCardProps {
   icon?: ComponentType<{ size?: number }>
@@ -184,7 +180,7 @@ export function IconMetricCard({ icon: Icon, tone, label, value }: IconMetricCar
     <div
       className={cn(
         metricBase,
-        'min-h-[132px] items-start justify-between gap-[9px] text-left shadow-[0_12px_28px_rgba(17,24,58,0.055)]'
+        'min-h-[132px] items-start justify-between gap-[9px] text-left'
       )}
     >
       <IconTile tone={tone} size="md">

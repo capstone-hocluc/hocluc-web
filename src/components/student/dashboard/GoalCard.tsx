@@ -1,5 +1,6 @@
-import { ArrowRight, Flame, Lock, Target } from '../../console/icons'
+import { ArrowRight, Lock, Target } from '../../console/icons'
 import SubjectAvatarIcon from '../../common/SubjectAvatarIcon'
+import FlameLottie from '../common/FlameLottie'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'
 import { ctaButtonClass } from './cta'
@@ -11,38 +12,39 @@ interface GoalCardProps {
   onStart: () => void
 }
 
-// "Mục tiêu hôm nay": blue hero card with a friendly avatar and the daily goal.
+// "Mục tiêu hôm nay": brand-blue ledge card with a friendly avatar, a speech bubble and the daily goal.
 function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
   return (
-    <section className="relative rounded-[18px] bg-linear-to-b from-primary-bright via-link to-link px-4 pt-5 pb-px shadow-[0_18px_34px_rgba(28, 176, 246,0.16)] after:absolute after:top-2 after:-right-7 after:size-[132px] after:rounded-[46%] after:bg-white/18 after:content-['']">
-      <div className="relative z-1 mb-3 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 max-[760px]:grid-cols-1">
-        <div className="inline-flex min-w-0 -translate-y-5 items-center gap-2 text-xl leading-[1.2] font-extrabold text-surface">
-          <Flame className="size-4 shrink-0 fill-streak text-streak" />
-          <span>Mục tiêu hôm nay</span>
-        </div>
-
-        <div className="flex min-w-0 items-center justify-end gap-2.5">
-          <div className="absolute -top-[38px] right-[105px] z-5 max-w-[298px] rounded-[10px] bg-primary-dark px-3.5 py-2.5 text-[15px] leading-[1.35] font-bold text-surface shadow-[0_8px_18px_rgba(16,72,238,0.22)]">
+    <section className="relative overflow-hidden rounded-3xl bg-primary p-5 shadow-[0_5px_0_#0797d6] after:pointer-events-none after:absolute after:-top-10 after:-right-10 after:size-44 after:rounded-full after:bg-white/15 after:content-['']">
+      <div className="relative z-1 mb-4 flex items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="inline-flex items-center gap-2 text-2xl leading-[1.2] font-black text-white">
+            <FlameLottie className="-my-2 h-11 w-10 shrink-0" />
+            <span>Mục tiêu hôm nay</span>
+          </div>
+          <p className="w-fit max-w-[298px] rounded-2xl border-[1.5px] border-[#d5e8f4] bg-surface px-4 py-2 text-sm leading-[1.4] font-bold text-text-heading">
             Bắt tay vào mục tiêu đầu tiên thôi!
-          </div>
-
-          <div className="relative z-1 grid h-[54px] w-[74px] place-items-center self-start justify-self-end max-[760px]:hidden">
-            <SubjectAvatarIcon type="flower" className="block size-[70px] drop-shadow-[0_16px_18px_rgba(17,24,58,0.18)]" />
-          </div>
+          </p>
+        </div>
+        <div className="grid size-[76px] shrink-0 place-items-center max-[760px]:hidden">
+          <SubjectAvatarIcon
+            type="flower"
+            className="block size-[76px] drop-shadow-[0_10px_12px_rgba(7,76,120,0.25)]"
+          />
         </div>
       </div>
 
-      <div className="relative z-2 -translate-y-[35px] rounded-[14px] bg-surface px-3.5 pt-2.5 pb-3.5">
-        <div className="relative z-1 grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 rounded-[14px] border-2 border-link bg-surface p-3 max-[760px]:grid-cols-1">
-          <span className="grid size-[34px] place-items-center rounded-full border-[1.5px] border-dashed border-line text-primary">
+      <div className="relative z-2 rounded-2xl bg-surface p-4">
+        <div className="grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-4 max-[760px]:grid-cols-1">
+          <span className="grid size-10 place-items-center rounded-xl bg-primary-soft text-primary-text">
             <Target size={22} />
           </span>
 
           <div>
-            <strong className="block text-[15px] leading-[1.3] font-extrabold text-text-heading">
+            <strong className="block text-base leading-[1.3] font-black text-text-heading">
               {title}
             </strong>
-            <p className="mt-1 text-xs leading-[1.45] text-text-body">{description}</p>
+            <p className="mt-1 text-sm leading-[1.5] text-text-body">{description}</p>
           </div>
 
           <Button
@@ -54,8 +56,8 @@ function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
           </Button>
         </div>
 
-        <div className="relative z-1 mt-2.5 mr-0.5 ml-1 flex items-center gap-2 text-xs leading-[1.4] text-text-subtle">
-          <Lock size={18} />
+        <div className="mt-3 flex items-center gap-2 border-t-[1.5px] border-line-soft pt-3 text-[13px] leading-[1.4] text-text-subtle">
+          <Lock size={16} className="shrink-0" />
           <span>{lockedNote}</span>
         </div>
       </div>

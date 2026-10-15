@@ -12,7 +12,7 @@ interface ResultSummaryCardProps {
   children?: ReactNode
 }
 
-// Headline of a result: kind of assessment, title, "x/y correct" and the percentage.
+// Headline of a result: kind of assessment, title, "x/y correct" and the percentage as a ring.
 // Shared by the course-quiz review and the placement result.
 function ResultSummaryCard({
   eyebrow,
@@ -22,24 +22,39 @@ function ResultSummaryCard({
   percentage,
   children,
 }: ResultSummaryCardProps) {
+  const clamped = Math.max(0, Math.min(100, percentage))
+
   return (
-    <Card as="section" padding="none" radius="lg" className="border-border-subtle p-[22px]">
-      <StatusBadge
-        tone="assessment"
-        size="sm"
-        className="mb-2.5 px-3 py-1 text-[11.5px] font-extrabold tracking-[0.04em] uppercase"
-      >
-        {eyebrow}
-      </StatusBadge>
-      <h1 className="mb-4 text-xl font-bold text-text-heading">{title}</h1>
-      <div className="flex flex-wrap items-center gap-6">
-        <div className="flex flex-col gap-2">
-          <strong className="text-[28px] leading-tight text-text-heading">
-            {correctCount}/{totalQuestions}
-          </strong>
-          <span className="text-[13px] text-text-faint">câu đúng</span>
+    <Card as="section" variant="panel" padding="none" radius="xl" className="p-6 max-[640px]:p-5">
+      <div className="flex flex-wrap items-center gap-6 max-[640px]:flex-col max-[640px]:items-start">
+        <div
+          className="grid size-[132px] shrink-0 place-items-center rounded-full"
+          style={{
+            background: `conic-gradient(var(--color-primary, #1cb0f6) ${clamped * 3.6}deg, #e3f1f9 0)`,
+          }}
+        >
+          <div className="grid size-[104px] place-items-center rounded-full bg-surface">
+            <span className="text-[32px] leading-none font-black text-text-heading">
+              {percentage}
+              <span className="text-lg text-primary-text">%</span>
+            </span>
+          </div>
         </div>
-        <div className="text-[28px] font-extrabold text-primary">{percentage}%</div>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <StatusBadge tone="assessment" size="sm" className="self-start px-3 py-1 text-xs font-extrabold tracking-[0.04em] uppercase">
+            {eyebrow}
+          </StatusBadge>
+          <h1 className="text-2xl leading-tight font-black tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
+            {title}
+          </h1>
+          <p className="text-base text-text-body">
+            <strong className="text-xl font-black text-text-heading">
+              {correctCount}/{totalQuestions}
+            </strong>{' '}
+            câu đúng
+          </p>
+        </div>
       </div>
       {children}
     </Card>

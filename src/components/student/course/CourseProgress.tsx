@@ -14,12 +14,12 @@ interface CourseProgressProps {
 // heading layout around <Progress> directly.
 function CourseProgress({ value, label = 'Tiến độ học tập', className }: CourseProgressProps) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
-      <div className="flex items-center justify-between gap-2.5 text-xs font-extrabold text-text-secondary">
+    <div className={cn('flex flex-col gap-2', className)}>
+      <div className="flex items-center justify-between gap-2.5 text-[13px] font-extrabold text-text-secondary">
         <span>{label}</span>
-        <strong className="font-black text-primary">{value}%</strong>
+        <strong className="text-sm font-black text-primary-text">{value}%</strong>
       </div>
-      <Progress value={value} size="sm" aria-label={typeof label === 'string' ? label : undefined} />
+      <Progress value={value} aria-label={typeof label === 'string' ? label : undefined} />
     </div>
   )
 }

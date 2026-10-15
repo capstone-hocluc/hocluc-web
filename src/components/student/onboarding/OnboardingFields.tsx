@@ -22,7 +22,7 @@ export function FieldLabel({
   children: ReactNode
 }) {
   return (
-    <span className="mb-[9px] flex items-center gap-[7px] text-[13px] font-extrabold text-text-emphasis [&>svg]:text-primary">
+    <span className="mb-[9px] flex items-center gap-[7px] text-sm font-extrabold text-text-heading [&>svg]:text-primary-text">
       <Icon size={16} />
       {children}
     </span>
@@ -30,7 +30,7 @@ export function FieldLabel({
 }
 
 export function FieldError({ children }: { children: ReactNode }) {
-  return <small className="mt-[7px] text-[11px] text-danger">{children}</small>
+  return <small className="mt-[7px] text-[13px] font-bold text-danger">{children}</small>
 }
 
 interface SearchSelectProps {
@@ -66,12 +66,12 @@ export function SearchSelect({
         renderValue={(option) => (
           <span className="flex min-w-0 items-center gap-[9px] text-text-subtle">
             <Icon size={17} aria-hidden={true} />
-            <span className="min-w-0 truncate text-[13px] text-text-heading">
+            <span className="min-w-0 truncate text-[15px] font-semibold text-text-heading">
               {option?.label || placeholder}
             </span>
           </span>
         )}
-        triggerClassName="flex h-[52px] items-center gap-[9px] py-0 rounded-[15px] border-[1.5px] border-line-blue bg-white/95 px-3.5 text-text-subtle transition focus-within:-translate-y-px focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(28, 176, 246,0.1)] aria-invalid:border-danger"
+        triggerClassName="flex h-[52px] items-center gap-[9px] py-0 rounded-2xl border-2 border-line bg-surface px-3.5 text-text-subtle transition focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(28,176,246,0.15)] aria-invalid:border-danger"
         value={value || null}
         onChange={(nextValue) => onChange(nextValue ?? '')}
       />
@@ -81,11 +81,11 @@ export function SearchSelect({
 }
 
 const subjectChip = cva(
-  'inline-flex cursor-pointer items-center gap-[5px] rounded-full border border-line-blue bg-surface px-[13px] py-2.5 text-[12px] text-text-body transition hover:-translate-y-px hover:border-primary hover:text-primary hover:shadow-[0_10px_18px_rgba(28, 176, 246,0.08)]',
+  'inline-flex min-h-10 cursor-pointer items-center gap-[5px] rounded-full border-2 border-line bg-surface px-3.5 py-2 text-sm font-bold text-text-body transition hover:border-primary hover:bg-surface-brand hover:text-primary-text focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
   {
     variants: {
       selected: {
-        true: 'border-primary bg-[linear-gradient(135deg,var(--color-badge-info-bg),var(--color-surface-sky))] font-extrabold text-primary shadow-[0_8px_16px_rgba(28, 176, 246,0.12)]',
+        true: 'border-primary bg-primary-soft font-extrabold text-primary-text',
         false: '',
       },
     },
@@ -132,20 +132,20 @@ export function SubjectChoice({ label, hint, selected, onChange, error }: Subjec
     <OnboardingField>
       <FieldLabel icon={BookOpen}>
         {label}
-        <strong className="ml-auto text-[11px] font-black tracking-[0.3px] text-primary">
+        <strong className="ml-auto text-xs font-black tracking-[0.3px] text-primary-text">
           {selected.length} môn đã chọn
         </strong>
       </FieldLabel>
-      <span className="-mt-[3px] mb-2.5 text-[11px] text-text-subtle">{hint}</span>
+      <span className="-mt-[3px] mb-2.5 text-[13px] text-text-body">{hint}</span>
       <div className="flex flex-col gap-3">
         {subjectGroups.map((group) => (
           <div
-            className="rounded-[15px] border border-line bg-[rgba(250,252,255,0.8)] p-3 first:border-line-brand first:bg-[linear-gradient(135deg,var(--color-surface-brand),var(--color-surface-tint))]"
+            className="rounded-2xl border-[1.5px] border-line-card bg-surface p-3.5 first:border-line-brand first:bg-surface-brand"
             key={group.label}
           >
             <div className="mb-[9px] flex items-baseline justify-between gap-2.5 max-[701px]:flex-col max-[701px]:items-start max-[701px]:gap-[3px]">
-              <strong className="text-[12px] text-text-emphasis">{group.label}</strong>
-              <span className="text-right text-[10px] text-text-subtle max-[701px]:text-left">
+              <strong className="text-sm font-black text-text-heading">{group.label}</strong>
+              <span className="text-right text-xs text-text-body max-[701px]:text-left">
                 {group.description}
               </span>
             </div>

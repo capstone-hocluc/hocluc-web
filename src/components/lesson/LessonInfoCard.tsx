@@ -21,13 +21,13 @@ function LessonInfoCard({ lesson, completing, onMarkComplete }: LessonInfoCardPr
   const percent = Math.max(0, Math.min(100, lesson.progress?.progressPercentage ?? 0))
 
   return (
-    <Card as="section" padding="none" className="px-5 py-[18px]">
+    <Card as="section" padding="none" radius="xl" className="p-6 max-[640px]:p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="mb-1 text-[21px] leading-tight font-bold text-text-heading">
+          <h1 className="mb-1.5 text-[26px] leading-tight font-black tracking-[-0.4px] text-text-heading max-[640px]:text-[22px]">
             {lesson.title}
           </h1>
-          <span className="text-[12.5px] text-text-secondary">
+          <span className="text-sm font-semibold text-text-secondary">
             {prettifyEnum(lesson.contentType)}
             {Boolean(lesson.durationSeconds) && ` · ${formatDuration(lesson.durationSeconds)}`}
           </span>
@@ -35,37 +35,37 @@ function LessonInfoCard({ lesson, completing, onMarkComplete }: LessonInfoCardPr
         <StatusBadge
           tone={getLessonStatusTone(statusKey)}
           size="sm"
-          className="shrink-0 px-2.5 py-1 text-[11.5px] font-semibold"
+          className="shrink-0 px-3 py-1 text-xs"
         >
           {getLessonStatusLabel(statusKey)}
         </StatusBadge>
       </div>
 
       {lesson.description && (
-        <p className="mt-3.5 text-[13.5px] leading-[1.6] text-text-body">{lesson.description}</p>
+        <p className="mt-4 text-base leading-[1.65] text-text-body">{lesson.description}</p>
       )}
 
-      <div className="mt-4 flex items-center gap-3 text-[12.5px] font-medium text-text-secondary">
-        <Progress value={percent} size="sm" className="flex-1" aria-label="Tiến độ bài học" />
-        <span>Tiến độ bài học: {percent}%</span>
+      <div className="mt-5 flex items-center gap-3 text-sm font-extrabold text-text-heading max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
+        <Progress value={percent} className="flex-1 max-[640px]:flex-none" aria-label="Tiến độ bài học" />
+        <span className="whitespace-nowrap">Tiến độ bài học: {percent}%</span>
       </div>
 
       {lesson.progress?.chapterCompleted && (
-        <span className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-badge-success-text">
-          <CheckCircle2 size={14} />
+        <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-extrabold text-badge-success-text">
+          <CheckCircle2 size={16} />
           Chương đã hoàn thành
         </span>
       )}
 
-      <div className="mt-4">
+      <div className="mt-5">
         {isCompleted ? (
-          <span className="inline-flex items-center gap-1.5 text-[13.5px] font-bold text-badge-success-text">
-            <CheckCircle2 size={15} />
+          <span className="inline-flex items-center gap-1.5 text-[15px] font-extrabold text-badge-success-text">
+            <CheckCircle2 size={18} />
             Đã hoàn thành
           </span>
         ) : (
           canMarkComplete && (
-            <Button className="text-[13.5px] font-semibold" onClick={onMarkComplete} disabled={completing}>
+            <Button onClick={onMarkComplete} disabled={completing}>
               {completing ? 'Đang lưu...' : 'Đánh dấu hoàn thành'}
             </Button>
           )

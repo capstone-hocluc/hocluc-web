@@ -9,9 +9,9 @@ export function ActivityCard({ as = 'article', className, ...props }: ComponentP
     <Card
       as={as}
       padding="none"
-      radius="lg"
+      radius="xl"
       className={cn(
-        'border-line-card bg-white/95 p-4 shadow-[0_10px_24px_rgba(17,24,58,0.04)] max-[760px]:rounded-2xl max-[760px]:p-3.5',
+        'border-line-card bg-surface p-5 shadow-card max-[760px]:p-4',
         className
       )}
       {...props}
@@ -22,7 +22,7 @@ export function ActivityCard({ as = 'article', className, ...props }: ComponentP
 // Card title (h2) inside an ActivityCard.
 export function ActivityCardTitle({ className, ...props }: ComponentProps<'h2'>) {
   return (
-    <h2 className={cn('mb-2.5 text-[17px] font-bold text-text-heading', className)} {...props} />
+    <h2 className={cn('mb-2.5 text-lg font-extrabold text-text-heading', className)} {...props} />
   )
 }
 
@@ -36,13 +36,13 @@ interface ActivityHeaderProps {
 export function ActivityHeader({ label, title, meta }: ActivityHeaderProps) {
   return (
     <ActivityCard as="header">
-      <StatusBadge tone="primary" size="sm" className="px-[9px] py-[5px] font-extrabold">
+      <StatusBadge tone="primary" size="sm" className="px-3 py-1 text-xs uppercase">
         {label}
       </StatusBadge>
-      <h1 className="mt-2.5 mb-1 text-[24px] leading-[1.2] font-extrabold text-text-heading max-[760px]:text-[21px]">
+      <h1 className="mt-3 mb-1.5 text-[28px] leading-[1.2] font-black tracking-[-0.4px] text-text-heading max-[760px]:text-[22px]">
         {title}
       </h1>
-      {meta && <p className="text-[12.5px] font-medium text-text-secondary">{meta}</p>}
+      {meta && <p className="text-sm font-semibold text-text-secondary">{meta}</p>}
     </ActivityCard>
   )
 }

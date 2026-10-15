@@ -8,6 +8,8 @@ interface QuestionNavigatorProps {
   onSelect: (questionId: string) => void
 }
 
+// Numbered tiles like the answer sheet: current = solid blue with ledge, answered = pale blue
+// with a blue edge, unanswered = white with a grey edge.
 function QuestionNavigator({
   questions,
   currentQuestionId,
@@ -16,7 +18,7 @@ function QuestionNavigator({
   onSelect,
 }: QuestionNavigatorProps) {
   return (
-    <div className="grid grid-cols-5 gap-2 rounded-[14px] border border-line bg-surface p-3 max-[640px]:grid-cols-6">
+    <div className="grid grid-cols-5 gap-2 max-[640px]:grid-cols-6">
       {questions.map((question, index) => {
         const isCurrent = question.id === currentQuestionId
         const isAnswered = answeredQuestionIds.has(question.id)
@@ -25,13 +27,14 @@ function QuestionNavigator({
             key={question.id}
             type="button"
             aria-current={isCurrent ? 'step' : undefined}
+            aria-label={`Câu ${index + 1}${isAnswered ? ', đã trả lời' : ''}`}
             className={cn(
-              'grid aspect-square cursor-pointer place-items-center rounded-lg border text-[13px] font-bold disabled:cursor-not-allowed disabled:opacity-60',
+              'grid aspect-square cursor-pointer place-items-center rounded-xl border-2 text-sm font-extrabold transition-[transform,box-shadow,background-color] duration-150 hover:-translate-y-0.5 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd] disabled:cursor-not-allowed disabled:opacity-60',
               isCurrent
-                ? 'border-primary bg-primary text-surface'
+                ? 'border-transparent bg-primary text-white'
                 : isAnswered
-                  ? 'border-primary bg-badge-info-bg text-primary'
-                  : 'border-border-primary bg-surface text-text-heading'
+                  ? 'border-line-brand bg-surface-brand text-primary-text'
+                  : 'border-line bg-surface text-text-body'
             )}
             onClick={() => onSelect(question.id)}
             disabled={disabled}

@@ -10,7 +10,7 @@ interface SectionHeaderProps {
   titleClassName?: string
 }
 
-const titleClass = 'min-w-0 text-xl leading-[1.2] font-extrabold text-text-dark'
+const titleClass = 'min-w-0 text-2xl leading-[1.2] font-black tracking-[-0.3px] text-text-heading max-[760px]:text-[22px]'
 
 // Section title (h3) with an optional row of actions on the right.
 function SectionHeader({ title, actions, className, titleClassName }: SectionHeaderProps) {

@@ -3,20 +3,20 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'
 
-// Pill-ish 38px button of the learning-activity screens. No hover colour
-// change (the screens never had one), only the tone/weight differ.
+// Button of the learning-activity screens: the shared ledge Button, with a
+// softer "soft" tone and a full-width option on phones.
 const activityButton = cva(
-  'h-auto min-h-[38px] gap-[7px] rounded-xl px-3.5 text-[12px] whitespace-normal [&>svg]:size-[15px]',
+  'h-auto min-h-11 gap-2 px-4 text-sm whitespace-normal [&>svg]:size-4',
   {
     variants: {
       tone: {
-        outline: 'border-line text-primary hover:bg-surface',
-        soft: 'border-line-brand bg-surface-brand text-primary hover:bg-surface-brand',
-        primary: 'border-primary hover:bg-primary',
+        outline: '',
+        soft: 'border-[#84d8ff] bg-surface-brand text-primary-text hover:bg-surface-brand',
+        primary: '',
       },
       weight: {
-        bold: 'font-bold',
-        extrabold: 'font-extrabold',
+        bold: 'font-extrabold',
+        extrabold: 'font-black',
       },
       block: {
         true: 'max-[760px]:w-full',

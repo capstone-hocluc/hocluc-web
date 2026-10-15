@@ -4,6 +4,7 @@
 /* Split from a single ~14k line index.css. Import order below matches the
    original file's top-to-bottom order exactly, so the resulting cascade is
    unchanged - do not reorder these. */
+@import './styles/base/fonts.css';
 @import './styles/base/tokens.css';
 @import './styles/base/keyframes.css';
 @import './styles/base/hover-utilities.css';
@@ -24,6 +25,7 @@
 @import './styles/landing/payment-result.css';
 @import './styles/landing/payment-instructions.css';
 @import './styles/base/theme-overrides.css';
+@import './styles/student/student-theme.css';
 @import './styles/tailgrids/tailgrids-theme.css';
 @import './styles/tailgrids/tailgrids-default.css';
 @import './styles/tailgrids/tailgrids-dark.css';

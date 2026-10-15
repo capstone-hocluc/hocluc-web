@@ -264,7 +264,7 @@ function CourseDetail({ courseId, onBack, onOpenActivity }) {
   }
 
   return (
-    <StudentPageContainer className="flex flex-col gap-3.5 px-[18px] pt-2 pb-8 text-text-heading max-[760px]:px-0 max-[760px]:pt-1.5 max-[760px]:pb-7">
+    <StudentPageContainer className="flex flex-col gap-6 pb-8 text-text-heading max-[760px]:pb-7">
       <CourseHero
         subject={course.subject || 'ĐGNL'}
         title={course.title}
@@ -277,17 +277,17 @@ function CourseDetail({ courseId, onBack, onOpenActivity }) {
         onContinue={() => showMessage('Trình phát video đang được phát triển.')}
       />
 
-      <main className="flex flex-col gap-3.5">
-        <div className="flex items-end justify-between gap-3.5 max-[760px]:flex-col max-[760px]:items-start">
-          <h2 className="text-xl leading-normal font-extrabold text-text-heading">
+      <main className="flex flex-col gap-4">
+        <div className="flex items-end justify-between gap-4 max-[760px]:flex-col max-[760px]:items-start">
+          <h2 className="text-2xl leading-normal font-black tracking-[-0.3px] text-text-heading">
             Nội dung khóa học
           </h2>
-          <p className="max-w-[560px] text-right text-[12.5px] leading-[1.45] font-medium text-text-secondary max-[760px]:max-w-none max-[760px]:text-left">
+          <p className="max-w-[560px] text-right text-sm leading-[1.45] font-semibold text-text-secondary max-[760px]:max-w-none max-[760px]:text-left">
             Học tuần tự từ phần đang mở, hoàn thành từng hoạt động để mở khóa các bài tiếp theo.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {isSupplementary ? (
             <SupplementaryCurriculum
               course={course}

@@ -14,27 +14,27 @@ function LiveClassMeta({ liveClass, className }: LiveClassMetaProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap gap-x-3.5 gap-y-2 text-[12.5px] text-text-secondary [&>span]:inline-flex [&>span]:items-center [&>span]:gap-[5px]',
+        'flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-text-secondary [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5',
         className
       )}
     >
       <span>
-        <Calendar size={13} />
+        <Calendar size={15} />
         {formatDateTime(liveClass.startTime)} – {formatTime(liveClass.endTime)}
       </span>
       {liveClass.instructorName && (
         <span>
-          <UserRound size={13} />
+          <UserRound size={15} />
           {liveClass.instructorName}
         </span>
       )}
       {liveClass.provider && (
         <span>
-          <Video size={13} />
+          <Video size={15} />
           {prettifyEnum(liveClass.provider)}
         </span>
       )}
-      <span className="font-semibold text-live">{prettifyEnum(liveClass.status)}</span>
+      <span className="font-extrabold text-live">{prettifyEnum(liveClass.status)}</span>
     </div>
   )
 }

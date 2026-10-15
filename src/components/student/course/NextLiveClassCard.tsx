@@ -14,9 +14,9 @@ function NextLiveClassCard({ liveClass }: NextLiveClassCardProps) {
   return (
     <Card variant="live">
       <CardEyebrow className="text-live">Buổi học trực tuyến tiếp theo</CardEyebrow>
-      <h3 className="mb-2 text-[15px] font-semibold text-text-heading">{liveClass.title}</h3>
+      <h3 className="mb-2 text-lg font-extrabold text-text-heading">{liveClass.title}</h3>
       {liveClass.description && (
-        <p className="mb-2.5 text-[13.5px] text-text-secondary">{liveClass.description}</p>
+        <p className="mb-3 text-[15px] text-text-body">{liveClass.description}</p>
       )}
 
       <LiveClassMeta liveClass={liveClass} className="mb-3" />
@@ -24,19 +24,14 @@ function NextLiveClassCard({ liveClass }: NextLiveClassCardProps) {
       {(canJoin || showRecording) && (
         <div className="flex flex-wrap gap-2.5">
           {canJoin && (
-            <Button asChild size="sm" className="px-3.5 text-[13px] font-semibold">
+            <Button asChild>
               <a href={liveClass.meetingUrl as string} target="_blank" rel="noreferrer">
                 Tham gia buổi học
               </a>
             </Button>
           )}
           {showRecording && (
-            <Button
-              asChild
-              size="sm"
-              appearance="outline"
-              className="px-3.5 text-[13px] font-semibold"
-            >
+            <Button asChild appearance="outline">
               <a href={liveClass.recordingUrl as string} target="_blank" rel="noreferrer">
                 Xem bản ghi
               </a>

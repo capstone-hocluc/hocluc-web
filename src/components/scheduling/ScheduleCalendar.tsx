@@ -24,9 +24,9 @@ export default function ScheduleCalendar({ items, date, onDateChange, onSelect, 
   })
 
   return (
-    <section className="hl-scheduling-calendar space-y-3" aria-label="Lịch theo tuần">
+    <section className="space-y-4" aria-label="Lịch theo tuần">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-text-heading">
+        <p className="text-lg font-black tracking-[-0.3px] text-text-heading">
           {localDateLabel(days[0], { day: 'numeric', month: 'short' })} – {localDateLabel(days[6], { day: 'numeric', month: 'short', year: 'numeric' })}
         </p>
         <div className="flex gap-1">
@@ -39,26 +39,26 @@ export default function ScheduleCalendar({ items, date, onDateChange, onSelect, 
           </Button>
         </div>
       </div>
-      <div className="hl-scheduling-week-grid">
+      <div className="grid grid-cols-7 gap-3 max-[1199px]:grid-cols-4 max-[767px]:hidden">
         {days.map((day) => {
           const dayItems = weekItems.filter((item) => itemDateKey(item, timezone) === day)
           return (
-            <section key={day} className="hl-scheduling-day" aria-label={localDateLabel(day, { weekday: 'long', day: 'numeric', month: 'long' })}>
-              <h3 className="hl-scheduling-day-heading">
+            <section key={day} className="min-h-44 min-w-0 rounded-2xl border-[1.5px] border-line-card bg-surface p-3 shadow-card-soft" aria-label={localDateLabel(day, { weekday: 'long', day: 'numeric', month: 'long' })}>
+              <h3 className="mb-3 flex items-baseline justify-between gap-1 border-b border-line pb-2 text-sm font-extrabold text-text-body capitalize">
                 <span>{localDateLabel(day, { weekday: 'short' })}</span>
-                <time dateTime={day}>{localDateLabel(day, { day: 'numeric', month: 'numeric' })}</time>
+                <time dateTime={day} className="text-text-heading">{localDateLabel(day, { day: 'numeric', month: 'numeric' })}</time>
               </h3>
               <div className="space-y-2">
                 {dayItems.length ? dayItems.map((item) => (
                   <button
                     type="button"
                     key={item.kind + ':' + item.sourceId}
-                    className="hl-scheduling-event"
+                    className="block w-full min-w-0 cursor-pointer rounded-xl border-2 border-line-brand bg-surface-brand p-2.5 text-left text-text-heading transition hover:-translate-y-0.5 hover:border-primary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]"
                     onClick={() => onSelect(item)}
                   >
-                    <span className="block truncate text-xs font-semibold">{itemTitle(item)}</span>
-                    <span className="mt-1 block text-[11px]">{itemTimeLabel(item, timezone)}</span>
-                    <span className="mt-1 block truncate text-[10px] text-text-muted">
+                    <span className="block truncate text-sm font-extrabold">{itemTitle(item)}</span>
+                    <span className="mt-1 block text-xs font-bold text-text-body">{itemTimeLabel(item, timezone)}</span>
+                    <span className="mt-1 block truncate text-xs text-text-muted">
                       {item.kind === 'classSession' ? 'Buổi trong chuỗi' : item.kind === 'liveClass' ? 'Lớp trực tuyến' : 'Lịch đơn'}
                     </span>
                     <span className="mt-1 flex flex-wrap items-center gap-1">
@@ -68,13 +68,13 @@ export default function ScheduleCalendar({ items, date, onDateChange, onSelect, 
                       )}
                     </span>
                   </button>
-                )) : <p className="py-3 text-center text-xs text-text-faint">Không có lịch</p>}
+                )) : <p className="py-4 text-center text-sm text-text-faint">Không có lịch</p>}
               </div>
             </section>
           )
         })}
       </div>
-      <div className="hl-scheduling-mobile-agenda">
+      <div className="hidden max-[767px]:block">
         <ScheduleList items={weekItems} onSelect={onSelect} timezone={timezone} />
       </div>
     </section>

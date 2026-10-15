@@ -66,7 +66,8 @@ function PlacementResultPage({ onOpenReview, onOpenCourse }: PlacementResultPage
           {data.latestAttemptId && (
             <Button
               shape="pill"
-              className="h-[46px] self-start px-[26px] text-sm font-extrabold"
+              size="lg"
+              className="self-start px-8 text-base font-extrabold max-[640px]:w-full"
               onClick={() => onOpenReview(data.latestAttemptId as string)}
             >
               <Eye size={16} />
@@ -75,8 +76,8 @@ function PlacementResultPage({ onOpenReview, onOpenCourse }: PlacementResultPage
           )}
 
           {data.suggestedCourses.length > 0 && (
-            <Card as="section" padding="none" radius="lg" className="border-border-subtle p-[22px]">
-              <CardTitle className="mb-3.5 text-base">Khóa học đề xuất cho bạn</CardTitle>
+            <Card as="section" variant="panel" padding="none" radius="xl" className="p-6 max-[640px]:p-5">
+              <CardTitle className="mb-3.5 text-xl">Khóa học đề xuất cho bạn</CardTitle>
               <div className="hl-catalog-grid mt-1">
                 {data.suggestedCourses.map((course, avatarIndex) => (
                   <CourseCard key={course.id} course={course} avatarIndex={avatarIndex} onOpen={onOpenCourse} />

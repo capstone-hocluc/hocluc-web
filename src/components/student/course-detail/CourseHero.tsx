@@ -5,7 +5,7 @@ import Progress from '../../ui/Progress'
 import StatusBadge from '../../ui/StatusBadge'
 
 const metaPill =
-  'inline-flex items-center gap-1.5 rounded-full border border-line-blue bg-surface-tint px-2.5 py-2 text-[12px] font-semibold text-text-dim [&>svg]:text-primary'
+  'inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-bold text-text-body [&>svg]:text-primary'
 
 interface CourseHeroProps {
   subject: string
@@ -35,29 +35,29 @@ function CourseHero({
     <Card
       as="header"
       padding="none"
-      radius="lg"
-      className="border-line-card bg-surface-sky bg-[linear-gradient(rgba(224,233,250,0.62)_1px,transparent_1px),linear-gradient(90deg,rgba(224,233,250,0.62)_1px,transparent_1px)] bg-[length:28px_28px] p-4 shadow-[0_12px_26px_rgba(17,24,58,0.045)] max-[760px]:rounded-2xl"
+      radius="xl"
+      className="bg-surface-brand p-6 max-[760px]:p-4"
     >
       <Button
         appearance="ghost"
-        className="h-auto gap-[7px] border-0 p-0 text-[13px] font-black hover:bg-transparent"
+        className="h-auto gap-2 border-0 p-0 text-sm font-extrabold text-primary-text hover:bg-transparent hover:underline"
         onClick={onBack}
       >
         <ArrowLeft size={17} />
         Khóa học của tôi
       </Button>
-      <div className="mt-3.5 grid grid-cols-[minmax(0,1fr)_300px] items-center gap-5 max-[1025px]:grid-cols-1">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_320px] items-center gap-6 max-[1025px]:grid-cols-1">
         <div>
-          <StatusBadge tone="primary" size="sm" className="px-2.5 py-[5px] font-black">
+          <StatusBadge tone="primary" size="sm" className="bg-surface px-3 py-1 text-xs uppercase">
             {subject}
           </StatusBadge>
-          <h1 className="mt-3 mb-2 max-w-[820px] text-[25px] leading-[1.16] font-extrabold text-text-heading">
+          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(24px,2.6vw,32px)] leading-[1.16] font-black tracking-[-0.5px] text-text-heading">
             {title}
           </h1>
-          <p className="max-w-[760px] text-[13px] leading-[1.55] font-medium text-text-body">
+          <p className="max-w-[760px] text-base leading-[1.6] text-text-body">
             {description}
           </p>
-          <div className="mt-3.5 flex flex-wrap gap-[9px]">
+          <div className="mt-4 flex flex-wrap gap-2.5">
             <span className={metaPill}>
               <GraduationCap size={16} />
               Giảng viên: {instructor}
@@ -68,21 +68,18 @@ function CourseHero({
             </span>
           </div>
         </div>
-        <div className="flex flex-col gap-[9px] rounded-2xl border border-line-blue bg-primary-soft p-3.5">
-          <span className="text-[13px] font-bold text-text-heading">Tiến độ khóa học</span>
+        <div className="flex flex-col gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface p-5 shadow-card-soft">
+          <span className="text-sm font-extrabold text-text-heading">Tiến độ khóa học</span>
           <div className="flex items-center justify-between gap-3">
-            <small className="text-[12px] font-medium text-text-secondary">
+            <small className="text-sm font-semibold text-text-secondary">
               {completedCount}/{contentCount} bài học
             </small>
-            <strong className="text-2xl leading-none font-black text-primary">{progress}%</strong>
+            <strong className="text-4xl leading-none font-black text-primary-text">{progress}%</strong>
           </div>
           <Progress value={progress} />
-          <Button
-            className="h-auto min-h-[38px] gap-[7px] rounded-xl border-0 px-3.5 text-xs leading-normal font-black shadow-[0_12px_20px_rgba(28, 176, 246,0.14)] hover:bg-primary [&>svg]:size-[15px]"
-            onClick={onContinue}
-          >
+          <Button size="lg" onClick={onContinue}>
             Tiếp tục học
-            <Play size={15} />
+            <Play size={18} />
           </Button>
         </div>
       </div>

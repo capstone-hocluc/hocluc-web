@@ -3,7 +3,6 @@ import MascotState from '../../components/common/MascotState'
 import MyCourseCard from '../../components/student/course/MyCourseCard'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
-import Card from '../../components/ui/Card'
 import SearchInput from '../../components/ui/SearchInput'
 import Skeleton from '../../components/ui/Skeleton'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/Tabs'
@@ -19,7 +18,7 @@ interface MyCoursesProps {
 type CourseTab = 'main' | 'support'
 
 const courseGrid =
-  'grid grid-cols-3 items-stretch gap-4 max-[1024px]:grid-cols-2 max-[640px]:grid-cols-1'
+  'grid grid-cols-3 items-stretch gap-5 max-[1100px]:grid-cols-2 max-[640px]:grid-cols-1'
 
 function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
   const [query, setQuery] = useState('')
@@ -60,7 +59,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
         description="Quản lý và tiếp tục học các khóa học ĐGNL bạn đã đăng ký."
       />
 
-      <div className="mb-3.5 flex flex-wrap items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <Tabs value={tab} onValueChange={(value) => setTab(value as CourseTab)}>
           <TabsList aria-label="Loại khóa học">
             <TabsTrigger value="main">Khóa học chính</TabsTrigger>
@@ -76,13 +75,13 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
         />
       </div>
 
-      <Card variant="panel" radius="xl">
-        <div className="mb-3.5">
-          <h2 className="text-xl font-black text-text-heading">
+      <section>
+        <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-2xl font-black tracking-[-0.3px] text-text-heading">
             {isMain ? 'Khóa học chính' : 'Khóa học bổ trợ'}
           </h2>
           {status === 'ready' && (
-            <span className="text-[13px] font-extrabold text-text-secondary">
+            <span className="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-extrabold text-primary-text">
               {visibleEnrollments.length} khóa học
             </span>
           )}
@@ -91,7 +90,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
         {status === 'loading' && (
           <div className={courseGrid}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-80 rounded-[18px]" />
+              <Skeleton key={index} className="h-80 rounded-3xl" />
             ))}
           </div>
         )}
@@ -136,7 +135,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
             ))}
           </div>
         )}
-      </Card>
+      </section>
     </StudentPageContainer>
   )
 }

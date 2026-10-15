@@ -17,9 +17,9 @@ export function CurriculumCard({
     <Card
       as="article"
       padding="none"
-      radius="lg"
+      radius="xl"
       className={cn(
-        'border-line-card bg-white/94 p-4 shadow-[0_10px_24px_rgba(17,24,58,0.035)] max-[760px]:rounded-2xl max-[760px]:p-3.5',
+        'bg-surface p-5 max-[760px]:rounded-3xl max-[760px]:p-3.5',
         className
       )}
     >
@@ -42,7 +42,7 @@ export function CurriculumBlock({
   return (
     <article
       className={cn(
-        'rounded-[15px] border border-line p-3',
+        'rounded-[20px] border-[1.5px] border-line p-3.5',
         tone === 'chapter' ? 'bg-surface' : 'bg-surface-tint',
         bare && 'rounded-none border-0 bg-transparent p-0'
       )}
@@ -55,18 +55,18 @@ export function CurriculumBlock({
 const title = cva('inline-flex items-center gap-2 text-text-heading', {
   variants: {
     level: {
-      section: 'text-[15px] font-extrabold',
-      group: 'text-[14px] font-[650]',
-      chapter: 'text-[14px] font-[650]',
+      section: 'text-xl font-black tracking-[-0.3px]',
+      group: 'text-[17px] font-extrabold',
+      chapter: 'text-base font-extrabold',
     },
   },
 })
 
-const count = cva('text-[13px] font-bold whitespace-nowrap', {
+const count = cva('text-sm font-black whitespace-nowrap', {
   variants: {
     level: {
-      section: 'text-primary',
-      group: 'text-primary',
+      section: 'text-primary-text',
+      group: 'text-primary-text',
       chapter: 'text-text-secondary',
     },
   },
@@ -104,13 +104,13 @@ export function CurriculumHead({
       <div className="grid gap-1">
         <span className={title({ level })}>
           <ChevronDown
-            size={level === 'section' ? 17 : 16}
+            size={level === 'section' ? 20 : 18}
             className="group-aria-[expanded=false]:-rotate-90"
           />
           {label}
         </span>
         {caption && (
-          <small className="text-[12px] font-medium text-text-secondary">{caption}</small>
+          <small className="text-[13px] font-semibold text-text-secondary">{caption}</small>
         )}
       </div>
       <strong className={count({ level })}>{value}</strong>
@@ -121,7 +121,7 @@ export function CurriculumHead({
 // Numbered square in a part's title ("01").
 export function CurriculumIndex({ children }: { children: ReactNode }) {
   return (
-    <b className="inline-grid size-[30px] place-items-center rounded-[10px] bg-primary-soft text-[12px] text-primary">
+    <b className="inline-grid size-9 place-items-center rounded-xl bg-primary-soft text-sm font-black text-primary-text">
       {children}
     </b>
   )
@@ -129,13 +129,13 @@ export function CurriculumIndex({ children }: { children: ReactNode }) {
 
 // Thin progress bar under a curriculum header.
 export function CurriculumProgress({ value, className }: { value: number; className?: string }) {
-  return <Progress value={value} className={cn('mt-[11px]', className)} />
+  return <Progress value={value} className={cn('mt-3.5', className)} />
 }
 
 // Bordered list of ActivityRow.
 export function ActivityList({ children }: { children: ReactNode }) {
   return (
-    <div className="mt-[11px] flex flex-col overflow-hidden rounded-[14px] border border-line bg-surface">
+    <div className="mt-3.5 flex flex-col gap-2">
       {children}
     </div>
   )
@@ -143,5 +143,5 @@ export function ActivityList({ children }: { children: ReactNode }) {
 
 // Vertical stack of nested blocks under an expanded header.
 export function BlockList({ children }: { children: ReactNode }) {
-  return <div className="mt-3 flex flex-col gap-2.5">{children}</div>
+  return <div className="mt-3.5 flex flex-col gap-3">{children}</div>
 }

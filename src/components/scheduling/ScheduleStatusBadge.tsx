@@ -18,7 +18,7 @@ const tones: Record<ScheduleStatus, 'info' | 'success' | 'warning' | 'neutral'> 
 export default function ScheduleStatusBadge({ status }: { status: ScheduleStatus | string }) {
   const knownStatus = status in labels ? (status as ScheduleStatus) : null
   return (
-    <StatusBadge tone={knownStatus ? tones[knownStatus] : 'neutral'} size="sm">
+    <StatusBadge tone={knownStatus ? tones[knownStatus] : 'neutral'} size="md">
       {knownStatus ? labels[knownStatus] : status}
     </StatusBadge>
   )

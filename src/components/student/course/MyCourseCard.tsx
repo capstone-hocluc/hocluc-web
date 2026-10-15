@@ -41,44 +41,53 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
     <button
       type="button"
       onClick={() => onOpen(course)}
-      className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-[18px] border border-line-card bg-surface p-0 text-left shadow-[0_10px_22px_rgba(17,24,58,0.04)] transition duration-200 hover:-translate-y-[3px] hover:border-line-brand hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-primary/25"
+      className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-surface p-0 text-left shadow-card transition duration-150 hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[#174fbd] active:translate-y-[3px] active:shadow-none"
     >
-      <div className="relative flex h-[120px] items-end justify-between bg-linear-to-br from-primary-soft to-surface-sky p-3.5 before:absolute before:inset-0 before:bg-[linear-gradient(rgba(255,255,255,0.32)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.32)_1px,transparent_1px)] before:bg-[length:30px_30px]">
+      <div
+        className={cn(
+          'flex h-[104px] items-center justify-between gap-3 px-5',
+          isCompleted ? 'bg-practice-soft' : 'bg-primary-soft'
+        )}
+      >
         <StatusBadge
-          tone="primary"
+          tone={isCompleted ? 'success' : 'primary'}
           size="sm"
-          className="relative max-w-[calc(100%-56px)] overflow-hidden bg-surface/85 px-[11px] py-[7px] text-[11.5px] font-black text-ellipsis uppercase"
+          className="max-w-[calc(100%-64px)] overflow-hidden bg-surface px-3 py-1 text-xs text-ellipsis uppercase"
         >
           {badgeLabel}
         </StatusBadge>
-        <BookOpen size={34} className="relative shrink-0 text-primary/80" />
+        <span
+          className={cn(
+            'grid size-14 shrink-0 place-items-center rounded-2xl bg-surface shadow-card-soft',
+            isCompleted ? 'text-practice' : 'text-primary'
+          )}
+        >
+          <BookOpen size={28} />
+        </span>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 px-4 pt-3.5 pb-4">
+      <div className="flex flex-1 flex-col gap-3.5 px-5 pt-4 pb-5">
         <div>
-          <StatusBadge tone="primary" size="sm" className="mb-2 max-w-full font-black uppercase">
-            {badgeLabel}
-          </StatusBadge>
-          <h3 className="line-clamp-2 min-h-11 text-base leading-[1.38] font-black text-text-heading">
+          <h3 className="line-clamp-2 min-h-[50px] text-lg leading-[1.35] font-black tracking-[-0.2px] text-text-heading">
             {course.title}
           </h3>
-          <p className="mt-1.5 line-clamp-2 text-[13px] leading-normal text-text-body">
+          <p className="mt-1.5 line-clamp-2 text-sm leading-normal text-text-body">
             {course.description || 'Chưa có mô tả cho khóa học này.'}
           </p>
         </div>
 
         {(enrolledAtLabel || enrollmentTypeLabel || enrollment.activeStudyGroupName) && (
-          <div className="flex flex-wrap gap-x-2.5 gap-y-1 text-xs font-bold text-text-faint [&>span]:inline-flex [&>span]:items-center [&>span]:gap-[5px]">
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-bold text-text-secondary [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5">
             {enrolledAtLabel && (
               <span>
-                <CalendarDays size={12} />
+                <CalendarDays size={14} />
                 Đăng ký: {enrolledAtLabel}
               </span>
             )}
             {enrollmentTypeLabel && <span>{enrollmentTypeLabel}</span>}
             {enrollment.activeStudyGroupName && (
               <span>
-                <Users size={12} />
+                <Users size={14} />
                 {enrollment.activeStudyGroupName}
               </span>
             )}
@@ -87,19 +96,19 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
 
         <CourseProgress value={progress} />
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t-[1.5px] border-line pt-3.5">
           <span
             className={cn(
-              'inline-flex items-center gap-[5px] text-[13px] font-black',
-              isCompleted ? 'text-badge-success-text' : 'text-primary'
+              'inline-flex items-center gap-1.5 text-sm font-extrabold',
+              isCompleted ? 'text-badge-success-text' : 'text-primary-text'
             )}
           >
-            {isCompleted ? <CheckCircle2 size={14} /> : <CircleDot size={14} />}
+            {isCompleted ? <CheckCircle2 size={16} /> : <CircleDot size={16} />}
             {statusLabels[status]}
           </span>
-          <span className="inline-flex items-center gap-[7px] text-[13px] font-black whitespace-nowrap text-primary">
+          <span className="inline-flex items-center gap-1.5 text-sm font-extrabold whitespace-nowrap text-primary-text">
             Tiếp tục học
-            <ArrowRight size={15} className="transition-transform duration-200 group-hover:translate-x-[3px]" />
+            <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-[3px]" />
           </span>
         </div>
       </div>

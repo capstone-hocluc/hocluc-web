@@ -122,18 +122,20 @@ function StudyGroupCard({
 
   return (
     <div className="flex flex-col gap-4">
-      <Card as="section" padding="lg" radius="lg" aria-labelledby="study-group-card-title">
+      <Card as="section" padding="lg" radius="xl" aria-labelledby="study-group-card-title">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <CardEyebrow>HỌC CÙNG BẠN BÈ</CardEyebrow>
-            <CardTitle id="study-group-card-title" className="mb-1 text-base">
+            <CardTitle id="study-group-card-title" className="mb-1 text-xl">
               Nhóm học của bạn
             </CardTitle>
-            <p className="m-0 text-sm text-text-secondary">
+            <p className="m-0 text-[15px] text-text-body">
               Tìm bạn học và mentor phù hợp với mục tiêu của bạn.
             </p>
           </div>
-          <BookOpenCheck size={22} className="mt-1 shrink-0 text-primary" aria-hidden="true" />
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary">
+            <BookOpenCheck size={22} aria-hidden="true" />
+          </span>
         </div>
 
         {groupResource.status === 'loading' ? (
@@ -142,22 +144,22 @@ function StudyGroupCard({
             <Skeleton className="h-4 w-72 max-w-full" />
           </div>
         ) : groupResource.status === 'ready' && group ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-blue bg-primary-soft px-4 py-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-[1.5px] border-line-brand bg-primary-soft px-4 py-3.5">
             <div className="flex min-w-0 items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-primary">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-surface text-primary">
                 <Users size={19} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <strong className="block truncate text-sm font-bold text-text-heading">
+                <strong className="block truncate text-base font-extrabold text-text-heading">
                   {group.name}
                 </strong>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-secondary">
+                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold text-text-secondary">
                   <span>{group.houseLabel}</span>
                   <span>{formatStudyGroupLevel(group.level)}</span>
                   <MemberCount group={group} />
                 </div>
                 {group.mentors.length > 0 && (
-                  <p className="mt-1.5 mb-0 text-xs text-text-secondary">
+                  <p className="mt-1.5 mb-0 text-sm font-semibold text-text-secondary">
                     Mentor: {group.mentors.map((mentor) => mentor.fullName).join(', ')}
                   </p>
                 )}
@@ -183,12 +185,12 @@ function StudyGroupCard({
             </div>
           </div>
         ) : groupResource.status === 'ready' ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-soft bg-surface-soft px-4 py-3">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-[1.5px] border-line bg-surface-soft px-4 py-3.5">
             <div>
-              <strong className="block text-sm font-semibold text-text-heading">
+              <strong className="block text-base font-extrabold text-text-heading">
                 Bạn chưa tham gia nhóm học nào
               </strong>
-              <p className="mt-1 mb-0 text-sm text-text-secondary">
+              <p className="mt-1 mb-0 text-[15px] text-text-body">
                 Xem các nhóm được đề xuất theo mục tiêu và trình độ của bạn.
               </p>
             </div>

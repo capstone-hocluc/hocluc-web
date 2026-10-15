@@ -20,21 +20,21 @@ function ActivityShell({
   children,
 }: ActivityShellProps) {
   return (
-    <StudentPageContainer className="flex flex-col gap-3.5 px-[18px] pt-2 pb-8 text-text-heading max-[760px]:px-0 max-[760px]:pt-1.5 max-[760px]:pb-7">
+    <StudentPageContainer className="flex flex-col gap-5 pb-8 text-text-heading max-[760px]:pb-7">
       <Button
         appearance="ghost"
-        className="h-auto w-max gap-[7px] border-0 p-0 text-[13px] font-extrabold hover:bg-transparent"
+        className="h-auto w-max gap-2 border-0 p-0 text-sm font-extrabold text-primary-text hover:bg-transparent hover:underline"
         onClick={onBack}
       >
         <ArrowLeft size={17} />
         Quay lại khóa học
       </Button>
-      <div className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-text-secondary">
+      <div className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-text-secondary">
         <span>{courseTitle}</span>
-        <ChevronRight size={14} />
+        <ChevronRight size={15} />
         <span>{subjectTitle}</span>
-        <ChevronRight size={14} />
-        <strong className="font-bold text-text-heading">{chapterTitle}</strong>
+        <ChevronRight size={15} />
+        <strong className="font-extrabold text-text-heading">{chapterTitle}</strong>
       </div>
       {children}
     </StudentPageContainer>

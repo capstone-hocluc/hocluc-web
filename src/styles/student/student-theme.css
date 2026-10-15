@@ -1,0 +1,56 @@
+/*
+ * Student area in the landing-page style: Nunito, navy headings, blue-grey body text and "ledge"
+ * shadows (a solid 3-5px bottom edge instead of a soft blur). Set while StudentLayout is mounted
+ * (html[data-student]); the token names stay the same, so every student screen picks it up.
+ * Dark mode keeps its own token set from tokens.css.
+ */
+html[data-student]:not([data-theme='dark']) {
+  --font-sans: 'Nunito', 'Segoe UI', Arial, sans-serif;
+
+  --color-heading: #173555;
+  --color-body: #4c6275;
+  --color-text-heading: #173555;
+  --color-text-heading-soft: #2c4a68;
+  --color-text-strong: #24405d;
+  --color-text-label: #3d5a73;
+  --color-text-body: #4c6275;
+  --color-text-muted: #5b7083;
+  --color-text-subtle: #677c8e;
+  --color-text-secondary: #566b7e;
+  --color-text-emphasis: #2c4a68;
+  --color-text-faint: #677c8e;
+  --color-text-dark: #173555;
+  --color-text-dim: #4c6275;
+  --color-text-heading-muted: #3d5a73;
+
+  --color-border-primary: #cfe3ef;
+  --color-border-subtle: #dde8ef;
+  --color-surface-hover: #eaf7fe;
+
+  --color-app-bg: #f1f9ff;
+  --color-surface-tint: #f8fcff;
+  --color-surface-brand: #eaf7fe;
+  --color-surface-sky: #f3faff;
+  --color-line: #dde8ef;
+  --color-line-soft: #e8eff4;
+  --color-line-card: #dde8ef;
+  --color-line-brand: #b9e3f7;
+  --color-line-blue: #d3e8f4;
+  --color-line-shell: #dde8ef;
+
+  --shadow-card: 0 5px 0 #dce8f0;
+  --shadow-card-soft: 0 4px 0 #e2e9ef;
+  --shadow-card-hover: 0 6px 0 #c9e1ef;
+}
+
+html[data-student] body {
+  background: var(--color-app-bg);
+}
+
+html[data-student] :where(h1, h2, h3) {
+  text-wrap: balance;
+}
+
+html[data-student] :focus-visible {
+  outline-color: #174fbd;
+}

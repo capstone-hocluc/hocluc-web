@@ -59,20 +59,20 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
 
   return (
     <div className="flex flex-col gap-5">
-      <Card as="section">
+      <Card as="section" padding="lg" radius="xl">
         <CardEyebrow>{formatEnrollmentBranch(plan.branch)}</CardEyebrow>
-        {planMessage && <p className="mb-2.5 text-[13.5px] text-text-secondary">{planMessage}</p>}
-        <div className="mt-3 mb-2 flex items-center justify-between text-[13px] text-text-secondary">
+        {planMessage && <p className="mb-3 text-[15px] text-text-body">{planMessage}</p>}
+        <div className="mt-3 mb-2 flex items-center justify-between text-sm font-semibold text-text-secondary">
           {/* Course-timeline-elapsed, NOT lesson/learning progress. */}
           <span>Tiến trình thời gian khóa học</span>
-          <strong className="font-semibold text-text-heading">{elapsed}%</strong>
+          <strong className="font-black text-primary-text">{elapsed}%</strong>
         </div>
         <Progress value={elapsed} aria-label="Tiến trình thời gian khóa học" />
       </Card>
 
       {plan.recommendedCourse && (
-        <Card as="section">
-          <CardTitle>Khóa học đề xuất</CardTitle>
+        <Card as="section" padding="lg" radius="xl">
+          <CardTitle className="text-xl">Khóa học đề xuất</CardTitle>
           <div className="grid grid-cols-[minmax(0,320px)]">
             <CourseCard course={plan.recommendedCourse} onOpen={onOpenCourse} />
           </div>
@@ -80,26 +80,21 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
       )}
 
       {plan.catchUpRecordings.length > 0 && (
-        <Card as="section">
-          <CardTitle>Buổi học cần xem lại</CardTitle>
+        <Card as="section" padding="lg" radius="xl">
+          <CardTitle className="text-xl">Buổi học cần xem lại</CardTitle>
           <div className="flex flex-col">
             {plan.catchUpRecordings.map((item) => (
               <CourseListRow
                 key={item.liveClassId}
                 title={item.title}
                 meta={
-                  <span className="text-[12.5px] text-text-secondary">
+                  <span className="text-sm font-semibold text-text-secondary">
                     {formatDateTime(item.startTime)}
                   </span>
                 }
                 actions={
                   item.recordingUrl && (
-                    <Button
-                      asChild
-                      size="sm"
-                      appearance="outline"
-                      className="h-8 px-3 text-[12.5px] font-semibold"
-                    >
+                    <Button asChild size="sm" appearance="outline">
                       <a href={item.recordingUrl} target="_blank" rel="noreferrer">
                         Xem bản ghi
                       </a>
@@ -113,25 +108,25 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
       )}
 
       {sortedSections.length > 0 && (
-        <Card as="section">
-          <CardTitle>Lộ trình học đề xuất</CardTitle>
+        <Card as="section" padding="lg" radius="xl">
+          <CardTitle className="text-xl">Lộ trình học đề xuất</CardTitle>
           <div className="flex flex-col">
             {sortedSections.map((item) => (
               <div
-                className="flex items-center gap-3 border-t border-line-soft py-3 first:border-t-0"
+                className="flex items-center gap-3 border-t-[1.5px] border-line py-3.5 first:border-t-0"
                 key={item.sectionCourseId}
               >
                 {item.priority && (
-                  <StatusBadge tone="live" size="sm" className="shrink-0 font-semibold">
-                    <Star size={11} />
+                  <StatusBadge tone="live" size="sm" className="shrink-0 text-xs">
+                    <Star size={12} />
                     Ưu tiên
                   </StatusBadge>
                 )}
                 <div className="flex min-w-0 flex-col gap-[3px]">
-                  <strong className="text-sm font-medium text-text-heading">
+                  <strong className="text-base font-extrabold text-text-heading">
                     {item.sectionCourseTitle}
                   </strong>
-                  <span className="text-[12.5px] text-text-secondary">
+                  <span className="text-sm font-semibold text-text-secondary">
                     {item.phaseName}
                     {item.categoryName ? ` · ${item.categoryName}` : ''}
                   </span>

@@ -32,7 +32,7 @@ interface StudentTopbarProps {
 }
 
 const iconButton =
-  'relative grid size-12 flex-none cursor-pointer place-items-center rounded-[15px] bg-surface text-primary shadow-[0_10px_22px_rgba(17,24,58,0.04)] max-[760px]:size-11'
+  'relative grid size-11 flex-none cursor-pointer place-items-center rounded-2xl border-2 border-line bg-surface text-primary-text transition active:translate-y-0.5 active:shadow-none focus-visible:outline-3 focus-visible:outline-offset-2'
 
 function StudentTopbar({
   profile,
@@ -48,7 +48,7 @@ function StudentTopbar({
   onNotify,
 }: StudentTopbarProps) {
   return (
-    <header className="sticky top-0 z-60 col-span-full row-start-1 flex min-h-16 items-center justify-between gap-[18px] border-b border-line-shell bg-surface/95 px-7 py-3 shadow-[0_10px_28px_rgba(17,24,58,0.05)] backdrop-blur-md backdrop-saturate-[180%] max-[760px]:flex-wrap max-[760px]:gap-2.5 max-[760px]:px-3.5 max-[760px]:py-2.5">
+    <header className="sticky top-0 z-60 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-[18px] border-b border-line-shell bg-surface/92 px-7 py-3 backdrop-blur-md backdrop-saturate-[180%] max-[760px]:flex-wrap max-[760px]:gap-2.5 max-[760px]:px-3.5 max-[760px]:py-2.5">
       <div className="flex min-w-0 flex-none items-center gap-3 max-[760px]:flex-[1_0_auto]">
         <button
           type="button"
@@ -68,18 +68,18 @@ function StudentTopbar({
         </button>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-3.5 max-[760px]:w-full max-[760px]:flex-[1_1_100%] max-[760px]:gap-2">
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-3.5 max-[760px]:gap-2">
         <button
           type="button"
           aria-label={`Chuỗi ${streak} ngày`}
           onClick={() => onNotify?.(`Bạn đang giữ chuỗi học tập ${streak} ngày.`)}
-          className="inline-flex h-[42px] cursor-pointer items-center gap-2 rounded-full bg-streak-soft px-[18px] text-streak max-[760px]:size-11 max-[760px]:justify-center max-[760px]:p-0"
+          className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-2xl border-2 border-[#ffd9a3] bg-streak-soft px-[18px] text-streak transition active:translate-y-0.5 active:shadow-none max-[760px]:size-11 max-[760px]:justify-center max-[760px]:p-0"
         >
           <Flame size={17} />
           <strong className="text-sm whitespace-nowrap max-[760px]:hidden">Khám phá streak</strong>
         </button>
 
-        <RoleSwitcher className="h-[42px] rounded-full max-[760px]:h-11" />
+        <RoleSwitcher className="h-11 rounded-2xl" />
 
         <Popover>
           <PopoverTrigger asChild>
@@ -88,7 +88,7 @@ function StudentTopbar({
               aria-label="Thông báo"
               className={cn(
                 iconButton,
-                'size-[42px] rounded-full bg-surface-sky text-text-heading shadow-none max-[760px]:size-11'
+                'text-text-heading'
               )}
             >
               <Bell size={18} />
@@ -112,7 +112,7 @@ function StudentTopbar({
             <button
               type="button"
               aria-label="Mở menu hồ sơ"
-              className={cn(iconButton, 'overflow-hidden border border-line-blue p-0')}
+              className={cn(iconButton, 'overflow-hidden p-0')}
             >
               {profileLoading ? (
                 <Skeleton className="size-full rounded-none" />

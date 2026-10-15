@@ -24,9 +24,9 @@ function LearningAccuracyCard({ item, comparisonLabel }) {
         <IconTile tone={item.accent}>
           <Icon size={17} />
         </IconTile>
-        <span className="text-[13px] leading-[1.25] font-black text-text-dark">{item.name}</span>
+        <span className="text-sm leading-[1.25] font-black text-text-heading">{item.name}</span>
       </div>
-      <strong className="text-[30px] leading-none font-black text-primary">{item.accuracy}%</strong>
+      <strong className="text-[32px] leading-none font-black tracking-[-0.5px] text-primary-text">{item.accuracy}%</strong>
       <TrendBadge value={item.trend} label={comparisonLabel.toLowerCase()} />
     </ProfileCard>
   )
@@ -68,7 +68,7 @@ function LearningTab({ onAction, panelId, labelledBy }) {
       <section className="grid grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] gap-[18px] max-[1181px]:grid-cols-1">
         <ProfileCard
           as="article"
-          className="relative overflow-hidden p-5 before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(rgba(28, 176, 246,0.055)_1px,transparent_1px),linear-gradient(90deg,rgba(28, 176, 246,0.055)_1px,transparent_1px)] before:bg-[length:28px_28px] before:content-[''] [&>*]:relative [&>*]:z-1"
+          className="p-5"
         >
           <ProfileHeading title="Tiến độ khóa học" action="Xem tất cả" onAction={onAction} />
           <div className="grid grid-cols-[148px_minmax(150px,0.45fr)_minmax(0,1fr)] items-center gap-5 max-[1181px]:grid-cols-1 max-[760px]:gap-4">
@@ -81,9 +81,9 @@ function LearningTab({ onAction, panelId, labelledBy }) {
               }
             >
               <strong className="text-[28px] font-black text-text-heading">{totalCourses}</strong>
-              <span className="text-[11px] font-extrabold text-text-secondary">Tổng khóa học</span>
+              <span className="text-xs font-bold text-text-body">Tổng khóa học</span>
             </div>
-            <div className="flex flex-col gap-2.5 text-[12px] font-extrabold text-text-secondary">
+            <div className="flex flex-col gap-2.5 text-[13px] font-bold text-text-body">
               {[
                 { color: 'bg-[var(--color-line)]', text: `Chưa bắt đầu: ${untouchedCourses}` },
                 { color: 'bg-primary', text: `Đang học: ${activeCourses}` },
@@ -95,12 +95,12 @@ function LearningTab({ onAction, panelId, labelledBy }) {
               ))}
             </div>
             <div className="flex flex-col gap-[13px]">
-              <strong className="text-[14px] font-black text-text-dark">Khóa học gần đây</strong>
+              <strong className="text-[15px] font-black text-text-heading">Khóa học gần đây</strong>
               {learningProfilePage.courseProgress.map((course) => (
                 <div key={course.name}>
-                  <p className="mb-2 flex items-center justify-between gap-3 text-[12px] leading-[1.4] font-extrabold text-text-emphasis">
+                  <p className="mb-2 flex items-center justify-between gap-3 text-sm leading-[1.4] font-bold text-text-heading">
                     <span className="min-w-0">{course.name}</span>
-                    <b className="text-primary">{course.progress}%</b>
+                    <b className="text-primary-text">{course.progress}%</b>
                   </p>
                   <ProfileProgress value={course.progress} />
                 </div>
@@ -158,11 +158,11 @@ function LearningTab({ onAction, panelId, labelledBy }) {
               key={`${item.date}-${item.title}`}
               className="grid grid-cols-[58px_12px_minmax(0,1fr)] items-start gap-[13px]"
             >
-              <time className="text-[12px] font-black text-text-secondary">{item.date}</time>
+              <time className="text-[13px] font-extrabold text-text-body">{item.date}</time>
               <span className="mt-[3px] size-3 rounded-full border-[3px] border-primary bg-surface" />
               <p className="flex flex-col gap-[3px]">
-                <strong className="text-[13px] font-black text-text-dark">{item.title}</strong>
-                <small className="text-[12px] font-bold text-text-secondary">{item.meta}</small>
+                <strong className="text-[15px] font-black text-text-heading">{item.title}</strong>
+                <small className="text-[13px] font-semibold text-text-body">{item.meta}</small>
               </p>
             </div>
           ))}

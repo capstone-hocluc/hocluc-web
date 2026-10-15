@@ -8,6 +8,9 @@ import LearningTypeIcon from '../common/LearningTypeIcon'
 import CurriculumRow from './CurriculumRow'
 import QuizRow from './QuizRow'
 
+const rowIcon = 'size-10 rounded-xl [&>svg]:size-5'
+const statusText = 'text-[13px]'
+
 interface LessonRowProps {
   lesson: CourseStudyLesson
   isCurrent: boolean
@@ -26,14 +29,14 @@ function LessonRow({ lesson, isCurrent, onOpen, onOpenQuiz }: LessonRowProps) {
   return (
     <>
       <CurriculumRow
-        icon={<LearningTypeIcon type={isVideo ? 'video' : 'document'} />}
+        icon={<LearningTypeIcon type={isVideo ? 'video' : 'document'} className={rowIcon} />}
         kind={kindLabel}
         title={
           <>
             {lesson.title}
             {lesson.preview && (
-              <StatusBadge tone="practice" size="sm" className="text-[10.5px] font-bold">
-                <Sparkles size={11} />
+              <StatusBadge tone="practice" size="sm" className="text-xs">
+                <Sparkles size={12} />
                 Học thử
               </StatusBadge>
             )}
@@ -44,17 +47,19 @@ function LessonRow({ lesson, isCurrent, onOpen, onOpenQuiz }: LessonRowProps) {
         onClick={() => onOpen(lesson.id)}
         side={
           isCompleted ? (
-            <LearningStatus status="completed">Đã hoàn thành</LearningStatus>
+            <LearningStatus status="completed" className={statusText}>Đã hoàn thành</LearningStatus>
           ) : isInProgress || isCurrent ? (
-            <LearningStatus status="current">Đang học</LearningStatus>
+            <LearningStatus status="current" className={statusText}>Đang học</LearningStatus>
           ) : (
-            <LearningStatus status="idle">{getLessonStatusLabel(lesson.status)}</LearningStatus>
+            <LearningStatus status="idle" className={statusText}>
+              {getLessonStatusLabel(lesson.status)}
+            </LearningStatus>
           )
         }
       />
 
       {lesson.quizzes.map((quiz) => (
-        <div className="pl-5 max-[640px]:pl-2.5" key={quiz.id}>
+        <div className="pl-6 max-[640px]:pl-3" key={quiz.id}>
           <QuizRow quiz={quiz} onOpenQuiz={onOpenQuiz} />
         </div>
       ))}

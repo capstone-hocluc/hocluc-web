@@ -11,13 +11,13 @@ interface StudentPageHeaderProps {
 
 function StudentPageHeader({ title, description, actions, className }: StudentPageHeaderProps) {
   return (
-    <header className={cn('mb-4 flex flex-wrap items-end justify-between gap-3', className)}>
+    <header className={cn('mb-6 flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="min-w-0">
-        <h1 className="mb-1 text-[26px] leading-[1.15] font-black text-text-heading max-[560px]:text-[22px]">
+        <h1 className="mb-1.5 text-[32px] leading-[1.18] font-black tracking-[-0.8px] text-balance text-text-heading max-[560px]:text-[25px]">
           {title}
         </h1>
         {description && (
-          <p className="text-[13px] leading-[1.45] text-text-secondary">{description}</p>
+          <p className="max-w-2xl text-base leading-[1.55] text-text-body">{description}</p>
         )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2.5">{actions}</div>}
