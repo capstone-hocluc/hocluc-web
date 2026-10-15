@@ -4,11 +4,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Eye,
-  Filter,
   LoaderCircle,
   MoreHorizontal,
   Plus,
-  Search,
   Trash2,
 } from '../console/icons'
 import {
@@ -30,11 +28,10 @@ import {
 import { grantedRoles } from '../../lib/role-home'
 import Button from '../console/button'
 import DataTable from '../console/data-table'
-import SelectField from '../console/select-field'
+import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../console/filter-toolbar'
 import Status from '../console/status'
 import ConfirmDialog from '../console/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
-import { Input } from '../tailgrids/core/input'
 import { Pagination } from '../tailgrids/core/pagination'
 import UserCreateDialog from './user-create-dialog'
 import UserDetailDialog from './user-detail-dialog'
@@ -76,7 +73,6 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL')
   const [query, setQuery] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
   const [pageData, setPageData] = useState<UserListPage>(emptyPage)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -328,34 +324,15 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
       className="overflow-hidden rounded-xl border border-card-border bg-card-background"
       aria-busy={loading}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <div className="relative w-full sm:w-80">
-          <Search size={16} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-icon-tertiary" />
-          <Input
-            aria-label="Tìm theo tên hoặc email"
-            placeholder="Tìm theo tên hoặc email..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="h-9 w-full py-0 pl-10 text-sm"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" appearance="outline" aria-expanded={showFilters} onClick={() => setShowFilters((open) => !open)}>
-            <Filter size={16} />
-            Lọc
-          </Button>
-          {canCreateUsers && !readOnly && (
-            <Button size="sm" onClick={() => setCreateUserOpen(true)}>
-              <Plus size={16} />
-              Thêm tài khoản
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="flex flex-wrap items-center gap-3 px-5 pb-4">
-          <SelectField
+      <FilterToolbar>
+        <SearchInput
+          ariaLabel="Tìm theo tên hoặc email"
+          placeholder="Tìm theo tên hoặc email..."
+          value={query}
+          onChange={setQuery}
+        />
+        <FilterGroup>
+          <FilterSelect
             ariaLabel="Lọc theo vai trò"
             options={ROLE_FILTER_OPTIONS}
             value={roleFilter}
@@ -364,7 +341,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               setPage(0)
             }}
           />
-          <SelectField
+          <FilterSelect
             ariaLabel="Lọc theo trạng thái"
             options={STATUS_FILTER_OPTIONS}
             value={statusFilter}
@@ -373,8 +350,14 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               setPage(0)
             }}
           />
-        </div>
-      )}
+          {canCreateUsers && !readOnly && (
+            <Button size="sm" onClick={() => setCreateUserOpen(true)}>
+              <Plus size={16} />
+              Thêm tài khoản
+            </Button>
+          )}
+        </FilterGroup>
+      </FilterToolbar>
 
       {feedback && (
         <div

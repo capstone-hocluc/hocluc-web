@@ -2,14 +2,13 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
-import SelectField from '../../console/select-field'
+import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Eye, PackageOpen, Pencil, Plus, Search, Send, Trash2 } from '../../console/icons'
+import { Eye, PackageOpen, Pencil, Plus, Send, Trash2 } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
-import { Input } from '../../tailgrids/core/input'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getCategories } from '../../../services/categoryService'
@@ -206,56 +205,55 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         </Notice>
       )}
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        <div className="flex flex-wrap gap-3 px-5 py-4">
+        <FilterToolbar>
           <form
-            className="flex w-full gap-2 sm:w-auto sm:flex-1"
+            className="w-full sm:max-w-md"
             onSubmit={(e) => {
               e.preventDefault()
               setQuery((old) => ({ ...old, query: search.trim(), page: 0 }))
             }}
           >
-            <Input
-              aria-label="Tìm khóa học"
-              placeholder="Tên khóa học..."
+            <SearchInput
+              ariaLabel="Tìm khóa học"
+              placeholder="Tên khóa học... (Enter để tìm)"
               maxLength={200}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 min-w-0 flex-1 py-0"
+              onChange={setSearch}
+              className="sm:max-w-none"
             />
-            <Button type="submit" appearance="outline" aria-label="Tìm kiếm">
-              <Search size={16} />
-            </Button>
           </form>
-          <SelectField
-            ariaLabel="Loại khóa lọc"
-            value={query.type ?? 'ALL'}
-            onChange={(v) => setFilter('type', v)}
-            options={[
-              { id: 'ALL', label: 'Tất cả loại' },
-              { id: 'MAIN', label: 'MAIN · Trọn bộ' },
-              { id: 'SECTION', label: 'SECTION · Khóa nhỏ' },
-            ]}
-          />
-          <SelectField
-            ariaLabel="Trạng thái khóa lọc"
-            value={query.status ?? 'ALL'}
-            onChange={(v) => setFilter('status', v)}
-            options={[
-              { id: 'ALL', label: 'Tất cả trạng thái' },
-              ...Object.entries(COURSE_STATUS_LABELS).map(([id, label]) => ({ id, label })),
-            ]}
-          />
-          <SelectField
-            ariaLabel="Danh mục lọc"
-            value={query.categoryId ?? 'ALL'}
-            onChange={(v) => setFilter('categoryId', v)}
-            disabled={categories.status !== 'ready'}
-            options={[
-              { id: 'ALL', label: 'Tất cả danh mục' },
-              ...(categories.data ?? []).map((c) => ({ id: c.id, label: c.name })),
-            ]}
-          />
-        </div>
+          <FilterGroup>
+            <FilterSelect
+              ariaLabel="Loại khóa lọc"
+              value={query.type ?? 'ALL'}
+              onChange={(v) => setFilter('type', v)}
+              options={[
+                { id: 'ALL', label: 'Tất cả loại' },
+                { id: 'MAIN', label: 'MAIN · Trọn bộ' },
+                { id: 'SECTION', label: 'SECTION · Khóa nhỏ' },
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Trạng thái khóa lọc"
+              value={query.status ?? 'ALL'}
+              onChange={(v) => setFilter('status', v)}
+              options={[
+                { id: 'ALL', label: 'Tất cả trạng thái' },
+                ...Object.entries(COURSE_STATUS_LABELS).map(([id, label]) => ({ id, label })),
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Danh mục lọc"
+              value={query.categoryId ?? 'ALL'}
+              onChange={(v) => setFilter('categoryId', v)}
+              disabled={categories.status !== 'ready'}
+              options={[
+                { id: 'ALL', label: 'Tất cả danh mục' },
+                ...(categories.data ?? []).map((c) => ({ id: c.id, label: c.name })),
+              ]}
+            />
+          </FilterGroup>
+        </FilterToolbar>
         <ScheduleResourceState skeleton="table"
           status={resource.status}
           errorMessage={resource.errorMessage}

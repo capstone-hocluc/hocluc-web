@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { Breadcrumbs } from '../tailgrids/core/breadcrumbs'
 import { Eye } from './icons'
 
-// NextAdmin page header: "Home > page" breadcrumb and 28/32 title stacked on the left, optional action on the right.
+// Page header in the CRM dashboard's style: breadcrumb, a bold 26/30px title, a readable description and the page
+// actions on the right, all closed off by a divider so the page content starts clearly below it.
 interface PageHeadingProps {
   title: string
   subtitle?: ReactNode
@@ -17,8 +18,8 @@ function PageHeading({ title, subtitle, action, readOnly = false }: PageHeadingP
   const [, first, second] = window.location.pathname.split('/')
   const homeHref = first === 'console' ? `/console/${second ?? ''}` : `/${first ?? ''}`
   return (
-    <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-      <div className="flex flex-col gap-2">
+    <header className="flex flex-col items-start justify-between gap-4 border-b border-card-border pb-5 sm:flex-row sm:items-end">
+      <div className="flex min-w-0 flex-col gap-2">
         <Breadcrumbs
           dividerType="chevron"
           items={[
@@ -27,7 +28,9 @@ function PageHeading({ title, subtitle, action, readOnly = false }: PageHeadingP
           ]}
         />
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-[28px] leading-8 font-medium text-text-primary">{title}</h1>
+          <h1 className="text-[26px] leading-8 font-semibold tracking-[-0.5px] text-balance text-text-primary sm:text-[30px]">
+            {title}
+          </h1>
           {readOnly && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-background-gray-secondary px-2.5 py-1 text-xs font-medium text-text-secondary">
               <Eye size={14} aria-hidden />
@@ -35,10 +38,10 @@ function PageHeading({ title, subtitle, action, readOnly = false }: PageHeadingP
             </span>
           )}
         </div>
-        {subtitle && <p className="text-sm text-text-tertiary">{subtitle}</p>}
+        {subtitle && <p className="max-w-2xl text-sm leading-6 text-text-secondary">{subtitle}</p>}
       </div>
-      {action && <div className="flex flex-wrap items-center gap-3">{action}</div>}
-    </div>
+      {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+    </header>
   )
 }
 
