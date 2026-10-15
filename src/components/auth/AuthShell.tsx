@@ -16,7 +16,7 @@ interface AuthShellProps {
 }
 
 const CARD =
-  'relative z-[1] w-full max-w-[480px] overflow-hidden rounded-[24px] border border-border-primary bg-white shadow-[0_24px_64px_-36px_rgba(0,125,181,.42)]'
+  'relative z-[1] w-full max-w-[480px] overflow-hidden rounded-[24px] border border-border-primary bg-surface shadow-[0_24px_64px_-36px_rgba(0,125,181,.42)]'
 
 /** Shared light-brand page frame for learner login and management login. */
 function AuthShell({
@@ -62,19 +62,19 @@ function AuthShell({
 
   return (
     <main
-      className={`hl-auth-page relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-gradient-to-br from-brand-soft-bg via-white to-brand-soft/60 px-4 pb-6 pt-16 sm:px-6 ${className}`}
+      className={`hl-auth-page relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-gradient-to-br from-brand-soft-bg via-surface to-brand-soft/60 px-4 pb-6 pt-16 sm:px-6 ${className}`}
     >
       <button
         type="button"
         onClick={onBack}
         aria-label="Quay lại trang chủ"
-        className="absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-semibold text-primary-text transition-colors hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:left-6"
+        className="absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-semibold text-primary-text transition-colors hover:bg-surface/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:left-6"
       >
         <ArrowLeft size={16} aria-hidden="true" />
         {backLabel}
       </button>
       {showThemeToggle && (
-        <ThemeToggle className="absolute right-4 top-4 border border-border-primary bg-white/90 text-primary-text sm:right-6" />
+        <ThemeToggle className="absolute right-4 top-4 border border-border-primary bg-surface/90 text-primary-text sm:right-6" />
       )}
       <div className={CARD}>{body}</div>
     </main>

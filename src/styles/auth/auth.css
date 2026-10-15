@@ -38,7 +38,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1.5px solid #dfe6f7;
+  border: 1.5px solid var(--color-border-primary);
   border-radius: 14px;
   background: var(--color-surface);
   color: var(--color-text-emphasis);
@@ -90,7 +90,7 @@
 .hl-auth-divider span {
   height: 1px;
   flex: 1;
-  background: #dfe6f7;
+  background: var(--color-border-primary);
 }
 .hl-auth-label {
   display: flex;
@@ -116,7 +116,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border: 1.5px solid #dfe6f7;
+  border: 1.5px solid var(--color-border-primary);
   border-radius: 13px;
   background: var(--color-surface);
   color: #8791ae;
@@ -293,9 +293,9 @@
   align-items: center;
   gap: 8px;
   padding: 24px 18px;
-  border: 1px solid #d9e4ff;
+  border: 1px solid var(--color-border-primary);
   border-radius: 16px;
-  background: linear-gradient(135deg, #f0faff, var(--color-surface));
+  background: linear-gradient(135deg, var(--color-surface-hover), var(--color-surface));
   color: var(--color-text-emphasis);
   text-align: center;
 }
@@ -312,7 +312,7 @@
   overflow-wrap: anywhere;
 }
 .hl-auth-resend {
-  border: 1px solid #d9e4ff;
+  border: 1px solid var(--color-border-primary);
   border-radius: 12px;
   padding: 11px 14px;
   background: var(--color-surface);
@@ -325,7 +325,7 @@
 .hl-auth-resend:disabled {
   cursor: wait;
   color: #98a2bc;
-  background: #f7fcfe;
+  background: var(--color-surface-hover);
 }
 .hl-auth-recovery-actions {
   display: flex;
