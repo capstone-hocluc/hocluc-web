@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Home,
   ListTree,
+  MailQuestion,
   Search,
   ShoppingBag,
   UserRound,
@@ -18,6 +19,7 @@ export type StudentNavKey =
   | 'courses'
   | 'schedule'
   | 'tutor'
+  | 'chat'
   | 'assessments'
   | 'learning-profile'
   | 'orders'
@@ -51,6 +53,7 @@ export const studentNavGroups: StudentNavGroup[] = [
     label: 'Luyện tập',
     items: [
       { key: 'tutor', label: 'Gia sư AI', icon: Bot, path: studentRoutes.tutor() },
+      { key: 'chat', label: 'Hỏi Mentor', icon: MailQuestion, path: studentRoutes.chat() },
       { key: 'assessments', label: 'Bài kiểm tra / thi thử', icon: ClipboardCheck, path: studentRoutes.placement() },
       { key: 'learning-profile', label: 'Hồ sơ năng lực', icon: UserRound, path: studentRoutes.learningProfile() },
     ],
@@ -76,6 +79,8 @@ export function getStudentNavKey(route: StudentRoute | null): StudentNavKey | nu
       return 'roadmap'
     case 'tutor':
       return 'tutor'
+    case 'chat':
+      return 'chat'
     case 'schedule':
       return 'schedule'
     case 'learning-profile':

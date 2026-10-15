@@ -60,7 +60,7 @@ export interface ConsoleNavItem {
   roles?: UserRole[]
   badgeKey?: NavBadgeKey
   featureFlag?: FeatureFlag
-  /** Listed in the menu but not built yet: opens the "Đang phát triển" state. */
+  /** Not built yet: opens the "Đang phát triển" state, and stays out of the menu while `unfinishedPages` is off. */
   soon?: boolean
 }
 
@@ -348,7 +348,10 @@ export interface ConsoleNavGroup {
 
 export function buildNav(role: UserRole): ConsoleNavGroup[] {
   const visible = CONSOLE_NAV.filter(
-    (item) => allows(role, item) && (!item.featureFlag || isFeatureEnabled(item.featureFlag))
+    (item) =>
+      allows(role, item) &&
+      (!item.featureFlag || isFeatureEnabled(item.featureFlag)) &&
+      (!item.soon || isFeatureEnabled('unfinishedPages'))
   )
   // The administrator works on the system first; for everyone else it is a side errand, so it goes last.
   const order =
