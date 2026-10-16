@@ -6,29 +6,25 @@ export type LandingIconName =
   | 'arrow-up-right'
   | 'book-open'
   | 'calculator'
-  | 'calendar'
+  | 'chevron-down'
+  | 'message-circle'
+  | 'sparkles'
   | 'chart-column-increasing'
   | 'check'
-  | 'chevron-down'
-  | 'clock'
   | 'flask-conical'
   | 'languages'
   | 'log-out'
-  | 'menu'
-  | 'message-circle'
   | 'package'
-  | 'rotate-ccw'
   | 'shopping-cart'
-  | 'sparkles'
   | 'user-round'
+  | 'menu'
+  | 'rotate-ccw'
   | 'x'
 
 export interface LandingLink {
-  label: string
-  /** Anchor on the landing page. */
-  href: string
-  /** Where the link goes from other pages; defaults to the same anchor on the landing page. */
   pageHref?: string
+  label: string
+  href: string
 }
 
 export interface HeroSlide {
@@ -43,7 +39,6 @@ export interface LandingHero {
   titleLines: [string, string]
   description: string
   primaryCta: string
-  accessNote: string
   secondaryCta: string
   slides: HeroSlide[]
 }
@@ -63,6 +58,7 @@ export interface ExamIntro {
   eyebrow: string
   title: string
   summary: string
+  sheetCaption: string
   structureTitle: string
   parts: ExamPart[]
   totalQuestions: number
@@ -121,16 +117,20 @@ export interface SampleQuestion {
 }
 
 export const landingNav: LandingLink[] = [
+  { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
   { label: 'Chương trình học', href: '#chuong-trinh' },
-  { label: 'Khóa học', href: '#cac-khoa-hoc', pageHref: '/courses' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Bài học mẫu', href: '#hoc-thu' },
   { label: 'V-ACT', href: '#ky-thi' },
 ]
 
 export const landingFooterNav: LandingLink[] = [
-  ...landingNav,
-  { label: 'Câu hỏi thường gặp', href: '#faq' },
+  { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
+  { label: 'Chương trình học', href: '#chuong-trinh' },
+  { label: 'Cách học', href: '#lo-trinh' },
+  { label: 'Bài học mẫu', href: '#hoc-thu' },
+  { label: 'Tìm hiểu V-ACT', href: '#ky-thi' },
+  { label: 'Hỗ trợ', href: '#faq' },
 ]
 
 const landingAssets = '/landing-v2/assets'
@@ -139,7 +139,6 @@ export const landingHero: LandingHero = {
   titleLines: ['Ôn đúng trọng tâm.', 'Vững bước vào V-ACT.'],
   description: 'Tìm phần cần học tiếp theo, luyện đúng trọng tâm.',
   primaryCta: 'Làm đánh giá miễn phí',
-  accessNote: 'Bài đánh giá miễn phí, cần đăng nhập để làm bài.',
   secondaryCta: 'Xem khóa học',
   slides: [
     {
@@ -168,6 +167,7 @@ export const examIntro: ExamIntro = {
   title: 'Kỳ thi Đánh giá năng lực V-ACT là gì?',
   summary:
     'Đánh giá năng lực (ĐGNL) là tên gọi chung của các kỳ thi tuyển sinh sớm do đại học tổ chức. V-ACT là kỳ thi ĐGNL của Đại học Quốc gia TP.HCM: bài thi trắc nghiệm trên giấy, đo năng lực cốt lõi cần cho việc học đại học và được hơn 100 trường đại học, cao đẳng dùng để xét tuyển.',
+  sheetCaption: 'Minh họa phiếu trả lời trắc nghiệm',
   structureTitle: 'Cấu trúc đề thi',
   parts: [
     {
@@ -218,27 +218,6 @@ export const examIntro: ExamIntro = {
     updatedAt: '14/10/2026',
     note: 'Lịch thi và lệ phí xem thông báo mới nhất của ĐHQG-HCM.',
   },
-}
-
-export const examFacts = {
-  label: 'Kỳ thi V-ACT · ĐGNL ĐHQG-HCM',
-  link: 'Tìm hiểu kỳ thi',
-}
-
-export const coursesSection = {
-  title: 'Chọn khóa học cho mục tiêu V-ACT.',
-  text: 'Xem lịch khai giảng, học phí và nội dung từng khóa trước khi đăng ký.',
-  cardCta: 'Xem chi tiết',
-  owned: 'Đã sở hữu',
-  allCta: 'Xem tất cả khóa học',
-  loading: 'Đang tải khóa học…',
-  errorTitle: 'Chưa tải được danh sách khóa học.',
-  errorText: 'Kiểm tra kết nối rồi thử lại, hoặc mở trang Khóa học.',
-  retry: 'Thử lại',
-  emptyTitle: 'Khóa học đang được cập nhật.',
-  emptyText: 'Trong lúc chờ, bạn có thể làm bài đánh giá miễn phí để biết mình nên bắt đầu từ đâu.',
-  emptyCta: 'Làm đánh giá miễn phí',
-  emptyImage: `/landing-v2/assets/mai-avatar-interaction.webp`,
 }
 
 export const catalogHeading = {
@@ -500,27 +479,22 @@ export const journey = {
   cta: 'Xem gợi ý nhanh',
   steps: [
     {
-      title: 'Đăng nhập và đặt mục tiêu',
+      title: 'Đặt mục tiêu',
       text: 'Tạo tài khoản học sinh, chọn mục tiêu để bắt đầu.',
     },
     {
-      title: 'Làm bài đánh giá đầu vào',
+      title: 'Hiểu điểm xuất phát',
       text: 'Bài đánh giá miễn phí bao quát các nhóm kiến thức V-ACT.',
     },
     {
-      title: 'Xem điểm mạnh và phần cần ôn',
+      title: 'Chọn phần cần học',
       text: 'Đọc kết quả theo từng phần để hiểu mình nên tập trung vào đâu.',
     },
     {
-      title: 'Nhận gợi ý học tiếp',
-      text: 'Lộ trình gợi ý khóa học, bài học và phần luyện tập phù hợp.',
+      title: 'Học và luyện mỗi ngày',
+      text: 'Theo dõi bài học, luyện tập và xem lại những phần chưa vững.',
     },
   ],
-  cycle: {
-    title: 'Sau đó, mỗi vòng học đi theo nhịp',
-    text: 'Mỗi vòng giúp bạn biết phần nào đã vững và phần nào cần quay lại củng cố.',
-    steps: ['Học', 'Luyện', 'Thực hành', 'Đánh giá', 'Củng cố', 'Đánh giá lại'],
-  },
   avatars: {
     label: 'Mai và Nam học cùng avatar hình khối',
     images: [
@@ -531,12 +505,11 @@ export const journey = {
 }
 
 export const sampleLesson = {
-  title: 'Xem thử cách một câu hỏi được giải thích.',
+  title: 'Thử một câu. Hiểu thêm một chút.',
   intro: 'Câu luyện mẫu · 3 câu ngắn · có giải thích sau mỗi câu.',
   disclaimer: 'Câu luyện mẫu · không phải bài thi V-ACT đầy đủ',
-  featureTitle: 'Mỗi câu trả lời mở ra',
-  featureAccent: 'một bước học tiếp theo.',
-  coursesLink: 'Học tiếp với các khóa học',
+  featureTitle: 'Hiểu cách làm,',
+  featureAccent: 'nhìn ra cách học.',
   features: [
     {
       title: 'Biết câu hỏi thuộc nhóm nào',
@@ -578,6 +551,69 @@ export const sampleQuestions: SampleQuestion[] = [
       'Thay đổi lượng ánh sáng và giữ các yếu tố còn lại giống nhau. Ánh sáng là biến độc lập; loại cây, lượng nước và đất cần được kiểm soát để so sánh có ý nghĩa.',
   },
 ]
+
+export const calculatorLink = {
+  label: 'Công cụ học tập · Toán',
+  title: 'Muốn luyện thao tác trên fx-580VN X?',
+  text: 'Mở trình mô phỏng ClassWiz chính thức của CASIO ở ClassPad.net.',
+  cta: 'Mở ClassPad.net',
+  href: 'https://classpad.net/intl/',
+}
+
+export const faq = {
+  title: 'Trước khi bắt đầu',
+  text: 'Thông tin ngắn gọn để bạn biết Học Lực phù hợp với bước nào trong hành trình ôn V-ACT.',
+  items: [
+    {
+      question: 'Bài đánh giá đầu vào có mất phí không?',
+      answer:
+        'Bài đánh giá đầu vào của Học Lực miễn phí. Bạn cần đăng nhập để làm bài và xem lộ trình gợi ý.',
+    },
+    {
+      question: 'Chưa mua khóa học thì có thể xem nội dung nào?',
+      answer:
+        'Lộ trình có thể gợi ý cả học phần bạn chưa mua. Bạn vẫn xem được danh mục, thông tin chi tiết và bài học mở ở chế độ xem trước; nội dung đầy đủ cần quyền truy cập khóa học.',
+    },
+    {
+      question: 'Kết quả đánh giá có phải điểm thi V-ACT chính thức không?',
+      answer:
+        'Không. Đây là kết quả đánh giá trên Học Lực để hỗ trợ việc học, không thay thế kết quả kỳ thi V-ACT.',
+    },
+    {
+      question: 'Khóa học có thời hạn và hình thức học thế nào?',
+      answer:
+        'Thời hạn, nội dung và hình thức học được ghi trong thông tin từng khóa. Bạn nên xem chi tiết trước khi đăng ký.',
+    },
+  ],
+}
+
+export const closingCta = {
+  title: 'Tìm bước học tiếp theo của bạn.',
+  text: 'Khám phá nhóm kiến thức và khóa học. Bài đánh giá đầu vào miễn phí, cần đăng nhập.',
+  primary: 'Làm đánh giá miễn phí',
+  secondary: 'Xem khóa học',
+}
+
+export const startDialogOptions = {
+  domains: [
+    { value: 'tieng-viet', label: 'Tiếng Việt' },
+    { value: 'tieng-anh', label: 'Tiếng Anh' },
+    { value: 'toan', label: 'Toán học & Tư duy định lượng' },
+    { value: 'logic', label: 'Logic & Phân tích số liệu' },
+    { value: 'khoa-hoc', label: 'Suy luận Khoa học' },
+  ],
+  defaultDomain: 'toan',
+  levels: [
+    { value: 'foundation', label: 'Mình muốn xây nền tảng' },
+    { value: 'skill', label: 'Mình muốn rèn kỹ năng' },
+    { value: 'practice', label: 'Mình muốn luyện tập vận dụng' },
+  ],
+} as const
+
+export const examFacts = {
+  label: 'Kỳ thi V-ACT · ĐGNL ĐHQG-HCM',
+  link: 'Tìm hiểu kỳ thi',
+}
 
 export interface SupportItem {
   id: string
@@ -624,57 +660,3 @@ export const support: { title: string; text: string; items: SupportItem[] } = {
     },
   ],
 }
-
-export const faq = {
-  title: 'Trước khi bắt đầu',
-  text: 'Thông tin ngắn gọn để bạn biết Học Lực phù hợp với bước nào trong hành trình ôn V-ACT.',
-  items: [
-    {
-      question: 'Bài đánh giá đầu vào có mất phí không?',
-      answer:
-        'Bài đánh giá đầu vào của Học Lực miễn phí. Bạn cần đăng nhập để làm bài và xem lộ trình gợi ý.',
-    },
-    {
-      question: 'Xem học phí và lịch khai giảng ở đâu?',
-      answer:
-        'Mục Khóa học trên trang này và trang Khóa học có học phí, ngày khai giảng và nội dung từng khóa. Bạn xem được chi tiết khóa học mà không cần đăng nhập.',
-    },
-    {
-      question: 'Chưa mua khóa học thì có thể xem nội dung nào?',
-      answer:
-        'Lộ trình có thể gợi ý cả học phần bạn chưa mua. Bạn vẫn xem được danh mục, thông tin chi tiết và bài học mở ở chế độ xem trước; nội dung đầy đủ cần quyền truy cập khóa học.',
-    },
-    {
-      question: 'Kết quả đánh giá có phải điểm thi V-ACT chính thức không?',
-      answer:
-        'Không. Đây là kết quả đánh giá trên Học Lực để hỗ trợ việc học, không thay thế kết quả kỳ thi V-ACT.',
-    },
-    {
-      question: 'Khi nào có thể dùng gia sư AI?',
-      answer: 'Gia sư AI yêu cầu bạn có ít nhất một khóa học đã mua còn hiệu lực.',
-    },
-  ],
-}
-
-export const closingCta = {
-  title: 'Tìm bước học tiếp theo của bạn.',
-  text: 'Khám phá nhóm kiến thức và khóa học. Bài đánh giá đầu vào miễn phí, cần đăng nhập.',
-  primary: 'Làm đánh giá miễn phí',
-  secondary: 'Khám phá khóa học',
-}
-
-export const startDialogOptions = {
-  domains: [
-    { value: 'tieng-viet', label: 'Tiếng Việt' },
-    { value: 'tieng-anh', label: 'Tiếng Anh' },
-    { value: 'toan', label: 'Toán học & Tư duy định lượng' },
-    { value: 'logic', label: 'Logic & Phân tích số liệu' },
-    { value: 'khoa-hoc', label: 'Suy luận Khoa học' },
-  ],
-  defaultDomain: 'toan',
-  levels: [
-    { value: 'foundation', label: 'Mình muốn xây nền tảng' },
-    { value: 'skill', label: 'Mình muốn rèn kỹ năng' },
-    { value: 'practice', label: 'Mình muốn luyện tập vận dụng' },
-  ],
-} as const

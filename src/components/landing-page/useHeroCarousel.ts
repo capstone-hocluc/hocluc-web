@@ -9,6 +9,7 @@ export function useHeroCarousel(slideCount: number, intervalMs = 6500) {
   const [active, setActive] = useState(0)
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
+  const [manuallyPaused, setManuallyPaused] = useState(false)
   const [tabHidden, setTabHidden] = useState(() => document.hidden)
   const [reduceMotion, setReduceMotion] = useState(
     () => window.matchMedia(REDUCED_MOTION_QUERY).matches
@@ -26,7 +27,7 @@ export function useHeroCarousel(slideCount: number, intervalMs = 6500) {
     }
   }, [])
 
-  const paused = hovered || focused || tabHidden || reduceMotion
+  const paused = hovered || focused || tabHidden || reduceMotion || manuallyPaused
   useEffect(() => {
     if (paused || slideCount < 2) return
     const timer = window.setInterval(
@@ -46,5 +47,14 @@ export function useHeroCarousel(slideCount: number, intervalMs = 6500) {
     },
   }
 
-  return { active: slideCount ? active % slideCount : 0, handlers }
+  return {
+    active: slideCount ? active % slideCount : 0,
+    handlers,
+    manuallyPaused,
+    togglePause: () => setManuallyPaused((value) => !value),
+    selectSlide: (index: number) => {
+      setActive(index)
+      setManuallyPaused(true)
+    },
+  }
 }

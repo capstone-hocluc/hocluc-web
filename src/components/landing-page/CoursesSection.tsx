@@ -1,172 +1,216 @@
 import { useEffect, useState } from 'react'
-import { coursesSection } from '../../data/landing-content'
-import { formatCoursePrice, formatDate, formatExamLabel, prettifyEnum } from '../../lib/courseFormat'
 import { getMainCourses, type Course } from '../../services/courseService'
-import AppLink from './AppLink'
-import AuthLink from './AuthLink'
+import LandingLink from './LandingLink'
 import Icon from './Icon'
 
-const SHOWN_COURSES = 3
+const currency = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0,
+})
+const dateFormat = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
 
-type CoursesState =
-  | { status: 'loading' }
-  | { status: 'error' }
-  | { status: 'ready'; courses: Course[] }
+// Opt-in local design preview. Never substitute sample data for a failed real request.
+const previewCourses: Course[] = import.meta.env.DEV
+  ? [
+      {
+        id: 'landing-design-preview',
+        title: 'V-ACT: Xây nền tảng, vững tư duy',
+        description:
+          'Củng cố 5 nhóm kiến thức, luyện tập theo chủ đề và hiểu cách giải qua từng bài học.',
+        imageUrl: '/landing-v2/assets/hero-mai-nam-learning.webp',
+        targetExam: 'V-ACT',
+        price: 1490000,
+        startDate: '2026-11-01',
+      },
+    ]
+  : []
 
-// Courses starting soonest first; courses without a start date go last.
-function byStartDate(a: Course, b: Course) {
-  const aTime = a.startDate ? new Date(a.startDate).getTime() : Number.POSITIVE_INFINITY
-  const bTime = b.startDate ? new Date(b.startDate).getTime() : Number.POSITIVE_INFINITY
-  return aTime - bTime
-}
-
-function CourseCardLink({ course }: { course: Course }) {
-  const badge = formatExamLabel(course.targetExam) || prettifyEnum(course.track)
-  const startDate = formatDate(course.startDate)
-
+function CourseCover({ course }: { course: Course }) {
+  const [failed, setFailed] = useState(false)
   return (
-    <AppLink className="course-card" href={`/courses/${encodeURIComponent(course.id)}`}>
-      <div className="course-cover">
-        {course.imageUrl ? (
-          <img src={course.imageUrl} alt="" loading="lazy" />
-        ) : (
-          <span className="course-cover-fallback" aria-hidden="true">
-            <Icon name="book-open" />
-          </span>
-        )}
-        {course.purchased && <span className="course-owned">{coursesSection.owned}</span>}
-      </div>
-      <div className="course-body">
-        {badge && <span className="course-badge">{badge}</span>}
-        <h3>{course.title}</h3>
-        {course.description && <p>{course.description}</p>}
-        {startDate && (
-          <span className="course-meta">
-            <Icon name="calendar" />
-            Khai giảng {startDate}
-          </span>
-        )}
-        <div className="course-footer">
-          <strong className="course-price">{formatCoursePrice(course.price)}</strong>
-          <span className="course-cta">
-            {coursesSection.cardCta} <Icon name="arrow-right" />
-          </span>
+    <div className="course-cover">
+      {course.imageUrl && !failed ? (
+        <img src={course.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
+      ) : (
+        <div className="course-cover-fallback">
+          <Icon name="book-open" />
+          <span>{course.targetExam || 'Học Lực'}</span>
         </div>
-      </div>
-    </AppLink>
+      )}
+      {course.purchased && (
+        <span className="course-owned">
+          <Icon name="check" /> Đã sở hữu
+        </span>
+      )}
+    </div>
   )
 }
 
-function CoursesSection() {
-  const [state, setState] = useState<CoursesState>({ status: 'loading' })
-  const [reloadKey, setReloadKey] = useState(0)
-
+export default function CoursesSection() {
+  const [isPreview] = useState(
+    () =>
+      import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get('preview-course') === '1'
+  )
+  const [courses, setCourses] = useState<Course[]>(isPreview ? previewCourses : [])
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
+    isPreview ? 'ready' : 'loading'
+  )
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
+    if (isPreview) return
     let cancelled = false
     getMainCourses()
       .then((response) => {
         if (cancelled) return
-        const courses = [...(response.data || [])].sort(byStartDate).slice(0, SHOWN_COURSES)
-        setState({ status: 'ready', courses })
+        setCourses(response.data ?? [])
+        setStatus('ready')
       })
       .catch(() => {
-        if (!cancelled) setState({ status: 'error' })
+        if (!cancelled) setStatus('error')
       })
     return () => {
       cancelled = true
     }
-  }, [reloadKey])
-
-  const retry = () => {
-    setState({ status: 'loading' })
-    setReloadKey((current) => current + 1)
-  }
-
-  const hasCourses = state.status === 'ready' && state.courses.length > 0
-
+  }, [attempt, isPreview])
   return (
-    <section
-      className="section courses-section"
-      id="cac-khoa-hoc"
-      aria-labelledby="courses-title"
-      aria-busy={state.status === 'loading'}
-    >
+    <section className="section courses-section" id="khoa-hoc" aria-labelledby="courses-title">
       <div className="container">
-        <div className="catalog-heading">
+        <div className="section-heading">
           <div>
-            <h2 id="courses-title">{coursesSection.title}</h2>
-            <p>{coursesSection.text}</p>
+            <h2 id="courses-title">
+              Chọn khóa học.
+              <br />
+              <span className="accent">Bắt đầu hành trình của bạn.</span>
+            </h2>
+            <p>Tìm nội dung phù hợp, xem thông tin và học phí trước khi quyết định.</p>
           </div>
+          <LandingLink className="text-link" href="/courses">
+            Xem tất cả khóa học <Icon name="arrow-up-right" />
+          </LandingLink>
         </div>
-
-        {state.status === 'loading' && (
-          <>
-            <p className="sr-only" role="status">
-              {coursesSection.loading}
-            </p>
-            <div className="course-grid" aria-hidden="true">
-              {Array.from({ length: SHOWN_COURSES }, (_, index) => (
-                <div key={index} className="course-card is-skeleton">
-                  <div className="course-cover" />
-                  <div className="course-body">
+        {isPreview && (
+          <p className="course-preview-notice">
+            Khóa học minh họa để xem giao diện. Tên, học phí và ngày khai giảng là dữ liệu mẫu.
+          </p>
+        )}
+        <div aria-busy={status === 'loading'}>
+          {status === 'loading' && (
+            <>
+              <p className="sr-only" role="status">
+                Đang tải khóa học
+              </p>
+              <div className="course-grid" aria-hidden="true">
+                {[0, 1, 2].map((item) => (
+                  <div key={item} className="course-skeleton">
+                    <div />
                     <span />
                     <span />
                     <span />
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </>
+          )}
+          {status === 'error' && (
+            <div className="course-empty" role="status">
+              <Icon name="book-open" />
+              <div>
+                <h3>Chưa tải được khóa học</h3>
+                <p>Bạn có thể thử lại hoặc trải nghiệm bài học mẫu trong lúc chờ.</p>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => {
+                    setStatus('loading')
+                    setAttempt((value) => value + 1)
+                  }}
+                >
+                  Thử lại <Icon name="rotate-ccw" />
+                </button>
+              </div>
+              <a className="text-link" href="#hoc-thu">
+                Thử một bài học <Icon name="arrow-right" />
+              </a>
             </div>
-          </>
-        )}
-
-        {state.status === 'error' && (
-          <div className="courses-state" role="alert">
-            <h3>{coursesSection.errorTitle}</h3>
-            <p>{coursesSection.errorText}</p>
-            <div className="courses-state-actions">
-              <button type="button" className="btn btn-secondary" onClick={retry}>
-                <Icon name="rotate-ccw" />
-                {coursesSection.retry}
-              </button>
-              <AppLink className="text-link" href="/courses">
-                {coursesSection.allCta} <Icon name="arrow-right" />
-              </AppLink>
+          )}
+          {status === 'ready' && courses.length === 0 && (
+            <div className="course-empty" role="status">
+              <Icon name="book-open" />
+              <div>
+                <h3>Khóa học đang được cập nhật</h3>
+                <p>Trong lúc chờ, thử một câu hỏi và khám phá cách học cùng Học Lực.</p>
+              </div>
+              <a className="btn btn-secondary" href="#hoc-thu">
+                Thử một bài học <Icon name="arrow-right" />
+              </a>
             </div>
-          </div>
-        )}
-
-        {state.status === 'ready' && !hasCourses && (
-          <div className="courses-state">
-            <img src={coursesSection.emptyImage} alt="" width={120} height={120} loading="lazy" />
-            <h3>{coursesSection.emptyTitle}</h3>
-            <p>{coursesSection.emptyText}</p>
-            <div className="courses-state-actions">
-              <AuthLink className="btn btn-primary">
-                {coursesSection.emptyCta}
-                <Icon name="arrow-right" />
-              </AuthLink>
-            </div>
-          </div>
-        )}
-
-        {state.status === 'ready' && hasCourses && (
-          <>
+          )}
+          {status === 'ready' && courses.length > 0 && (
             <div className="course-grid">
-              {state.courses.map((course) => (
-                <CourseCardLink key={course.id} course={course} />
-              ))}
+              {courses.slice(0, 3).map((course) => {
+                const date = course.startDate
+                  ? new Date(`${course.startDate.slice(0, 10)}T00:00:00`)
+                  : null
+                return (
+                  <article className="landing-course" key={course.id}>
+                    <CourseCover course={course} />
+                    <div className="course-info">
+                      <h3>
+                        {isPreview ? (
+                          course.title
+                        ) : (
+                          <LandingLink href={`/courses/${encodeURIComponent(course.id)}`}>
+                            {course.title}
+                          </LandingLink>
+                        )}
+                      </h3>
+                      {course.description && (
+                        <p className="course-description">{course.description}</p>
+                      )}
+                      {date && !Number.isNaN(date.getTime()) && (
+                        <p className="course-date">Khai giảng {dateFormat.format(date)}</p>
+                      )}
+                      <div className="course-bottom">
+                        <div>
+                          {typeof course.price === 'number' &&
+                            Number.isFinite(course.price) &&
+                            course.price >= 0 && (
+                              <>
+                                <span className="course-price-label">Học phí</span>
+                                <strong>
+                                  {course.price === 0 ? 'Miễn phí' : currency.format(course.price)}
+                                </strong>
+                              </>
+                            )}
+                        </div>
+                        {isPreview ? (
+                          <a className="text-link" href="#hoc-thu">
+                            Thử bài học mẫu <Icon name="arrow-right" />
+                          </a>
+                        ) : (
+                          <LandingLink
+                            className="text-link"
+                            href={`/courses/${encodeURIComponent(course.id)}`}
+                          >
+                            Xem chi tiết <Icon name="arrow-right" />
+                            <span className="sr-only"> {course.title}</span>
+                          </LandingLink>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
-            <div className="courses-more">
-              <AppLink className="btn btn-secondary" href="/courses">
-                {coursesSection.allCta}
-                <Icon name="arrow-right" />
-              </AppLink>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </section>
   )
 }
-
-export default CoursesSection

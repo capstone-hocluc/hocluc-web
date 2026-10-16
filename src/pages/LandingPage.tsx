@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import CatalogSection from '../components/landing-page/CatalogSection'
-import CoursesSection from '../components/landing-page/CoursesSection'
 import DetailDialog, { type LandingDetail } from '../components/landing-page/DetailDialog'
-import ExamFactsStrip from '../components/landing-page/ExamFactsStrip'
 import ExamIntroSection from '../components/landing-page/ExamIntroSection'
+import CoursesSection from '../components/landing-page/CoursesSection'
 import HeroSection from '../components/landing-page/HeroSection'
 import JourneySection from '../components/landing-page/JourneySection'
 import LandingHeader from '../components/landing-page/LandingHeader'
@@ -14,11 +13,11 @@ import SampleLessonSection, {
 } from '../components/landing-page/SampleLessonSection'
 import StartDialog from '../components/landing-page/StartDialog'
 import {
+  LearningSupportSection,
   ClosingCtaSection,
   FaqSection,
   LandingFooter,
 } from '../components/landing-page/StaticSections'
-import SupportSection from '../components/landing-page/SupportSection'
 import {
   domains,
   examIntro,
@@ -30,10 +29,10 @@ import { useLearnerTheme } from '../hooks/useLearnerTheme'
 import '../styles/landing/landing-page.css'
 
 function LandingPage() {
+  useLearnerTheme()
   const [detail, setDetail] = useState<LandingDetail | null>(null)
   const [startOpen, setStartOpen] = useState(false)
   const lessonRef = useRef<SampleLessonHandle>(null)
-  useLearnerTheme()
 
   const openDomain = (domainId: string) => {
     const domain = domains.find((item) => item.id === domainId)
@@ -69,17 +68,11 @@ function LandingPage() {
       <LandingHeader />
       <main id="main">
         <HeroSection hero={landingHero} />
-        <ExamFactsStrip exam={examIntro} />
-        <CatalogSection
-          domains={domains}
-          operations={practiceOperations}
-          onOpenDomain={openDomain}
-          onOpenOperation={openOperation}
-        />
+        <CatalogSection domains={domains} onOpenDomain={openDomain} />
         <CoursesSection />
-        <JourneySection onStart={() => setStartOpen(true)} />
         <SampleLessonSection ref={lessonRef} questions={sampleQuestions} />
-        <SupportSection />
+        <JourneySection onStart={() => setStartOpen(true)} onOpenOperation={openOperation} />
+        <LearningSupportSection />
         <ExamIntroSection exam={examIntro} />
         <FaqSection />
         <ClosingCtaSection />

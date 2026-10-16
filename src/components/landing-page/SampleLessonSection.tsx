@@ -2,6 +2,7 @@ import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { Ref } from 'react'
 import { sampleLesson, type SampleQuestion } from '../../data/landing-content'
 import Icon from './Icon'
+import AuthLink from './AuthLink'
 
 export interface SampleLessonHandle {
   /** Moves focus to the first answer, or to the action button once the question is checked. */
@@ -74,16 +75,16 @@ function SampleLessonSection({ questions, ref }: SampleLessonSectionProps) {
     : ''
 
   return (
-    <section className="section" id="hoc-thu">
+    <section className="section sample-section" id="hoc-thu" aria-labelledby="sample-title">
       <div className="container">
         <div className="center experience-heading">
-          <h2>{sampleLesson.title}</h2>
+          <h2 id="sample-title">{sampleLesson.title}</h2>
           <p className="intro">{sampleLesson.intro}</p>
         </div>
         <div className="experience-layout">
           <div className="lesson">
             <div className="lesson-header">
-              <span>CÂU LUYỆN MẪU</span>
+              <span>Câu luyện mẫu</span>
               <span id="question-counter">
                 {finished ? `Hoàn thành · ${score}/${total} đúng` : `Câu ${index + 1} / ${total}`}
               </span>
@@ -167,6 +168,7 @@ function SampleLessonSection({ questions, ref }: SampleLessonSectionProps) {
             </div>
           </div>
           <div className="feature-copy">
+            <span className="eyebrow">Học thử cùng Học Lực</span>
             <h2>
               {sampleLesson.featureTitle}
               <br />
@@ -185,11 +187,20 @@ function SampleLessonSection({ questions, ref }: SampleLessonSectionProps) {
                 </li>
               ))}
             </ul>
-            <a className="text-link" href="#cac-khoa-hoc">
-              {sampleLesson.coursesLink} <Icon name="arrow-right" />
+            <a className="text-link" href="#khoa-hoc">
+              Xem khóa học <Icon name="arrow-right" />
             </a>
           </div>
         </div>
+        {finished && (
+          <div className="sample-next">
+            <p>Bạn đã hoàn thành bài mẫu. Chọn bước tiếp theo của mình.</p>
+            <a className="btn btn-primary" href="#khoa-hoc">
+              Xem khóa học <Icon name="arrow-right" />
+            </a>
+            <AuthLink className="text-link">Làm đánh giá miễn phí</AuthLink>
+          </div>
+        )}
       </div>
     </section>
   )
