@@ -1,26 +1,73 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Pencil, Plus, Trash2 } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import Button from '../../console/button'
+import SelectField from '../../console/select-field'
 import ListCard from '../../console/list-card'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import CategoryEditorDialog from './category-editor-dialog'
-import { getCategories, deleteCategory, type Category } from '../../../services/categoryService'
+import {
+  getCategories,
+  deleteCategory,
+  saveCategory,
+  type Category,
+} from '../../../services/categoryService'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { crudError, unknownMutation } from './crud-errors'
+
+// A category cannot move under itself or its own descendants. The backend still enforces cycles and depth.
+function blockedParents(category: Category, rows: Category[]) {
+  const blocked = new Set([category.id])
+  for (let i = 0; i < rows.length; i++) {
+    for (const item of rows) if (item.parentId && blocked.has(item.parentId)) blocked.add(item.id)
+  }
+  return blocked
+}
 
 export default function CategoryManagement({ readOnly = false }: { readOnly?: boolean }) {
   const resource = useScheduleResource('management-categories', getCategories)
   const [editor, setEditor] = useState<{ category: Category | null } | null>(null)
   const [deleting, setDeleting] = useState<Category | null>(null)
   const [busy, setBusy] = useState(false)
+  // The select can report one choice twice before `busy` re-renders; this blocks the duplicate request.
+  const moving = useRef(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const rows = useMemo(() => resource.data ?? [], [resource.data])
+  const changeParent = useCallback(
+    async (category: Category, value: string) => {
+      const parentId = value === 'NONE' ? null : value
+      if (moving.current || busy || parentId === category.parentId) return
+      moving.current = true
+      setBusy(true)
+      setError('')
+      setNotice('')
+      try {
+        await saveCategory(category.id, {
+          name: category.name,
+          description: category.description,
+          imageUrl: category.imageUrl,
+          parentId,
+          active: category.active,
+          sortOrder: category.sortOrder,
+          expectedUpdatedAt: category.updatedAt,
+        })
+        setNotice(`Đã đổi danh mục cha của "${category.name}".`)
+        resource.reload()
+      } catch (err) {
+        setError(crudError(err))
+        if (unknownMutation(err)) resource.reload()
+      } finally {
+        moving.current = false
+        setBusy(false)
+      }
+    },
+    [busy, resource]
+  )
   const names = useMemo(() => new Map(rows.map((row) => [row.id, row.name])), [rows])
   const columns = useMemo<ColumnDef<Category>[]>(
     () => [
@@ -37,6 +84,24 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
         id: 'parent',
         header: 'Danh mục cha',
         accessorFn: (c) => (c.parentId ? (names.get(c.parentId) ?? '—') : '—'),
+        cell: ({ row }) => {
+          const category = row.original
+          if (readOnly) return category.parentId ? (names.get(category.parentId) ?? '—') : '—'
+          const blocked = blockedParents(category, rows)
+          return (
+            <SelectField
+              ariaLabel={`Danh mục cha của ${category.name}`}
+              value={category.parentId ?? 'NONE'}
+              disabled={busy}
+              onChange={(value) => void changeParent(category, value)}
+              className="min-w-48"
+              options={[
+                { id: 'NONE', label: 'Không có (cấp gốc)' },
+                ...rows.filter((c) => !blocked.has(c.id)).map((c) => ({ id: c.id, label: c.name })),
+              ]}
+            />
+          )
+        },
       },
       { accessorKey: 'sortOrder', header: 'Thứ tự' },
       {
@@ -56,7 +121,12 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
               meta: { className: 'w-32 text-right' },
               cell: ({ row }: { row: { original: Category } }) => (
                 <RowActions>
-                  <IconAction label="Sửa" icon={Pencil} disabled={busy} onClick={() => setEditor({ category: row.original })} />
+                  <IconAction
+                    label="Sửa"
+                    icon={Pencil}
+                    disabled={busy}
+                    onClick={() => setEditor({ category: row.original })}
+                  />
                   <IconAction
                     label="Xóa"
                     icon={Trash2}
@@ -73,7 +143,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           ]
         : []),
     ],
-    [readOnly, names, busy]
+    [readOnly, names, busy, rows, changeParent]
   )
   async function remove() {
     if (!deleting || busy) return
@@ -120,7 +190,8 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           <span role="alert">{error}</span>
         </Notice>
       )}
-      <ScheduleResourceState skeleton="table"
+      <ScheduleResourceState
+        skeleton="table"
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
