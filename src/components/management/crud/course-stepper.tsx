@@ -42,10 +42,8 @@ export default function CourseStepper({
             </>
           )
           const cardStyle = cn(
-            'block w-full rounded-lg border px-3 py-2.5 text-left',
-            active
-              ? 'border-brand-500 bg-brand-500/10'
-              : 'border-card-border bg-background-gray-secondary/40'
+            'block w-full rounded-lg px-3 py-2.5 text-left',
+            active ? 'bg-brand-500/10' : 'bg-background-gray-secondary/60'
           )
           return (
             <li
@@ -82,7 +80,7 @@ export default function CourseStepper({
                     onClick={() => onGo(step.tab!)}
                     className={cn(
                       cardStyle,
-                      'cursor-pointer hover:border-text-tertiary/60 focus-visible:outline-2 focus-visible:outline-brand-500'
+                      'cursor-pointer transition-colors hover:bg-background-gray-secondary focus-visible:outline-2 focus-visible:outline-brand-500'
                     )}
                   >
                     {card}
