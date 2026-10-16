@@ -30,7 +30,6 @@ export function courseSteps(
   const contentDone = (chapters?.length ?? 0) > 0 || gifts.length > 0
   const publishDone = (published > 0 || gifts.length > 0) && unfinishedGifts === 0
   const live = course.status === 'PUBLISHED'
-  const waiting = course.reviewState === 'PENDING'
 
   const steps: CourseStep[] = [
     {
@@ -72,13 +71,9 @@ export function courseSteps(
       state: live ? 'done' : 'todo',
       note: live
         ? undefined
-        : waiting
-          ? canReview
-            ? 'Khóa đang chờ bạn duyệt.'
-            : 'Đã gửi, đang chờ người duyệt.'
-          : course.reviewState === 'REJECTED'
-            ? 'Bị trả lại. Sửa theo góp ý rồi gửi lại.'
-            : undefined,
+        : course.reviewState === 'REJECTED'
+          ? 'Bị trả lại. Sửa theo góp ý rồi gửi lại.'
+          : undefined,
     },
     { id: 'live', title: 'Đang bán', state: live ? 'done' : 'todo' },
   ]

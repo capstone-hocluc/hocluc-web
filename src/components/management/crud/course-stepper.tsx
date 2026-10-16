@@ -27,7 +27,7 @@ export default function CourseStepper({
                     'flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-medium',
                     done && 'border-success bg-success text-white',
                     active && 'border-brand-500 bg-brand-500 text-white',
-                    !done && !active && 'border-card-border text-text-tertiary'
+                    !done && !active && 'border-text-tertiary/50 text-text-secondary'
                   )}
                 >
                   {done ? <Check size={16} /> : index + 1}
@@ -37,7 +37,7 @@ export default function CourseStepper({
                     aria-hidden
                     className={cn(
                       'mx-2 hidden h-0.5 flex-1 rounded-full sm:block',
-                      done ? 'bg-success' : 'bg-card-border'
+                      done ? 'bg-success' : 'bg-text-tertiary/30'
                     )}
                   />
                 )}
@@ -45,7 +45,7 @@ export default function CourseStepper({
               <span
                 className={cn(
                   'min-w-0 text-left text-sm font-medium sm:mt-2',
-                  active || done ? 'text-text-primary' : 'text-text-tertiary'
+                  active || done ? 'text-text-primary' : 'text-text-secondary'
                 )}
               >
                 {step.title}

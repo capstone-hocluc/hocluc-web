@@ -211,10 +211,10 @@ export default function CourseDetailScreen({
       return (
         <>
           {edit}
-          <Button disabled>
-            <Clock3 size={16} />
+          <span className="inline-flex h-10 items-center gap-2 px-2 text-sm font-medium text-text-secondary">
+            <Clock3 size={16} aria-hidden />
             Đang chờ duyệt
-          </Button>
+          </span>
         </>
       )
     }
