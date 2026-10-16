@@ -529,7 +529,7 @@ function App() {
       />
     )
   if (authMode === 'courses')
-    return <CourseCatalogPage onOpenCourse={(course) => navigateTo(`/courses/${course.id}`)} />
+    return <CourseCatalogPage />
   if (authMode === 'cart')
     return (
       <CartPage

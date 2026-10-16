@@ -16,7 +16,6 @@
 
 /* New styles added after the split above go here. */
 @import './styles/landing/course-catalog.css';
-@import './styles/landing/course-detail.css';
 @import './styles/landing/cart.css';
 @import './styles/landing/checkout.css';
 @import './styles/landing/orders.css';

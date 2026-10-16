@@ -1,18 +1,9 @@
-import { useEffect, useState } from 'react'
-import { getMainCourses, type Course } from '../../services/courseService'
+import { useState } from 'react'
+import type { Course } from '../../services/courseService'
+import LandingCourseCard, { CourseGridSkeleton } from './LandingCourseCard'
 import LandingLink from './LandingLink'
 import Icon from './Icon'
-
-const currency = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
-const dateFormat = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-})
+import { useMainCourses } from './use-main-courses'
 
 // Opt-in local design preview. Never substitute sample data for a failed real request.
 const previewCourses: Course[] = import.meta.env.DEV
@@ -30,54 +21,13 @@ const previewCourses: Course[] = import.meta.env.DEV
     ]
   : []
 
-function CourseCover({ course }: { course: Course }) {
-  const [failed, setFailed] = useState(false)
-  return (
-    <div className="course-cover">
-      {course.imageUrl && !failed ? (
-        <img src={course.imageUrl} alt="" loading="lazy" onError={() => setFailed(true)} />
-      ) : (
-        <div className="course-cover-fallback">
-          <Icon name="book-open" />
-          <span>{course.targetExam || 'Học Lực'}</span>
-        </div>
-      )}
-      {course.purchased && (
-        <span className="course-owned">
-          <Icon name="check" /> Đã sở hữu
-        </span>
-      )}
-    </div>
-  )
-}
-
 export default function CoursesSection() {
   const [isPreview] = useState(
     () =>
       import.meta.env.DEV &&
       new URLSearchParams(window.location.search).get('preview-course') === '1'
   )
-  const [courses, setCourses] = useState<Course[]>(isPreview ? previewCourses : [])
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
-    isPreview ? 'ready' : 'loading'
-  )
-  const [attempt, setAttempt] = useState(0)
-  useEffect(() => {
-    if (isPreview) return
-    let cancelled = false
-    getMainCourses()
-      .then((response) => {
-        if (cancelled) return
-        setCourses(response.data ?? [])
-        setStatus('ready')
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('error')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [attempt, isPreview])
+  const { courses, status, retry } = useMainCourses(isPreview ? previewCourses : undefined)
   return (
     <section className="section courses-section" id="khoa-hoc" aria-labelledby="courses-title">
       <div className="container">
@@ -100,23 +50,7 @@ export default function CoursesSection() {
           </p>
         )}
         <div aria-busy={status === 'loading'}>
-          {status === 'loading' && (
-            <>
-              <p className="sr-only" role="status">
-                Đang tải khóa học
-              </p>
-              <div className="course-grid" aria-hidden="true">
-                {[0, 1, 2].map((item) => (
-                  <div key={item} className="course-skeleton">
-                    <div />
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+          {status === 'loading' && <CourseGridSkeleton />}
           {status === 'error' && (
             <div className="course-empty" role="status">
               <Icon name="book-open" />
@@ -126,10 +60,7 @@ export default function CoursesSection() {
                 <button
                   className="btn btn-secondary"
                   type="button"
-                  onClick={() => {
-                    setStatus('loading')
-                    setAttempt((value) => value + 1)
-                  }}
+                  onClick={retry}
                 >
                   Thử lại <Icon name="rotate-ccw" />
                 </button>
@@ -153,60 +84,9 @@ export default function CoursesSection() {
           )}
           {status === 'ready' && courses.length > 0 && (
             <div className="course-grid">
-              {courses.slice(0, 3).map((course) => {
-                const date = course.startDate
-                  ? new Date(`${course.startDate.slice(0, 10)}T00:00:00`)
-                  : null
-                return (
-                  <article className="landing-course" key={course.id}>
-                    <CourseCover course={course} />
-                    <div className="course-info">
-                      <h3>
-                        {isPreview ? (
-                          course.title
-                        ) : (
-                          <LandingLink href={`/courses/${encodeURIComponent(course.id)}`}>
-                            {course.title}
-                          </LandingLink>
-                        )}
-                      </h3>
-                      {course.description && (
-                        <p className="course-description">{course.description}</p>
-                      )}
-                      {date && !Number.isNaN(date.getTime()) && (
-                        <p className="course-date">Khai giảng {dateFormat.format(date)}</p>
-                      )}
-                      <div className="course-bottom">
-                        <div>
-                          {typeof course.price === 'number' &&
-                            Number.isFinite(course.price) &&
-                            course.price >= 0 && (
-                              <>
-                                <span className="course-price-label">Học phí</span>
-                                <strong>
-                                  {course.price === 0 ? 'Miễn phí' : currency.format(course.price)}
-                                </strong>
-                              </>
-                            )}
-                        </div>
-                        {isPreview ? (
-                          <a className="text-link" href="#hoc-thu">
-                            Thử bài học mẫu <Icon name="arrow-right" />
-                          </a>
-                        ) : (
-                          <LandingLink
-                            className="text-link"
-                            href={`/courses/${encodeURIComponent(course.id)}`}
-                          >
-                            Xem chi tiết <Icon name="arrow-right" />
-                            <span className="sr-only"> {course.title}</span>
-                          </LandingLink>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
+              {courses.slice(0, 3).map((course) => (
+                <LandingCourseCard key={course.id} course={course} preview={isPreview} />
+              ))}
             </div>
           )}
         </div>
