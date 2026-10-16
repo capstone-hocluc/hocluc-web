@@ -5,7 +5,7 @@ import type { UserRole } from '../../../services/userService';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
 import { Check } from '../icons';
 import ConfirmDialog from '../confirm-dialog';
-import Status from '../status';
+import RoleBadge from '../role-badge';
 import { ROLE_LABELS } from '../../../lib/role-home';
 import { Avatar, AvatarFallback, AvatarImage } from '../../tailgrids/core/avatar';
 import {
@@ -71,7 +71,7 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
             <span className="truncate text-sm font-medium text-text-primary">{name}</span>
             <span className="truncate text-xs text-gray-500">{profile.email}</span>
             <span className="mt-1.5 self-start">
-              <Status tone="info">{ROLE_LABELS[profile.role]}</Status>
+              <RoleBadge role={profile.role} />
             </span>
           </span>
         </DropdownMenuHeader>

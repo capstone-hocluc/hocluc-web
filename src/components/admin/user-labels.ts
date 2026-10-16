@@ -21,7 +21,9 @@ type UserNameSource = Pick<UserSummary, 'displayName' | 'email'> &
 
 export function getUserName(user: UserNameSource) {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-  return user.displayName || fullName || user.email
+  // The admin form edits these fields directly; keep its title and list in sync
+  // even when an older displayName still contains a previous full name.
+  return fullName || user.displayName || user.email
 }
 
 export function getInitials(user: Pick<UserSummary, 'firstName' | 'lastName' | 'email'>) {

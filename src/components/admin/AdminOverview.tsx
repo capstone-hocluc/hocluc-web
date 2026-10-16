@@ -40,7 +40,7 @@ function getStatusTone(status: UserStatus) {
 
 function getUserName(user: Pick<UserSummary, 'displayName' | 'firstName' | 'lastName' | 'email'>) {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
-  return user.displayName || fullName || user.email
+  return fullName || user.displayName || user.email
 }
 
 function getInitials(user: Pick<UserSummary, 'firstName' | 'lastName' | 'email'>) {
@@ -198,7 +198,7 @@ function AdminOverview({ onNavigate, areaLabel = 'quản trị' }: AdminOverview
                 key={user.id}
                 type="button"
                 className="flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-background-gray-secondary"
-                onClick={() => onNavigate('users')}
+                onClick={() => onNavigate(user.role === 'STUDENT' ? 'learners' : 'users')}
               >
                 <span className="grid size-9 shrink-0 place-items-center rounded-full bg-badge-info-bg text-sm font-semibold text-badge-info-text">
                   {getInitials(user)}

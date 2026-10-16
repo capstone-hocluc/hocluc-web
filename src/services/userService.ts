@@ -179,6 +179,8 @@ export async function changePassword(payload: ChangePasswordRequest) {
 
 export interface UserListQuery {
   role?: UserRole
+  /** Leaves one role out, e.g. STUDENT for the personnel list. */
+  excludeRole?: UserRole
   status?: UserStatus
   /** Case-insensitive fragment of the name or email; a picker needs it to find anyone past page 1. */
   query?: string
@@ -195,6 +197,7 @@ function requireResponseData<T>(response: { data?: T }, message: string): T {
 export async function getUsers(query: UserListQuery = {}): Promise<UserListPage> {
   const params = new URLSearchParams()
   if (query.role) params.set('role', query.role)
+  if (query.excludeRole) params.set('excludeRole', query.excludeRole)
   if (query.status) params.set('status', query.status)
   if (query.query?.trim()) params.set('query', query.query.trim())
   params.set('page', (query.page ?? 0).toString())

@@ -30,6 +30,7 @@ import Button from '../console/button'
 import DataTable from '../console/data-table'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../console/filter-toolbar'
 import Status from '../console/status'
+import RoleBadge from '../console/role-badge'
 import ConfirmDialog from '../console/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
 import { Pagination } from '../tailgrids/core/pagination'
@@ -46,7 +47,7 @@ import {
 
 const PAGE_SIZE = 10
 
-const ROLE_OPTIONS = USER_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))
+const ROLE_OPTIONS = USER_ROLES.filter((role) => role !== 'STUDENT').map((role) => ({ id: role, label: ROLE_LABELS[role] }))
 const STATUS_OPTIONS = USER_STATUSES.map((status) => ({ id: status, label: STATUS_LABELS[status] }))
 const ROLE_FILTER_OPTIONS = [{ id: 'ALL', label: 'Tất cả vai trò' }, ...ROLE_OPTIONS]
 const STATUS_FILTER_OPTIONS = [{ id: 'ALL', label: 'Tất cả trạng thái' }, ...STATUS_OPTIONS]
@@ -64,11 +65,15 @@ const normalize = (value: string) =>
     .trim()
 
 interface UserManagementProps {
+  /** Students are the platform's customers and personnel run it, so each has its own list. */
+  audience: 'staff' | 'students'
   readOnly?: boolean
   canCreateUsers?: boolean
 }
 
-function UserManagement({ readOnly = false, canCreateUsers = false }: UserManagementProps) {
+function UserManagement({ audience, readOnly = false, canCreateUsers = false }: UserManagementProps) {
+  const students = audience === 'students'
+  const noun = students ? 'học viên' : 'tài khoản'
   const [page, setPage] = useState(0)
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL')
@@ -98,7 +103,8 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
     getUsers({
       page,
       size: PAGE_SIZE,
-      role: roleFilter === 'ALL' ? undefined : roleFilter,
+      role: students ? 'STUDENT' : roleFilter === 'ALL' ? undefined : roleFilter,
+      excludeRole: students ? undefined : 'STUDENT',
       status: statusFilter === 'ALL' ? undefined : statusFilter,
       sort: 'createdAt,desc',
     })
@@ -115,7 +121,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
     return () => {
       ignore = true
     }
-  }, [page, reloadKey, roleFilter, statusFilter])
+  }, [page, reloadKey, roleFilter, statusFilter, students])
 
   const visibleUsers = useMemo(() => {
     const needle = normalize(query)
@@ -231,7 +237,8 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   }, [deletingUser])
 
   const columns = useMemo<ColumnDef<UserSummary>[]>(
-    () => [
+    () =>
+      ([
       {
         id: 'name',
         header: 'Tên',
@@ -244,15 +251,15 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
         accessorKey: 'email',
         cell: ({ row }) => <span className="text-text-secondary">{row.original.email}</span>,
       },
-      {
+      !students && {
         id: 'role',
         header: 'Vai trò',
         accessorFn: (user) => ROLE_LABELS[user.role],
         cell: ({ row }) => {
           const roles = grantedRoles(row.original)
           return (
-            <span className="whitespace-nowrap text-text-secondary">
-              {ROLE_LABELS[row.original.role]}
+            <span className="inline-flex items-center whitespace-nowrap">
+              <RoleBadge role={row.original.role} />
               {roles.length > 1 && <span className="ml-1.5 text-xs text-text-tertiary">+{roles.length - 1}</span>}
             </span>
           )
@@ -264,9 +271,15 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
         accessorFn: (user) => STATUS_LABELS[user.status],
         cell: ({ row }) => <Status tone={getStatusTone(row.original.status)}>{STATUS_LABELS[row.original.status]}</Status>,
       },
+      students && {
+        id: 'lastLoginAt',
+        header: 'Đăng nhập gần nhất',
+        accessorFn: (user) => user.lastLoginAt ?? undefined,
+        cell: ({ row }) => <span className="whitespace-nowrap text-text-secondary">{formatDate(row.original.lastLoginAt)}</span>,
+      },
       {
         id: 'createdAt',
-        header: 'Ngày tạo',
+        header: students ? 'Ngày tham gia' : 'Ngày tạo',
         accessorFn: (user) => user.createdAt ?? undefined,
         cell: ({ row }) => <span className="whitespace-nowrap text-text-secondary">{formatDate(row.original.createdAt)}</span>,
       },
@@ -315,8 +328,8 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
           </div>
         ),
       },
-    ],
-    [deleteUserLoading, openUserDetail, readOnly, runUserUpdate, updatingUserId]
+    ] as (ColumnDef<UserSummary> | false)[]).filter((column): column is ColumnDef<UserSummary> => Boolean(column)),
+    [deleteUserLoading, openUserDetail, readOnly, runUserUpdate, students, updatingUserId]
   )
 
   return (
@@ -332,15 +345,17 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
           onChange={setQuery}
         />
         <FilterGroup>
-          <FilterSelect
-            ariaLabel="Lọc theo vai trò"
-            options={ROLE_FILTER_OPTIONS}
-            value={roleFilter}
-            onChange={(value) => {
-              setRoleFilter(value as UserRole | 'ALL')
-              setPage(0)
-            }}
-          />
+          {!students && (
+            <FilterSelect
+              ariaLabel="Lọc theo vai trò"
+              options={ROLE_FILTER_OPTIONS}
+              value={roleFilter}
+              onChange={(value) => {
+                setRoleFilter(value as UserRole | 'ALL')
+                setPage(0)
+              }}
+            />
+          )}
           <FilterSelect
             ariaLabel="Lọc theo trạng thái"
             options={STATUS_FILTER_OPTIONS}
@@ -353,7 +368,7 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
           {canCreateUsers && !readOnly && (
             <Button size="sm" onClick={() => setCreateUserOpen(true)}>
               <Plus size={16} />
-              Thêm tài khoản
+              {students ? 'Thêm học viên' : 'Thêm nhân sự'}
             </Button>
           )}
         </FilterGroup>
@@ -396,13 +411,13 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               Đang tải...
             </span>
           ) : (
-            'Không có tài khoản phù hợp.'
+            `Không có ${noun} phù hợp.`
           )
         }
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border px-5 py-3">
-        <span className="text-sm text-text-tertiary">{pageData.totalElements} tài khoản</span>
+        <span className="text-sm text-text-tertiary">{pageData.totalElements} {noun}</span>
         {pageData.totalPages > 1 && (
           <div className="ml-auto w-auto">
             <Pagination
@@ -418,10 +433,11 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
 
       <UserCreateDialog
         open={createUserOpen}
+        accountType={students ? 'STUDENT' : 'PERSONNEL'}
         onClose={() => setCreateUserOpen(false)}
         onCreated={() => {
           setCreateUserOpen(false)
-          setFeedback('Đã tạo tài khoản.')
+          setFeedback(students ? 'Đã tạo tài khoản học viên.' : 'Đã tạo tài khoản nhân sự.')
           setReloadKey((current) => current + 1)
         }}
       />
