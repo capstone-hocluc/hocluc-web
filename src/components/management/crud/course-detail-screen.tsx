@@ -183,7 +183,6 @@ export default function CourseDetailScreen({
   const goTo = (target: CourseStepTab) => setTab(target)
   const isMain = course?.courseType === 'MAIN'
   const waiting = course?.reviewState === 'PENDING'
-  const blockedReason = blocker ? (blocker.note ?? blocker.title) : ''
 
   function primaryActions(current: CourseAdmin) {
     if (!canAct) return null
@@ -314,14 +313,11 @@ export default function CourseDetailScreen({
                 }
                 actions={primaryActions(course)}
               />
-              {canAct &&
-                blockedReason &&
-                course.status !== 'PUBLISHED' &&
-                !(waiting && !canReview) && (
-                  <p id="course-action-reason" className="mt-3 text-sm text-text-tertiary">
-                    Chưa thể {canReview ? 'bán' : 'gửi duyệt'}: {blockedReason}
-                  </p>
-                )}
+              {canAct && (
+                <div className="mt-5 border-t border-card-border pt-4">
+                  <CourseStepper steps={steps} onGo={goTo} />
+                </div>
+              )}
             </Panel>
 
             {waiting && (
@@ -355,8 +351,6 @@ export default function CourseDetailScreen({
                 </span>
               </Notice>
             )}
-
-            {canAct && <CourseStepper steps={steps} onGo={goTo} />}
 
             <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
               <ConsoleTabsList aria-label="Nội dung khóa học">

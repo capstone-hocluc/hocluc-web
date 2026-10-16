@@ -12,10 +12,7 @@ export default function CourseStepper({
 }) {
   const current = steps.find((step) => step.state === 'current')
   return (
-    <section
-      aria-label="Các bước đưa khóa lên bán"
-      className="rounded-xl border border-card-border bg-card-background p-5"
-    >
+    <section aria-label="Các bước đưa khóa lên bán">
       <ol className="grid gap-1 sm:grid-cols-5 sm:gap-0">
         {steps.map((step, index) => {
           const done = step.state === 'done'
@@ -81,7 +78,7 @@ export default function CourseStepper({
         })}
       </ol>
       {current?.note && (
-        <p className="mt-3 border-t border-card-border pt-3 text-sm text-text-tertiary">
+        <p id="course-action-reason" className="mt-3 text-sm text-text-tertiary">
           <strong className="font-medium text-text-primary">Tiếp theo: {current.title}.</strong>{' '}
           {current.note}
         </p>
