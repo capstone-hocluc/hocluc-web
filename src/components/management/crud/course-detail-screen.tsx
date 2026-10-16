@@ -35,8 +35,8 @@ import CourseContentPanel from './course-content-panel'
 import ContentSectionsPanel from './content-sections-panel'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseRejectDialog from './course-reject-dialog'
-import CourseReadinessChecklist from './course-readiness-checklist'
-import { courseReadiness, firstBlocker, type ReadinessTab } from './course-readiness'
+import CourseStepper from './course-stepper'
+import { courseSteps, firstBlocker, type CourseStepTab } from './course-steps'
 import { COURSE_STATUS_LABELS, REVIEW_STATE_LABELS, type CourseMutation } from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
 
@@ -102,7 +102,7 @@ export default function CourseDetailScreen({
     getContentSections(id)
   )
   const categories = useScheduleResource('course-categories', getCategories)
-  const [tab, setTab] = useState<ReadinessTab | 'instructors'>('overview')
+  const [tab, setTab] = useState<CourseStepTab | 'instructors'>('overview')
   const [chapters, setChapters] = useState<ChapterAdmin[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -115,18 +115,15 @@ export default function CourseDetailScreen({
   const course = resource.data
   const onChapters = useCallback((items: ChapterAdmin[]) => setChapters(items), [])
   const reloadContent = useCallback(() => sectionsResource.reload(), [sectionsResource])
-  const readiness = useMemo(
-    () =>
-      course
-        ? courseReadiness(course, chapters ? chapters.filter((c) => c.published).length : null)
-        : [],
-    [course, chapters]
-  )
-  const blocker = firstBlocker(readiness)
-
   // Backend field when present (it knows per-subject reviewers); otherwise the roles that always review.
   const canReview =
     course?.canReview ?? (profile?.role === 'ADMINISTRATOR' || profile?.role === 'MANAGER')
+
+  const steps = useMemo(
+    () => (course ? courseSteps(course, chapters, canReview) : []),
+    [course, chapters, canReview]
+  )
+  const blocker = firstBlocker(steps)
 
   // Runs one request; a stale copy (409) or an unknown outcome reloads so the next click is on fresh data.
   async function run<T>(request: () => Promise<T>, success: string) {
@@ -181,10 +178,10 @@ export default function CourseDetailScreen({
   }
 
   const canAct = !readOnly || canReview
-  const goTo = (target: ReadinessTab) => setTab(target)
+  const goTo = (target: CourseStepTab) => setTab(target)
   const isMain = course?.courseType === 'MAIN'
   const waiting = course?.reviewState === 'PENDING'
-  const blockedReason = blocker ? (blocker.hint ?? blocker.label) : ''
+  const blockedReason = blocker ? (blocker.note ?? blocker.title) : ''
 
   function primaryActions(current: CourseAdmin) {
     if (!canAct) return null
@@ -357,9 +354,7 @@ export default function CourseDetailScreen({
               </Notice>
             )}
 
-            {course.status !== 'PUBLISHED' && !waiting && canAct && (
-              <CourseReadinessChecklist items={readiness} onGo={goTo} />
-            )}
+            {canAct && <CourseStepper steps={steps} onGo={goTo} />}
 
             <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
               <ConsoleTabsList aria-label="Nội dung khóa học">
