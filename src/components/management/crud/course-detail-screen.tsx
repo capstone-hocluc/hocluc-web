@@ -41,6 +41,7 @@ import { courseSteps, firstBlocker, type CourseStep, type CourseStepTab } from '
 import {
   COURSE_STATUS_LABELS,
   COURSE_STATUS_TONES,
+  COURSE_TYPE_LABELS,
   REVIEW_STATE_LABELS,
   REVIEW_STATE_TONES,
   type CourseMutation,
@@ -328,7 +329,7 @@ export default function CourseDetailScreen({
               <DetailHeader
                 title={course.title}
                 subtitle={[
-                  isMain ? 'Khóa chính' : 'Khóa tặng kèm',
+                  COURSE_TYPE_LABELS[course.courseType],
                   course.categoryName ?? 'Chưa phân loại',
                   course.paid
                     ? `${new Intl.NumberFormat('vi-VN').format(course.price ?? 0)} đ`
@@ -399,7 +400,7 @@ export default function CourseDetailScreen({
                     <div>
                       <dt className="text-text-tertiary">Loại khóa</dt>
                       <dd className="mt-1 font-medium text-text-primary">
-                        {isMain ? 'Khóa chính' : 'Khóa tặng kèm'}
+                        {COURSE_TYPE_LABELS[course.courseType]}
                       </dd>
                     </div>
                     <div>

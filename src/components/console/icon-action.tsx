@@ -47,5 +47,12 @@ export function IconAction({
 
 /** Right-aligned strip that keeps a column's icon actions in a fixed spot whatever the row allows. */
 export function RowActions({ children }: { children: ReactNode }) {
-  return <div className="flex items-center justify-end gap-0.5">{children}</div>
+  return (
+    <div
+      className="flex items-center justify-end gap-0.5"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {children}
+    </div>
+  )
 }

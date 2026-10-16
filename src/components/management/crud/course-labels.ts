@@ -1,5 +1,9 @@
-import type { CourseReviewState, CourseStatus } from '../../../services/courseAdminService'
+import type { CourseReviewState, CourseStatus, CourseType } from '../../../services/courseAdminService'
 import type { StatusTone } from '../../console/status'
+export const COURSE_TYPE_LABELS: Record<CourseType, string> = {
+  MAIN: 'Trọn bộ',
+  SECTION: 'Khóa nhỏ',
+}
 export const REVIEW_STATE_LABELS: Record<CourseReviewState, string> = {
   NONE: 'Chưa gửi duyệt',
   PENDING: 'Chờ duyệt',

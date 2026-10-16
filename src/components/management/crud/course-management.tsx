@@ -7,7 +7,7 @@ import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { BookOpen, Eye, PackageOpen, Pencil, Plus, Trash2 } from '../../console/icons'
+import { BookOpen, PackageOpen, Pencil, Plus, Trash2 } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
@@ -24,7 +24,12 @@ import { crudError, unknownMutation } from './crud-errors'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseDetailScreen from './course-detail-screen'
 
-import { COURSE_STATUS_LABELS, courseDisplayStatus, REVIEW_STATE_LABELS } from './course-labels'
+import {
+  COURSE_STATUS_LABELS,
+  COURSE_TYPE_LABELS,
+  courseDisplayStatus,
+  REVIEW_STATE_LABELS,
+} from './course-labels'
 const price = (course: CourseAdmin) =>
   !course.paid
     ? 'Miễn phí'
@@ -54,6 +59,10 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
   const pending = useScheduleResource('admin-courses-pending', () =>
     getAdminCourses({ reviewState: 'PENDING', page: 0, size: 1 })
   )
+  const openDetail = (id: string) => {
+    setOpenOnContent(false)
+    setSelectedId(id)
+  }
   const columns = useMemo<ColumnDef<CourseAdmin>[]>(
     () => [
       {
@@ -62,16 +71,22 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         enableSorting: false,
         meta: { className: 'w-[34%]' },
         cell: ({ row }) => (
-          <strong className="block max-w-80 truncate font-medium" title={row.original.title}>
+          <button
+            type="button"
+            className="block max-w-80 truncate text-left font-medium hover:text-primary focus-visible:underline"
+            title={row.original.title}
+            onClick={() => openDetail(row.original.id)}
+          >
             {row.original.title}
-          </strong>
+          </button>
         ),
       },
       {
         accessorKey: 'courseType',
         header: 'Loại',
         enableSorting: false,
-        meta: { className: 'w-24' },
+        meta: { className: 'w-28' },
+        cell: ({ row }) => COURSE_TYPE_LABELS[row.original.courseType],
       },
       {
         accessorKey: 'categoryName',
@@ -102,15 +117,6 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         meta: { className: 'w-52 text-right' },
         cell: ({ row }) => (
           <RowActions>
-            <IconAction
-              label="Chi tiết"
-              icon={Eye}
-              onClick={() => {
-                setOpenOnContent(false)
-                setSelectedId(row.original.id)
-              }}
-              disabled={busy}
-            />
             {!readOnly && (
               <>
                 <IconAction
@@ -284,8 +290,8 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
               onChange={(v) => setFilter('type', v)}
               options={[
                 { id: 'ALL', label: 'Tất cả loại' },
-                { id: 'MAIN', label: 'Khóa chính' },
-                { id: 'SECTION', label: 'Khóa tặng kèm' },
+                { id: 'MAIN', label: COURSE_TYPE_LABELS.MAIN },
+                { id: 'SECTION', label: COURSE_TYPE_LABELS.SECTION },
               ]}
             />
             <FilterSelect
@@ -325,6 +331,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
             columns={columns}
             data={resource.data?.content ?? []}
             getRowKey={(c) => c.id}
+            onRowClick={(c) => openDetail(c.id)}
             emptyMessage="Chưa có khóa học phù hợp."
           />
           <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">

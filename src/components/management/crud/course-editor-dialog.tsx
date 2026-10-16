@@ -13,6 +13,7 @@ import {
 } from '../../../services/courseAdminService'
 import type { Category } from '../../../services/categoryService'
 import { getFieldErrors } from '../../../lib/errors'
+import { COURSE_TYPE_LABELS } from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
 import CourseImageField from './course-image-field'
 
@@ -227,8 +228,8 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
                 onChange={(value) => setCourseType(value as CourseType)}
                 disabled={!!course || busy}
                 options={[
-                  { id: 'MAIN', label: 'MAIN · Trọn bộ' },
-                  { id: 'SECTION', label: 'SECTION · Khóa nhỏ' },
+                  { id: 'MAIN', label: COURSE_TYPE_LABELS.MAIN },
+                  { id: 'SECTION', label: COURSE_TYPE_LABELS.SECTION },
                 ]}
               />
             </Field>
@@ -407,7 +408,7 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
               <p className="text-xs text-text-tertiary">
                 {courseType === 'MAIN'
                   ? 'Quyền truy cập kết thúc vào cuối ngày kết thúc của khóa.'
-                  : 'SECTION không có ngày kết thúc — chọn “N ngày kể từ khi mua” nếu muốn giới hạn thời gian học.'}
+                  : 'Khóa nhỏ không có ngày kết thúc — chọn “N ngày kể từ khi mua” nếu muốn giới hạn thời gian học.'}
               </p>
             )}
           </div>
