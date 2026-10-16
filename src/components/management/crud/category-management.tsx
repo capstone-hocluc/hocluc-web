@@ -85,10 +85,10 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
       {
         id: 'parent',
         header: 'Danh mục cha',
-        accessorFn: (c) => (c.parentId ? (names.get(c.parentId) ?? '—') : '—'),
+        accessorFn: (c) => (c.parentId ? (names.get(c.parentId) ?? '—') : 'Không có'),
         cell: ({ row }) => {
           const category = row.original
-          const parentName = category.parentId ? (names.get(category.parentId) ?? '—') : '—'
+          const parentName = category.parentId ? (names.get(category.parentId) ?? '—') : 'Không có'
           if (readOnly) return parentName
           if (quickEditId !== category.id) {
             return (
@@ -113,7 +113,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
                 onChange={(value) => void changeParent(category, value)}
                 className="min-w-48"
                 options={[
-                  { id: 'NONE', label: 'Không có (cấp gốc)' },
+                  { id: 'NONE', label: 'Không có' },
                   ...rows
                     .filter((c) => !blocked.has(c.id))
                     .map((c) => ({ id: c.id, label: c.name })),
