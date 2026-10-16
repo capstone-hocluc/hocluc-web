@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import Panel from '../../console/panel'
 import Button from '../../console/button'
+import Status from '../../console/status'
 import SelectField from '../../console/select-field'
 import Field from '../../console/form-field'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import { ArrowDown, ArrowUp } from '../../console/icons'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourses, type CourseAdmin } from '../../../services/courseAdminService'
-import { movedIds, type CourseMutation, type CourseRemoval } from './course-labels'
+import { COURSE_STATUS_LABELS, movedIds, type CourseMutation, type CourseRemoval } from './course-labels'
 
 interface Props {
   course: CourseAdmin
@@ -16,29 +17,26 @@ interface Props {
   mutate: CourseMutation
   remove: CourseRemoval
 }
+
+// Gifts: other courses the student also gets when buying this one. Any course may come with any
+// other, never with itself. The backend keeps the table name `course_sections`, hence the file name.
 export default function CourseSectionsPanel({ course, readOnly, busy, mutate, remove }: Props) {
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState('NONE')
-  const [phaseId, setPhaseId] = useState('NONE')
   const candidates = useScheduleResource(
-    readOnly ? null : `section-picker:${course.status}:${page}`,
+    readOnly ? null : `gift-picker:${course.id}:${course.status}:${page}`,
     () =>
       getAdminCourses({
-        type: 'SECTION',
         status: course.status === 'PUBLISHED' ? 'PUBLISHED' : undefined,
         page,
         size: 20,
       })
   )
   const options = (candidates.data?.content ?? []).filter(
-    (c) => !course.sections.some((s) => s.sectionCourseId === c.id)
+    (c) => c.id !== course.id && !course.sections.some((s) => s.sectionCourseId === c.id)
   )
-  const phaseOptions = [
-    { id: 'NONE', label: 'Không có giai đoạn' },
-    ...course.phases.map((p) => ({ id: p.id, label: p.name })),
-  ]
   return (
-    <Panel title="SECTION trong khóa">
+    <Panel title="Khóa tặng kèm">
       {!readOnly && (
         <ScheduleResourceState
           status={candidates.status}
@@ -46,41 +44,29 @@ export default function CourseSectionsPanel({ course, readOnly, busy, mutate, re
           onRetry={candidates.reload}
         >
           <div className="flex flex-col gap-3 border-b border-card-border pb-5">
-            <div className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
-              <Field label="Khóa nhỏ">
+            <div className="grid items-end gap-3 sm:grid-cols-[1fr_auto]">
+              <Field label="Khóa tặng kèm" hint="Học viên mua khóa này sẽ được học cả khóa được chọn.">
                 <SelectField
-                  ariaLabel="SECTION để gắn"
+                  ariaLabel="Khóa để tặng kèm"
                   value={selected}
                   onChange={setSelected}
                   disabled={busy}
                   options={[
-                    { id: 'NONE', label: 'Chọn SECTION' },
-                    ...options.map((c) => ({ id: c.id, label: c.title })),
+                    { id: 'NONE', label: 'Chọn khóa' },
+                    ...options.map((c) => ({
+                      id: c.id,
+                      label: `${c.title} · ${COURSE_STATUS_LABELS[c.status]}`,
+                    })),
                   ]}
-                />
-              </Field>
-              <Field label="Giai đoạn">
-                <SelectField
-                  ariaLabel="Giai đoạn SECTION mới"
-                  value={phaseId}
-                  onChange={setPhaseId}
-                  disabled={busy}
-                  options={phaseOptions}
                 />
               </Field>
               <Button
                 disabled={busy || selected === 'NONE'}
                 onClick={async () => {
-                  if (
-                    await mutate('sections', 'POST', {
-                      sectionCourseId: selected,
-                      phaseId: phaseId === 'NONE' ? null : phaseId,
-                    })
-                  )
-                    setSelected('NONE')
+                  if (await mutate('sections', 'POST', { sectionCourseId: selected })) setSelected('NONE')
                 }}
               >
-                Gắn SECTION
+                Tặng kèm khóa
               </Button>
             </div>
             {candidates.data && candidates.data.totalPages > 1 && (
@@ -111,42 +97,30 @@ export default function CourseSectionsPanel({ course, readOnly, busy, mutate, re
               </div>
             )}
             {!options.length && (
-              <p className="text-sm text-text-tertiary">Chưa có SECTION phù hợp trong trang này.</p>
+              <p className="text-sm text-text-tertiary">Chưa có khóa phù hợp trong trang này.</p>
             )}
           </div>
         </ScheduleResourceState>
       )}
       {!course.sections.length ? (
-        <p className="mt-4 text-sm text-text-tertiary">Chưa gắn SECTION vào khóa.</p>
+        <p className="mt-4 text-sm text-text-tertiary">
+          Chưa tặng kèm khóa nào. Phần này là tùy chọn: khóa vẫn bán được nếu có chương đã xuất bản.
+        </p>
       ) : (
         <ol className="divide-y divide-card-border">
           {course.sections.map((section, index) => (
             <li
               key={section.id}
-              className="flex flex-wrap items-center justify-between gap-3 py-4 last:pb-0"
+              className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
             >
-              <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                 <h3 className="font-medium text-text-primary">{section.title}</h3>
-                {readOnly && (
-                  <p className="mt-1 text-sm text-text-tertiary">
-                    {course.phases.find((p) => p.id === section.phaseId)?.name ??
-                      'Không có giai đoạn'}
-                  </p>
-                )}
+                <Status tone={section.status === 'PUBLISHED' ? 'success' : 'neutral'}>
+                  {COURSE_STATUS_LABELS[section.status]}
+                </Status>
               </div>
               {!readOnly && (
                 <div className="flex flex-wrap items-center gap-1">
-                  <SelectField
-                    ariaLabel={`Giai đoạn của ${section.title}`}
-                    value={section.phaseId ?? 'NONE'}
-                    disabled={busy}
-                    options={phaseOptions}
-                    onChange={(value) =>
-                      void mutate(`sections/${section.id}`, 'PUT', {
-                        phaseId: value === 'NONE' ? null : value,
-                      })
-                    }
-                  />
                   <Button
                     size="icon"
                     appearance="ghost"

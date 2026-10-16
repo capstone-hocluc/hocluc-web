@@ -7,7 +7,7 @@ import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Eye, PackageOpen, Pencil, Plus, Send, Trash2 } from '../../console/icons'
+import { Eye, PackageOpen, Pencil, Plus, Trash2 } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
@@ -24,7 +24,7 @@ import { crudError, unknownMutation } from './crud-errors'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseDetailScreen from './course-detail-screen'
 
-import { COURSE_STATUS_LABELS } from './course-labels'
+import { COURSE_STATUS_LABELS, REVIEW_STATE_LABELS } from './course-labels'
 const price = (course: CourseAdmin) =>
   !course.paid
     ? 'Miễn phí'
@@ -50,6 +50,9 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     getAdminCourses(query)
   )
   const categories = useScheduleResource('course-categories', getCategories)
+  const pending = useScheduleResource('admin-courses-pending', () =>
+    getAdminCourses({ reviewState: 'PENDING', page: 0, size: 1 })
+  )
   const columns = useMemo<ColumnDef<CourseAdmin>[]>(
     () => [
       {
@@ -63,7 +66,12 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
           </strong>
         ),
       },
-      { accessorKey: 'courseType', header: 'Loại', enableSorting: false, meta: { className: 'w-24' } },
+      {
+        accessorKey: 'courseType',
+        header: 'Loại',
+        enableSorting: false,
+        meta: { className: 'w-24' },
+      },
       {
         accessorKey: 'categoryName',
         header: 'Danh mục',
@@ -96,27 +104,49 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         ),
       },
       {
+        id: 'review',
+        header: 'Duyệt',
+        meta: { className: 'w-32' },
+        cell: ({ row }) =>
+          row.original.status === 'PUBLISHED' || row.original.reviewState === 'NONE' ? (
+            <span className="text-text-tertiary">—</span>
+          ) : (
+            <Status tone={row.original.reviewState === 'PENDING' ? 'info' : 'danger'}>
+              {REVIEW_STATE_LABELS[row.original.reviewState]}
+            </Status>
+          ),
+      },
+      {
         id: 'actions',
         header: 'Thao tác',
         meta: { className: 'w-44 text-right' },
         cell: ({ row }) => (
           <RowActions>
-            <IconAction label="Chi tiết" icon={Eye} onClick={() => setSelectedId(row.original.id)} disabled={busy} />
+            <IconAction
+              label="Chi tiết"
+              icon={Eye}
+              onClick={() => setSelectedId(row.original.id)}
+              disabled={busy}
+            />
             {!readOnly && (
               <>
-                <IconAction label="Sửa" icon={Pencil} onClick={() => setEditor({ course: row.original })} disabled={busy} />
                 <IconAction
-                  label={row.original.status === 'PUBLISHED' ? 'Lưu trữ' : 'Xuất bản'}
-                  icon={row.original.status === 'PUBLISHED' ? PackageOpen : Send}
+                  label="Sửa"
+                  icon={Pencil}
+                  onClick={() => setEditor({ course: row.original })}
                   disabled={busy}
-                  onClick={() => {
-                    setError('')
-                    setConfirmation({
-                      course: row.original,
-                      status: row.original.status === 'PUBLISHED' ? 'ARCHIVED' : 'PUBLISHED',
-                    })
-                  }}
                 />
+                {row.original.status === 'PUBLISHED' && (
+                  <IconAction
+                    label="Lưu trữ"
+                    icon={PackageOpen}
+                    disabled={busy}
+                    onClick={() => {
+                      setError('')
+                      setConfirmation({ course: row.original, status: 'ARCHIVED' })
+                    }}
+                  />
+                )}
                 {row.original.status === 'DRAFT' && (
                   <IconAction
                     label="Xóa"
@@ -137,7 +167,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     ],
     [readOnly, busy]
   )
-  const setFilter = (key: 'type' | 'status' | 'categoryId', value: string) =>
+  const setFilter = (key: 'type' | 'status' | 'categoryId' | 'reviewState', value: string) =>
     setQuery((old) => ({ ...old, [key]: value === 'ALL' ? undefined : value, page: 0 }))
   async function confirm() {
     if (!confirmation || busy) return
@@ -167,14 +197,27 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         onBack={() => {
           setSelectedId(null)
           resource.reload()
+          pending.reload()
         }}
       />
     )
   return (
     <section className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">Khóa trọn bộ và khóa nhỏ, ở mọi trạng thái.</p>
+        <p className="text-sm text-text-tertiary">
+          Soạn khóa, gửi duyệt và theo dõi trạng thái bán. Mở một khóa để thêm nội dung và gửi
+          duyệt.
+        </p>
         <div className="flex gap-2">
+          <Button
+            appearance={query.reviewState === 'PENDING' ? 'fill' : 'outline'}
+            aria-pressed={query.reviewState === 'PENDING'}
+            onClick={() =>
+              setFilter('reviewState', query.reviewState === 'PENDING' ? 'ALL' : 'PENDING')
+            }
+          >
+            Chờ duyệt{pending.data ? ` (${pending.data.totalElements})` : ''}
+          </Button>
           {!readOnly && (
             <Button
               onClick={() => setEditor({ course: null })}
@@ -229,8 +272,8 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
               onChange={(v) => setFilter('type', v)}
               options={[
                 { id: 'ALL', label: 'Tất cả loại' },
-                { id: 'MAIN', label: 'MAIN · Trọn bộ' },
-                { id: 'SECTION', label: 'SECTION · Khóa nhỏ' },
+                { id: 'MAIN', label: 'Khóa chính' },
+                { id: 'SECTION', label: 'Khóa tặng kèm' },
               ]}
             />
             <FilterSelect
@@ -240,6 +283,16 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
               options={[
                 { id: 'ALL', label: 'Tất cả trạng thái' },
                 ...Object.entries(COURSE_STATUS_LABELS).map(([id, label]) => ({ id, label })),
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Trạng thái duyệt lọc"
+              value={query.reviewState ?? 'ALL'}
+              onChange={(v) => setFilter('reviewState', v)}
+              options={[
+                { id: 'ALL', label: 'Mọi trạng thái duyệt' },
+                { id: 'PENDING', label: REVIEW_STATE_LABELS.PENDING },
+                { id: 'REJECTED', label: REVIEW_STATE_LABELS.REJECTED },
               ]}
             />
             <FilterSelect
@@ -254,7 +307,8 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
             />
           </FilterGroup>
         </FilterToolbar>
-        <ScheduleResourceState skeleton="table"
+        <ScheduleResourceState
+          skeleton="table"
           status={resource.status}
           errorMessage={resource.errorMessage}
           onRetry={resource.reload}
@@ -298,21 +352,13 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       )}
       {confirmation && (
         <ConfirmDialog
-          title={
-            confirmation.status === 'PUBLISHED'
-              ? 'Xuất bản khóa học?'
-              : confirmation.status === 'ARCHIVED'
-                ? 'Lưu trữ khóa học?'
-                : 'Xóa khóa nháp?'
-          }
+          title={confirmation.status === 'ARCHIVED' ? 'Lưu trữ khóa học?' : 'Xóa khóa nháp?'}
           description={
             <>
               {confirmation.course.title}.{' '}
               {confirmation.status === 'ARCHIVED'
                 ? 'Ẩn khỏi danh sách mở bán; giữ lịch sử và quyền học đã cấp.'
-                : confirmation.status === 'PUBLISHED'
-                  ? 'Chỉ xuất bản khi nội dung và các SECTION đã sẵn sàng.'
-                  : 'Không thể khôi phục; backend sẽ chặn nếu còn tham chiếu.'}
+                : 'Không thể khôi phục; backend sẽ chặn nếu còn tham chiếu.'}
               {error && (
                 <span role="alert" className="mt-2 block text-danger">
                   {error}

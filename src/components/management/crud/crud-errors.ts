@@ -12,9 +12,24 @@ const messages: Record<string, string> = {
   'Only an unreferenced draft course can be deleted. Archive it instead.':
     'Khóa còn dữ liệu liên quan. Không thể xóa hoặc đổi thành phần đã cấp quyền.',
   'Course is not ready for publication.':
-    'Khóa chưa đủ điều kiện xuất bản. Kiểm tra chương và các SECTION.',
+    'Khóa chưa đủ điều kiện để bán. Kiểm tra tên, học phí, chương đã xuất bản và các khóa tặng kèm.',
   'Move sections out of this phase before deleting it.':
-    'Chuyển các SECTION ra khỏi giai đoạn trước khi xóa.',
+    'Chuyển các phần học ra khỏi giai đoạn trước khi xóa.',
+  'Send the course for review: a manager or the leader of its subject puts it on sale.':
+    'Khóa cần được duyệt trước khi bán. Hãy gửi duyệt; quản lý hoặc trưởng bộ môn sẽ đưa khóa lên bán.',
+  "Only a manager or the leader of the course's subject reviews it.":
+    'Chỉ quản lý hoặc trưởng bộ môn của khóa mới được duyệt.',
+  'The course is not waiting for review.': 'Khóa không ở trạng thái chờ duyệt.',
+  'Invalid course state transition.': 'Không thể chuyển khóa sang trạng thái này.',
+  'The course is on sale: take it off sale (ARCHIVED) to change it, then send it for review.':
+    'Khóa đang bán. Hãy lưu trữ khóa để chỉnh sửa, rồi gửi duyệt lại.',
+  'The course is already on sale.': 'Khóa đã được bán.',
+  'Move or delete the chapters of this section first.':
+    'Chuyển hoặc xóa các chương của phần học này trước.',
+  'Classes or recordings of the schedule are for this section.':
+    'Lịch học hoặc bản ghi buổi học đang gắn với phần học này.',
+  'Section does not belong to this course.': 'Phần học không thuộc khóa này.',
+  'A course cannot come with itself.': 'Một khóa không thể tặng kèm chính nó.',
   'This operation conflicts with referenced or concurrently changed data.':
     'Dữ liệu bị xung đột. Tải lại và kiểm tra các tham chiếu.',
   'Chapter has lessons, quizzes or student progress. Unpublish it or remove unreferenced children first.':
@@ -51,9 +66,21 @@ const messages: Record<string, string> = {
   'Choose an account whose active role is STUDENT.': 'Chọn tài khoản có vai trò Học viên.',
   'Email is already registered and active.': 'Email đã được dùng cho tài khoản khác.',
 }
+// Why the backend says a course is not ready, keyed by the field it reports.
+const readinessReasons: Record<string, string> = {
+  content: 'Cần xuất bản ít nhất một chương, hoặc tặng kèm một khóa đã xuất bản.',
+  sections: 'Mọi khóa tặng kèm phải đã xuất bản hoặc lưu trữ.',
+}
 export function crudError(error: unknown): string {
   const message = getErrorMessage(error)
-  return messages[message] ?? message
+  const base = messages[message] ?? message
+  if (error instanceof ApiError && message === 'Course is not ready for publication.') {
+    const reasons = Object.keys(error.errors ?? {})
+      .map((key) => readinessReasons[key])
+      .filter(Boolean)
+    if (reasons.length) return `${base} ${reasons.join(' ')}`
+  }
+  return base
 }
 export function unknownMutation(error: unknown): boolean {
   return !(error instanceof ApiError) || error.status >= 500

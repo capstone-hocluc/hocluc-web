@@ -58,7 +58,7 @@ export default function CoursePhasesPanel({
     >
       {!course.phases.length ? (
         <p className="text-sm text-text-tertiary">
-          Chưa có giai đoạn. Có thể gắn SECTION không theo giai đoạn.
+          Chưa có giai đoạn. Có thể thêm phần học mà không gắn giai đoạn.
         </p>
       ) : (
         <ol className="divide-y divide-card-border">

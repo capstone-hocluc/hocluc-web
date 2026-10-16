@@ -1,4 +1,9 @@
-import type { CourseStatus } from '../../../services/courseAdminService'
+import type { CourseReviewState, CourseStatus } from '../../../services/courseAdminService'
+export const REVIEW_STATE_LABELS: Record<CourseReviewState, string> = {
+  NONE: 'Chưa gửi duyệt',
+  PENDING: 'Chờ duyệt',
+  REJECTED: 'Bị trả lại',
+}
 export const COURSE_STATUS_LABELS: Record<CourseStatus, string> = {
   DRAFT: 'Nháp',
   PUBLISHED: 'Đã xuất bản',
