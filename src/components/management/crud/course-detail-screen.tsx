@@ -187,20 +187,9 @@ export default function CourseDetailScreen({
   function primaryActions(current: CourseAdmin) {
     if (!canAct) return null
     // Reviewers act on review state even where the console is view-only for course content.
-    const edit = readOnly ? null : (
-      <Button
-        appearance="outline"
-        onClick={() => setEditing(true)}
-        disabled={busy || !categories.data}
-      >
-        <Pencil size={16} />
-        Sửa thông tin
-      </Button>
-    )
     if (current.status === 'PUBLISHED') {
       return (
         <>
-          {edit}
           <Button appearance="outline" disabled={busy} onClick={() => setAction('archive')}>
             Lưu trữ
           </Button>
@@ -210,7 +199,6 @@ export default function CourseDetailScreen({
     if (waiting && !canReview) {
       return (
         <>
-          {edit}
           <span className="inline-flex h-10 items-center gap-2 px-2 text-sm font-medium text-text-secondary">
             <Clock3 size={16} aria-hidden />
             Đang chờ duyệt
@@ -221,7 +209,6 @@ export default function CourseDetailScreen({
     if (waiting) {
       return (
         <>
-          {edit}
           <Button
             appearance="outline"
             variant="danger"
@@ -242,7 +229,6 @@ export default function CourseDetailScreen({
     }
     return (
       <>
-        {edit}
         {canReview ? (
           <Button
             disabled={busy || !!blocker}
@@ -361,7 +347,21 @@ export default function CourseDetailScreen({
               </ConsoleTabsList>
 
               <ConsoleTabsContent value="overview">
-                <Panel title="Thông tin khóa">
+                <Panel
+                  title="Thông tin khóa"
+                  action={
+                    readOnly ? undefined : (
+                      <Button
+                        appearance="outline"
+                        onClick={() => setEditing(true)}
+                        disabled={busy || !categories.data}
+                      >
+                        <Pencil size={16} />
+                        Sửa thông tin
+                      </Button>
+                    )
+                  }
+                >
                   <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
                     <div>
                       <dt className="text-text-tertiary">Loại khóa</dt>
