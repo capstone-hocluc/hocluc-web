@@ -1,29 +1,29 @@
-/* Nunito: the typeface of the landing page, the auth screens and the student area. */
+/* Nunito: the typeface of every learner screen (landing, auth, public course pages, student area). */
 @font-face {
   font-family: 'Nunito';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-400.ttf') format('truetype');
+  src: url('/landing-v2/assets/fonts/nunito-400.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Nunito';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-700.ttf') format('truetype');
+  src: url('/landing-v2/assets/fonts/nunito-700.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Nunito';
   font-style: normal;
   font-weight: 800;
   font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-800.ttf') format('truetype');
+  src: url('/landing-v2/assets/fonts/nunito-800.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Nunito';
   font-style: normal;
   font-weight: 900;
   font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-900.ttf') format('truetype');
+  src: url('/landing-v2/assets/fonts/nunito-900.woff2') format('woff2');
 }

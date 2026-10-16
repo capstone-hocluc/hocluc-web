@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { LockKeyhole } from '../components/console/icons'
+import { Eye, EyeOff, LockKeyhole, Mail } from '../components/console/icons'
 import AuthShell from '../components/auth/AuthShell'
-import Button from '../components/ui/Button'
+import Button from '../components/console/button'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { clearTokens } from '../lib/api'
 import { getErrorMessage } from '../lib/errors'
@@ -67,7 +67,10 @@ function AdminLoginPage({
 
       if (!allowedRoles.includes(profile.role)) {
         const available = grantedRoles(profile).filter((role) => allowedRoles.includes(role))
-        if (available.length) { setRoleChoices(available); return }
+        if (available.length) {
+          setRoleChoices(available)
+          return
+        }
         clearTokens()
         clearCurrentUser()
         setError(rejectedRoleMessage)
@@ -97,107 +100,143 @@ function AdminLoginPage({
     }
   }
 
-  if (roleChoices.length) return (
-    <AuthShell onBack={() => { clearTokens(); clearCurrentUser(); setRoleChoices([]); onBack() }} backLabel="Quay lại trang chủ" showThemeToggle>
-      <section>
-        <h1 className="text-center text-xl font-semibold text-text-heading">Chọn vai trò để tiếp tục</h1>
-        <p className="my-4 text-sm text-text-muted">Chuyển vai trò sẽ kết thúc các phiên đăng nhập khác.</p>
-        <div className="grid gap-3">
-          {roleChoices.map((role) => <Button key={role} disabled={loading} onClick={() => void chooseRole(role)}>{loading ? 'Đang chuyển...' : ROLE_LABELS[role]}</Button>)}
-          <Button appearance="outline" disabled={loading} onClick={() => { clearTokens(); clearCurrentUser(); setRoleChoices([]) }}>Dùng tài khoản khác</Button>
-        </div>
-        {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
-      </section>
-    </AuthShell>
-  )
+  if (roleChoices.length)
+    return (
+      <AuthShell
+        onBack={() => {
+          clearTokens()
+          clearCurrentUser()
+          setRoleChoices([])
+          onBack()
+        }}
+        backLabel="Quay lại trang chủ"
+        showThemeToggle
+      >
+        <section>
+          <div className="hl-auth-heading">
+            <h1>Chọn vai trò để tiếp tục</h1>
+            <p>Chuyển vai trò sẽ kết thúc các phiên đăng nhập khác.</p>
+          </div>
+          <div className="brand-auth-role-choices">
+            {roleChoices.map((role) => (
+              <Button
+                className="hl-auth-submit"
+                key={role}
+                disabled={loading}
+                onClick={() => void chooseRole(role)}
+              >
+                {loading ? 'Đang chuyển...' : ROLE_LABELS[role]}
+              </Button>
+            ))}
+            <Button
+              className="brand-auth-alternate"
+              appearance="outline"
+              disabled={loading}
+              onClick={() => {
+                clearTokens()
+                clearCurrentUser()
+                setRoleChoices([])
+              }}
+            >
+              Dùng tài khoản khác
+            </Button>
+          </div>
+          {error && (
+            <p role="alert" className="hl-auth-error">
+              {error}
+            </p>
+          )}
+        </section>
+      </AuthShell>
+    )
 
   return (
     <AuthShell onBack={onBack} backLabel="Quay lại trang chủ" showThemeToggle>
       <section aria-labelledby="admin-login-title">
-        <h1
-          id="admin-login-title"
-          className="mb-5 text-center text-[24px] font-black leading-tight tracking-[-0.03em] text-text-heading"
-        >
-          {title}
-        </h1>
-
-        {import.meta.env.DEV && (
-          <div className="mb-4 flex flex-wrap justify-center gap-2">
-            {DEV_ACCOUNTS.map((account) => (
+        <div className="hl-auth-heading">
+          <h1 id="admin-login-title">{title}</h1>
+          <p>Truy cập không gian làm việc dành cho đội ngũ Học Lực.</p>
+        </div>
+        <form onSubmit={handleSubmit} aria-busy={loading}>
+          <label className="hl-auth-label" htmlFor="admin-email">
+            Email
+            <span className="hl-auth-input">
+              <Mail size={19} aria-hidden="true" />
+              <input
+                id="admin-email"
+                type="email"
+                autoComplete="username"
+                placeholder="ban@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={loading}
+                autoFocus
+              />
+            </span>
+          </label>
+          <label className="hl-auth-label" htmlFor="admin-password">
+            Mật khẩu
+            <span className="hl-auth-input">
+              <LockKeyhole size={19} aria-hidden="true" />
+              <input
+                id="admin-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="Nhập mật khẩu"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={loading}
+              />
               <button
-                key={account.email}
                 type="button"
-                title={`${account.email} / ${DEV_PASSWORD}`}
-                onClick={() => {
-                  setEmail(account.email)
-                  setPassword(DEV_PASSWORD)
-                  setShowPassword(true)
-                  setError('')
-                  void signIn(account.email, DEV_PASSWORD)
-                }}
-                className="rounded-full border border-border-primary px-3 py-1 text-[12px] font-bold text-text-label transition-colors hover:bg-surface-hover"
+                className="hl-auth-eye"
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                aria-pressed={showPassword}
+                disabled={loading}
+                onClick={() => setShowPassword((current) => !current)}
               >
-                Đăng nhập nhanh: {account.label}
+                {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
               </button>
-            ))}
-          </div>
-        )}
-
-        <form className="grid gap-3" onSubmit={handleSubmit}>
-          <div className="grid gap-1.5">
-            <label htmlFor="admin-email" className="text-[12px] font-bold text-text-label">
-              Email
-            </label>
-            <input
-              id="admin-email"
-              type="email"
-              autoComplete="username"
-              placeholder="admin@gmail.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              disabled={loading}
-              className="h-10 w-full rounded-xl border border-border-primary bg-surface-hover px-3.5 text-[14px] text-text-heading outline-none transition-colors placeholder:text-text-subtle focus:border-primary focus:ring-3 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-
-          <div className="grid gap-1.5">
-            <label htmlFor="admin-password" className="text-[12px] font-bold text-text-label">
-              Mật khẩu
-            </label>
-            <input
-              id="admin-password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="Nhập mật khẩu"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              disabled={loading}
-              className="h-10 w-full rounded-xl border border-border-primary bg-surface-hover px-3.5 text-[14px] text-text-heading outline-none transition-colors placeholder:text-text-subtle focus:border-primary focus:ring-3 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
+            </span>
+          </label>
 
           {error && (
-            <p className="mt-2 text-[13px] leading-5 text-danger" role="alert">
+            <p className="hl-auth-error" role="alert">
               {error}
             </p>
           )}
 
-          <Button
-            type="submit"
-            size="md"
-            className="mt-1 h-11 w-full rounded-xl bg-primary text-[13px] font-extrabold text-white shadow-[0_4px_0_var(--color-primary-dark)] transition hover:-translate-y-0.5 hover:bg-primary hover:shadow-[0_5px_0_var(--color-primary-dark)] active:translate-y-0.5 active:shadow-none"
-            disabled={loading}
-          >
+          <Button type="submit" size="md" className="hl-auth-submit" disabled={loading}>
             <LockKeyhole size={16} aria-hidden="true" />
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </Button>
         </form>
-        <p className="mt-4 text-center text-[13px] text-text-muted">
-          Bạn là học viên?{' '}
-          <a className="font-bold text-primary-text" href="/login">
-            Đăng nhập tại đây
-          </a>
+        <p className="hl-auth-switch">
+          Bạn là học viên? <a href="/login">Đăng nhập tại đây</a>
         </p>
+        {import.meta.env.DEV && (
+          <details className="hl-auth-dev-tools">
+            <summary>Công cụ phát triển</summary>
+            <div className="brand-auth-dev-accounts">
+              {DEV_ACCOUNTS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setEmail(account.email)
+                    setPassword(DEV_PASSWORD)
+                    setShowPassword(false)
+                    setError('')
+                    void signIn(account.email, DEV_PASSWORD)
+                  }}
+                >
+                  Đăng nhập nhanh: {account.label}
+                </button>
+              ))}
+            </div>
+          </details>
+        )}
       </section>
     </AuthShell>
   )

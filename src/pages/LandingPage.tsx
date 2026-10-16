@@ -26,9 +26,11 @@ import {
   practiceOperations,
   sampleQuestions,
 } from '../data/landing-content'
+import { useLearnerTheme } from '../hooks/useLearnerTheme'
 import '../styles/landing/landing-page.css'
 
 function LandingPage() {
+  useLearnerTheme()
   const [detail, setDetail] = useState<LandingDetail | null>(null)
   const [startOpen, setStartOpen] = useState(false)
   const lessonRef = useRef<SampleLessonHandle>(null)

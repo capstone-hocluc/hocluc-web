@@ -1,7 +1,8 @@
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import StudentSidebar from './StudentSidebar'
 import StudentTopbar from './StudentTopbar'
 import { useCurrentUser, useHydrateCurrentUser } from '../../../hooks/useCurrentUser'
+import { useLearnerTheme } from '../../../hooks/useLearnerTheme'
 import { useTransientMessage } from '../../../hooks/useTransientMessage'
 import StudentToast from '../common/StudentToast'
 import { dashboardSummary } from '../../../data/studentDashboard'
@@ -22,8 +23,8 @@ interface StudentLayoutProps {
 // lessons, quizzes, results, review...): sticky topbar, icon-rail sidebar and
 // the page area (`children` is the routed page). Pages never render their own
 // header/sidebar; the sidebar highlight is derived from the current URL.
-// While mounted it marks <html data-student> so the landing-page token set
-// (student-theme.css) also reaches portals such as menus and dialogs.
+// While mounted it opts into the learner token set (student-theme.css), which
+// also reaches portals such as menus and dialogs.
 function StudentLayout({
   currentPath,
   onNavigate,
@@ -37,12 +38,7 @@ function StudentLayout({
   useHydrateCurrentUser()
   const { profile, status } = useCurrentUser()
 
-  useEffect(() => {
-    document.documentElement.dataset.student = ''
-    return () => {
-      delete document.documentElement.dataset.student
-    }
-  }, [])
+  useLearnerTheme()
 
   return (
     <div

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Landmark, ShoppingBag } from '../../components/console/icons'
-import Navbar from '../../components/common/Navbar'
-import Footer from '../../components/common/Footer'
-import Chatbot from '../../components/landing/Chatbot'
+import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import { getCart, getEndedCartItems, type Cart } from '../../services/cartService'
 import { checkout, type OrderPaymentData } from '../../services/orderService'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -67,7 +65,7 @@ function CheckoutPage({ onOrderCreated, onBackToCart }: CheckoutPageProps) {
 
   return (
     <div className="hl-checkout-page">
-      <Navbar />
+      <PublicHeader />
       <main className="hl-checkout-main-wrap">
         <div className="hl-checkout-container">
           <h1 className="hl-checkout-title">Thanh toán</h1>
@@ -192,8 +190,7 @@ function CheckoutPage({ onOrderCreated, onBackToCart }: CheckoutPageProps) {
           )}
         </div>
       </main>
-      <Footer />
-      <Chatbot />
+      <PublicFooter />
     </div>
   )
 }

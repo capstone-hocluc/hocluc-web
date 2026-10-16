@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ChevronLeft, SearchX } from '../../components/console/icons'
-import Navbar from '../../components/common/Navbar'
-import Footer from '../../components/common/Footer'
-import Chatbot from '../../components/landing/Chatbot'
+import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import OrderStatusBadge from '../../components/orders/OrderStatusBadge'
 import { cancelOrder, getOrder, payOrder, type Order, type OrderPaymentData } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
@@ -94,7 +92,7 @@ function OrderDetailPage({
 
   return (
     <div className="hl-orders-page">
-      <Navbar />
+      <PublicHeader />
       <main className="hl-orders-main-wrap">
         <div className="hl-orders-container">
           {status === 'loading' && (
@@ -251,8 +249,7 @@ function OrderDetailPage({
           )}
         </div>
       </main>
-      <Footer />
-      <Chatbot />
+      <PublicFooter />
     </div>
   )
 }

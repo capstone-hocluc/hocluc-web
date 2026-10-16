@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, PackageOpen } from '../../components/console/icons'
-import Navbar from '../../components/common/Navbar'
-import Footer from '../../components/common/Footer'
-import Chatbot from '../../components/landing/Chatbot'
+import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import OrderCard from '../../components/orders/OrderCard'
 import { getMyOrders, type Order } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
@@ -38,7 +36,7 @@ function MyOrdersPage({ onOpenOrder, onBrowseCourses }: MyOrdersPageProps) {
 
   return (
     <div className="hl-orders-page">
-      <Navbar />
+      <PublicHeader />
       <main className="hl-orders-main-wrap">
         <div className="hl-orders-container">
           <h1 className="hl-orders-title">Đơn hàng của tôi</h1>
@@ -87,8 +85,7 @@ function MyOrdersPage({ onOpenOrder, onBrowseCourses }: MyOrdersPageProps) {
           )}
         </div>
       </main>
-      <Footer />
-      <Chatbot />
+      <PublicFooter />
     </div>
   )
 }

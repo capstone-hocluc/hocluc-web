@@ -109,15 +109,15 @@ export function ClosingCtaSection() {
   )
 }
 
-export function LandingFooter() {
+export function LandingFooter({ onLanding = true }: { onLanding?: boolean }) {
   return (
     <footer className="footer" aria-label="Chân trang">
       <div className="container">
         <div className="footer-top">
           <div>
-            <a className="logo" href="#top" aria-label="Về đầu trang hocluc.com">
+            <LandingLink className="logo" href={onLanding ? "#top" : "/"} aria-label="Về trang chủ hocluc.com">
               <LandingLogo size={26} />
-            </a>
+            </LandingLink>
             <p>
               Mỗi ngày một chút,
               <br />
@@ -126,9 +126,9 @@ export function LandingFooter() {
           </div>
           <nav className="footer-nav" aria-label="Điều hướng cuối trang">
             {landingFooterNav.map((link) => (
-              <a key={link.href} href={link.href}>
+              <LandingLink key={link.href} href={onLanding ? link.href : (link.pageHref ?? `/${link.href}`)}>
                 {link.label}
-              </a>
+              </LandingLink>
             ))}
           </nav>
         </div>

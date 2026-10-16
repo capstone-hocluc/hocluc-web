@@ -1,10 +1,10 @@
 .hl-cd-page {
   min-height: 100vh;
-  background: var(--color-surface-soft);
+  background: var(--color-app-bg);
 }
 
 .hl-cd-main-wrap {
-  padding: 130px 24px 100px;
+  padding: 48px 24px 100px;
 }
 
 .hl-cd-container {
@@ -552,7 +552,7 @@
 
 @media (max-width: 640px) {
   .hl-cd-main-wrap {
-    padding-top: 100px;
+    padding-top: 32px;
   }
 }
 

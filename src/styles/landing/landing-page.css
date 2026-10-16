@@ -1769,3 +1769,148 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Header: cart and account menu for a signed-in visitor. */
+.landing-page .nav-icon-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+.landing-page .nav-icon-button:hover {
+  border-color: var(--blue);
+  color: var(--blue-hover);
+}
+.landing-page .account-menu {
+  position: relative;
+}
+.landing-page .account-trigger {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: var(--small);
+  font-weight: 800;
+}
+.landing-page .account-trigger:hover {
+  border-color: var(--blue);
+}
+.landing-page .account-trigger .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+.landing-page .account-avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: #e1f4ff;
+  color: var(--blue-hover);
+  font-size: var(--small);
+  font-weight: 800;
+  object-fit: cover;
+}
+.landing-page .account-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.landing-page .account-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 22px 55px rgba(18, 53, 76, 0.16);
+}
+.landing-page .account-dropdown a,
+.landing-page .account-dropdown button {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font-size: var(--small);
+  font-weight: 700;
+  text-align: left;
+}
+.landing-page .account-dropdown a:hover,
+.landing-page .account-dropdown button:hover {
+  background: var(--soft);
+}
+.landing-page .account-dropdown .is-danger {
+  color: #c2334d;
+}
+.landing-page .account-dropdown .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+.landing-page .mobile-nav-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.landing-page .mobile-nav-account a,
+.landing-page .mobile-nav-account button {
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: var(--body);
+  font-weight: 800;
+  text-align: left;
+}
+@media (max-width: 640px) {
+  .landing-page .account-name {
+    display: none;
+  }
+  .landing-page .account-trigger {
+    padding-right: 8px;
+  }
+}
+
+/* Public course pages reuse this header and footer inside a .landing-page wrapper. */
+.landing-page.public-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.landing-page.public-chrome .header {
+  position: relative;
+}
+.landing-page.public-footer {
+  background: transparent;
+}
+.landing-page.public-footer .footer {
+  border-top: 1px solid var(--line);
+}
+.landing-page.public-footer .footer::before {
+  content: none;
+}

@@ -1,11 +1,11 @@
 .hl-catalog-section {
   min-height: 100vh;
-  padding: 112px 24px 92px;
-  background: var(--color-surface-soft);
+  padding: 48px 24px 92px;
+  background: var(--color-app-bg);
 }
 
 .hl-catalog-container {
-  max-width: 1240px;
+  max-width: 1124px;
   margin: 0 auto;
 }
 
@@ -476,7 +476,7 @@
 
 @media (max-width: 1024px) {
   .hl-catalog-section {
-    padding-top: 118px;
+    padding-top: 40px;
   }
 
   .hl-catalog-grid {
@@ -486,7 +486,7 @@
 
 @media (max-width: 768px) {
   .hl-catalog-section {
-    padding: 108px 18px 76px;
+    padding: 32px 18px 76px;
   }
 
   .hl-catalog-topbar .hl-catalog-filters {

@@ -1,10 +1,11 @@
 /*
- * Student area in the landing-page style: Nunito, navy headings, blue-grey body text and "ledge"
- * shadows (a solid 3-5px bottom edge instead of a soft blur). Set while StudentLayout is mounted
- * (html[data-student]); the token names stay the same, so every student screen picks it up.
- * Dark mode keeps its own token set from tokens.css.
+ * Learner look shared by the landing page, the public course pages and the student area: Nunito,
+ * navy headings, blue-grey body text and "ledge" shadows (a solid bottom edge instead of a soft
+ * blur). Set while a learner screen is mounted (html[data-learner], see useLearnerTheme); the token
+ * names stay the same, so every learner screen picks it up. The student area's dark mode keeps
+ * its own token set from tokens.css; public pages are light only.
  */
-html[data-student]:not([data-theme='dark']) {
+html[data-learner]:not([data-theme='dark']) {
   --font-sans: 'Nunito', 'Segoe UI', Arial, sans-serif;
 
   --color-heading: #173555;
@@ -41,16 +42,21 @@ html[data-student]:not([data-theme='dark']) {
   --shadow-card: 0 5px 0 #dce8f0;
   --shadow-card-soft: 0 4px 0 #e2e9ef;
   --shadow-card-hover: 0 6px 0 #c9e1ef;
+
+  /* Ledges: the brand one only under primary buttons, the neutral one under secondary buttons
+     and the few cards that invite a click. Everything else stays flat with a 1px line. */
+  --ledge-brand: 0 4px 0 #0797d6;
+  --ledge-neutral: 0 4px 0 #dde8ef;
 }
 
-html[data-student] body {
+html[data-learner] body {
   background: var(--color-app-bg);
 }
 
-html[data-student] :where(h1, h2, h3) {
+html[data-learner] :where(h1, h2, h3) {
   text-wrap: balance;
 }
 
-html[data-student] :focus-visible {
+html[data-learner] :focus-visible {
   outline-color: #174fbd;
 }

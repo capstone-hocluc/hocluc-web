@@ -6,11 +6,18 @@ export type LandingIconName =
   | 'arrow-up-right'
   | 'book-open'
   | 'calculator'
+  | 'chevron-down'
+  | 'message-circle'
+  | 'sparkles'
   | 'chart-column-increasing'
   | 'check'
   | 'flask-conical'
   | 'languages'
   | 'lightbulb'
+  | 'log-out'
+  | 'package'
+  | 'shopping-cart'
+  | 'user-round'
   | 'menu'
   | 'message-square-quote'
   | 'pen-line'
@@ -22,6 +29,7 @@ export type LandingIconName =
   | 'x'
 
 export interface LandingLink {
+  pageHref?: string
   label: string
   href: string
 }
@@ -61,6 +69,7 @@ export interface ExamIntro {
   structureTitle: string
   parts: ExamPart[]
   totalQuestions: number
+  durationMinutes: number
   totalScore: string
   scoringNote: string
   seasonTitle: string
@@ -115,7 +124,7 @@ export interface SampleQuestion {
 }
 
 export const landingNav: LandingLink[] = [
-  { label: 'Khóa học', href: '#khoa-hoc' },
+  { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
   { label: 'Chương trình học', href: '#chuong-trinh' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Bài học mẫu', href: '#hoc-thu' },
@@ -123,7 +132,7 @@ export const landingNav: LandingLink[] = [
 ]
 
 export const landingFooterNav: LandingLink[] = [
-  { label: 'Khóa học', href: '#khoa-hoc' },
+  { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
   { label: 'Chương trình học', href: '#chuong-trinh' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Bài học mẫu', href: '#hoc-thu' },
@@ -199,6 +208,7 @@ export const examIntro: ExamIntro = {
     },
   ],
   totalQuestions: 120,
+  durationMinutes: 150,
   totalScore: '1.200',
   scoringNote:
     'Điểm được tính theo lý thuyết ứng đáp câu hỏi (IRT): mỗi câu có trọng số khác nhau tùy độ khó.',
@@ -304,7 +314,7 @@ export const domains: Domain[] = [
     soft: '#e7f5ff',
     art: {
       kind: 'image',
-      src: `${landingAssets}/owl-teacher-teaching.png`,
+      src: `${landingAssets}/owl-teacher-teaching.webp`,
       alt: 'Cú giảng bài Toán',
       width: 1280,
       height: 1280,
@@ -486,8 +496,8 @@ export const journey = {
   avatars: {
     label: 'Mai và Nam học cùng avatar hình khối',
     images: [
-      { src: `${landingAssets}/mai-avatar-interaction.png`, alt: 'Mai đang ghi chép' },
-      { src: `${landingAssets}/nam-avatar-interaction.png`, alt: 'Nam đang khám phá hình học' },
+      { src: `${landingAssets}/mai-avatar-interaction.webp`, alt: 'Mai đang ghi chép' },
+      { src: `${landingAssets}/nam-avatar-interaction.webp`, alt: 'Nam đang khám phá hình học' },
     ],
   },
 }
@@ -594,3 +604,54 @@ export const startDialogOptions = {
     { value: 'practice', label: 'Mình muốn luyện tập vận dụng' },
   ],
 } as const
+
+export const examFacts = {
+  label: 'Kỳ thi V-ACT · ĐGNL ĐHQG-HCM',
+  link: 'Tìm hiểu kỳ thi',
+}
+
+export interface SupportItem {
+  id: string
+  icon: LandingIconName
+  title: string
+  text: string
+  note: string
+  tone: string
+  soft: string
+  link?: { label: string; href: string }
+}
+
+export const support: { title: string; text: string; items: SupportItem[] } = {
+  title: 'Có người đồng hành khi học.',
+  text: 'Những hỗ trợ đi kèm khóa học, cùng một công cụ miễn phí cho phần Toán.',
+  items: [
+    {
+      id: 'mentor',
+      icon: 'message-circle',
+      title: 'Hỏi Mentor',
+      text: 'Nhắn câu hỏi theo môn cho mentor ngay trong khu học tập.',
+      note: 'Dành cho học viên đã có khóa học.',
+      tone: '#087dbd',
+      soft: '#e7f5ff',
+    },
+    {
+      id: 'ai-tutor',
+      icon: 'sparkles',
+      title: 'Gia sư AI',
+      text: 'Hỏi lại phần chưa hiểu và nhận thêm giải thích trong lúc học.',
+      note: 'Cần ít nhất một khóa học đã mua còn hiệu lực.',
+      tone: '#6a52d0',
+      soft: '#efeafd',
+    },
+    {
+      id: 'calculator',
+      icon: 'calculator',
+      title: 'Máy tính fx-580VN X',
+      text: 'Luyện thao tác trên trình mô phỏng ClassWiz chính thức của CASIO.',
+      note: 'Miễn phí · mở trang ClassPad.net của CASIO.',
+      tone: '#23845a',
+      soft: '#e5f5ec',
+      link: { label: 'Mở ClassPad.net', href: 'https://classpad.net/intl/' },
+    },
+  ],
+}

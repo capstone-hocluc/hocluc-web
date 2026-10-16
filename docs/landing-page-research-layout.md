@@ -4,6 +4,18 @@
 
 Research date: 2026-10-13 15:21 Asia/Saigon
 
+## Decisions changed on 2026-10-16
+
+The landing page was restructured after a product review. Where the sections below disagree, these decisions win:
+
+- Page order: hero → V-ACT facts strip → five knowledge groups → courses (`#cac-khoa-hoc`) → learning path (`#lo-trinh`) → sample lesson → support while learning (`#ho-tro`) → V-ACT explanation (`#ky-thi`) → FAQ → final CTA → footer.
+- The main navigation includes **Khóa học**. On the landing page it points at `#cac-khoa-hoc`; on other public pages it opens `/courses`. The duplicate **Học thử** header link was removed (**Bài học mẫu** remains).
+- The courses section shows real catalog data from `GET /api/v1/courses/main`, **with prices**, the three courses starting soonest, and loading, error and empty states.
+- The four start steps and the six-step learning cycle are one section (`#lo-trinh`); the separate cycle section and the standalone calculator section were removed. ClassPad.net, mentor chat and the AI tutor live in the support section, each with its access condition.
+- **Bắt đầu miễn phí** opens sign-up; **Làm đánh giá miễn phí** still opens sign-in, with the sign-in requirement stated under the hero buttons.
+- The V-ACT explanation sits near the end, condensed; the exam season is a disclosure.
+- Primary buttons use navy text on the bright brand blue (readable contrast). The landing page and the public course pages share one header and footer and the learner look (`html[data-learner]`, light only).
+
 ## Summary
 
 HocLuc should present the landing page as a clear route into V-ACT preparation, not as a course-sale campaign. The strongest reference is the product-first structure used by VN Exams: explain what a learner can do, show the available exam paths, and give a direct next action. Combine that with the learner-centered diagnostic flow in HocLuc's own product documents. Do not invent score claims, learner counts, testimonials, or a mock-exam interface that does not exist yet.

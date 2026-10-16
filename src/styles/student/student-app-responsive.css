@@ -1,57 +1,5 @@
 /* ===== responsive ===== */
-@media (max-width: 1024px) {
-  .hl-grid-5 {
-    grid-template-columns: repeat(3, 1fr) !important;
-  }
-}
-@media (max-width: 900px) {
-  .hl-desktop-nav {
-    display: none !important;
-  }
-  .hl-hero-grid,
-  .hl-learn-split,
-  .hl-learn-live,
-  .hl-mind,
-  .hl-streak,
-  .hl-feat,
-  .hl-footer-grid {
-    grid-template-columns: 1fr !important;
-  }
-  .hl-grid-4 {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .hl-grid-3 {
-    grid-template-columns: 1fr !important;
-  }
-  .hl-grid-5 {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-  .hl-stats {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-
-  .hl-roadmap-line {
-    left: 28px !important;
-    transform: none !important;
-  }
-  .hl-roadmap-row {
-    grid-template-columns: 56px 1fr !important;
-  }
-  .hl-roadmap-row > div:first-child {
-    grid-column: 2 !important;
-    justify-content: flex-start !important;
-  }
-  .hl-roadmap-row > div:first-child > div {
-    text-align: left !important;
-  }
-  .hl-roadmap-pin {
-    grid-column: 1 !important;
-  }
-}
 @media (max-width: 560px) {
-  .hl-grid-4 {
-    grid-template-columns: 1fr !important;
-  }
   .hl-auth-heading--compact h1 {
     font-size: clamp(24px, 8vw, 30px);
   }
