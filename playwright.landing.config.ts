@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 // Desktop only for this iteration. All course responses are browser fixtures.
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: 'landing.spec.ts',
+  testMatch: ['landing.spec.ts', 'auth-design.spec.ts'],
   fullyParallel: false,
   workers: 1,
   retries: 0,
