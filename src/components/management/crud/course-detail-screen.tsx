@@ -357,7 +357,7 @@ export default function CourseDetailScreen({
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-text-tertiary">Danh mục</dt>
+                      <dt className="text-text-tertiary">Môn học</dt>
                       <dd className="mt-1 font-medium text-text-primary">
                         {course.categoryName ?? 'Chưa phân loại'}
                       </dd>

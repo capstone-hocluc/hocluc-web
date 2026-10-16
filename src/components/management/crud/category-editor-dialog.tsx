@@ -60,7 +60,7 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
   return (
     <ConsoleDialog
       open
-      title={category ? 'Sửa danh mục' : 'Tạo danh mục'}
+      title={category ? 'Sửa môn học' : 'Tạo môn học'}
       onClose={onClose}
       onSubmit={(e) => void submit(e)}
       dismissable={!busy}
@@ -70,7 +70,7 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
             {uncertain ? 'Đóng và kiểm tra' : 'Hủy'}
           </Button>
           <Button type="submit" disabled={busy || uncertain}>
-            {busy ? 'Đang lưu...' : 'Lưu danh mục'}
+            {busy ? 'Đang lưu...' : 'Lưu môn học'}
           </Button>
         </>
       }
@@ -86,7 +86,7 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
             Chưa rõ kết quả lưu. Đóng form và tải lại danh sách trước khi thử tiếp.
           </Notice>
         )}
-        <Field label="Tên danh mục">
+        <Field label="Tên môn học">
           <input
             name="name"
             required
@@ -112,9 +112,9 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
           Đang sử dụng
         </Checkbox>
         <DetailSection title="Tùy chọn thêm" collapsible defaultOpen={hasOptional}>
-          <Field label="Danh mục cha">
+          <Field label="Môn học cha">
             <SelectField
-              ariaLabel="Danh mục cha"
+              ariaLabel="Môn học cha"
               value={parentId}
               onChange={setParentId}
               options={[
@@ -125,7 +125,7 @@ export default function CategoryEditorDialog({ category, categories, onClose, on
               ]}
             />
           </Field>
-          <Field label="Ảnh danh mục">
+          <Field label="Ảnh môn học">
             <input
               name="imageUrl"
               maxLength={2000}

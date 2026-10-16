@@ -42,7 +42,7 @@ export function courseSteps(
         : !priced
           ? 'Khóa thu phí cần học phí lớn hơn 0.'
           : !course.categoryId
-            ? 'Nên chọn danh mục để trưởng bộ môn duyệt khóa này.'
+            ? 'Nên chọn môn học để trưởng bộ môn duyệt khóa này.'
             : undefined,
     },
     {

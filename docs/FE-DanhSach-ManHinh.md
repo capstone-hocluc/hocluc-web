@@ -2,7 +2,7 @@
 
 *Tạo ngày 10/10/2026 · Repo `Casptone_Frontend_Branch` (React + Vite) · Dùng để làm tiếp FE bằng dữ liệu mẫu trước khi nối API*
 
-Nguồn đối chiếu: `W:\CapstoneProject\docs` — file 02 §4 (luồng theo role), §8 (danh mục API CRUD), file 05 §0 (quyết định chốt D1–D24), file 06 (kế hoạch).
+Nguồn đối chiếu: `W:\CapstoneProject\docs` — file 02 §4 (luồng theo role), §8 (môn học API CRUD), file 05 §0 (quyết định chốt D1–D24), file 06 (kế hoạch).
 
 **Ký hiệu trạng thái:** `[x]` có, chạy API thật · `[m]` có, đang dùng dữ liệu mẫu · `[~]` có nhưng phải sửa · `[ ]` chưa có.
 
@@ -50,12 +50,12 @@ Menu thực tế (cờ `mentorAsk = false`, nên "Hỏi Mentor", "Phân công Me
 | Nhóm | Admin | Manager | Staff | Teacher | Mentor |
 | --- | --- | --- | --- | --- | --- |
 | Tổng quan | Tổng quan, *Báo cáo* | Tổng quan, *Báo cáo* | Tổng quan | Tổng quan | Tổng quan |
-| Hệ thống | Người dùng & phân quyền, *Cấu hình nghiệp vụ*, Nhật ký hoạt động | Người dùng & phân quyền (xem), Nhật ký hoạt động | Người dùng & phân quyền (xem) | — | — |
-| Học thuật | Phân loại kiến thức, Blueprint đề thi, Danh mục môn | Danh mục môn (xem) | Phân loại kiến thức, Danh mục môn | Phân loại kiến thức | — |
+| Hệ thống | Nhân sự & phân quyền, *Cấu hình nghiệp vụ*, Nhật ký hoạt động | Nhân sự & phân quyền (xem), Nhật ký hoạt động | Nhân sự & phân quyền (xem) | — | — |
+| Học thuật | Phân loại kiến thức, Blueprint đề thi, Môn học | Môn học (xem) | Phân loại kiến thức, Môn học | Phân loại kiến thức | — |
 | Khoá học & nội dung | Khóa học, *Ngân hàng câu hỏi*, Duyệt câu hỏi | Khóa học (xem) | Khóa học, *Ngân hàng câu hỏi*, Duyệt câu hỏi | Lớp của tôi, *Ngân hàng câu hỏi*, Duyệt câu hỏi, Bài thi thử | — |
 | Giảng dạy | — | — | — | Lịch dạy, Giờ rảnh | — |
 | Vận hành lớp | Nhóm học | Lịch học (xem), Nhóm học (xem) | Lịch học, Điểm danh, Nhóm học | — | Nhóm của tôi |
-| Học viên & kinh doanh | Ghi danh, Đơn hàng | Ghi danh (xem), Đơn hàng (xem) | Ghi danh, Đơn hàng | — | Học viên |
+| Học viên & kinh doanh | Học viên, Ghi danh, Đơn hàng | Học viên (xem), Ghi danh (xem), Đơn hàng (xem) | Học viên (xem), Ghi danh, Đơn hàng | — | Học viên |
 | Đánh giá & duyệt | Duyệt lời giải AI, *Lời giải ngân hàng* | — | — | Bài làm học viên, Duyệt lời giải AI, *Lời giải ngân hàng* | Duyệt lời giải AI, *Lời giải ngân hàng* |
 
 Lệch có chủ đích so với bảng quyền ở docs/06 §2.2 (theo `@PreAuthorize` thực tế): Manager **không có** "Điểm danh" (API điểm danh không cho MANAGER); Admin **không có** "Lịch học" / "Điểm danh" (tạo lịch chỉ STAFF); xác nhận thanh toán thủ công trong "Đơn hàng" chỉ Admin.
@@ -98,12 +98,13 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 | Trạng thái | Màn | Trang | Ghi chú |
 | --- | --- | --- | --- |
 | [x] | Tổng quan | `dashboard` | |
-| [x] | Người dùng (tạo, role, status, cấp role chuyển được) | `users` | |
+| [x] | Nhân sự & phân quyền (tạo, role, status, cấp role chuyển được) | `users` | Chỉ tài khoản nhân sự (`excludeRole=STUDENT`) |
+| [x] | Học viên (tạo, status) | `learners` | Tài khoản học viên (`role=STUDENT`), tách khỏi nhân sự |
 | [m] | Blueprint đề thi | `blueprints` | Thêm form tạo/sửa blueprint theo năm (4 phần, số câu từng phần) |
-| [m] | Phân loại kiến thức | `taxonomy` | Cần CRUD 9 loại danh mục + màn import (mục 3.4) |
+| [m] | Phân loại kiến thức | `taxonomy` | Cần CRUD 9 loại môn học + màn import (mục 3.4) |
 | [m] | Nhật ký hoạt động | `audit-log` | |
 | [x] | Quản lý khoá học | `courses` | Dùng chung màn với Staff (mục 3.2) |
-| [x] | Danh mục môn (categories) | `categories` | Danh mục hiển thị trên catalog |
+| [x] | Môn học (categories) | `categories` | Môn học hiển thị trên catalog |
 | [x] | Nhóm học, Ghi danh, Đơn hàng | `groups`, `enrollments`, `orders` | Admin là role duy nhất xác nhận thanh toán thủ công |
 | [m] | Duyệt câu hỏi, Duyệt lời giải AI | `question-review`, `solution-queue` | |
 | [ ] | Báo cáo | `reports` | Menu có, màn "Đang phát triển" |
@@ -114,7 +115,7 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 
 | Trạng thái | Màn | Trang | Ghi chú |
 | --- | --- | --- | --- |
-| [x] | Tổng quan, Người dùng (xem) | `dashboard`, `users` | |
+| [x] | Tổng quan, Nhân sự (xem), Học viên (xem) | `dashboard`, `users`, `learners` | |
 | [x] | Đơn hàng | `orders` | Có chi tiết đơn |
 | [x] | Ghi danh | `enrollments` | Có ghi danh thủ công, đổi trạng thái, đổi hạn dùng |
 | [x] | Nhóm học | `groups` | Tạo/sửa group, gán mentor, xếp/chuyển học sinh |
@@ -122,7 +123,7 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 | [x] | Lịch học, Điểm danh | `schedules`, `attendance` | |
 | [x] | Quản lý khoá học | `courses` | Mục 3.2 |
 | [m] | Phân loại kiến thức | `taxonomy` | Dùng lại màn admin (mục 1) |
-| [x] | Danh mục môn | `categories` | |
+| [x] | Môn học | `categories` | |
 | [ ] | Ngân hàng câu hỏi (toàn bộ) | `question-bank` | Menu có, màn "Đang phát triển". Dùng lại trình soạn của Teacher (mục 3.3) |
 | [x] | **Route cũ đã dọn** | `/staff/batches`, `/staff/invoices`, `/staff/tuition`, `/staff/payments`… | Mô hình batch và công nợ học phí không còn trong scope; URL không có trong menu → 403 |
 
@@ -131,9 +132,9 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 | Trạng thái | Màn | Trang | Ghi chú |
 | --- | --- | --- | --- |
 | [x] | Tổng quan | `dashboard` | |
-| [x] | Khoá học, Danh mục môn (xem) | `courses`, `categories` | `readOnly`: ẩn tạo/sửa/xoá/xuất bản |
+| [x] | Khoá học, Môn học (xem) | `courses`, `categories` | `readOnly`: ẩn tạo/sửa/xoá/xuất bản |
 | [x] | Lịch học (xem) | `schedules` | Không có Điểm danh: API điểm danh không cho MANAGER |
-| [x] | Người dùng, Nhật ký hoạt động (xem) | `users`, `audit-log` | |
+| [x] | Nhân sự, Học viên, Nhật ký hoạt động (xem) | `users`, `learners`, `audit-log` | |
 | [x] | Đơn hàng, Ghi danh, Nhóm học (xem) | `orders`, `enrollments`, `groups` | `readOnly` |
 | [ ] | Báo cáo | `reports` | Menu có, màn "Đang phát triển". Doanh thu theo khoá, học viên mới, tỷ lệ hoàn thành, điểm theo phần |
 | [ ] | Giám sát hỗ trợ | `chat-monitoring` | Ẩn bằng cờ `mentorAsk` (D11) |
@@ -190,8 +191,8 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 
 | Màn con | Nội dung | Ai sửa |
 | --- | --- | --- |
-| Danh sách khoá | Lọc loại (Trọn bộ / Khoá nhỏ), danh mục và **một bộ lọc trạng thái chung** (Nháp / Chờ duyệt / Bị trả lại / Đang bán / Lưu trữ), cùng một hàng; một cột Trạng thái; nút nhanh "Chờ duyệt (n)"; nút tạo **Bấm vào dòng** để mở chi tiết. Cột Thao tác: **một nút bước tiếp theo** (Gửi duyệt / Duyệt và bán / Bán khoá) kế bên **menu ⋯** (Soạn nội dung, Sửa thông tin, Trả lại, Lưu trữ, Xoá). Gửi duyệt từ danh sách vẫn do BE kiểm tra điều kiện; lý do chưa đủ điều kiện hiện ngay trong hộp xác nhận. | SF, AD (Teacher chỉ thấy khoá mình) |
-| Chi tiết khoá — đầu trang | Tên, loại · danh mục · giá, chip trạng thái + chip duyệt, **một hành động chính theo trạng thái và vai trò**: Gửi duyệt (staff) / Đang chờ duyệt / Duyệt và bán + Trả lại (người duyệt) / Bán khoá / Lưu trữ. Nút bị khoá kèm lý do ngay dưới | SF, AD, MG |
+| Danh sách khoá | Lọc loại (Trọn bộ / Khoá nhỏ), môn học và **một bộ lọc trạng thái chung** (Nháp / Chờ duyệt / Bị trả lại / Đang bán / Lưu trữ), cùng một hàng; một cột Trạng thái; nút nhanh "Chờ duyệt (n)"; nút tạo **Bấm vào dòng** để mở chi tiết. Cột Thao tác: **một nút bước tiếp theo** (Gửi duyệt / Duyệt và bán / Bán khoá) kế bên **menu ⋯** (Soạn nội dung, Sửa thông tin, Trả lại, Lưu trữ, Xoá). Gửi duyệt từ danh sách vẫn do BE kiểm tra điều kiện; lý do chưa đủ điều kiện hiện ngay trong hộp xác nhận. | SF, AD (Teacher chỉ thấy khoá mình) |
+| Chi tiết khoá — đầu trang | Tên, loại · môn học · giá, chip trạng thái + chip duyệt, **một hành động chính theo trạng thái và vai trò**: Gửi duyệt (staff) / Đang chờ duyệt / Duyệt và bán + Trả lại (người duyệt) / Bán khoá / Lưu trữ. Nút bị khoá kèm lý do ngay dưới | SF, AD, MG |
 | Banner duyệt + các bước | Chờ duyệt (ai gửi, lúc nào); bị trả lại (ai, lúc nào, lý do); 5 bước ở đầu trang: Thông tin khoá → Soạn nội dung → Xuất bản nội dung → Gửi duyệt (hoặc Duyệt và bán) → Đang bán; bước hiện tại nổi bật kèm dòng "Tiếp theo", bấm một bước để nhảy tới tab liên quan | SF, AD, MG |
 | Tab Tổng quan | Thông tin khoá; "Sửa thông tin" mở form nhiều bước. Ảnh khoá học: dán link hoặc tải ảnh lên từ máy (PNG/JPG/WebP ≤ 5MB, qua `files/upload-urls` → MinIO → `complete-upload`) | SF, AD |
 | Tab Nội dung (khoá chính) | Giai đoạn → **Phần học** → Chương → Bài học. Chương được nhóm theo phần học; "Thêm chương" ngay trong phần; chọn phần học khi tạo/sửa chương | SF, AD, TE (khoá mình) |
@@ -221,7 +222,7 @@ Quy trình bán: nhân viên soạn nội dung, xuất bản bài học rồi ch
 | Cây | Nhóm (5 nhóm V-ACT) → Domain → Dạng câu → Skill → Micro-skill |
 | Bảng từng loại | Domain, Khoá/module, Dạng câu, Skill, Micro-skill, Mapping, Mã lỗi, Thẻ cấu trúc — tìm, lọc, thêm, sửa, ngưng dùng |
 | Import Excel | Chọn file → **chạy thử** → bảng lỗi theo sheet/dòng → xác nhận ghi |
-| Mock | Lấy số liệu thật từ 5 file Master Data: 37 domain · 98 dạng câu · 116 skill · 130 micro-skill · 40 mã lỗi (danh mục ở docs/03 Phụ lục) |
+| Mock | Lấy số liệu thật từ 5 file Master Data: 37 domain · 98 dạng câu · 116 skill · 130 micro-skill · 40 mã lỗi (môn học ở docs/03 Phụ lục) |
 
 ---
 
@@ -253,4 +254,4 @@ Quy trình bán: nhân viên soạn nội dung, xuất bản bài học rồi ch
 | Lộ trình | `POST /roadmaps/me/generate`, `GET /roadmaps/me` |
 | Gia sư AI | `/tutor/sessions`, `/tutor/sessions/{id}/messages` |
 | Thông báo | `/notifications/me`, `PATCH /notifications/{id}/read` |
-| Blueprint, nhật ký | Chưa có trong danh mục API — bổ sung khi làm backend |
+| Blueprint, nhật ký | Chưa có trong môn học API — bổ sung khi làm backend |

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import Panel from '../../console/panel'
 import Button from '../../console/button'
+import { IconAction } from '../../console/icon-action'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
-import { ArrowDown, ArrowUp, Plus } from '../../console/icons'
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from '../../console/icons'
 import type { CourseAdminPhase } from '../../../services/courseAdminService'
 import {
   deleteContentSection,
@@ -24,7 +25,13 @@ interface Props {
 }
 
 // A course groups its chapters into sections ("Phần học"), optionally inside a phase.
-export default function ContentSectionsPanel({ courseId, sections, phases, readOnly, onChanged }: Props) {
+export default function ContentSectionsPanel({
+  courseId,
+  sections,
+  phases,
+  readOnly,
+  onChanged,
+}: Props) {
   const [editor, setEditor] = useState<{ section: ContentSection | null } | null>(null)
   const [removal, setRemoval] = useState<ContentSection | null>(null)
   const [busy, setBusy] = useState(false)
@@ -72,10 +79,12 @@ export default function ContentSectionsPanel({ courseId, sections, phases, readO
       title="Phần học"
       action={
         !readOnly && (
-          <Button size="sm" appearance="outline" disabled={busy} onClick={() => setEditor({ section: null })}>
-            <Plus size={14} />
-            Thêm phần học
-          </Button>
+          <IconAction
+            label="Thêm phần học"
+            icon={Plus}
+            disabled={busy}
+            onClick={() => setEditor({ section: null })}
+          />
         )
       }
     >
@@ -92,8 +101,8 @@ export default function ContentSectionsPanel({ courseId, sections, phases, readO
         )}
         {sections.length === 0 ? (
           <p className="text-sm text-text-tertiary">
-            Chưa có phần học. Có thể thêm chương trực tiếp vào khóa, hoặc nhóm các chương thành phần học
-            (ví dụ "Đọc hiểu", "Từ vựng") để học viên dễ theo dõi.
+            Chưa có phần học. Có thể thêm chương trực tiếp vào khóa, hoặc nhóm các chương thành phần
+            học (ví dụ "Đọc hiểu", "Từ vựng") để học viên dễ theo dõi.
           </p>
         ) : (
           <ol className="divide-y divide-card-border">
@@ -105,7 +114,9 @@ export default function ContentSectionsPanel({ courseId, sections, phases, readO
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate font-medium text-text-primary">{section.title}</h3>
                   <p className="text-xs text-text-tertiary">
-                    {[section.phaseName, `${section.chapterCount} chương`].filter(Boolean).join(' · ')}
+                    {[section.phaseName, `${section.chapterCount} chương`]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                 </div>
                 {!readOnly && (
@@ -128,28 +139,22 @@ export default function ContentSectionsPanel({ courseId, sections, phases, readO
                     >
                       <ArrowDown size={16} />
                     </Button>
-                    <Button
-                      size="sm"
-                      appearance="outline"
-                      aria-label={`Sửa phần học ${section.title}`}
+                    <IconAction
+                      label={`Sửa phần học ${section.title}`}
+                      icon={Pencil}
                       disabled={busy}
                       onClick={() => setEditor({ section })}
-                    >
-                      Sửa
-                    </Button>
-                    <Button
-                      size="sm"
-                      appearance="ghost"
+                    />
+                    <IconAction
+                      label={`Xóa phần học ${section.title}`}
+                      icon={Trash2}
                       variant="danger"
-                      aria-label={`Xóa phần học ${section.title}`}
                       disabled={busy}
                       onClick={() => {
                         setError('')
                         setRemoval(section)
                       }}
-                    >
-                      Xóa
-                    </Button>
+                    />
                   </div>
                 )}
               </li>

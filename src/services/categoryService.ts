@@ -25,7 +25,7 @@ export interface SaveCategoryRequest {
 
 export async function getCategories(): Promise<Category[]> {
   const response = await request<Category[]>('/api/v1/categories', { auth: true })
-  if (!response.data) throw new Error('Không thể tải danh mục.')
+  if (!response.data) throw new Error('Không thể tải môn học.')
   return response.data
 }
 
@@ -41,7 +41,7 @@ export async function saveCategory(
       body,
     }
   )
-  if (!response.data) throw new Error('Không nhận được danh mục đã lưu.')
+  if (!response.data) throw new Error('Không nhận được môn học đã lưu.')
   return response.data
 }
 

@@ -85,7 +85,7 @@ export function FilterSelect({
       onChange={onChange}
       disabled={disabled}
       className={cn('min-w-0 sm:w-48', className)}
-      triggerClassName="h-9 w-full min-w-0"
+      triggerClassName="h-9 w-full min-w-0 shadow-none"
     />
   )
 }

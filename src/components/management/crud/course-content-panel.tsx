@@ -1,11 +1,22 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { cn } from '../../../lib/cn'
 import Panel from '../../console/panel'
 import Button from '../../console/button'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Plus } from '../../console/icons'
+import {
+  ChevronDown,
+  ChevronRight,
+  EyeOff,
+  Pencil,
+  PlayCircle,
+  Plus,
+  Send,
+  Trash2,
+} from '../../console/icons'
+import { IconAction } from '../../console/icon-action'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import {
   deleteAdminChapter,
@@ -25,7 +36,8 @@ import {
 import type { ContentSection } from '../../../services/contentSectionService'
 import { ApiError } from '../../../lib/api'
 import { crudError, unknownMutation } from './crud-errors'
-import { movedIds } from './course-labels'
+import DragHandle from './drag-handle'
+import { arrayMove, useDragReorder } from './use-drag-reorder'
 import ChapterEditorDialog from './chapter-editor-dialog'
 import LessonEditorDialog from './lesson-editor-dialog'
 
@@ -93,6 +105,7 @@ export default function CourseContentPanel({
   const [openChapter, setOpenChapter] = useState<string | null>(null)
   const [lessons, setLessons] = useState<Record<string, LessonAdmin[]>>({})
   const [lessonsBusy, setLessonsBusy] = useState(false)
+  const [quickPublishOpen, setQuickPublishOpen] = useState(false)
 
   const chapters = useMemo(() => resource.data ?? [], [resource.data])
   useEffect(() => {
@@ -111,14 +124,6 @@ export default function CourseContentPanel({
     const loose = chapters.filter((chapter) => !chapter.sectionId || !known.has(chapter.sectionId))
     return loose.length ? [...grouped, { key: 'none', section: null, chapters: loose }] : grouped
   }, [chapters, sections])
-
-  const moveChapter = (group: ChapterAdmin[], index: number, direction: -1 | 1) => {
-    const ids = chapters.map((item) => item.id)
-    const from = ids.indexOf(group[index].id)
-    const to = ids.indexOf(group[index + direction].id)
-    ;[ids[from], ids[to]] = [ids[to], ids[from]]
-    return orderAdminChapters(courseId, ids)
-  }
 
   async function act(
     action: () => Promise<unknown>,
@@ -168,6 +173,162 @@ export default function CourseContentPanel({
 
   const reloadLessons = (chapterId: string) => () => loadLessons(chapterId)
 
+  async function quickPublishContent() {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+
+    let mutationStarted = false
+    let currentChapterId: string | undefined
+    let publishedLessons = 0
+    let publishedChapters = 0
+    const skipped: string[] = []
+
+    try {
+      const currentChapters = await getAdminChapters(courseId)
+      for (const chapter of currentChapters) {
+        currentChapterId = chapter.id
+        let currentLessons = await getAdminLessons(chapter.id)
+        let hasPublishedLesson = currentLessons.some((lesson) => lesson.published)
+
+        for (const lesson of currentLessons) {
+          if (lesson.published) continue
+          try {
+            mutationStarted = true
+            const updated = await setAdminLessonState(lesson, {
+              published: true,
+              preview: lesson.preview,
+            })
+            currentLessons = currentLessons.map((item) =>
+              item.id === updated.id ? updated : item
+            )
+            hasPublishedLesson = true
+            publishedLessons += 1
+            setLessons((previous) => ({ ...previous, [chapter.id]: currentLessons }))
+          } catch (reason) {
+            if (!(reason instanceof ApiError) || reason.status !== 409) throw reason
+            skipped.push(`Bài học "${lesson.title}": ${crudError(reason)}`)
+          }
+        }
+
+        setLessons((previous) => ({ ...previous, [chapter.id]: currentLessons }))
+        if (chapter.published) continue
+        if (!hasPublishedLesson) {
+          skipped.push(`Chương "${chapter.title}": chưa có bài học đủ điều kiện để xuất bản.`)
+          continue
+        }
+
+        try {
+          // Publishing lessons changes the chapter timestamp; use a fresh version for this update.
+          const refreshedChapters = await getAdminChapters(courseId)
+          const currentChapter = refreshedChapters.find((item) => item.id === chapter.id)
+          if (!currentChapter) throw new Error(`Không tìm thấy chương "${chapter.title}".`)
+          if (currentChapter.published) continue
+          mutationStarted = true
+          await publishAdminChapter(currentChapter, true)
+          publishedChapters += 1
+        } catch (reason) {
+          if (!(reason instanceof ApiError) || reason.status !== 409) throw reason
+          skipped.push(`Chương "${chapter.title}": ${crudError(reason)}`)
+        }
+      }
+
+      await resource.reload()
+      if (publishedLessons || publishedChapters) onChange?.()
+      setNotice(
+        publishedLessons || publishedChapters
+          ? `Đã xuất bản ${publishedLessons} bài học và ${publishedChapters} chương.`
+          : skipped.length
+            ? 'Không có nội dung nào được xuất bản.'
+            : 'Các chương và bài học đã được xuất bản hết.'
+      )
+      if (skipped.length) {
+        const visible = skipped.slice(0, 5)
+        if (skipped.length > visible.length) visible.push(`Và ${skipped.length - visible.length} mục khác.`)
+        setError(`Một số mục chưa xuất bản được: ${visible.join(' ')}`)
+      }
+    } catch (reason) {
+      setError(crudError(reason))
+      if (currentChapterId) {
+        try {
+          const currentLessons = await getAdminLessons(currentChapterId)
+          setLessons((previous) => ({ ...previous, [currentChapterId!]: currentLessons }))
+        } catch {
+          // Keep the last known rows if a refresh also fails.
+        }
+      }
+      await resource.reload()
+      if (mutationStarted) {
+        setNotice('Đã tải lại trạng thái. Một số mục có thể đã được xuất bản trước khi thao tác dừng.')
+      }
+    } finally {
+      setBusy(false)
+      setQuickPublishOpen(false)
+    }
+  }
+
+  // Chapters reorder inside their own group; the full chapter order is rebuilt with the group's new order.
+  const groupHolding = (...ids: string[]) =>
+    groups.find((group) => ids.every((id) => group.chapters.some((item) => item.id === id)))
+  const reorderChapters = (groupIds: string[], nextGroupIds: string[]) => {
+    const queue = [...nextGroupIds]
+    const all = chapters.map((item) => (groupIds.includes(item.id) ? queue.shift()! : item.id))
+    return orderAdminChapters(courseId, all)
+  }
+  const chapterDrag = useDragReorder(
+    (fromId, toId) => {
+      const group = groupHolding(fromId, toId)
+      if (!group) return
+      const ids = group.chapters.map((item) => item.id)
+      void act(
+        () => reorderChapters(ids, arrayMove(ids, fromId, toId)),
+        'Đã đổi thứ tự chương.',
+        reloadChapters
+      )
+    },
+    (id, direction) => {
+      const group = groupHolding(id)
+      if (!group) return
+      const ids = group.chapters.map((item) => item.id)
+      const target = ids[ids.indexOf(id) + direction]
+      if (!target) return
+      void act(
+        () => reorderChapters(ids, arrayMove(ids, id, target)),
+        'Đã đổi thứ tự chương.',
+        reloadChapters
+      )
+    }
+  )
+  const chapterOfLessons = (...ids: string[]) =>
+    Object.entries(lessons).find(([, list]) => ids.every((id) => list.some((l) => l.id === id)))
+  const lessonDrag = useDragReorder(
+    (fromId, toId) => {
+      const found = chapterOfLessons(fromId, toId)
+      if (!found) return
+      const [chapterId, list] = found
+      const ids = list.map((item) => item.id)
+      void act(
+        () => orderAdminLessons(chapterId, arrayMove(ids, fromId, toId)),
+        'Đã đổi thứ tự bài học.',
+        reloadLessons(chapterId)
+      )
+    },
+    (id, direction) => {
+      const found = chapterOfLessons(id)
+      if (!found) return
+      const [chapterId, list] = found
+      const ids = list.map((item) => item.id)
+      const target = ids[ids.indexOf(id) + direction]
+      if (!target) return
+      void act(
+        () => orderAdminLessons(chapterId, arrayMove(ids, id, target)),
+        'Đã đổi thứ tự bài học.',
+        reloadLessons(chapterId)
+      )
+    }
+  )
+
   async function toggleChapter(chapter: ChapterAdmin) {
     if (openChapter === chapter.id) {
       setOpenChapter(null)
@@ -181,28 +342,32 @@ export default function CourseContentPanel({
     <Panel
       title={title}
       action={
-        !readOnly && (
+        !readOnly && chapters.length > 0 ? (
           <Button
             size="sm"
-            appearance="outline"
-            disabled={busy}
-            onClick={() => setChapterEditor({ chapter: null })}
+            aria-label="Xuất bản nhanh các chương và bài học"
+            disabled={busy || lessonsBusy || resource.status !== 'ready'}
+            onClick={() => setQuickPublishOpen(true)}
           >
-            <Plus size={14} />
-            Thêm chương
+            <Send size={16} />
+            Xuất bản nhanh
           </Button>
-        )
+        ) : null
       }
     >
-      {notice && (
-        <Notice tone="info">
-          <span role="status">{notice}</span>
-        </Notice>
-      )}
-      {error && (
-        <Notice tone="danger">
-          <span role="alert">{error}</span>
-        </Notice>
+      {(notice || error) && (
+        <div className="mb-5 flex flex-col gap-2">
+          {notice && (
+            <Notice tone="info">
+              <span role="status">{notice}</span>
+            </Notice>
+          )}
+          {error && (
+            <Notice tone="danger">
+              <span role="alert">{error}</span>
+            </Notice>
+          )}
+        </div>
       )}
       <ScheduleResourceState
         status={resource.status}
@@ -227,18 +392,14 @@ export default function CourseContentPanel({
                     </p>
                   </div>
                   {!readOnly && group.section && (
-                    <Button
-                      size="sm"
-                      appearance="ghost"
-                      aria-label={`Thêm chương vào ${group.section.title}`}
+                    <IconAction
+                      label={`Thêm chương vào ${group.section.title}`}
+                      icon={Plus}
                       disabled={busy}
                       onClick={() =>
                         setChapterEditor({ chapter: null, sectionId: group.section?.id ?? null })
                       }
-                    >
-                      <Plus size={14} />
-                      Thêm chương
-                    </Button>
+                    />
                   )}
                 </div>
               )}
@@ -247,9 +408,25 @@ export default function CourseContentPanel({
               ) : (
                 <ol className="divide-y divide-card-border">
                   {group.chapters.map((chapter, index) => (
-                    <li key={chapter.id} className="py-3 first:pt-0 last:pb-0">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-2">
+                    <li
+                      key={chapter.id}
+                      {...chapterDrag.rowProps(chapter.id)}
+                      className={cn(
+                        chapterDrag.rowProps(chapter.id).className,
+                        'py-3 first:pt-0 last:pb-0'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          {!readOnly && (
+                            <DragHandle
+                              {...chapterDrag.handleProps(
+                                chapter.id,
+                                `chương ${chapter.title}`,
+                                busy
+                              )}
+                            />
+                          )}
                           <Button
                             size="icon"
                             appearance="ghost"
@@ -273,60 +450,30 @@ export default function CourseContentPanel({
                             </h3>
                             <p className="text-xs text-text-tertiary">Thứ tự {chapter.sequence}</p>
                           </div>
+                        </div>
+                        <div className="w-28 shrink-0">
                           <Status tone={chapter.published ? 'success' : 'neutral'}>
                             {chapter.published ? 'Đã xuất bản' : 'Nháp'}
                           </Status>
                         </div>
                         {!readOnly && (
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex shrink-0 items-center gap-1">
                             {chapterAction?.(chapter)}
-                            <Button
-                              size="icon"
-                              appearance="ghost"
-                              aria-label={`Đưa ${chapter.title} lên`}
-                              disabled={busy || index === 0}
-                              onClick={() =>
-                                void act(
-                                  () => moveChapter(group.chapters, index, -1),
-                                  'Đã đổi thứ tự chương.',
-                                  reloadChapters
-                                )
-                              }
-                            >
-                              <ArrowUp size={16} />
-                            </Button>
-                            <Button
-                              size="icon"
-                              appearance="ghost"
-                              aria-label={`Đưa ${chapter.title} xuống`}
-                              disabled={busy || index === group.chapters.length - 1}
-                              onClick={() =>
-                                void act(
-                                  () => moveChapter(group.chapters, index, 1),
-                                  'Đã đổi thứ tự chương.',
-                                  reloadChapters
-                                )
-                              }
-                            >
-                              <ArrowDown size={16} />
-                            </Button>
-                            <Button
-                              size="sm"
-                              appearance="outline"
-                              aria-label={`Sửa chương ${chapter.title}`}
+                            <IconAction
+                              hover="info"
+                              label={`Sửa chương ${chapter.title}`}
+                              icon={Pencil}
                               disabled={busy}
                               onClick={() => setChapterEditor({ chapter })}
-                            >
-                              Sửa
-                            </Button>
-                            <Button
-                              size="sm"
-                              appearance="ghost"
-                              aria-label={
+                            />
+                            <IconAction
+                              hover="success"
+                              label={
                                 chapter.published
                                   ? `Ẩn chương ${chapter.title}`
                                   : `Xuất bản chương ${chapter.title}`
                               }
+                              icon={chapter.published ? EyeOff : Send}
                               disabled={busy}
                               onClick={() =>
                                 void act(
@@ -335,14 +482,11 @@ export default function CourseContentPanel({
                                   reloadChapters
                                 )
                               }
-                            >
-                              {chapter.published ? 'Ẩn' : 'Xuất bản'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              appearance="ghost"
+                            />
+                            <IconAction
+                              label={`Xóa chương ${chapter.title}`}
+                              icon={Trash2}
                               variant="danger"
-                              aria-label={`Xóa chương ${chapter.title}`}
                               disabled={busy}
                               onClick={() =>
                                 setRemoval({
@@ -351,29 +495,12 @@ export default function CourseContentPanel({
                                   reload: reloadChapters,
                                 })
                               }
-                            >
-                              Xóa
-                            </Button>
+                            />
                           </div>
                         )}
                       </div>
                       {openChapter === chapter.id && (
-                        <div className="mt-3 rounded-lg border border-card-border bg-background-gray-secondary p-3">
-                          {!readOnly && (
-                            <div className="mb-2 flex justify-end">
-                              <Button
-                                size="sm"
-                                appearance="outline"
-                                disabled={busy}
-                                onClick={() =>
-                                  setLessonEditor({ chapterId: chapter.id, lesson: null })
-                                }
-                              >
-                                <Plus size={14} />
-                                Thêm bài học
-                              </Button>
-                            </div>
-                          )}
+                        <div className="mt-3 rounded-lg border border-card-border bg-card-background p-3">
                           {lessonsBusy && !lessons[chapter.id] ? (
                             <p className="text-sm text-text-tertiary">Đang tải bài học…</p>
                           ) : (lessons[chapter.id] ?? []).length === 0 ? (
@@ -383,9 +510,22 @@ export default function CourseContentPanel({
                               {(lessons[chapter.id] ?? []).map((lesson, lessonIndex) => (
                                 <li
                                   key={lesson.id}
-                                  className="flex flex-wrap items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                                  {...lessonDrag.rowProps(lesson.id)}
+                                  className={cn(
+                                    lessonDrag.rowProps(lesson.id).className,
+                                    'flex items-center gap-3 py-2 first:pt-0 last:pb-0'
+                                  )}
                                 >
-                                  <div className="min-w-0">
+                                  {!readOnly && (
+                                    <DragHandle
+                                      {...lessonDrag.handleProps(
+                                        lesson.id,
+                                        `bài học ${lesson.title}`,
+                                        busy
+                                      )}
+                                    />
+                                  )}
+                                  <div className="min-w-0 flex-1">
                                     <p className="truncate text-sm font-medium text-text-primary">
                                       {lesson.title}
                                     </p>
@@ -393,10 +533,12 @@ export default function CourseContentPanel({
                                       {lessonMeta(lesson)}
                                     </p>
                                   </div>
-                                  <div className="flex flex-wrap items-center gap-1">
+                                  <div className="w-28 shrink-0">
                                     <Status tone={lesson.published ? 'success' : 'neutral'}>
                                       {lesson.published ? 'Đã xuất bản' : 'Nháp'}
                                     </Status>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-1">
                                     {lesson.preview && (
                                       <span className="rounded-full border border-card-border px-2 py-0.5 text-xs text-text-tertiary">
                                         Xem trước
@@ -404,78 +546,23 @@ export default function CourseContentPanel({
                                     )}
                                     {!readOnly && (
                                       <>
-                                        <Button
-                                          size="icon"
-                                          appearance="ghost"
-                                          aria-label={`Đưa ${lesson.title} lên`}
-                                          disabled={busy || lessonIndex === 0}
-                                          onClick={() =>
-                                            void act(
-                                              () =>
-                                                orderAdminLessons(
-                                                  chapter.id,
-                                                  movedIds(
-                                                    (lessons[chapter.id] ?? []).map(
-                                                      (item) => item.id
-                                                    ),
-                                                    lessonIndex,
-                                                    -1
-                                                  )
-                                                ),
-                                              'Đã đổi thứ tự bài học.',
-                                              reloadLessons(chapter.id)
-                                            )
-                                          }
-                                        >
-                                          <ArrowUp size={16} />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          appearance="ghost"
-                                          aria-label={`Đưa ${lesson.title} xuống`}
-                                          disabled={
-                                            busy ||
-                                            lessonIndex === (lessons[chapter.id] ?? []).length - 1
-                                          }
-                                          onClick={() =>
-                                            void act(
-                                              () =>
-                                                orderAdminLessons(
-                                                  chapter.id,
-                                                  movedIds(
-                                                    (lessons[chapter.id] ?? []).map(
-                                                      (item) => item.id
-                                                    ),
-                                                    lessonIndex,
-                                                    1
-                                                  )
-                                                ),
-                                              'Đã đổi thứ tự bài học.',
-                                              reloadLessons(chapter.id)
-                                            )
-                                          }
-                                        >
-                                          <ArrowDown size={16} />
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          appearance="outline"
-                                          aria-label={`Sửa bài học ${lesson.title}`}
+                                        <IconAction
+                                          hover="info"
+                                          label={`Sửa bài học ${lesson.title}`}
+                                          icon={Pencil}
                                           disabled={busy}
                                           onClick={() =>
                                             setLessonEditor({ chapterId: chapter.id, lesson })
                                           }
-                                        >
-                                          Sửa
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          appearance="ghost"
-                                          aria-label={
+                                        />
+                                        <IconAction
+                                          hover="success"
+                                          label={
                                             lesson.published
                                               ? `Ẩn bài học ${lesson.title}`
                                               : `Xuất bản bài học ${lesson.title}`
                                           }
+                                          icon={lesson.published ? EyeOff : Send}
                                           disabled={busy}
                                           onClick={() =>
                                             void act(
@@ -490,17 +577,15 @@ export default function CourseContentPanel({
                                               reloadLessons(chapter.id)
                                             )
                                           }
-                                        >
-                                          {lesson.published ? 'Ẩn' : 'Xuất bản'}
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          appearance="ghost"
-                                          aria-label={
+                                        />
+                                        <IconAction
+                                          hover="info"
+                                          label={
                                             lesson.preview
                                               ? `Tắt xem trước ${lesson.title}`
                                               : `Bật xem trước ${lesson.title}`
                                           }
+                                          icon={PlayCircle}
                                           disabled={busy}
                                           onClick={() =>
                                             void act(
@@ -515,14 +600,11 @@ export default function CourseContentPanel({
                                               reloadLessons(chapter.id)
                                             )
                                           }
-                                        >
-                                          {lesson.preview ? 'Tắt xem trước' : 'Xem trước'}
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          appearance="ghost"
+                                        />
+                                        <IconAction
+                                          label={`Xóa bài học ${lesson.title}`}
+                                          icon={Trash2}
                                           variant="danger"
-                                          aria-label={`Xóa bài học ${lesson.title}`}
                                           disabled={busy}
                                           onClick={() =>
                                             setRemoval({
@@ -531,15 +613,25 @@ export default function CourseContentPanel({
                                               reload: reloadLessons(chapter.id),
                                             })
                                           }
-                                        >
-                                          Xóa
-                                        </Button>
+                                        />
                                       </>
                                     )}
                                   </div>
                                 </li>
                               ))}
                             </ul>
+                          )}
+                          {!readOnly && (
+                            <div className="mt-2 flex justify-center border-t border-card-border pt-2">
+                              <IconAction
+                                label="Thêm bài học"
+                                icon={Plus}
+                                disabled={busy}
+                                onClick={() =>
+                                  setLessonEditor({ chapterId: chapter.id, lesson: null })
+                                }
+                              />
+                            </div>
                           )}
                         </div>
                       )}
@@ -550,6 +642,16 @@ export default function CourseContentPanel({
             </div>
           ))}
         </div>
+        {!readOnly && (
+          <div className="mt-4 flex justify-center border-t border-card-border pt-3">
+            <IconAction
+              label="Thêm chương"
+              icon={Plus}
+              disabled={busy}
+              onClick={() => setChapterEditor({ chapter: null })}
+            />
+          </div>
+        )}
       </ScheduleResourceState>
       {chapterEditor && (
         <ChapterEditorDialog
@@ -603,6 +705,18 @@ export default function CourseContentPanel({
             const target = removal
             if (await act(target.run, 'Đã xóa.', target.reload)) setRemoval(null)
           }}
+        />
+      )}
+      {quickPublishOpen && (
+        <ConfirmDialog
+          title="Xuất bản nhanh chương và bài học?"
+          description="Các bài học nháp đủ điều kiện sẽ được xuất bản trước, sau đó xuất bản chương có bài học đã xuất bản. Mục chưa đủ điều kiện sẽ được bỏ qua và báo lý do."
+          cancelLabel="Hủy"
+          confirmLabel="Xuất bản"
+          busyLabel="Đang xuất bản..."
+          busy={busy}
+          onCancel={() => setQuickPublishOpen(false)}
+          onConfirm={() => void quickPublishContent()}
         />
       )}
     </Panel>

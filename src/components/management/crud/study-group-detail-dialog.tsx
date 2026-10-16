@@ -448,7 +448,7 @@ function StrengthEditor({
   return (
     <div>
       {categories.length === 0 ? (
-        <p className="text-sm text-text-tertiary">Chưa có danh mục để chọn.</p>
+        <p className="text-sm text-text-tertiary">Chưa có môn học để chọn.</p>
       ) : (
         <div className="flex flex-wrap gap-5" data-testid="mentor-strengths">
           {categories.map((category) => (

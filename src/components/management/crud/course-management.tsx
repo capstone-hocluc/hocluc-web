@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
+import PageHeading from '../../console/page-heading'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
@@ -7,6 +8,7 @@ import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
+import { ConsoleTabs, ConsoleTabsList, ConsoleTabsTrigger, ConsoleTabsContent } from '../../console/tabs'
 import { Plus } from '../../console/icons'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
@@ -45,7 +47,13 @@ const price = (course: CourseAdmin) =>
         maximumFractionDigits: 0,
       }).format(course.price ?? 0)
 
-export default function CourseManagement({ readOnly = false }: { readOnly?: boolean }) {
+export default function CourseManagement({
+  readOnly = false,
+  title = 'Khóa học',
+}: {
+  readOnly?: boolean
+  title?: string
+}) {
   const [query, setQuery] = useState<CourseQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
   const [editor, setEditor] = useState<{ course: CourseAdmin | null } | null>(null)
@@ -122,7 +130,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       },
       {
         accessorKey: 'categoryName',
-        header: 'Danh mục',
+        header: 'Môn học',
         enableSorting: false,
         meta: { className: 'w-44' },
         cell: ({ row }) => row.original.categoryName ?? 'Chưa phân loại',
@@ -182,6 +190,11 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     }))
   const setFilter = (key: 'type' | 'categoryId', value: string) =>
     setQuery((old) => ({ ...old, [key]: value === 'ALL' ? undefined : value, page: 0 }))
+  const selectedSubject = query.categoryId ?? 'ALL'
+  const subjectTabs = [
+    { id: 'ALL', label: 'Tất cả môn học' },
+    ...(categories.data ?? []).map((category) => ({ id: category.id, label: category.name })),
+  ]
   // Runs one change on a course and refreshes the list; false means the dialog should stay open.
   async function perform(work: () => Promise<unknown>, done: string): Promise<boolean> {
     if (busy) return false
@@ -219,31 +232,109 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         }}
       />
     )
-  return (
-    <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">
-          Soạn khóa, gửi duyệt và theo dõi trạng thái bán. Bấm vào một khóa để xem chi tiết.
-        </p>
-        <div className="flex gap-2">
-          <Button
-            appearance={statusFilter === 'PENDING' ? 'fill' : 'outline'}
-            aria-pressed={statusFilter === 'PENDING'}
-            onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
-          >
-            Chờ duyệt{pending.data ? ` (${pending.data.totalElements})` : ''}
-          </Button>
-          {!readOnly && (
-            <Button
-              onClick={() => setEditor({ course: null })}
-              disabled={busy || categories.status !== 'ready' || resource.status !== 'ready'}
-            >
-              <Plus size={16} />
-              Tạo khóa học
-            </Button>
+  const courseList = (
+    <>
+      <FilterToolbar>
+        <form
+          className="w-full sm:max-w-sm sm:min-w-40 sm:flex-1"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setQuery((old) => ({ ...old, query: search.trim(), page: 0 }))
+          }}
+        >
+          <SearchInput
+            ariaLabel="Tìm khóa học"
+            placeholder="Tìm tên khóa học"
+            maxLength={200}
+            value={search}
+            onChange={setSearch}
+            className="sm:max-w-none"
+          />
+        </form>
+        <FilterGroup>
+          <FilterSelect
+            className="sm:w-40"
+            ariaLabel="Loại khóa lọc"
+            value={query.type ?? 'ALL'}
+            onChange={(value) => setFilter('type', value)}
+            options={[
+              { id: 'ALL', label: 'Tất cả loại' },
+              { id: 'MAIN', label: COURSE_TYPE_LABELS.MAIN },
+              { id: 'SECTION', label: COURSE_TYPE_LABELS.SECTION },
+            ]}
+          />
+          <FilterSelect
+            className="sm:w-40"
+            ariaLabel="Trạng thái khóa lọc"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { id: 'ALL', label: 'Tất cả trạng thái' },
+              { id: 'DRAFT', label: COURSE_STATUS_LABELS.DRAFT },
+              { id: 'PENDING', label: REVIEW_STATE_LABELS.PENDING },
+              { id: 'REJECTED', label: REVIEW_STATE_LABELS.REJECTED },
+              { id: 'PUBLISHED', label: COURSE_STATUS_LABELS.PUBLISHED },
+              { id: 'ARCHIVED', label: COURSE_STATUS_LABELS.ARCHIVED },
+            ]}
+          />
+        </FilterGroup>
+      </FilterToolbar>
+      <ScheduleResourceState
+        skeleton="table"
+        status={resource.status}
+        errorMessage={resource.errorMessage}
+        onRetry={resource.reload}
+      >
+        <DataTable
+          columns={columns}
+          data={resource.data?.content ?? []}
+          getRowKey={(course) => course.id}
+          onRowClick={(course) => openDetail(course.id)}
+          emptyMessage="Chưa có khóa học phù hợp."
+        />
+        <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
+          <p className="text-sm text-text-tertiary">
+            {resource.data?.totalElements ?? 0} khóa học
+          </p>
+          {(resource.data?.totalPages ?? 0) > 1 && (
+            <Pagination
+              currentPage={(query.page ?? 0) + 1}
+              totalPages={resource.data?.totalPages ?? 1}
+              onPageChange={(page) => setQuery((old) => ({ ...old, page: page - 1 }))}
+              sideLayout="icon"
+            />
           )}
         </div>
-      </div>
+      </ScheduleResourceState>
+    </>
+  )
+  return (
+    <section className="flex flex-col gap-5">
+      <PageHeading
+        title={title}
+        subtitle="Soạn khóa, gửi duyệt và theo dõi trạng thái bán. Bấm vào một khóa để xem chi tiết."
+        readOnly={readOnly}
+        action={
+          <>
+            <Button
+              appearance={statusFilter === 'PENDING' ? 'fill' : 'outline'}
+              aria-pressed={statusFilter === 'PENDING'}
+              onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+            >
+              Chờ duyệt{pending.data ? ` (${pending.data.totalElements})` : ''}
+            </Button>
+            {!readOnly && (
+              <Button
+                onClick={() => setEditor({ course: null })}
+                disabled={busy || categories.status !== 'ready' || resource.status !== 'ready'}
+              >
+                <Plus size={16} />
+                Tạo khóa học
+              </Button>
+            )}
+          </>
+        }
+      />
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>
@@ -256,97 +347,36 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       )}
       {categories.status === 'error' && (
         <Notice tone="warning">
-          Không tải được danh mục.{' '}
+          Không tải được môn học.{' '}
           <Button appearance="outline" size="sm" onClick={categories.reload}>
             Thử lại
           </Button>
         </Notice>
       )}
-      <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        <FilterToolbar>
-          <form
-            className="w-full sm:max-w-sm sm:min-w-40 sm:flex-1"
-            onSubmit={(e) => {
-              e.preventDefault()
-              setQuery((old) => ({ ...old, query: search.trim(), page: 0 }))
-            }}
-          >
-            <SearchInput
-              ariaLabel="Tìm khóa học"
-              placeholder="Tìm tên khóa học"
-              maxLength={200}
-              value={search}
-              onChange={setSearch}
-              className="sm:max-w-none"
-            />
-          </form>
-          <FilterGroup>
-            <FilterSelect
-              className="sm:w-40"
-              ariaLabel="Loại khóa lọc"
-              value={query.type ?? 'ALL'}
-              onChange={(v) => setFilter('type', v)}
-              options={[
-                { id: 'ALL', label: 'Tất cả loại' },
-                { id: 'MAIN', label: COURSE_TYPE_LABELS.MAIN },
-                { id: 'SECTION', label: COURSE_TYPE_LABELS.SECTION },
-              ]}
-            />
-            <FilterSelect
-              className="sm:w-40"
-              ariaLabel="Trạng thái khóa lọc"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { id: 'ALL', label: 'Tất cả trạng thái' },
-                { id: 'DRAFT', label: COURSE_STATUS_LABELS.DRAFT },
-                { id: 'PENDING', label: REVIEW_STATE_LABELS.PENDING },
-                { id: 'REJECTED', label: REVIEW_STATE_LABELS.REJECTED },
-                { id: 'PUBLISHED', label: COURSE_STATUS_LABELS.PUBLISHED },
-                { id: 'ARCHIVED', label: COURSE_STATUS_LABELS.ARCHIVED },
-              ]}
-            />
-            <FilterSelect
-              className="sm:w-40"
-              ariaLabel="Danh mục lọc"
-              value={query.categoryId ?? 'ALL'}
-              onChange={(v) => setFilter('categoryId', v)}
-              disabled={categories.status !== 'ready'}
-              options={[
-                { id: 'ALL', label: 'Tất cả danh mục' },
-                ...(categories.data ?? []).map((c) => ({ id: c.id, label: c.name })),
-              ]}
-            />
-          </FilterGroup>
-        </FilterToolbar>
-        <ScheduleResourceState
-          skeleton="table"
-          status={resource.status}
-          errorMessage={resource.errorMessage}
-          onRetry={resource.reload}
-        >
-          <DataTable
-            columns={columns}
-            data={resource.data?.content ?? []}
-            getRowKey={(c) => c.id}
-            onRowClick={(c) => openDetail(c.id)}
-            emptyMessage="Chưa có khóa học phù hợp."
-          />
-          <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
-            <p className="text-sm text-text-tertiary">
-              {resource.data?.totalElements ?? 0} khóa học
-            </p>
-            {(resource.data?.totalPages ?? 0) > 1 && (
-              <Pagination
-                currentPage={(query.page ?? 0) + 1}
-                totalPages={resource.data?.totalPages ?? 1}
-                onPageChange={(p) => setQuery((old) => ({ ...old, page: p - 1 }))}
-                sideLayout="icon"
-              />
-            )}
-          </div>
-        </ScheduleResourceState>
-      </section>
+      <ConsoleTabs
+        className="flex flex-col"
+        value={selectedSubject}
+        onValueChange={(value) => setFilter('categoryId', value)}
+      >
+        <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+          <ConsoleTabsList aria-label="Lọc khóa học theo môn học" className="px-4">
+            {subjectTabs.map((subject) => (
+              <ConsoleTabsTrigger key={subject.id} value={subject.id}>
+                {subject.label}
+              </ConsoleTabsTrigger>
+            ))}
+          </ConsoleTabsList>
+          {subjectTabs.map((subject) => (
+            <ConsoleTabsContent
+              key={subject.id}
+              value={subject.id}
+              className="gap-0 pt-0"
+            >
+              {selectedSubject === subject.id ? courseList : null}
+            </ConsoleTabsContent>
+          ))}
+        </section>
+      </ConsoleTabs>
       {editor && categories.data && (
         <CourseEditorDialog
           key={editor.course?.id ?? 'new'}

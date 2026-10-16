@@ -3,7 +3,7 @@ import { Breadcrumbs } from '../tailgrids/core/breadcrumbs'
 import { Eye } from './icons'
 
 // Page header in the CRM dashboard's style: breadcrumb, a bold 26/30px title, a readable description and the page
-// actions on the right, all closed off by a divider so the page content starts clearly below it.
+// actions on the right.
 interface PageHeadingProps {
   title: string
   subtitle?: ReactNode
@@ -18,7 +18,7 @@ function PageHeading({ title, subtitle, action, readOnly = false }: PageHeadingP
   const [, first, second] = window.location.pathname.split('/')
   const homeHref = first === 'console' ? `/console/${second ?? ''}` : `/${first ?? ''}`
   return (
-    <header className="flex flex-col items-start justify-between gap-4 border-b border-card-border pb-5 sm:flex-row sm:items-end">
+    <header className="flex flex-col items-start justify-between gap-4 pb-1 sm:flex-row sm:items-end">
       <div className="flex min-w-0 flex-col gap-2">
         <Breadcrumbs
           dividerType="chevron"

@@ -22,9 +22,9 @@ test('category edit preserves metadata and sends stale-edit token', async ({ pag
     .getByRole('row', { name: /^Toán / })
     .getByRole('button', { name: 'Sửa', exact: true })
     .click()
-  const dialog = page.getByRole('dialog', { name: 'Sửa danh mục', exact: true })
-  await dialog.getByLabel('Tên danh mục', { exact: true }).fill('Toán cập nhật')
-  await dialog.getByRole('button', { name: 'Lưu danh mục', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Sửa môn học', exact: true })
+  await dialog.getByLabel('Tên môn học', { exact: true }).fill('Toán cập nhật')
+  await dialog.getByRole('button', { name: 'Lưu môn học', exact: true }).click()
   await expect(dialog).toBeHidden()
   await expect(page.getByRole('row', { name: /^Toán cập nhật / })).toBeVisible()
   const saved = state.requests.find((r) => r.method === 'PUT' && r.path.endsWith(IDS.root))!
@@ -40,12 +40,12 @@ test('category edit preserves metadata and sends stale-edit token', async ({ pag
 test('category creation and unknown mutation prevent blind retries', async ({ page }) => {
   const state = await installCrudFixture(page, 'ADMINISTRATOR')
   await page.goto('/admin/categories')
-  await page.getByRole('button', { name: 'Tạo danh mục', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'Tạo danh mục', exact: true })
-  await dialog.getByLabel('Tên danh mục', { exact: true }).fill('Vật lý')
+  await page.getByRole('button', { name: 'Tạo môn học', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo môn học', exact: true })
+  await dialog.getByLabel('Tên môn học', { exact: true }).fill('Vật lý')
   state.failNext = 'network'
-  await dialog.getByRole('button', { name: 'Lưu danh mục', exact: true }).click()
-  await expect(dialog.getByRole('button', { name: 'Lưu danh mục', exact: true })).toBeDisabled()
+  await dialog.getByRole('button', { name: 'Lưu môn học', exact: true }).click()
+  await expect(dialog.getByRole('button', { name: 'Lưu môn học', exact: true })).toBeDisabled()
   await expect(dialog.getByText(/Chưa rõ kết quả lưu/)).toBeVisible()
   expect(state.requests.filter((r) => r.method === 'POST')).toHaveLength(1)
   const getsBeforeClose = state.requests.filter(
@@ -58,7 +58,7 @@ test('category creation and unknown mutation prevent blind retries', async ({ pa
   await dialog.getByRole('button', { name: 'Đóng và kiểm tra', exact: true }).click()
   try {
     await expect(dialog).toBeHidden()
-    await expect(page.getByRole('button', { name: 'Tạo danh mục', exact: true })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Tạo môn học', exact: true })).toBeDisabled()
   } finally {
     releaseRead()
   }
@@ -76,13 +76,13 @@ test('stale category edit keeps input and does not automatically resend', async 
     .getByRole('row', { name: /^Toán / })
     .getByRole('button', { name: 'Sửa', exact: true })
     .click()
-  const dialog = page.getByRole('dialog', { name: 'Sửa danh mục', exact: true })
-  await dialog.getByLabel('Tên danh mục', { exact: true }).fill('Nội dung chưa lưu')
+  const dialog = page.getByRole('dialog', { name: 'Sửa môn học', exact: true })
+  await dialog.getByLabel('Tên môn học', { exact: true }).fill('Nội dung chưa lưu')
   state.failNext = 'conflict'
-  await dialog.getByRole('button', { name: 'Lưu danh mục', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Lưu môn học', exact: true }).click()
   await expect(dialog.getByRole('alert')).toContainText(/Reload|tải lại|thay đổi/i)
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByLabel('Tên danh mục', { exact: true })).toHaveValue('Nội dung chưa lưu')
+  await expect(dialog.getByLabel('Tên môn học', { exact: true })).toHaveValue('Nội dung chưa lưu')
   expect(state.requests.filter((r) => r.method === 'PUT')).toHaveLength(1)
   expect(state.categories.find((c) => c.id === IDS.root)!.name).toBe('Toán')
 })
@@ -196,8 +196,8 @@ test('category delete confirms the chosen leaf and keeps its parent', async ({ p
     .click()
   const confirmation = page
     .getByRole('dialog')
-    .filter({ has: page.getByRole('heading', { name: 'Xóa danh mục?', exact: true }) })
-  await confirmation.getByRole('button', { name: 'Xóa danh mục', exact: true }).click()
+    .filter({ has: page.getByRole('heading', { name: 'Xóa môn học?', exact: true }) })
+  await confirmation.getByRole('button', { name: 'Xóa môn học', exact: true }).click()
   await expect(confirmation).toBeHidden()
   await expect(page.getByRole('row', { name: /^Toán / })).toBeVisible()
   await expect(page.getByRole('row', { name: /^Đại số / })).toHaveCount(0)
@@ -232,7 +232,7 @@ test('manager has read-only category/course detail on a narrow viewport', async 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/manager/categories')
   await expect(page.getByRole('row', { name: /^Toán / })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Tạo danh mục', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Tạo môn học', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true

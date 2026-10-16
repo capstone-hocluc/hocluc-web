@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
+import PageHeading from '../../console/page-heading'
 import { Pencil, Plus, Trash2, XCircle } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import Button from '../../console/button'
@@ -57,7 +58,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           sortOrder: category.sortOrder,
           expectedUpdatedAt: category.updatedAt,
         })
-        setNotice(`Đã đổi danh mục cha của "${category.name}".`)
+        setNotice(`Đã đổi môn học cha của "${category.name}".`)
         setQuickEditId(null)
         resource.reload()
       } catch (err) {
@@ -75,7 +76,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
     () => [
       {
         accessorKey: 'name',
-        header: 'Danh mục',
+        header: 'Môn học',
         cell: ({ row }) => (
           <div className="min-w-40">
             <strong className="font-medium">{row.original.name}</strong>
@@ -84,7 +85,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
       },
       {
         id: 'parent',
-        header: 'Danh mục cha',
+        header: 'Môn học cha',
         accessorFn: (c) => (c.parentId ? (names.get(c.parentId) ?? '—') : 'Không có'),
         cell: ({ row }) => {
           const category = row.original
@@ -95,7 +96,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
               <div className="flex items-center gap-1">
                 <span>{parentName}</span>
                 <IconAction
-                  label={`Sửa nhanh danh mục cha của ${category.name}`}
+                  label={`Sửa nhanh môn học cha của ${category.name}`}
                   icon={Pencil}
                   disabled={busy}
                   onClick={() => setQuickEditId(category.id)}
@@ -107,7 +108,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           return (
             <div className="flex items-center gap-1">
               <SelectField
-                ariaLabel={`Danh mục cha của ${category.name}`}
+                ariaLabel={`Môn học cha của ${category.name}`}
                 value={category.parentId ?? 'NONE'}
                 disabled={busy}
                 onChange={(value) => void changeParent(category, value)}
@@ -178,7 +179,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
     try {
       await deleteCategory(deleting.id)
       setDeleting(null)
-      setNotice('Đã xóa danh mục.')
+      setNotice('Đã xóa môn học.')
       resource.reload()
     } catch (err) {
       setError(crudError(err))
@@ -192,20 +193,22 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
   }
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">Danh mục dùng chung cho khóa học và nội dung.</p>
-        <div className="flex gap-2">
-          {!readOnly && (
+      <PageHeading
+        title="Môn học"
+        subtitle="Môn học dùng chung cho khóa học và nội dung."
+        readOnly={readOnly}
+        action={
+          !readOnly && (
             <Button
               onClick={() => setEditor({ category: null })}
               disabled={busy || resource.status !== 'ready'}
             >
               <Plus size={16} />
-              Tạo danh mục
+              Tạo môn học
             </Button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>
@@ -226,11 +229,11 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           data={rows}
           columns={columns}
           getRowKey={(c) => c.id}
-          searchPlaceholder="Tìm danh mục..."
+          searchPlaceholder="Tìm môn học..."
           searchText={(c) => c.name}
-          emptyMessage="Chưa có danh mục. Tạo danh mục đầu tiên để phân loại nội dung."
+          emptyMessage="Chưa có môn học. Tạo môn học đầu tiên để phân loại nội dung."
           filter={{
-            ariaLabel: 'Trạng thái danh mục',
+            ariaLabel: 'Trạng thái môn học',
             allLabel: 'Tất cả trạng thái',
             options: ['Đang dùng', 'Ngừng dùng'],
             get: (c) => (c.active ? 'Đang dùng' : 'Ngừng dùng'),
@@ -248,17 +251,17 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           }}
           onSaved={() => {
             setEditor(null)
-            setNotice('Đã lưu danh mục.')
+            setNotice('Đã lưu môn học.')
             resource.reload()
           }}
         />
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa danh mục?"
+          title="Xóa môn học?"
           description={
             <>
-              {deleting.name}. Chỉ xóa khi không còn danh mục con hoặc dữ liệu tham chiếu.
+              {deleting.name}. Chỉ xóa khi không còn môn học con hoặc dữ liệu tham chiếu.
               {error && (
                 <span className="mt-2 block text-danger" role="alert">
                   {error}
@@ -267,7 +270,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
             </>
           }
           cancelLabel="Hủy"
-          confirmLabel="Xóa danh mục"
+          confirmLabel="Xóa môn học"
           variant="danger"
           busy={busy}
           onCancel={() => setDeleting(null)}

@@ -10,6 +10,8 @@ interface IconActionProps {
   onClick: () => void
   disabled?: boolean
   variant?: 'primary' | 'danger'
+  /** Hover tint that hints at what the action does; defaults to the neutral icon colour. */
+  hover?: 'info' | 'success' | 'warning'
 }
 
 // One row action in a table: an icon button whose name stays readable for assistive tech and tooltips.
@@ -19,6 +21,7 @@ export function IconAction({
   onClick,
   disabled,
   variant = 'primary',
+  hover,
 }: IconActionProps) {
   return (
     <Tooltip placement="top">
@@ -32,7 +35,11 @@ export function IconAction({
           onClick={onClick}
           className={cn(
             'size-8',
-            variant === 'primary' && 'text-icon-tertiary hover:text-icon-primary'
+            variant === 'primary' && 'text-text-secondary',
+            variant === 'primary' && !hover && 'hover:text-text-primary',
+            hover === 'info' && 'hover:text-badge-blue-text',
+            hover === 'success' && 'hover:text-badge-success-text',
+            hover === 'warning' && 'hover:text-badge-warning-text'
           )}
         >
           <Icon size={18} />

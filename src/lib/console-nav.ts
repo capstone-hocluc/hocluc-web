@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   Sparkles,
   UserCog,
+  UserRound,
   Users,
 } from '../components/console/icons'
 import type { NavIcon, NavSection } from '../components/console/layout/nav-types'
@@ -101,7 +102,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
 
   {
     page: 'users',
-    label: 'Người dùng & phân quyền',
+    label: 'Nhân sự & phân quyền',
     icon: UserCog,
     group: 'system',
     permission: ['USER_MANAGE', 'USER_READ'],
@@ -140,7 +141,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   },
   {
     page: 'categories',
-    label: 'Danh mục môn',
+    label: 'Môn học',
     icon: Layers3,
     group: 'academic',
     permission: 'COURSE_READ',
@@ -243,6 +244,14 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     group: 'business',
     permission: 'REVIEW_QUEUE_HANDLE',
     roles: ['MENTOR'],
+  },
+  {
+    page: 'learners',
+    label: 'Học viên',
+    icon: UserRound,
+    group: 'business',
+    permission: ['USER_MANAGE', 'USER_READ'],
+    writePermission: 'USER_MANAGE',
   },
   {
     page: 'enrollments',

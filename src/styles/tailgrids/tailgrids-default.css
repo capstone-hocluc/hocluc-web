@@ -149,23 +149,23 @@
   --badge-neutral-icon-color: #6b7280;
 
   /* Badge Primary */
-  --badge-primary-background: #eff3ff;
-  --badge-primary-text: #3758f9;
-  --badge-primary-icon-color: #3758f9;
+  --badge-primary-background: #f3f6ff;
+  --badge-primary-text: #5b7bf0;
+  --badge-primary-icon-color: #6f8cf5;
 
   /* Badge Error */
-  --badge-error-background: #fef2f2;
-  --badge-error-text: #b91c1c;
+  --badge-error-background: #ffe9eb;
+  --badge-error-text: #d02f3c;
   --badge-error-icon-color: #ef4444;
 
   /* Badge Warning*/
-  --badge-warning-background: #fffbeb;
-  --badge-warning-text: #b45309;
+  --badge-warning-background: #fff2d2;
+  --badge-warning-text: #b06500;
   --badge-warning-icon-color: #f59e0b;
 
   /* Badge Success*/
-  --badge-success-background: #f0fdf4;
-  --badge-success-text: #15803d;
+  --badge-success-background: #e2f7ea;
+  --badge-success-text: #178a55;
   --badge-success-icon-color: #22c55e;
 
   /* Badge Cyan */
@@ -179,8 +179,8 @@
   --badge-sky-icon-color: #0ea5e9;
 
   /* Badge Blue */
-  --badge-blue-background: #eff6ff;
-  --badge-blue-text: #1d4ed8;
+  --badge-blue-background: #e6f1ff;
+  --badge-blue-text: #1f6fd6;
   --badge-blue-icon-color: #3b82f6;
 
   /* Badge Violet */

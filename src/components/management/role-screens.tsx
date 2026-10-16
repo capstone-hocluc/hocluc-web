@@ -33,9 +33,9 @@ const REVIEW_TONES: Record<ReviewStatus, StatusTone> = { PENDING: 'warning', APP
 
 function statusTone(status: string): StatusTone {
   if (['Đang dùng', 'Đã thanh toán', 'Còn hạn'].includes(status)) return 'success'
-  if (['Chờ thanh toán', 'Sắp hết hạn', 'Nháp'].includes(status)) return 'warning'
+  if (['Chờ thanh toán', 'Sắp hết hạn'].includes(status)) return 'warning'
   if (['Đã hủy', 'Hết hạn'].includes(status)) return 'danger'
-  return 'neutral'
+  return 'neutral' // includes 'Nháp', same grey as course drafts
 }
 
 const statusColumn = <T extends { status: string }>(): ColumnDef<T> => ({

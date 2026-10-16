@@ -233,9 +233,9 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
                 ]}
               />
             </Field>
-            <Field label="Danh mục">
+            <Field label="Môn học">
               <SelectField
-                ariaLabel="Danh mục khóa học"
+                ariaLabel="Môn học khóa học"
                 value={categoryId}
                 onChange={setCategoryId}
                 disabled={busy}

@@ -79,7 +79,14 @@ export function ManagementScreen({
       return (
         <>
           <PageHeading title={title} readOnly={readOnly} />
-          <UserManagement readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
+          <UserManagement audience="staff" readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
+        </>
+      )
+    case 'learners':
+      return (
+        <>
+          <PageHeading title={title} subtitle="Tài khoản học viên, khách hàng của nền tảng." readOnly={readOnly} />
+          <UserManagement audience="students" readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
         </>
       )
     case 'audit-log':
@@ -89,19 +96,9 @@ export function ManagementScreen({
     case 'blueprints':
       return <AdminBlueprints />
     case 'categories':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <CategoryManagement readOnly={readOnly} />
-        </>
-      )
+      return <CategoryManagement readOnly={readOnly} />
     case 'courses':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <ManagementCourseList readOnly={readOnly} />
-        </>
-      )
+      return <ManagementCourseList readOnly={readOnly} title={title} />
     case 'question-review':
       return <QuestionReview />
     case 'schedules':
