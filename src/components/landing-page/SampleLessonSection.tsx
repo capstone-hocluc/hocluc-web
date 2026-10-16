@@ -187,9 +187,6 @@ function SampleLessonSection({ questions, ref }: SampleLessonSectionProps) {
                 </li>
               ))}
             </ul>
-            <a className="text-link" href="#khoa-hoc">
-              Xem khóa học <Icon name="arrow-right" />
-            </a>
           </div>
         </div>
         {finished && (

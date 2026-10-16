@@ -1,32 +1,45 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Domain } from '../../data/landing-content'
+import type { Domain, LandingIconName } from '../../data/landing-content'
 import Icon from './Icon'
 
-const subjectVisuals: Record<string, { image: string; caption: string; topics: string[] }> = {
+// Marks echo real V-ACT question types from the curriculum master data (appendix C of
+// 03-NoiDung-MasterData-NganHang): passages/spelling/arguments, conditionals/cloze/tenses,
+// integrals/probability/Casio, deduction/patterns/charts, hypothesis/experiments/trends.
+type SubjectMark = { text: string } | { icon: LandingIconName }
+
+const subjectVisuals: Record<
+  string,
+  { image: string; caption: string; topics: string[]; marks: SubjectMark[] }
+> = {
   'tieng-viet': {
     image: 'star-reading-v2-card.webp',
     caption: 'Đọc sâu, hiểu đúng.',
     topics: ['Đọc hiểu văn bản', 'Sử dụng tiếng Việt', 'Lập luận và suy luận'],
+    marks: [{ icon: 'scroll-text' }, { icon: 'pen-line' }, { icon: 'message-square-quote' }],
   },
   'tieng-anh': {
     image: 'mai-english-v1-card.webp',
     caption: 'Hiểu ngôn ngữ trong ngữ cảnh.',
     topics: ['Từ vựng và ngữ pháp', 'Điền từ vào đoạn văn', 'Đọc hiểu tiếng Anh'],
+    marks: [{ text: 'If' }, { text: '[ __ ]' }, { text: '-ed' }],
   },
   toan: {
     image: 'owl-teacher-teaching-card.webp',
     caption: 'Hiểu bản chất, tìm cách giải.',
     topics: ['Kiến thức Toán học', 'Tư duy định lượng', 'Kỹ năng máy tính'],
+    marks: [{ text: '∫' }, { text: 'P(A)' }, { text: 'fx' }],
   },
   logic: {
     image: 'nam-analysis-v1-card.webp',
     caption: 'Kết nối dữ kiện, tìm quy luật.',
     topics: ['Suy luận logic', 'Bảng và biểu đồ', 'Phân tích dữ kiện'],
+    marks: [{ icon: 'split' }, { icon: 'puzzle' }, { icon: 'chart-column-increasing' }],
   },
   'khoa-hoc': {
     image: 'robot-science-v2-card.webp',
     caption: 'Khám phá bằng chứng khoa học.',
     topics: ['Đọc dữ liệu khoa học', 'Phân tích thí nghiệm', 'Kiểm chứng giả thuyết'],
+    marks: [{ icon: 'lightbulb' }, { icon: 'flask-conical' }, { icon: 'trending-up' }],
   },
 }
 
@@ -62,13 +75,12 @@ export default function CatalogSection({
       <div className="container">
         <div className="subjects-heading">
           <h2 id="subjects-title">Bạn muốn bắt đầu từ đâu?</h2>
-          <p>Khám phá nhóm kiến thức phù hợp với bạn.</p>
         </div>
         <div className="subject-list">
           {domains.map((domain) => (
             <button
               type="button"
-              className={`subject-item${activeId === domain.id ? ' is-previewed' : ''}`}
+              className={`subject-item subject-item--${domain.id}${activeId === domain.id ? ' is-previewed' : ''}`}
               key={domain.id}
               onPointerEnter={(event) => {
                 if (event.pointerType === 'touch') return
@@ -98,6 +110,11 @@ export default function CatalogSection({
                 ) : (
                   <span className="subject-symbol">{domain.label}</span>
                 )}
+                {subjectVisuals[domain.id]?.marks.map((mark) => (
+                  <span className="subject-mark" key={'icon' in mark ? mark.icon : mark.text}>
+                    {'icon' in mark ? <Icon name={mark.icon} /> : mark.text}
+                  </span>
+                ))}
               </span>
               <span className="subject-name">{domain.title}</span>
               <span className="subject-caption" id={`subject-caption-${domain.id}`}>

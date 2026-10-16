@@ -4,6 +4,7 @@ import CatalogSection from '../components/landing-page/CatalogSection'
 import DetailDialog, { type LandingDetail } from '../components/landing-page/DetailDialog'
 import ExamIntroSection from '../components/landing-page/ExamIntroSection'
 import CoursesSection from '../components/landing-page/CoursesSection'
+import { useScrollReveal } from '../components/landing-page/use-scroll-reveal'
 import HeroSection from '../components/landing-page/HeroSection'
 import JourneySection from '../components/landing-page/JourneySection'
 import LandingHeader from '../components/landing-page/LandingHeader'
@@ -31,6 +32,8 @@ function LandingPage() {
   const [detail, setDetail] = useState<LandingDetail | null>(null)
   const [startOpen, setStartOpen] = useState(false)
   const lessonRef = useRef<SampleLessonHandle>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useScrollReveal(rootRef)
 
   const openDomain = (domainId: string) => {
     const domain = domains.find((item) => item.id === domainId)
@@ -58,7 +61,7 @@ function LandingPage() {
   }
 
   return (
-    <div className={`landing-page${detail || startOpen ? ' modal-open' : ''}`}>
+    <div ref={rootRef} className={`landing-page${detail || startOpen ? ' modal-open' : ''}`}>
       <a className="skip-link" href="#main">
         Đến nội dung chính
       </a>

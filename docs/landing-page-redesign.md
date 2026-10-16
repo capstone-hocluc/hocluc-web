@@ -14,6 +14,14 @@ Follow-up: [Desktop verification and subject-card proposal](landing-page-verific
 - Desktop widths 1280, 1440, and 1920 remain free of horizontal overflow. Images do not overlap their labels. Mobile refinement remains deferred.
 - The build retains the pre-existing application bundle-size warning. Preview course data currently cannot load; UI error/retry remains visible rather than substituted content.
 
+## Subject-card marks, scroll reveal and layout balance (16 October)
+
+- Each subject card carries three small marks around its character. Marks come from the master data (`03-NoiDung-MasterData-NganHang.md`, appendix C): Toán and Tiếng Anh use text marks (`∫ P(A) fx`, `If [ __ ] -ed`); Tiếng Việt, Logic and Khoa học use Lucide icons from the inline sprite. Each subject has its own hover motion; idle drift uses the CSS `translate` property so it never fights hover `transform`.
+- Sections fade in on scroll through `useScrollReveal` (`IntersectionObserver`, `.reveal` / `.is-in`). It does nothing under `prefers-reduced-motion`.
+- Redundant copy was removed (subject subtitle, journey intro, FAQ intro, duplicate "Xem khóa học" links, closing slogan).
+- First screen: section padding 96 → 72 px, hero padding 64 → 40 px, wider copy column. At about 1665 × 816 the hero, the heading and the characters of all five cards are visible without scrolling; the page is about 550 px shorter.
+- Validated: TypeScript, build and 10/10 landing tests; no horizontal overflow at 1280 and 1920.
+
 ## Learner login and signup (16 October)
 
 - `/login` and `/signup` use `LearnerAuthShell`: on desktop a two-column dialog with the logo, tagline and Mai/Nam illustration beside the form; below 900 px only the logo and form remain. Staff login (`/console/login`) keeps `AuthShell`.

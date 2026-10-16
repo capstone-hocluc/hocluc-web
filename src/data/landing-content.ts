@@ -10,8 +10,15 @@ export type LandingIconName =
   | 'check'
   | 'flask-conical'
   | 'languages'
+  | 'lightbulb'
   | 'menu'
+  | 'message-square-quote'
+  | 'pen-line'
+  | 'puzzle'
   | 'rotate-ccw'
+  | 'scroll-text'
+  | 'split'
+  | 'trending-up'
   | 'x'
 
 export interface LandingLink {
@@ -58,7 +65,7 @@ export interface ExamIntro {
   scoringNote: string
   seasonTitle: string
   season: { title: string; text: string }[]
-  source: { label: string; href: string; updatedAt: string; note: string }
+  source: { href: string; updatedAt: string }
 }
 
 export interface CourseModule {
@@ -203,16 +210,9 @@ export const examIntro: ExamIntro = {
     { title: 'Xét tuyển', text: 'Nộp điểm cho trường bạn chọn.' },
   ],
   source: {
-    label: 'Trung tâm Khảo thí ĐHQG-HCM',
     href: 'https://cetqa.vnuhcm.edu.vn/danh-gia-nang-luc',
     updatedAt: '14/10/2026',
-    note: 'Lịch thi và lệ phí xem thông báo mới nhất của ĐHQG-HCM.',
   },
-}
-
-export const catalogHeading = {
-  title: 'Học đủ 5 nhóm kiến thức V-ACT.',
-  text: 'Chọn nhóm bạn muốn học. Khám phá nội dung từ nền tảng đến luyện tập.',
 }
 
 export const domains: Domain[] = [
@@ -412,8 +412,6 @@ export const domains: Domain[] = [
   },
 ]
 
-export const practiceHeading = 'Ôn luyện cùng Học Lực'
-
 export const practiceOperations: PracticeOperation[] = [
   {
     id: 'OR00',
@@ -496,7 +494,7 @@ export const journey = {
 
 export const sampleLesson = {
   title: 'Thử một câu. Hiểu thêm một chút.',
-  intro: 'Câu luyện mẫu · 3 câu ngắn · có giải thích sau mỗi câu.',
+  intro: '3 câu ngắn, có giải thích sau mỗi câu.',
   disclaimer: 'Câu luyện mẫu · không phải bài thi V-ACT đầy đủ',
   featureTitle: 'Hiểu cách làm,',
   featureAccent: 'nhìn ra cách học.',
@@ -578,9 +576,6 @@ export const faq = {
 }
 
 export const closingCta = {
-  title: 'Tìm bước học tiếp theo của bạn.',
-  text: 'Khám phá nhóm kiến thức và khóa học. Bài đánh giá đầu vào miễn phí, cần đăng nhập.',
-  primary: 'Làm đánh giá miễn phí',
   secondary: 'Xem khóa học',
 }
 

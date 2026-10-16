@@ -2,6 +2,7 @@
 /* Landing-only layout and interactions. */
 .landing-page {
   --subject-art-height: 144px;
+  --subject-art-box: 176px;
   --subject-motion: 200ms;
   color: var(--ink);
   background: var(--paper);
@@ -78,7 +79,7 @@
   margin-inline: auto;
 }
 .landing-page .section {
-  padding-block: var(--s24);
+  padding-block: 72px;
 }
 .landing-page .accent {
   color: var(--blue-text);
@@ -297,12 +298,12 @@
 }
 /* The existing study illustrations become one framed visual. */
 .landing-page .hero {
-  padding-block: 64px;
+  padding-block: 40px;
   background: var(--soft);
 }
 .landing-page .hero-grid {
   display: grid;
-  grid-template-columns: 1.05fr 1fr;
+  grid-template-columns: 1.25fr 1fr;
   align-items: center;
   gap: 48px;
 }
@@ -395,20 +396,17 @@
 }
 /* Compact discovery */
 .landing-page .subjects-section {
-  padding-top: 48px;
+  padding-top: 40px;
 }
 .landing-page .subjects-heading {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 .landing-page .subjects-heading h2 {
   font-size: var(--heading);
-}
-.landing-page .subjects-heading p {
-  font-size: 0.875rem;
 }
 .landing-page .subject-list {
   display: grid;
@@ -421,7 +419,7 @@
   flex-direction: column;
   gap: var(--s2);
   text-align: left;
-  padding: var(--s4);
+  padding: 20px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: var(--soft);
@@ -440,10 +438,11 @@
   transform: translateY(1px);
 }
 .landing-page .subject-art {
+  position: relative;
   display: grid;
   place-items: center;
   width: 100%;
-  height: var(--subject-art-height);
+  height: var(--subject-art-box);
   margin-bottom: var(--s2);
 }
 .landing-page .subject-art img {
@@ -451,10 +450,153 @@
   height: var(--subject-art-height);
   min-height: 0;
   object-fit: contain;
-  transition: transform var(--subject-motion) var(--ease);
+  transition: scale var(--subject-motion) var(--ease);
 }
 .landing-page .subject-item:is(:hover, :focus-visible, .is-previewed) .subject-art img {
-  transform: scale(1.03);
+  scale: 1.03;
+  animation: var(--art-motion, none) 900ms var(--ease) 1;
+}
+/* Small subject cues around each character: they drift at rest and react once on preview. */
+.landing-page .subject-mark {
+  position: absolute;
+  color: var(--blue);
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.6;
+  pointer-events: none;
+  animation: subject-mark-drift var(--dur) ease-in-out var(--d) infinite;
+  transition: opacity var(--subject-motion);
+}
+.landing-page .subject-mark .ui-icon {
+  width: 28px;
+  height: 28px;
+  stroke-width: 2;
+}
+.landing-page .subject-mark:has(.ui-icon) {
+  opacity: 0.75;
+}
+.landing-page .subject-mark:nth-of-type(1) {
+  top: 4px;
+  left: 6px;
+  font-size: 1.75rem;
+  rotate: -10deg;
+  --d: 0ms;
+  --dur: 4.2s;
+}
+.landing-page .subject-mark:nth-of-type(2) {
+  top: 14px;
+  right: 6px;
+  font-size: 1.25rem;
+  rotate: 9deg;
+  --d: 160ms;
+  --dur: 5s;
+}
+.landing-page .subject-mark:nth-of-type(3) {
+  bottom: 2px;
+  left: 6px;
+  font-size: 1.5rem;
+  rotate: -5deg;
+  --d: 320ms;
+  --dur: 4.6s;
+}
+.landing-page .subject-item:is(:hover, :focus-visible, .is-previewed) .subject-mark {
+  opacity: 1;
+  animation:
+    var(--mark-motion, none) 700ms var(--ease) var(--d) 1,
+    subject-mark-drift var(--dur) ease-in-out calc(var(--d) + 700ms) infinite;
+}
+.landing-page .subject-item--tieng-viet {
+  --art-motion: subject-art-rock;
+  --mark-motion: subject-mark-wiggle;
+}
+.landing-page .subject-item--tieng-anh {
+  --art-motion: subject-art-bounce;
+  --mark-motion: subject-mark-pop;
+}
+.landing-page .subject-item--toan {
+  --art-motion: subject-art-nod;
+  --mark-motion: subject-mark-spin;
+}
+.landing-page .subject-item--logic {
+  --art-motion: subject-art-nudge;
+  --mark-motion: subject-mark-step;
+}
+.landing-page .subject-item--khoa-hoc {
+  --art-motion: subject-art-float;
+  --mark-motion: subject-mark-bubble;
+}
+@keyframes subject-mark-drift {
+  50% {
+    translate: 0 -4px;
+  }
+}
+@keyframes subject-mark-wiggle {
+  25% {
+    transform: rotate(-12deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(10deg) scale(1.1);
+  }
+  75% {
+    transform: rotate(-5deg);
+  }
+}
+@keyframes subject-mark-pop {
+  0% {
+    transform: scale(0.8);
+  }
+  55% {
+    transform: scale(1.25);
+  }
+}
+@keyframes subject-mark-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes subject-mark-step {
+  40% {
+    transform: translateY(-5px) scale(1.25);
+  }
+}
+@keyframes subject-mark-bubble {
+  60% {
+    transform: translateY(-12px) scale(1.15);
+  }
+}
+@keyframes subject-art-rock {
+  30% {
+    transform: rotate(-5deg);
+  }
+  60% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes subject-art-bounce {
+  35% {
+    transform: translateY(-8px);
+  }
+  80% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes subject-art-nod {
+  50% {
+    transform: translateY(-2px) rotate(4deg);
+  }
+}
+@keyframes subject-art-nudge {
+  40% {
+    transform: translateX(6px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+@keyframes subject-art-float {
+  50% {
+    transform: translateY(-8px) rotate(-2deg);
+  }
 }
 .landing-page .subject-symbol {
   font-size: var(--title);
@@ -1061,10 +1203,6 @@
   padding-top: 64px;
   border-top: 1px solid var(--line);
 }
-.landing-page .faq-intro p {
-  margin-top: 24px;
-  max-width: 35ch;
-}
 .landing-page .faq-list details {
   border-bottom: 1px solid var(--line);
 }
@@ -1115,13 +1253,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-.landing-page .closing-cta-actions > span {
-  grid-column: 1/-1;
-  font-size: var(--small);
-  color: var(--muted);
-  text-align: center;
-  margin-top: 8px;
 }
 .landing-page .footer {
   padding-top: 48px;
@@ -1424,9 +1555,6 @@
   .landing-page .subjects-heading {
     display: block;
   }
-  .landing-page .subjects-heading p {
-    margin-top: 8px;
-  }
   .landing-page .subject-list {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
@@ -1567,9 +1695,6 @@
   .landing-page .faq-layout {
     padding-top: 48px;
   }
-  .landing-page .faq-intro p {
-    margin-top: 16px;
-  }
   .landing-page .closing-cta-inner {
     flex-direction: column;
     gap: 32px;
@@ -1621,6 +1746,19 @@
   .landing-page .closing-cta-actions {
     grid-template-columns: 1fr;
   }
+}
+/* Scroll reveal: classes are added by use-scroll-reveal, so content stays visible without it. */
+.landing-page .reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 600ms var(--ease),
+    transform 600ms var(--ease);
+  transition-delay: calc(var(--reveal-i, 0) * 90ms);
+}
+.landing-page .reveal.is-in {
+  opacity: 1;
+  transform: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .landing-page *,

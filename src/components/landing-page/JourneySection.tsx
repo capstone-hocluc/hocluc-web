@@ -18,7 +18,6 @@ export default function JourneySection({
               <br />
               <span className="accent">Một hướng đi rõ ràng.</span>
             </h2>
-            <p>Hiểu mình đang ở đâu, chọn phần cần học và luyện tập mỗi ngày.</p>
           </div>
           <button type="button" className="text-link" onClick={onStart}>
             Xem gợi ý nhanh <Icon name="arrow-up-right" />

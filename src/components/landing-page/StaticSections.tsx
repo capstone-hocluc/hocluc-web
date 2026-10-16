@@ -16,9 +16,6 @@ export function LearningSupportSection() {
             để hiểu bài.
           </h2>
           <p>Khám phá hình thức hỗ trợ dành cho học viên trong thông tin từng khóa học.</p>
-          <a className="text-link" href="#khoa-hoc">
-            Xem khóa học <Icon name="arrow-right" />
-          </a>
         </div>
         <div className="support-items">
           <article>
@@ -70,7 +67,6 @@ export function FaqSection() {
             <br />
             băn khoăn điều gì?
           </h2>
-          <p>Một vài điều cần biết trước khi bắt đầu học cùng Học Lực.</p>
         </div>
         <div className="faq-list">
           {faq.items.map((item) => (
@@ -98,11 +94,7 @@ export function ClosingCtaSection() {
             <br />
             bắt đầu từ hôm nay.
           </h2>
-          <p>
-            Chọn một khóa học, thử một câu hỏi.
-            <br />
-            Mỗi ngày một chút, tiến xa một bước.
-          </p>
+          <p>Chọn một khóa học, thử một câu hỏi.</p>
         </div>
         <div className="closing-cta-actions">
           <AuthLink mode="signup" className="btn btn-primary">
@@ -111,7 +103,6 @@ export function ClosingCtaSection() {
           <a className="btn btn-secondary" href="#khoa-hoc">
             {closingCta.secondary}
           </a>
-          <span>Tạo tài khoản để bắt đầu đánh giá đầu vào.</span>
         </div>
       </div>
     </section>
