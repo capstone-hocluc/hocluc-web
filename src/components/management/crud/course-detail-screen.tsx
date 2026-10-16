@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
 import Panel from '../../console/panel'
 import Notice from '../../console/notice'
@@ -36,7 +37,7 @@ import ContentSectionsPanel from './content-sections-panel'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseRejectDialog from './course-reject-dialog'
 import CourseStepper from './course-stepper'
-import { courseSteps, firstBlocker, type CourseStepTab } from './course-steps'
+import { courseSteps, firstBlocker, type CourseStep, type CourseStepTab } from './course-steps'
 import { COURSE_STATUS_LABELS, REVIEW_STATE_LABELS, type CourseMutation } from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
 
@@ -78,6 +79,56 @@ const dateTime = (value: string | null) =>
         new Date(value)
       )
     : ''
+
+function courseStatusLine(
+  course: CourseAdmin,
+  { waiting, readOnly, hint }: { waiting: boolean; readOnly: boolean; hint?: CourseStep }
+): { tone: 'info' | 'warning' | 'neutral'; body: ReactNode } | null {
+  if (course.status === 'PUBLISHED') {
+    return readOnly
+      ? null
+      : {
+          tone: 'neutral',
+          body: 'Khóa đang bán. Muốn chỉnh sửa nội dung, hãy lưu trữ khóa trước rồi gửi duyệt lại.',
+        }
+  }
+  if (waiting) {
+    return {
+      tone: 'info',
+      body: `Chờ duyệt${course.reviewRequestedByName ? ` — gửi bởi ${course.reviewRequestedByName}` : ''}${
+        course.reviewRequestedAt ? ` lúc ${dateTime(course.reviewRequestedAt)}` : ''
+      }.`,
+    }
+  }
+  if (course.reviewState === 'REJECTED') {
+    return {
+      tone: 'warning',
+      body: (
+        <div className="flex flex-col gap-1">
+          <strong>
+            Khóa bị trả lại
+            {course.reviewedByName ? ` bởi ${course.reviewedByName}` : ''}
+            {course.reviewedAt ? ` lúc ${dateTime(course.reviewedAt)}` : ''}
+          </strong>
+          {course.reviewNote && <span className="whitespace-pre-line">{course.reviewNote}</span>}
+          <span>Sửa theo góp ý rồi gửi duyệt lại.</span>
+        </div>
+      ),
+    }
+  }
+  if (hint?.note) {
+    return {
+      tone: 'neutral',
+      body: (
+        <>
+          <strong className="font-medium text-text-primary">Tiếp theo: {hint.title}.</strong>{' '}
+          {hint.note}
+        </>
+      ),
+    }
+  }
+  return null
+}
 
 function statusTone(course: CourseAdmin): StatusTone {
   return course.status === 'PUBLISHED'
@@ -184,6 +235,12 @@ export default function CourseDetailScreen({
   const isMain = course?.courseType === 'MAIN'
   const waiting = course?.reviewState === 'PENDING'
 
+  const hint = canAct && !waiting ? steps.find((step) => step.state === 'current') : undefined
+  // One line under the steps: what is happening now, or what to do next.
+  const statusLine = course
+    ? courseStatusLine(course, { waiting: !!waiting, readOnly, hint })
+    : null
+
   function primaryActions(current: CourseAdmin) {
     if (!canAct) return null
     // Reviewers act on review state even where the console is view-only for course content.
@@ -277,7 +334,7 @@ export default function CourseDetailScreen({
       >
         {course && (
           <>
-            <Panel>
+            <Panel className="overflow-hidden">
               <DetailHeader
                 title={course.title}
                 subtitle={[
@@ -288,55 +345,37 @@ export default function CourseDetailScreen({
                     : 'Miễn phí',
                 ].join(' · ')}
                 chips={
-                  <>
+                  course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' ? (
+                    <Status tone={waiting ? 'info' : 'danger'}>
+                      {REVIEW_STATE_LABELS[course.reviewState]}
+                    </Status>
+                  ) : (
                     <Status tone={statusTone(course)}>{COURSE_STATUS_LABELS[course.status]}</Status>
-                    {course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' && (
-                      <Status tone={waiting ? 'info' : 'danger'}>
-                        {REVIEW_STATE_LABELS[course.reviewState]}
-                      </Status>
-                    )}
-                  </>
+                  )
                 }
                 actions={primaryActions(course)}
               />
               {canAct && (
-                <div className="mt-5 border-t border-card-border pt-4">
+                <div className="mt-5 border-t border-card-border pt-3">
                   <CourseStepper steps={steps} onGo={goTo} />
                 </div>
               )}
-            </Panel>
-
-            {waiting && (
-              <Notice tone="info">
-                <span>
-                  Chờ duyệt
-                  {course.reviewRequestedByName ? ` — gửi bởi ${course.reviewRequestedByName}` : ''}
-                  {course.reviewRequestedAt ? ` lúc ${dateTime(course.reviewRequestedAt)}` : ''}.
-                </span>
-              </Notice>
-            )}
-            {course.reviewState === 'REJECTED' && course.status !== 'PUBLISHED' && (
-              <Notice tone="warning">
-                <div className="flex flex-col gap-1">
-                  <strong>
-                    Khóa bị trả lại
-                    {course.reviewedByName ? ` bởi ${course.reviewedByName}` : ''}
-                    {course.reviewedAt ? ` lúc ${dateTime(course.reviewedAt)}` : ''}
-                  </strong>
-                  {course.reviewNote && (
-                    <span className="whitespace-pre-line">{course.reviewNote}</span>
+              {statusLine && (
+                <div
+                  id={hint ? 'course-action-reason' : undefined}
+                  className={cn(
+                    '-mx-5 -mb-5 mt-4 border-t px-5 py-3 text-sm',
+                    statusLine.tone === 'warning'
+                      ? 'border-transparent bg-badge-warning-background text-badge-warning-text'
+                      : statusLine.tone === 'info'
+                        ? 'border-transparent bg-badge-blue-background text-badge-blue-text'
+                        : 'border-card-border bg-background-gray-secondary/50 text-text-secondary'
                   )}
-                  <span>Sửa theo góp ý rồi gửi duyệt lại.</span>
+                >
+                  {statusLine.body}
                 </div>
-              </Notice>
-            )}
-            {course.status === 'PUBLISHED' && !readOnly && (
-              <Notice tone="info">
-                <span>
-                  Khóa đang bán. Muốn chỉnh sửa nội dung, hãy lưu trữ khóa trước rồi gửi duyệt lại.
-                </span>
-              </Notice>
-            )}
+              )}
+            </Panel>
 
             <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
               <ConsoleTabsList aria-label="Nội dung khóa học">
