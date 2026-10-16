@@ -14,7 +14,10 @@ export function ConsoleTabsList({
 }: ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      className={cn('flex gap-1 overflow-x-auto border-b border-card-border', className)}
+      className={cn(
+        'flex gap-1 overflow-x-auto overflow-y-hidden border-b border-card-border',
+        className
+      )}
       {...props}
     />
   )
@@ -27,7 +30,7 @@ export function ConsoleTabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        '-mb-px inline-flex h-11 cursor-pointer items-center gap-2 border-b-2 border-transparent px-4 text-sm font-medium whitespace-nowrap text-text-tertiary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 data-[state=active]:border-brand-500 data-[state=active]:text-brand-500',
+        'inline-flex h-11 cursor-pointer items-center gap-2 border-b-2 border-transparent px-4 text-sm font-medium whitespace-nowrap text-text-tertiary transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 data-[state=active]:border-brand-500 data-[state=active]:text-brand-500',
         className
       )}
       {...props}

@@ -162,25 +162,34 @@ export default function CourseDetailScreen({
     setRemoving({ resource: target, label })
   }
 
+  // Content edits move the course's version, so a review step always starts from the latest copy.
   async function confirmAction(current: ReviewAction) {
-    if (!course) return
-    const request = {
-      submit: () => submitCourseReview(course),
-      approve: () => approveCourseReview(course),
-      sell: () => changeCourseStatus(course, 'PUBLISHED'),
-      archive: () => changeCourseStatus(course, 'ARCHIVED'),
-    }[current]
+    const request = async () => {
+      const latest = await getAdminCourse(id)
+      switch (current) {
+        case 'submit':
+          return submitCourseReview(latest)
+        case 'approve':
+          return approveCourseReview(latest)
+        case 'sell':
+          return changeCourseStatus(latest, 'PUBLISHED')
+        case 'archive':
+          return changeCourseStatus(latest, 'ARCHIVED')
+      }
+    }
     if (await run(request, ACTION_COPY[current].done)) setAction(null)
   }
 
+  const canAct = !readOnly || canReview
   const goTo = (target: ReadinessTab) => setTab(target)
   const isMain = course?.courseType === 'MAIN'
   const waiting = course?.reviewState === 'PENDING'
   const blockedReason = blocker ? (blocker.hint ?? blocker.label) : ''
 
   function primaryActions(current: CourseAdmin) {
-    if (readOnly) return null
-    const edit = (
+    if (!canAct) return null
+    // Reviewers act on review state even where the console is view-only for course content.
+    const edit = readOnly ? null : (
       <Button
         appearance="outline"
         onClick={() => setEditing(true)}
@@ -204,7 +213,7 @@ export default function CourseDetailScreen({
       return (
         <>
           {edit}
-          <Button disabled aria-describedby="course-action-reason">
+          <Button disabled>
             <Clock3 size={16} />
             Đang chờ duyệt
           </Button>
@@ -306,18 +315,14 @@ export default function CourseDetailScreen({
                 }
                 actions={primaryActions(course)}
               />
-              {!readOnly && blockedReason && course.status !== 'PUBLISHED' && (
-                <p id="course-action-reason" className="mt-3 text-sm text-text-tertiary">
-                  {waiting && !canReview
-                    ? 'Khóa đang chờ người duyệt xử lý.'
-                    : `Chưa thể ${canReview ? 'bán' : 'gửi duyệt'}: ${blockedReason}`}
-                </p>
-              )}
-              {!readOnly && !blockedReason && waiting && !canReview && (
-                <p id="course-action-reason" className="mt-3 text-sm text-text-tertiary">
-                  Khóa đang chờ người duyệt xử lý.
-                </p>
-              )}
+              {canAct &&
+                blockedReason &&
+                course.status !== 'PUBLISHED' &&
+                !(waiting && !canReview) && (
+                  <p id="course-action-reason" className="mt-3 text-sm text-text-tertiary">
+                    Chưa thể {canReview ? 'bán' : 'gửi duyệt'}: {blockedReason}
+                  </p>
+                )}
             </Panel>
 
             {waiting && (
@@ -352,7 +357,7 @@ export default function CourseDetailScreen({
               </Notice>
             )}
 
-            {course.status !== 'PUBLISHED' && !readOnly && (
+            {course.status !== 'PUBLISHED' && !waiting && canAct && (
               <CourseReadinessChecklist items={readiness} onGo={goTo} />
             )}
 
@@ -503,7 +508,12 @@ export default function CourseDetailScreen({
           error={error}
           onCancel={() => setRejecting(false)}
           onSubmit={async (note) => {
-            if (await run(() => rejectCourseReview(course, note), 'Đã trả lại khóa kèm lý do.'))
+            if (
+              await run(
+                async () => rejectCourseReview(await getAdminCourse(id), note),
+                'Đã trả lại khóa kèm lý do.'
+              )
+            )
               setRejecting(false)
           }}
         />

@@ -190,11 +190,17 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 
 | Màn con | Nội dung | Ai sửa |
 | --- | --- | --- |
-| Danh sách khoá | Lọc loại (trọn bộ / khoá nhỏ), trạng thái, track; nút tạo | SF, AD (Teacher chỉ thấy khoá mình) |
-| Thông tin khoá | Tên, mô tả, ảnh, giá, loại, track, ngày bắt đầu/kết thúc, ngày thi, **kiểu hạn dùng** + số ngày, trạng thái `DRAFT / PUBLISHED / ARCHIVED` | SF, AD |
-| Giảng viên | Gán / gỡ | SF, AD |
-| Lộ trình (khoá trọn bộ) | Giai đoạn; ghép khoá nhỏ vào giai đoạn; kéo thả thứ tự | SF, AD |
-| Nội dung (khoá nhỏ) | Chương → bài học (loại TEXT / VIDEO / ARTICLE / QUIZ / LIVE), cờ preview, video, kéo thả thứ tự | TE (khoá mình), SF |
+| Danh sách khoá | Lọc loại (khoá chính / khoá tặng kèm), trạng thái, **trạng thái duyệt**, danh mục; cột Duyệt; nút nhanh "Chờ duyệt (n)"; nút tạo | SF, AD (Teacher chỉ thấy khoá mình) |
+| Chi tiết khoá — đầu trang | Tên, loại · danh mục · giá, chip trạng thái + chip duyệt, **một hành động chính theo trạng thái và vai trò**: Gửi duyệt (staff) / Đang chờ duyệt / Duyệt và bán + Trả lại (người duyệt) / Bán khoá / Lưu trữ. Nút bị khoá kèm lý do ngay dưới | SF, AD, MG |
+| Banner duyệt + checklist | Chờ duyệt (ai gửi, lúc nào); bị trả lại (ai, lúc nào, lý do); checklist "Sẵn sàng để bán" (thông tin đủ, ≥1 chương đã xuất bản hoặc có khoá tặng kèm, khoá tặng kèm đã xuất bản, danh mục) | SF, AD, MG |
+| Tab Tổng quan | Thông tin khoá; "Sửa thông tin" mở form nhiều bước | SF, AD |
+| Tab Nội dung (khoá chính) | Giai đoạn → **Phần học** → Chương → Bài học. Chương được nhóm theo phần học; "Thêm chương" ngay trong phần; chọn phần học khi tạo/sửa chương | SF, AD, TE (khoá mình) |
+| Tab Khoá tặng kèm | Gắn / gỡ khoá khác để tặng kèm khi mua khoá này (mọi khoá, trừ chính nó); đổi thứ tự | SF, AD |
+| Tab Giảng viên | Gán / gỡ | SF, AD |
+| Nội dung (khoá tặng kèm) | Chương → bài học (loại TEXT / VIDEO / ARTICLE / QUIZ / LIVE), cờ preview, video, thứ tự | TE (khoá mình), SF |
+
+Quy trình bán: nhân viên soạn nội dung, xuất bản bài học rồi chương, bấm **Gửi duyệt**. Quản lý / trưởng bộ môn **Duyệt và bán** hoặc **Trả lại** kèm lý do bắt buộc (≤ 2000 ký tự); nhân viên sửa theo góp ý và gửi lại. Người duyệt có thể bán trực tiếp. Mọi bước dùng bản khoá mới nhất (`expectedUpdatedAt`). Backend vẫn là nơi quyết định điều kiện; checklist chỉ báo sớm. Khoá đang bán chỉ chỉnh sửa được sau khi lưu trữ. Màn đọc-chỉ (Manager) vẫn có nút duyệt / trả lại / bán.
+
 | Mock | `mockCourses[]` (có `courseType`, `expiryType`, `expiryDays`), `mockPhases[]`, `mockCourseSections[]`, `mockChapters[]`, `mockLessons[]` |
 
 ### 3.3 Ngân hàng câu hỏi và lời giải — `/teacher/questions`, `/staff/question-bank`

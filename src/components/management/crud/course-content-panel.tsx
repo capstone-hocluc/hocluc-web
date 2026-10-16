@@ -23,6 +23,7 @@ import {
   type LessonAdmin,
 } from '../../../services/lessonAdminService'
 import type { ContentSection } from '../../../services/contentSectionService'
+import { ApiError } from '../../../lib/api'
 import { crudError, unknownMutation } from './crud-errors'
 import { movedIds } from './course-labels'
 import ChapterEditorDialog from './chapter-editor-dialog'
@@ -132,6 +133,8 @@ export default function CourseContentPanel({
       await action()
       setNotice(success)
       await reload()
+      // A lesson change moves its chapter's version too; without this the next chapter action is rejected as stale.
+      if (reload !== reloadChapters) await resource.reload()
       onChange?.()
       return true
     } catch (err) {
@@ -139,6 +142,8 @@ export default function CourseContentPanel({
       if (unknownMutation(err)) {
         setNotice('Chưa rõ kết quả thao tác. Đã yêu cầu tải lại để kiểm tra.')
         await reload()
+      } else if (err instanceof ApiError && err.status === 409) {
+        await resource.reload()
       }
       return false
     } finally {
@@ -571,6 +576,7 @@ export default function CourseContentPanel({
             setLessonEditor(null)
             setNotice('Đã lưu bài học.')
             void loadLessons(chapterId)
+            void resource.reload()
             onChange?.()
           }}
         />
