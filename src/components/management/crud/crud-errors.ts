@@ -64,6 +64,20 @@ const messages: Record<string, string> = {
   'This study group is already at capacity.': 'Nhóm đã đủ sĩ số.',
   'Choose an account whose active role is MENTOR.': 'Chọn tài khoản có vai trò Mentor.',
   'Choose an account whose active role is STUDENT.': 'Chọn tài khoản có vai trò Học viên.',
+  'Category not found.': 'Không tìm thấy danh mục.',
+  'Course type cannot be changed.': 'Không thể đổi loại khóa (Trọn bộ / Khóa nhỏ).',
+  'Notification not found.': 'Không tìm thấy thông báo.',
+  'Phase does not belong to this course.': 'Giai đoạn không thuộc khóa này.',
+  'Choose an active teacher.': 'Chọn giáo viên đang hoạt động.',
+  'Provide each item exactly once in the requested order.':
+    'Danh sách sắp xếp phải có đủ từng mục đúng một lần.',
+  'List every category of the group exactly once, in the new order.':
+    'Danh sách sắp xếp phải có đủ từng danh mục của nhóm đúng một lần.',
+  'Chapter does not belong to this course.': 'Chương không thuộc khóa này.',
+  'Section does not belong to the specified course.': 'Phần học không thuộc khóa đã chọn.',
+  'You cannot review your own work.': 'Bạn không thể tự duyệt nội dung của mình.',
+  "The chapter's subject or domains are invalid.": 'Môn hoặc domain của chương không hợp lệ.',
+  'The lesson labels are invalid.': 'Nhãn của bài học không hợp lệ.',
   'Email is already registered and active.': 'Email đã được dùng cho tài khoản khác.',
 }
 // Why the backend says a course is not ready, keyed by the field it reports.
