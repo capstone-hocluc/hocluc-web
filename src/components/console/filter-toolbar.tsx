@@ -6,9 +6,20 @@ import { cn } from '../../lib/cn'
 
 // Toolbar above a console table, as in the CRM dashboard: search on the left, filters and actions
 // on the right, every filter visible, one divider under the row.
-export function FilterToolbar({ children, className }: { children: ReactNode; className?: string }) {
+export function FilterToolbar({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <div className={cn('flex flex-wrap items-center justify-between gap-3 border-b border-card-border px-4 py-3', className)}>
+    <div
+      className={cn(
+        'flex flex-wrap items-center justify-between gap-3 border-b border-card-border px-4 py-3',
+        className
+      )}
+    >
       {children}
     </div>
   )
@@ -23,7 +34,14 @@ interface SearchInputProps {
   className?: string
 }
 
-export function SearchInput({ value, onChange, placeholder, ariaLabel, maxLength, className }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+  maxLength,
+  className,
+}: SearchInputProps) {
   return (
     <InputGroup className={cn('h-9 w-full sm:max-w-md', className)}>
       <InputGroupAddon align="inline-start" className="pr-0 text-icon-tertiary">
@@ -48,9 +66,17 @@ interface FilterSelectProps {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  className?: string
 }
 
-export function FilterSelect({ ariaLabel, options, value, onChange, disabled }: FilterSelectProps) {
+export function FilterSelect({
+  ariaLabel,
+  options,
+  value,
+  onChange,
+  disabled,
+  className,
+}: FilterSelectProps) {
   return (
     <SelectField
       ariaLabel={ariaLabel}
@@ -58,7 +84,7 @@ export function FilterSelect({ ariaLabel, options, value, onChange, disabled }: 
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="min-w-0 sm:w-48"
+      className={cn('min-w-0 sm:w-48', className)}
       triggerClassName="h-9 w-full min-w-0"
     />
   )

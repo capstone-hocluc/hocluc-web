@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
+import { cn } from '../../lib/cn'
 import Button from './button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tailgrids/core/tooltip'
 
@@ -12,7 +13,13 @@ interface IconActionProps {
 }
 
 // One row action in a table: an icon button whose name stays readable for assistive tech and tooltips.
-export function IconAction({ label, icon: Icon, onClick, disabled, variant = 'primary' }: IconActionProps) {
+export function IconAction({
+  label,
+  icon: Icon,
+  onClick,
+  disabled,
+  variant = 'primary',
+}: IconActionProps) {
   return (
     <Tooltip placement="top">
       <TooltipTrigger asChild>
@@ -23,7 +30,10 @@ export function IconAction({ label, icon: Icon, onClick, disabled, variant = 'pr
           aria-label={label}
           disabled={disabled}
           onClick={onClick}
-          className="size-8"
+          className={cn(
+            'size-8',
+            variant === 'primary' && 'text-icon-tertiary hover:text-icon-primary'
+          )}
         >
           <Icon size={18} />
         </Button>

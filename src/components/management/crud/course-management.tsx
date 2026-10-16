@@ -264,7 +264,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
         <FilterToolbar>
           <form
-            className="w-full sm:max-w-md"
+            className="w-full sm:max-w-sm sm:min-w-40 sm:flex-1"
             onSubmit={(e) => {
               e.preventDefault()
               setQuery((old) => ({ ...old, query: search.trim(), page: 0 }))
@@ -272,7 +272,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
           >
             <SearchInput
               ariaLabel="Tìm khóa học"
-              placeholder="Tên khóa học... (Enter để tìm)"
+              placeholder="Tìm tên khóa học"
               maxLength={200}
               value={search}
               onChange={setSearch}
@@ -281,6 +281,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
           </form>
           <FilterGroup>
             <FilterSelect
+              className="sm:w-40"
               ariaLabel="Loại khóa lọc"
               value={query.type ?? 'ALL'}
               onChange={(v) => setFilter('type', v)}
@@ -291,6 +292,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
               ]}
             />
             <FilterSelect
+              className="sm:w-40"
               ariaLabel="Trạng thái khóa lọc"
               value={query.status ?? 'ALL'}
               onChange={(v) => setFilter('status', v)}
@@ -300,16 +302,18 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
               ]}
             />
             <FilterSelect
+              className="sm:w-40"
               ariaLabel="Trạng thái duyệt lọc"
               value={query.reviewState ?? 'ALL'}
               onChange={(v) => setFilter('reviewState', v)}
               options={[
-                { id: 'ALL', label: 'Mọi trạng thái duyệt' },
+                { id: 'ALL', label: 'Trạng thái duyệt' },
                 { id: 'PENDING', label: REVIEW_STATE_LABELS.PENDING },
                 { id: 'REJECTED', label: REVIEW_STATE_LABELS.REJECTED },
               ]}
             />
             <FilterSelect
+              className="sm:w-40"
               ariaLabel="Danh mục lọc"
               value={query.categoryId ?? 'ALL'}
               onChange={(v) => setFilter('categoryId', v)}
