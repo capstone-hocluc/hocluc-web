@@ -108,6 +108,7 @@ export interface SampleQuestion {
 }
 
 export const landingNav: LandingLink[] = [
+  { label: 'Khóa học', href: '#khoa-hoc' },
   { label: 'Chương trình học', href: '#chuong-trinh' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Bài học mẫu', href: '#hoc-thu' },
@@ -115,6 +116,7 @@ export const landingNav: LandingLink[] = [
 ]
 
 export const landingFooterNav: LandingLink[] = [
+  { label: 'Khóa học', href: '#khoa-hoc' },
   { label: 'Chương trình học', href: '#chuong-trinh' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Bài học mẫu', href: '#hoc-thu' },
@@ -128,7 +130,7 @@ export const landingHero: LandingHero = {
   titleLines: ['Ôn đúng trọng tâm.', 'Vững bước vào V-ACT.'],
   description: 'Tìm phần cần học tiếp theo, luyện đúng trọng tâm.',
   primaryCta: 'Làm đánh giá miễn phí',
-  secondaryCta: 'Xem 5 nhóm kiến thức',
+  secondaryCta: 'Xem khóa học',
   slides: [
     {
       id: 'hero-slide-0',
@@ -467,20 +469,20 @@ export const journey = {
   cta: 'Xem gợi ý nhanh',
   steps: [
     {
-      title: 'Đăng nhập và đặt mục tiêu',
+      title: 'Đặt mục tiêu',
       text: 'Tạo tài khoản học sinh, chọn mục tiêu để bắt đầu.',
     },
     {
-      title: 'Làm bài đánh giá đầu vào',
+      title: 'Hiểu điểm xuất phát',
       text: 'Bài đánh giá miễn phí bao quát các nhóm kiến thức V-ACT.',
     },
     {
-      title: 'Xem điểm mạnh và phần cần ôn',
+      title: 'Chọn phần cần học',
       text: 'Đọc kết quả theo từng phần để hiểu mình nên tập trung vào đâu.',
     },
     {
-      title: 'Nhận gợi ý học tiếp',
-      text: 'Lộ trình gợi ý khóa học, bài học và phần luyện tập phù hợp.',
+      title: 'Học và luyện mỗi ngày',
+      text: 'Theo dõi bài học, luyện tập và xem lại những phần chưa vững.',
     },
   ],
   avatars: {
@@ -493,11 +495,11 @@ export const journey = {
 }
 
 export const sampleLesson = {
-  title: 'Xem thử cách một câu hỏi được giải thích.',
+  title: 'Thử một câu. Hiểu thêm một chút.',
   intro: 'Câu luyện mẫu · 3 câu ngắn · có giải thích sau mỗi câu.',
   disclaimer: 'Câu luyện mẫu · không phải bài thi V-ACT đầy đủ',
-  featureTitle: 'Mỗi câu trả lời mở ra',
-  featureAccent: 'một bước học tiếp theo.',
+  featureTitle: 'Hiểu cách làm,',
+  featureAccent: 'nhìn ra cách học.',
   features: [
     {
       title: 'Biết câu hỏi thuộc nhóm nào',
@@ -548,19 +550,6 @@ export const calculatorLink = {
   href: 'https://classpad.net/intl/',
 }
 
-export const learningCycle = {
-  title: 'Học, luyện rồi xem mình đã tiến bộ đến đâu.',
-  text: 'Mỗi vòng học giúp bạn biết phần nào đã vững và phần nào cần quay lại củng cố.',
-  steps: [
-    { title: 'Học', text: 'Nắm kiến thức và cách giải của từng kỹ năng.' },
-    { title: 'Luyện', text: 'Làm câu hỏi theo dạng và nhóm kiến thức.' },
-    { title: 'Thực hành', text: 'Kết hợp kỹ năng trong các bài luyện.' },
-    { title: 'Đánh giá', text: 'Xem kết quả, lỗi sai và phần còn yếu.' },
-    { title: 'Củng cố', text: 'Ôn lại kiến thức cần thiết rồi thử dạng tương tự.' },
-    { title: 'Đánh giá lại', text: 'Kiểm tra lại mức độ nắm vững sau khi ôn.' },
-  ],
-}
-
 export const faq = {
   title: 'Trước khi bắt đầu',
   text: 'Thông tin ngắn gọn để bạn biết Học Lực phù hợp với bước nào trong hành trình ôn V-ACT.',
@@ -581,8 +570,9 @@ export const faq = {
         'Không. Đây là kết quả đánh giá trên Học Lực để hỗ trợ việc học, không thay thế kết quả kỳ thi V-ACT.',
     },
     {
-      question: 'Khi nào có thể dùng gia sư AI?',
-      answer: 'Gia sư AI yêu cầu bạn có ít nhất một khóa học đã mua còn hiệu lực.',
+      question: 'Khóa học có thời hạn và hình thức học thế nào?',
+      answer:
+        'Thời hạn, nội dung và hình thức học được ghi trong thông tin từng khóa. Bạn nên xem chi tiết trước khi đăng ký.',
     },
   ],
 }
@@ -591,7 +581,7 @@ export const closingCta = {
   title: 'Tìm bước học tiếp theo của bạn.',
   text: 'Khám phá nhóm kiến thức và khóa học. Bài đánh giá đầu vào miễn phí, cần đăng nhập.',
   primary: 'Làm đánh giá miễn phí',
-  secondary: 'Khám phá khóa học',
+  secondary: 'Xem khóa học',
 }
 
 export const startDialogOptions = {

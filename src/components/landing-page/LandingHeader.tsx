@@ -64,11 +64,8 @@ function LandingHeader() {
             ))}
           </div>
           <div className="nav-actions">
-            <a href="#hoc-thu" className="login-link">
-              Học thử
-            </a>
             <AuthLink className="login-link">Đăng nhập</AuthLink>
-            <AuthLink className="btn btn-primary btn-small">
+            <AuthLink mode="signup" className="btn btn-primary btn-small">
               Bắt đầu miễn phí
               <Icon name="arrow-right" />
             </AuthLink>

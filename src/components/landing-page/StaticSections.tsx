@@ -1,55 +1,60 @@
-import {
-  calculatorLink,
-  closingCta,
-  faq,
-  landingFooterNav,
-  learningCycle,
-} from '../../data/landing-content'
+import { calculatorLink, closingCta, faq, landingFooterNav } from '../../data/landing-content'
 import Icon from './Icon'
 import LandingLogo from './LandingLogo'
 import AuthLink from './AuthLink'
+import LandingLink from './LandingLink'
 
-export function CalculatorLinkSection() {
+export function LearningSupportSection() {
   return (
-    <section className="section calculator-section calculator-official" id="may-tinh">
-      <div className="container calculator-link-card">
-        <div>
-          <span className="calculator-label">{calculatorLink.label}</span>
-          <h2>{calculatorLink.title}</h2>
-          <p>{calculatorLink.text}</p>
+    <section className="section support-section" id="ho-tro" aria-labelledby="support-title">
+      <div className="container support-layout">
+        <div className="support-intro">
+          <span className="eyebrow">Hỗ trợ khi học</span>
+          <h2 id="support-title">
+            Có thêm cách
+            <br />
+            để hiểu bài.
+          </h2>
+          <p>Khám phá hình thức hỗ trợ dành cho học viên trong thông tin từng khóa học.</p>
+          <a className="text-link" href="#khoa-hoc">
+            Xem khóa học <Icon name="arrow-right" />
+          </a>
         </div>
-        <a className="btn btn-primary" href={calculatorLink.href} target="_blank" rel="noreferrer">
-          {calculatorLink.cta}
-          <Icon name="arrow-right" />
-        </a>
-      </div>
-    </section>
-  )
-}
-
-export function LearningCycleSection() {
-  return (
-    <section
-      className="section learning-cycle"
-      id="chu-trinh"
-      aria-labelledby="learning-cycle-title"
-    >
-      <div className="container">
-        <div className="catalog-heading">
-          <div>
-            <h2 id="learning-cycle-title">{learningCycle.title}</h2>
-            <p>{learningCycle.text}</p>
-          </div>
+        <div className="support-items">
+          <article>
+            <Icon name="languages" />
+            <div>
+              <h3>Trao đổi cùng Mentor</h3>
+              <p>
+                Trao đổi những phần chưa hiểu trong quá trình học. Quyền hỗ trợ theo khóa học bạn
+                tham gia.
+              </p>
+            </div>
+          </article>
+          <article>
+            <Icon name="book-open" />
+            <div>
+              <h3>Khám phá cùng gia sư AI</h3>
+              <p>
+                Dành cho học viên có khóa đã mua còn hiệu lực. Xem điều kiện sử dụng trong tài khoản
+                học tập.
+              </p>
+            </div>
+          </article>
+          <a
+            className="calculator-link"
+            href={calculatorLink.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon name="calculator" />
+            <span>
+              Luyện thao tác máy tính với ClassPad.net
+              <small>Công cụ bên ngoài · Mở trong tab mới</small>
+            </span>
+            <Icon name="arrow-up-right" />
+          </a>
         </div>
-        <ol className="learning-cycle-list">
-          {learningCycle.steps.map((step, index) => (
-            <li key={step.title}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-            </li>
-          ))}
-        </ol>
       </div>
     </section>
   )
@@ -60,13 +65,20 @@ export function FaqSection() {
     <section className="section faq-section" id="faq" aria-labelledby="faq-title">
       <div className="container faq-layout">
         <div className="faq-intro">
-          <h2 id="faq-title">{faq.title}</h2>
-          <p>{faq.text}</p>
+          <h2 id="faq-title">
+            Bạn đang
+            <br />
+            băn khoăn điều gì?
+          </h2>
+          <p>Một vài điều cần biết trước khi bắt đầu học cùng Học Lực.</p>
         </div>
         <div className="faq-list">
           {faq.items.map((item) => (
             <details key={item.question}>
-              <summary>{item.question}</summary>
+              <summary>
+                {item.question}
+                <span aria-hidden="true">+</span>
+              </summary>
               <p>{item.answer}</p>
             </details>
           ))}
@@ -81,17 +93,25 @@ export function ClosingCtaSection() {
     <section className="closing-cta" aria-labelledby="closing-cta-title">
       <div className="container closing-cta-inner">
         <div>
-          <h2 id="closing-cta-title">{closingCta.title}</h2>
-          <p>{closingCta.text}</p>
+          <h2 id="closing-cta-title">
+            Bước tiếp theo,
+            <br />
+            bắt đầu từ hôm nay.
+          </h2>
+          <p>
+            Chọn một khóa học, thử một câu hỏi.
+            <br />
+            Mỗi ngày một chút, tiến xa một bước.
+          </p>
         </div>
         <div className="closing-cta-actions">
-          <AuthLink className="btn btn-primary">
-            {closingCta.primary}
-            <Icon name="arrow-right" />
+          <AuthLink mode="signup" className="btn btn-primary">
+            Bắt đầu miễn phí <Icon name="arrow-right" />
           </AuthLink>
-          <a className="btn btn-secondary" href="#chuong-trinh">
+          <a className="btn btn-secondary" href="#khoa-hoc">
             {closingCta.secondary}
           </a>
+          <span>Tạo tài khoản để bắt đầu đánh giá đầu vào.</span>
         </div>
       </div>
     </section>
@@ -101,20 +121,35 @@ export function ClosingCtaSection() {
 export function LandingFooter() {
   return (
     <footer className="footer" aria-label="Chân trang">
-      <div className="container footer-compact">
-        <a className="logo" href="#top" aria-label="Về đầu trang hocluc.com">
-          <LandingLogo size={24} />
-        </a>
-        <nav className="footer-nav" aria-label="Điều hướng cuối trang">
-          {landingFooterNav.map((link) => (
-            <a key={link.href} href={link.href}>
-              {link.label}
+      <div className="container">
+        <div className="footer-top">
+          <div>
+            <a className="logo" href="#top" aria-label="Về đầu trang hocluc.com">
+              <LandingLogo size={26} />
             </a>
-          ))}
-          <AuthLink>Đăng nhập</AuthLink>
-          <a href="/console/login">Đăng nhập nhân sự</a>
-        </nav>
-        <span className="footer-copyright">© 2026 hocluc.com</span>
+            <p>
+              Mỗi ngày một chút,
+              <br />
+              tiến xa một bước.
+            </p>
+          </div>
+          <nav className="footer-nav" aria-label="Điều hướng cuối trang">
+            {landingFooterNav.map((link) => (
+              <a key={link.href} href={link.href}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+        <div className="footer-bottom">
+          <span>© {new Date().getFullYear()} hocluc.com</span>
+          <div>
+            <AuthLink>Đăng nhập</AuthLink>
+            <LandingLink href="/console/login">
+              Dành cho nhân sự <Icon name="arrow-up-right" />
+            </LandingLink>
+          </div>
+        </div>
       </div>
     </footer>
   )

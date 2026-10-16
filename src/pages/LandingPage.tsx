@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import CatalogSection from '../components/landing-page/CatalogSection'
 import DetailDialog, { type LandingDetail } from '../components/landing-page/DetailDialog'
-import ExamIntroSection from '../components/landing-page/ExamIntroSection'
+import ExamIntroSection, { ExamFacts } from '../components/landing-page/ExamIntroSection'
+import CoursesSection from '../components/landing-page/CoursesSection'
 import HeroSection from '../components/landing-page/HeroSection'
 import JourneySection from '../components/landing-page/JourneySection'
 import LandingHeader from '../components/landing-page/LandingHeader'
@@ -12,11 +13,10 @@ import SampleLessonSection, {
 } from '../components/landing-page/SampleLessonSection'
 import StartDialog from '../components/landing-page/StartDialog'
 import {
-  CalculatorLinkSection,
+  LearningSupportSection,
   ClosingCtaSection,
   FaqSection,
   LandingFooter,
-  LearningCycleSection,
 } from '../components/landing-page/StaticSections'
 import {
   domains,
@@ -66,17 +66,13 @@ function LandingPage() {
       <LandingHeader />
       <main id="main">
         <HeroSection hero={landingHero} />
-        <ExamIntroSection exam={examIntro} />
-        <CatalogSection
-          domains={domains}
-          operations={practiceOperations}
-          onOpenDomain={openDomain}
-          onOpenOperation={openOperation}
-        />
-        <JourneySection onStart={() => setStartOpen(true)} />
+        <ExamFacts exam={examIntro} />
+        <CatalogSection domains={domains} onOpenDomain={openDomain} />
+        <CoursesSection />
         <SampleLessonSection ref={lessonRef} questions={sampleQuestions} />
-        <CalculatorLinkSection />
-        <LearningCycleSection />
+        <JourneySection onStart={() => setStartOpen(true)} onOpenOperation={openOperation} />
+        <LearningSupportSection />
+        <ExamIntroSection exam={examIntro} />
         <FaqSection />
         <ClosingCtaSection />
       </main>

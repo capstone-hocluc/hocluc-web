@@ -1,5 +1,6 @@
 import type { AnchorHTMLAttributes, MouseEvent } from 'react'
 import { openLandingAuth, type LandingAuthMode } from './landing-auth'
+import { isPlainNavigation } from './navigation'
 
 interface AuthLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   mode?: LandingAuthMode
@@ -10,13 +11,13 @@ interface AuthLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
 function AuthLink({ mode = 'login', onNavigate, onClick, children, ...rest }: AuthLinkProps) {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event)
-    if (event.defaultPrevented) return
+    if (!isPlainNavigation(event)) return
     event.preventDefault()
     onNavigate?.()
     openLandingAuth(mode)
   }
   return (
-    <a href="/login" data-auth={mode} {...rest} onClick={handleClick}>
+    <a href={`/${mode}`} data-auth={mode} {...rest} onClick={handleClick}>
       {children}
     </a>
   )

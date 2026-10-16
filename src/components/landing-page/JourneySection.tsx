@@ -1,48 +1,54 @@
-import { journey } from '../../data/landing-content'
+import { journey, practiceOperations } from '../../data/landing-content'
 import Icon from './Icon'
 
-function JourneySection({ onStart }: { onStart: () => void }) {
+export default function JourneySection({
+  onStart,
+  onOpenOperation,
+}: {
+  onStart: () => void
+  onOpenOperation: (id: string) => void
+}) {
   return (
-    <section className="section journey" id="lo-trinh">
-      <div className="container journey-layout">
-        <div className="journey-copy">
-          <h2>
-            {journey.title}
-            <br />
-            <span className="accent">{journey.accent}</span>
-          </h2>
-          <p>{journey.text}</p>
-          <button type="button" className="btn btn-primary" data-start onClick={onStart}>
-            {journey.cta}
-            <Icon name="arrow-right" />
+    <section className="section journey" id="lo-trinh" aria-labelledby="journey-title">
+      <div className="container">
+        <div className="section-heading">
+          <div>
+            <h2 id="journey-title">
+              Từng bước nhỏ.
+              <br />
+              <span className="accent">Một hướng đi rõ ràng.</span>
+            </h2>
+            <p>Hiểu mình đang ở đâu, chọn phần cần học và luyện tập mỗi ngày.</p>
+          </div>
+          <button type="button" className="text-link" onClick={onStart}>
+            Xem gợi ý nhanh <Icon name="arrow-up-right" />
           </button>
         </div>
-        <div className="journey-steps">
+        <ol className="journey-steps">
           {journey.steps.map((step, index) => (
-            <article key={step.title} className="journey-step">
-              <span className="step-number">{index + 1}</span>
-              <div className="step-body">
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
-              </div>
-            </article>
+            <li className="journey-step" key={step.title}>
+              <span className="step-number">{String(index + 1).padStart(2, '0')}</span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </li>
           ))}
+        </ol>
+        <div className="practice-compact">
+          <span>Cùng bạn trong từng bước học</span>
+          <div className="practice-pills">
+            {practiceOperations.map((operation) => (
+              <button
+                key={operation.id}
+                type="button"
+                onClick={() => onOpenOperation(operation.id)}
+              >
+                {operation.label}
+                <Icon name="arrow-up-right" />
+              </button>
+            ))}
+          </div>
         </div>
-        <figure className="journey-avatar-pair" aria-label={journey.avatars.label}>
-          {journey.avatars.images.map((image) => (
-            <img
-              key={image.src}
-              src={image.src}
-              width={160}
-              height={160}
-              alt={image.alt}
-              loading="lazy"
-            />
-          ))}
-        </figure>
       </div>
     </section>
   )
 }
-
-export default JourneySection
