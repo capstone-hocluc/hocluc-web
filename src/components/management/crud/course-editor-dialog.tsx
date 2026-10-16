@@ -14,6 +14,7 @@ import {
 import type { Category } from '../../../services/categoryService'
 import { getFieldErrors } from '../../../lib/errors'
 import { crudError, unknownMutation } from './crud-errors'
+import CourseImageField from './course-image-field'
 
 type StepId = 'info' | 'pricing' | 'schedule' | 'access'
 
@@ -70,6 +71,7 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
   const [accessMode, setAccessMode] = useState<AccessMode>(course?.accessMode ?? 'FIXED_END_DATE')
   const [stepIndex, setStepIndex] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [uncertain, setUncertain] = useState(false)
@@ -94,7 +96,7 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    if (busy || uncertain) return
+    if (busy || uncertain || uploading) return
     if (!isLastStep) {
       goNext(event.currentTarget)
       return
@@ -163,14 +165,14 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
             </Button>
           )}
           {isLastStep ? (
-            <Button key="save" type="submit" disabled={busy || uncertain}>
+            <Button key="save" type="submit" disabled={busy || uncertain || uploading}>
               {busy ? 'Đang lưu...' : 'Lưu khóa học'}
             </Button>
           ) : (
             <Button
               key="next"
               onClick={(event) => goNext(event.currentTarget.closest('form'))}
-              disabled={busy}
+              disabled={busy || uploading}
             >
               Tiếp tục
             </Button>
@@ -258,16 +260,13 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
               aria-invalid={!!fields.title}
             />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Ảnh khóa học">
-              <input
-                name="imageUrl"
-                maxLength={2000}
-                defaultValue={course?.imageUrl ?? ''}
-                placeholder="https://…"
-                className={fieldControlClass}
-              />
-            </Field>
+          <div className="grid gap-4">
+            <CourseImageField
+              name="imageUrl"
+              defaultValue={course?.imageUrl ?? ''}
+              disabled={busy}
+              onUploadingChange={setUploading}
+            />
             <Field label="Video giới thiệu">
               <input
                 name="videoUrl"
