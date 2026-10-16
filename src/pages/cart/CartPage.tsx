@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ShoppingBag } from '../../components/console/icons'
-import Navbar from '../../components/common/Navbar'
-import Footer from '../../components/common/Footer'
-import Chatbot from '../../components/landing/Chatbot'
+import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import CartItemRow from '../../components/cart/CartItemRow'
 import CartSummary from '../../components/cart/CartSummary'
 import { getCart, getEndedCartItems, removeCartItem, type Cart } from '../../services/cartService'
@@ -59,7 +57,7 @@ function CartPage({ onBrowseCourses, onGoToCheckout }: CartPageProps) {
 
   return (
     <div className="hl-cart-page">
-      <Navbar />
+      <PublicHeader />
       <main className="hl-cart-main-wrap">
         <div className="hl-cart-container">
           <h1 className="hl-cart-title">Giỏ hàng</h1>
@@ -127,8 +125,7 @@ function CartPage({ onBrowseCourses, onGoToCheckout }: CartPageProps) {
           )}
         </div>
       </main>
-      <Footer />
-      <Chatbot />
+      <PublicFooter />
     </div>
   )
 }

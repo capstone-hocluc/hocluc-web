@@ -41,6 +41,17 @@ function JourneySection({ onStart }: { onStart: () => void }) {
           ))}
         </figure>
       </div>
+      <div className="container journey-cycle">
+        <div className="journey-cycle-copy">
+          <h3>{journey.cycle.title}</h3>
+          <p>{journey.cycle.text}</p>
+        </div>
+        <ol className="journey-cycle-list">
+          {journey.cycle.steps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </div>
     </section>
   )
 }

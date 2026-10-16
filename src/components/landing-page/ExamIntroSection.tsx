@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react'
 import type { ExamIntro } from '../../data/landing-content'
-import AnswerSheet from './AnswerSheet'
 import Icon from './Icon'
 
+// Reference information about the exam, near the end of the page: what it is, its structure and,
+// on demand, how an exam season runs.
 function ExamIntroSection({ exam }: { exam: ExamIntro }) {
   return (
     <section className="section exam-intro" id="ky-thi" aria-labelledby="exam-intro-title">
@@ -12,68 +13,64 @@ function ExamIntroSection({ exam }: { exam: ExamIntro }) {
             <span className="exam-eyebrow">{exam.eyebrow}</span>
             <h2 id="exam-intro-title">{exam.title}</h2>
             <p>{exam.summary}</p>
+            <p className="exam-note">{exam.scoringNote}</p>
           </div>
-          <figure className="exam-visual">
-            <AnswerSheet />
-            <figcaption>{exam.sheetCaption}</figcaption>
-          </figure>
-        </div>
 
-        <div>
-          <h3 className="exam-block-title">{exam.structureTitle}</h3>
-          <div className="exam-table-wrap">
-            <table className="exam-table">
-              <caption>Cấu trúc đề thi V-ACT: số câu và điểm tối đa của từng phần</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Phần thi</th>
-                  <th scope="col">Số câu</th>
-                  <th scope="col">Điểm tối đa</th>
-                </tr>
-              </thead>
-              <tbody>
-                {exam.parts.map((part) => (
-                  <tr
-                    key={part.id}
-                    style={{ '--tone': part.tone, '--soft': part.soft } as CSSProperties}
-                  >
-                    <th scope="row">
-                      <span className="exam-icon">
-                        <Icon name={part.icon} />
-                      </span>
-                      <span>
-                        {part.title}
-                        {part.detail && <small>{part.detail}</small>}
-                      </span>
-                    </th>
-                    <td>{part.questions}</td>
-                    <td>{part.maxScore}</td>
+          <div>
+            <h3 className="exam-block-title">{exam.structureTitle}</h3>
+            <div className="exam-table-wrap">
+              <table className="exam-table">
+                <caption>Cấu trúc đề thi V-ACT: số câu và điểm tối đa của từng phần</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Phần thi</th>
+                    <th scope="col">Số câu</th>
+                    <th scope="col">Điểm tối đa</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">Tổng</th>
-                  <td>{exam.totalQuestions}</td>
-                  <td>{exam.totalScore}</td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody>
+                  {exam.parts.map((part) => (
+                    <tr
+                      key={part.id}
+                      style={{ '--tone': part.tone, '--soft': part.soft } as CSSProperties}
+                    >
+                      <th scope="row">
+                        <span className="exam-icon">
+                          <Icon name={part.icon} />
+                        </span>
+                        <span>
+                          {part.title}
+                          {part.detail && <small>{part.detail}</small>}
+                        </span>
+                      </th>
+                      <td>{part.questions}</td>
+                      <td>{part.maxScore}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">Tổng</th>
+                    <td>{exam.totalQuestions}</td>
+                    <td>{exam.totalScore}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
-          <p className="exam-note">{exam.scoringNote}</p>
         </div>
 
-        <div>
-          <h3 className="exam-block-title">{exam.seasonTitle}</h3>
+        <details className="exam-season">
+          <summary>{exam.seasonTitle}</summary>
           <ol className="exam-timeline">
             {exam.season.map((step) => (
               <li key={step.title}>
-                <h3>{step.title}</h3>
+                <h4>{step.title}</h4>
                 <p>{step.text}</p>
               </li>
             ))}
           </ol>
-        </div>
+        </details>
 
         <p className="exam-source">
           Nguồn:{' '}

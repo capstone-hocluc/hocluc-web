@@ -7,7 +7,6 @@
 @import './styles/base/fonts.css';
 @import './styles/base/tokens.css';
 @import './styles/base/keyframes.css';
-@import './styles/base/hover-utilities.css';
 @import './styles/auth/auth.css';
 @import './styles/student/onboarding.css';
 @import './styles/student/student-app.css';
@@ -16,7 +15,6 @@
 @import './styles/scheduling/scheduling.css';
 
 /* New styles added after the split above go here. */
-@import './styles/landing/header-auth.css';
 @import './styles/landing/course-catalog.css';
 @import './styles/landing/course-detail.css';
 @import './styles/landing/cart.css';

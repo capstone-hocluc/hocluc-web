@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import MascotState from '../../components/common/MascotState'
-import Navbar from '../../components/common/Navbar'
-import Footer from '../../components/common/Footer'
-import Chatbot from '../../components/landing/Chatbot'
+import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import CourseBreadcrumb from '../../components/course/CourseBreadcrumb'
 import CourseDetailHero from '../../components/course/CourseDetailHero'
 import CourseEnrollmentCard from '../../components/course/CourseEnrollmentCard'
@@ -80,7 +78,7 @@ function CourseDetailPage({
 
   return (
     <div className="hl-cd-page">
-      <Navbar />
+      <PublicHeader />
       <main className="hl-cd-main-wrap">
         {status === 'loading' && (
           <div className="hl-cd-container">
@@ -158,8 +156,7 @@ function CourseDetailPage({
           </div>
         )}
       </main>
-      <Footer />
-      <Chatbot />
+      <PublicFooter />
     </div>
   )
 }

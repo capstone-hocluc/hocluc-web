@@ -4,34 +4,7 @@
  * Source order is the original cascade order - keep it when editing.
  */
 
-@font-face {
-  font-family: 'Nunito';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-400.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Nunito';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-700.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Nunito';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-800.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Nunito';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/landing-v2/assets/fonts/nunito-900.ttf') format('truetype');
-}
+/* Nunito is declared once in styles/base/fonts.css. */
 @keyframes mai-study {
   0%,
   100% {
@@ -203,14 +176,16 @@ body:has(.landing-page.modal-open) {
   margin: auto;
 }
 
+/* Page aliases. The core colours point at the shared learner tokens (student-theme.css), with the
+   same values as fallbacks; the rest are landing-only. */
 .landing-page {
-  --blue: #1cb0f6;
+  --blue: var(--color-brand, #1cb0f6);
   --blue-dark: #007db5;
   --blue-hover: #48c2fa;
-  --sky: #1cb0f6;
-  --navy: #173555;
-  --text: #4c6275;
-  --line: #dde8ef;
+  --sky: var(--color-brand, #1cb0f6);
+  --navy: var(--color-text-heading, #173555);
+  --text: var(--color-text-body, #4c6275);
+  --line: var(--color-line, #dde8ef);
   --pale: #eef8ff;
   --purple: #7652bf;
   --green: #27735b;
@@ -219,11 +194,19 @@ body:has(.landing-page.modal-open) {
   --radius: 24px;
   --shadow: 0 5px 0 #dce8f0;
   --font: 'Nunito', 'Segoe UI', Arial, sans-serif;
-  --type-body: 1rem;
-  --type-label: 0.875rem;
+  /* Type scale: every font size on the page comes from these steps (12px is the smallest).
+     Weights: 400 text, 700 labels and links, 800 headings, buttons and navigation,
+     900 only for the hero title. */
   --type-caption: 0.75rem;
-  --type-action: 1rem;
-  --type-navigation: 1.0625rem;
+  --type-label: 0.875rem;
+  --type-body: 1rem;
+  --type-lead: 1.125rem;
+  --type-h4: 1.25rem;
+  --type-h3: 1.5rem;
+  --type-h2: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+  --type-h1: clamp(2.4rem, 1rem + 4vw, 3.75rem);
+  --type-action: var(--type-body);
+  --type-navigation: var(--type-body);
   --line-navigation: 1.5rem;
   --section-space: 6rem;
   --section-tool-space: 5.5rem;
@@ -239,7 +222,7 @@ body:has(.landing-page.modal-open) {
   background: #fff;
   color: var(--navy);
   font-family: var(--font);
-  font-size: 16px;
+  font-size: var(--type-body);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
@@ -285,11 +268,13 @@ body:has(.landing-page.modal-open) {
   text-wrap: pretty;
 }
 .landing-page h2 {
-  font-size: clamp(29px, 3.1vw, 43px);
+  font-size: var(--type-h2);
+  font-weight: 800;
   letter-spacing: -1.1px;
 }
 .landing-page h3 {
-  font-size: 23px;
+  font-size: var(--type-h3);
+  font-weight: 800;
   letter-spacing: -0.4px;
 }
 .landing-page button:focus-visible,
@@ -327,7 +312,7 @@ body:has(.landing-page.modal-open) {
   max-width: 620px;
   margin: 17px auto 0;
   color: var(--text);
-  font-size: 17px;
+  font-size: var(--type-lead);
 }
 .landing-page .btn {
   display: inline-flex;
@@ -359,22 +344,6 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .btn-primary:hover {
   background: var(--blue-hover);
-}
-.landing-page .hero-buttons .btn-primary {
-  background: var(--blue);
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 4px 0 #0797d6;
-}
-.landing-page .hero-buttons .btn-primary:hover {
-  background: var(--blue-hover);
-}
-.landing-page .hero-buttons .btn-primary:active {
-  box-shadow: none;
-}
-.landing-page .nav-actions .btn-primary {
-  color: #fff;
-  font-weight: 900;
 }
 .landing-page .btn-secondary {
   background: #fff;
@@ -429,7 +398,7 @@ body:has(.landing-page.modal-open) {
   background: var(--navy);
   color: #fff;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--type-caption);
   padding: 8px 20px;
   letter-spacing: 0.1px;
 }
@@ -520,7 +489,7 @@ body:has(.landing-page.modal-open) {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: white;
-  font-size: 23px;
+  font-size: var(--type-h3);
 }
 .landing-page .login-link {
   font-size: var(--type-label);
@@ -560,7 +529,7 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .hero-kicker {
   color: #37647c;
-  font-size: 13px;
+  font-size: var(--type-label);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -577,7 +546,6 @@ body:has(.landing-page.modal-open) {
   box-sizing: content-box;
 }
 .landing-page .hero h1 {
-  font-size: clamp(40px, 4.55vw, 61px);
   line-height: 1.16;
   letter-spacing: -1.9px;
   font-weight: 900;
@@ -600,7 +568,7 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .hero-copy-slide > p {
   color: var(--text);
-  font-size: 17px;
+  font-size: var(--type-lead);
   max-width: 480px;
   margin: 26px 0 28px;
   line-height: 1.8;
@@ -613,14 +581,14 @@ body:has(.landing-page.modal-open) {
 .landing-page .hero-note {
   display: flex;
   gap: 19px;
-  font-size: 12px;
+  font-size: var(--type-caption);
   color: #526c7e;
   margin-top: 22px;
 }
 .landing-page .hero-note span:before {
   content: '✓';
   color: var(--green);
-  font-weight: 900;
+  font-weight: 800;
   margin-right: 6px;
 }
 .landing-page .hero-art {
@@ -681,7 +649,7 @@ body:has(.landing-page.modal-open) {
   left: 82px;
   padding: 13px 20px;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--type-label);
   transform: rotate(-5deg);
 }
 .landing-page .hello:after {
@@ -724,8 +692,8 @@ body:has(.landing-page.modal-open) {
   width: 54px;
   height: 54px;
   border-radius: 17px;
-  font-size: 24px;
-  font-weight: 900;
+  font-size: var(--type-h3);
+  font-weight: 800;
   box-shadow: 0 4px 0 #c9e1ef;
 }
 .landing-page .token-math {
@@ -765,7 +733,7 @@ body:has(.landing-page.modal-open) {
 .landing-page .s3 {
   left: 6%;
   bottom: 8%;
-  font-size: 16px;
+  font-size: var(--type-body);
 }
 .landing-page .hero-ground {
   position: absolute;
@@ -790,7 +758,7 @@ body:has(.landing-page.modal-open) {
   display: flex;
   align-items: center;
   gap: 11px;
-  font-size: 13px;
+  font-size: var(--type-label);
   font-weight: 700;
   min-height: 44px;
   white-space: nowrap;
@@ -801,8 +769,8 @@ body:has(.landing-page.modal-open) {
   border-radius: 11px;
   display: grid;
   place-items: center;
-  font-weight: 900;
-  font-size: 18px;
+  font-weight: 800;
+  font-size: var(--type-lead);
   background: var(--soft);
   color: var(--tone);
 }
@@ -822,7 +790,7 @@ body:has(.landing-page.modal-open) {
   margin-top: 16px;
 }
 .landing-page .catalog-caption {
-  font-size: 12px;
+  font-size: var(--type-caption);
   color: var(--text);
   white-space: nowrap;
   padding-bottom: 5px;
@@ -889,7 +857,7 @@ body:has(.landing-page.modal-open) {
   z-index: 2;
   font-size: 48px;
   line-height: 1;
-  font-weight: 900;
+  font-weight: 800;
   color: var(--tone);
   top: 30px;
   letter-spacing: -2px;
@@ -908,7 +876,7 @@ body:has(.landing-page.modal-open) {
   left: 32px;
   bottom: 15px;
   color: var(--tone);
-  font-size: 21px;
+  font-size: var(--type-h4);
   transform: rotate(-8deg);
   opacity: 0.7;
 }
@@ -925,7 +893,7 @@ body:has(.landing-page.modal-open) {
   flex-direction: column;
 }
 .landing-page .domain-content h3 {
-  font-size: 22px;
+  font-size: var(--type-h4);
   margin-bottom: 12px;
 }
 .landing-page .domain-content > p {
@@ -958,12 +926,12 @@ body:has(.landing-page.modal-open) {
   align-items: flex-start;
   gap: 9px;
   margin-top: 26px;
-  font-size: 12px;
+  font-size: var(--type-caption);
   color: var(--text);
 }
 .landing-page .catalog-note b {
   color: var(--blue-dark);
-  font-size: 18px;
+  font-size: var(--type-lead);
   line-height: 1.2;
 }
 .landing-page .journey {
@@ -1045,8 +1013,8 @@ body:has(.landing-page.modal-open) {
   place-items: center;
   border: 5px solid #f0f9ff;
   border-radius: 50%;
-  font-size: 20px;
-  font-weight: 900;
+  font-size: var(--type-h4);
+  font-weight: 800;
   z-index: 1;
   background: #d8eefe;
   color: #17698e;
@@ -1060,7 +1028,7 @@ body:has(.landing-page.modal-open) {
   flex: 1;
 }
 .landing-page .step-body h3 {
-  font-size: 18px;
+  font-size: var(--type-lead);
   margin-bottom: 6px;
 }
 .landing-page .step-body p {
@@ -1069,7 +1037,7 @@ body:has(.landing-page.modal-open) {
   max-width: 410px;
 }
 .landing-page .step-tag {
-  font-size: 10px;
+  font-size: var(--type-caption);
   font-weight: 700;
   display: inline-block;
   border: 1px solid #b7d7eb;
@@ -1133,7 +1101,7 @@ body:has(.landing-page.modal-open) {
   margin-bottom: 12px;
 }
 .landing-page .lesson-body h3 {
-  font-size: 20px;
+  font-size: var(--type-h4);
   line-height: 1.5;
 }
 .landing-page .lesson-body > p {
@@ -1214,9 +1182,6 @@ body:has(.landing-page.modal-open) {
   box-shadow: 0 4px 0 #c7d3dc;
   transform: none;
 }
-.landing-page .feature-copy h2 {
-  font-size: 36px;
-}
 .landing-page .feature-copy > p {
   color: var(--text);
   margin-top: 18px;
@@ -1242,12 +1207,12 @@ body:has(.landing-page.modal-open) {
   color: var(--blue-dark);
   display: grid;
   place-items: center;
-  font-size: 14px;
-  font-weight: 900;
+  font-size: var(--type-label);
+  font-weight: 800;
   margin-top: 2px;
 }
 .landing-page .feature-list h3 {
-  font-size: 17px;
+  font-size: var(--type-lead);
   margin-bottom: 5px;
 }
 .landing-page .feature-list p {
@@ -1284,11 +1249,10 @@ body:has(.landing-page.modal-open) {
   margin-bottom: 31px;
 }
 .landing-page .practice-top h2 {
-  font-size: 32px;
   max-width: 640px;
 }
 .landing-page .practice-top p {
-  font-size: 14px;
+  font-size: var(--type-label);
   color: #bed5e7;
   margin-top: 13px;
   max-width: 650px;
@@ -1312,17 +1276,17 @@ body:has(.landing-page.modal-open) {
   border-top: 1px solid #49637e;
 }
 .landing-page .practice-item .p-symbol {
-  font-size: 25px;
+  font-size: var(--type-h3);
   color: #87d5fa;
-  font-weight: 900;
+  font-weight: 800;
   margin-bottom: 10px;
 }
 .landing-page .practice-item h3 {
-  font-size: 16px;
+  font-size: var(--type-body);
   line-height: 1.4;
 }
 .landing-page .practice-item p {
-  font-size: 11px;
+  font-size: var(--type-caption);
   color: #c4d9e9;
   margin-top: 7px;
 }
@@ -1332,7 +1296,7 @@ body:has(.landing-page.modal-open) {
   color: #a9e5ff;
   text-align: left;
   padding: 15px 0 0;
-  font-size: 12px;
+  font-size: var(--type-caption);
   font-weight: 700;
   margin-top: auto;
   min-height: 44px;
@@ -1387,17 +1351,17 @@ body:has(.landing-page.modal-open) {
   transform: translateY(-8px) rotate(3deg);
 }
 .landing-page .friend h3 {
-  font-size: 19px;
+  font-size: var(--type-h4);
   margin-top: 16px;
 }
 .landing-page .friend .role {
-  font-size: 12px;
+  font-size: var(--type-caption);
   font-weight: 700;
   color: var(--tone);
   margin-top: 5px;
 }
 .landing-page .friend .quote {
-  font-size: 12px;
+  font-size: var(--type-caption);
   color: var(--text);
   max-width: 180px;
   margin: 9px auto 0;
@@ -1418,7 +1382,7 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .faq-copy > p {
   color: var(--text);
-  font-size: 15px;
+  font-size: var(--type-label);
   margin-top: 18px;
 }
 .landing-page .faq-copy img {
@@ -1438,7 +1402,7 @@ body:has(.landing-page.modal-open) {
   cursor: pointer;
   padding: 22px 32px 22px 0;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--type-label);
   position: relative;
 }
 .landing-page .faq-list summary::-webkit-details-marker {
@@ -1449,14 +1413,14 @@ body:has(.landing-page.modal-open) {
   position: absolute;
   right: 4px;
   top: 17px;
-  font-size: 23px;
+  font-size: var(--type-h3);
   color: var(--blue-dark);
 }
 .landing-page .faq-list details[open] summary:after {
   content: '−';
 }
 .landing-page .faq-list details p {
-  font-size: 14px;
+  font-size: var(--type-label);
   color: var(--text);
   padding: 0 25px 22px 0;
 }
@@ -1479,7 +1443,6 @@ body:has(.landing-page.modal-open) {
   z-index: 1;
 }
 .landing-page .cta-panel h2 {
-  font-size: 36px;
   max-width: 680px;
 }
 .landing-page .cta-panel p {
@@ -1505,19 +1468,19 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .footer-brand p {
   max-width: 230px;
-  font-size: 12px;
+  font-size: var(--type-caption);
   color: var(--text);
   margin-top: 18px;
 }
 .landing-page .footer h3 {
-  font-size: 13px;
+  font-size: var(--type-label);
   margin-bottom: 15px;
 }
 .landing-page .footer-links {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--type-caption);
   color: var(--text);
 }
 .landing-page .footer-links a {
@@ -1534,7 +1497,7 @@ body:has(.landing-page.modal-open) {
   display: flex;
   justify-content: space-between;
   gap: 15px;
-  font-size: 11px;
+  font-size: var(--type-caption);
   color: var(--text);
 }
 .landing-page dialog {
@@ -1560,7 +1523,7 @@ body:has(.landing-page.modal-open) {
   gap: 20px;
 }
 .landing-page .dialog-top h2 {
-  font-size: 26px;
+  font-size: var(--type-h3);
   letter-spacing: -0.6px;
 }
 .landing-page .dialog-top p {
@@ -1575,7 +1538,7 @@ body:has(.landing-page.modal-open) {
   border-radius: 50%;
   border: 1px solid var(--line);
   background: #fff;
-  font-size: 24px;
+  font-size: var(--type-h3);
   line-height: 1;
 }
 .landing-page .dialog-body {
@@ -1608,7 +1571,7 @@ body:has(.landing-page.modal-open) {
   color: var(--text);
 }
 .landing-page .module h3 {
-  font-size: 18px;
+  font-size: var(--type-lead);
   margin-bottom: 7px;
 }
 .landing-page .module p {
@@ -1650,7 +1613,7 @@ body:has(.landing-page.modal-open) {
   margin-top: 20px;
 }
 .landing-page .recommendation h3 {
-  font-size: 19px;
+  font-size: var(--type-h4);
   margin-bottom: 9px;
 }
 .landing-page .recommendation p {
@@ -1662,7 +1625,7 @@ body:has(.landing-page.modal-open) {
   display: none;
 }
 .landing-page .demo-label {
-  font-size: 11px;
+  font-size: var(--type-caption);
   color: var(--text);
   margin-top: 16px;
   line-height: 1.6;
@@ -1696,9 +1659,6 @@ body:has(.landing-page.modal-open) {
   .landing-page .nav-actions {
     gap: 12px;
   }
-  .landing-page .hero h1 {
-    font-size: 49px;
-  }
   .landing-page .hero-art {
     transform: scale(0.9);
     transform-origin: center;
@@ -1708,7 +1668,7 @@ body:has(.landing-page.modal-open) {
   }
   .landing-page .hero-note {
     gap: 11px;
-    font-size: 11px;
+    font-size: var(--type-caption);
   }
   .landing-page .hero-buttons .btn {
     font-size: var(--type-action);
@@ -1719,7 +1679,7 @@ body:has(.landing-page.modal-open) {
   }
   .landing-page .subject-shortcuts a {
     gap: 6px;
-    font-size: 11px;
+    font-size: var(--type-caption);
   }
   .landing-page .journey-layout,
   .landing-page .experience-layout,
@@ -1781,7 +1741,6 @@ body:has(.landing-page.modal-open) {
     justify-content: center;
   }
   .landing-page .hero h1 {
-    font-size: clamp(38px, 7vw, 57px);
     max-width: 660px;
     margin: auto;
   }
@@ -1809,7 +1768,7 @@ body:has(.landing-page.modal-open) {
     row-gap: 7px;
   }
   .landing-page .subject-shortcuts a {
-    font-size: 12px;
+    font-size: var(--type-caption);
   }
   .landing-page .section {
     padding: 65px 0;
@@ -1853,9 +1812,6 @@ body:has(.landing-page.modal-open) {
   }
   .landing-page .feature-copy {
     order: -1;
-  }
-  .landing-page .feature-copy h2 {
-    font-size: 32px;
   }
   .landing-page .experience-heading {
     margin-bottom: 30px;
@@ -1912,9 +1868,6 @@ body:has(.landing-page.modal-open) {
   .landing-page .cta-panel {
     padding: 35px;
   }
-  .landing-page .cta-panel h2 {
-    font-size: 30px;
-  }
   .landing-page .cta-panel img {
     width: 165px;
     margin-right: -30px;
@@ -1925,7 +1878,7 @@ body:has(.landing-page.modal-open) {
     gap: 30px;
   }
   .landing-page .footer-bottom {
-    font-size: 10px;
+    font-size: var(--type-caption);
   }
   .landing-page .catalog-heading h2 {
     max-width: 570px;
@@ -1936,7 +1889,7 @@ body:has(.landing-page.modal-open) {
     padding: 0 20px;
   }
   .landing-page .announcement {
-    font-size: 10px;
+    font-size: var(--type-caption);
     padding: 7px 12px;
   }
   .landing-page .announcement a {
@@ -1970,12 +1923,11 @@ body:has(.landing-page.modal-open) {
     padding-bottom: 0;
   }
   .landing-page .hero-kicker {
-    font-size: 11px;
+    font-size: var(--type-caption);
     gap: 6px;
     margin-bottom: 17px;
   }
   .landing-page .hero h1 {
-    font-size: 40px;
     letter-spacing: -1.5px;
     line-height: 1.2;
   }
@@ -1993,7 +1945,7 @@ body:has(.landing-page.modal-open) {
     min-height: 49px;
   }
   .landing-page .hero-note {
-    font-size: 10px;
+    font-size: var(--type-caption);
     gap: 12px;
     margin-top: 19px;
   }
@@ -2024,11 +1976,11 @@ body:has(.landing-page.modal-open) {
   .landing-page .hello {
     left: 47px;
     top: 10px;
-    font-size: 12px;
+    font-size: var(--type-caption);
     padding: 10px 13px;
   }
   .landing-page .hero-streak {
-    font-size: 11px;
+    font-size: var(--type-caption);
     right: 0;
     bottom: 26px;
     padding: 8px 10px;
@@ -2041,12 +1993,12 @@ body:has(.landing-page.modal-open) {
     font-size: var(--type-caption);
   }
   .landing-page .flame {
-    font-size: 23px;
+    font-size: var(--type-h3);
   }
   .landing-page .floating-token {
     width: 38px;
     height: 38px;
-    font-size: 19px;
+    font-size: var(--type-h4);
     border-radius: 12px;
   }
   .landing-page .token-math {
@@ -2065,7 +2017,7 @@ body:has(.landing-page.modal-open) {
     display: none;
   }
   .landing-page .s2 {
-    font-size: 22px;
+    font-size: var(--type-h4);
   }
   .landing-page .subject-strip {
     padding: 17px 0;
@@ -2075,7 +2027,7 @@ body:has(.landing-page.modal-open) {
     row-gap: 7px;
   }
   .landing-page .subject-shortcuts a {
-    font-size: 10px;
+    font-size: var(--type-caption);
     gap: 6px;
     min-height: 35px;
   }
@@ -2083,13 +2035,13 @@ body:has(.landing-page.modal-open) {
     width: 27px;
     height: 27px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: var(--type-label);
   }
   .landing-page .section {
     padding: var(--section-space) 0;
   }
   .landing-page h2 {
-    font-size: 30px;
+    font-size: var(--type-h2);
     letter-spacing: -0.8px;
   }
   .landing-page .intro {
@@ -2102,7 +2054,7 @@ body:has(.landing-page.modal-open) {
     font-size: var(--type-body);
   }
   .landing-page .catalog-caption {
-    font-size: 11px;
+    font-size: var(--type-caption);
   }
   .landing-page .catalog-grid {
     gap: 17px;
@@ -2127,13 +2079,13 @@ body:has(.landing-page.modal-open) {
     min-height: 0;
   }
   .landing-page .domain-content h3 {
-    font-size: 23px;
+    font-size: var(--type-h3);
   }
   .landing-page .domain-meta {
     padding: 15px 0;
   }
   .landing-page .catalog-note {
-    font-size: 11px;
+    font-size: var(--type-caption);
   }
   .landing-page .journey-copy > p {
     font-size: var(--type-body);
@@ -2142,7 +2094,7 @@ body:has(.landing-page.modal-open) {
     gap: 13px;
   }
   .landing-page .step-body h3 {
-    font-size: 17px;
+    font-size: var(--type-lead);
   }
   .landing-page .step-tag {
     display: none;
@@ -2153,7 +2105,7 @@ body:has(.landing-page.modal-open) {
   .landing-page .step-number {
     width: 49px;
     height: 49px;
-    font-size: 17px;
+    font-size: var(--type-lead);
   }
   .landing-page .journey-steps:before {
     left: 24px;
@@ -2166,11 +2118,11 @@ body:has(.landing-page.modal-open) {
     padding: 22px 19px;
   }
   .landing-page .lesson-body h3 {
-    font-size: 18px;
+    font-size: var(--type-lead);
   }
   .landing-page .answer {
     padding: 10px;
-    font-size: 14px;
+    font-size: var(--type-label);
     gap: 8px;
   }
   .landing-page .lesson-bottom {
@@ -2184,9 +2136,6 @@ body:has(.landing-page.modal-open) {
   .landing-page .lesson-bottom .btn {
     font-size: var(--type-action);
     padding: 12px 17px;
-  }
-  .landing-page .feature-copy h2 {
-    font-size: 30px;
   }
   .landing-page .feature-copy > p {
     font-size: var(--type-body);
@@ -2204,11 +2153,8 @@ body:has(.landing-page.modal-open) {
     padding: 27px 23px;
     border-radius: 24px;
   }
-  .landing-page .practice-top h2 {
-    font-size: 28px;
-  }
   .landing-page .practice-top p {
-    font-size: 13px;
+    font-size: var(--type-label);
   }
   .landing-page .practice-options {
     grid-template-columns: 1fr 1fr;
@@ -2233,14 +2179,14 @@ body:has(.landing-page.modal-open) {
     grid-column: auto;
   }
   .landing-page .friend h3 {
-    font-size: 18px;
+    font-size: var(--type-lead);
     margin-top: 10px;
   }
   .landing-page .friend .role {
-    font-size: 11px;
+    font-size: var(--type-caption);
   }
   .landing-page .friend .quote {
-    font-size: 11px;
+    font-size: var(--type-caption);
   }
   .landing-page .friend:first-child .friend-stage {
     height: 190px;
@@ -2253,21 +2199,18 @@ body:has(.landing-page.modal-open) {
     margin-top: 25px;
   }
   .landing-page .faq-list summary {
-    font-size: 14px;
+    font-size: var(--type-label);
   }
   .landing-page .faq-list details p {
-    font-size: 13px;
+    font-size: var(--type-label);
   }
   .landing-page .cta-panel {
     padding: 30px 25px 0;
     display: block;
     text-align: center;
   }
-  .landing-page .cta-panel h2 {
-    font-size: 30px;
-  }
   .landing-page .cta-panel p {
-    font-size: 14px;
+    font-size: var(--type-label);
   }
   .landing-page .cta-panel img {
     width: 175px;
@@ -2306,13 +2249,13 @@ body:has(.landing-page.modal-open) {
     padding: 23px 21px 18px;
   }
   .landing-page .dialog-top h2 {
-    font-size: 23px;
+    font-size: var(--type-h3);
   }
   .landing-page .dialog-body {
     padding: 21px;
   }
   .landing-page .module h3 {
-    font-size: 17px;
+    font-size: var(--type-lead);
   }
 }
 @media (max-width: 480px) {
@@ -2324,7 +2267,7 @@ body:has(.landing-page.modal-open) {
     width: 120px;
   }
   .landing-page .domain-card:nth-child(n + 4) .art-doodle {
-    font-size: 15px;
+    font-size: var(--type-label);
     left: 24px;
     max-width: 140px;
   }
@@ -2357,7 +2300,6 @@ body:has(.landing-page.modal-open) {
   white-space: nowrap;
 }
 .landing-page .hero h1 {
-  font-size: clamp(38px, 4.2vw, 54px);
   line-height: 1.3;
   letter-spacing: -0.8px;
   text-wrap: initial;
@@ -2377,7 +2319,7 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .hero-copy-slide > p {
   max-width: 440px;
-  font-size: 17px;
+  font-size: var(--type-lead);
   margin: 23px 0 27px;
 }
 .landing-page .section {
@@ -2385,9 +2327,6 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .catalog-heading {
   margin-bottom: 28px;
-}
-.landing-page .catalog-heading h2 {
-  font-size: clamp(27px, 3vw, 36px);
 }
 .landing-page .catalog-heading p {
   max-width: none;
@@ -2410,7 +2349,7 @@ body:has(.landing-page.modal-open) {
   border-top: 1px solid var(--line);
 }
 .landing-page .practice-compact h3 {
-  font-size: 17px;
+  font-size: var(--type-lead);
   margin-bottom: 14px;
 }
 .landing-page .practice-pills {
@@ -2434,23 +2373,14 @@ body:has(.landing-page.modal-open) {
   background: #e0f1fc;
   border-color: var(--blue-dark);
 }
-.landing-page .journey h2 {
-  font-size: clamp(29px, 3vw, 38px);
-}
 .landing-page .journey-copy > p {
-  font-size: 16px;
+  font-size: var(--type-body);
 }
 .landing-page .journey-steps {
   gap: 5px;
 }
 .landing-page .step-body {
   padding: 12px 0;
-}
-.landing-page .experience-heading h2 {
-  font-size: clamp(29px, 3vw, 38px);
-}
-.landing-page .feature-copy h2 {
-  font-size: 33px;
 }
 .landing-page .footer {
   padding: 23px 0;
@@ -2468,9 +2398,6 @@ body:has(.landing-page.modal-open) {
   font-size: 24px;
 }
 @media (max-width: 800px) {
-  .landing-page .hero h1 {
-    font-size: clamp(30px, 5.7vw, 45px);
-  }
   .landing-page .hero h1 .accent {
     margin-inline: auto;
   }
@@ -2503,7 +2430,6 @@ body:has(.landing-page.modal-open) {
     padding: 10px 13px;
   }
   .landing-page .hero h1 {
-    font-size: clamp(27px, 7.6vw, 35px);
     line-height: 1.38;
     letter-spacing: -0.35px;
   }
@@ -2523,14 +2449,11 @@ body:has(.landing-page.modal-open) {
   .landing-page .section {
     padding: var(--section-space) 0;
   }
-  .landing-page .catalog-heading h2 {
-    font-size: 28px;
-  }
   .landing-page .catalog-heading p {
     font-size: var(--type-body);
   }
   .landing-page .domain-content h3 {
-    font-size: 21px;
+    font-size: var(--type-h4);
   }
   .landing-page .domain-content {
     padding: 20px;
@@ -2546,12 +2469,6 @@ body:has(.landing-page.modal-open) {
     gap: 8px;
   }
   .landing-page .journey h2,
-  .landing-page .experience-heading h2 {
-    font-size: 29px;
-  }
-  .landing-page .feature-copy h2 {
-    font-size: 28px;
-  }
   .landing-page .footer-compact {
     flex-wrap: wrap;
     gap: 12px;
@@ -2560,74 +2477,9 @@ body:has(.landing-page.modal-open) {
     font-size: var(--type-label);
   }
 }
-/* LCD: khung đen, nền xanh xám, canvas ma trận điểm căn giữa (kích thước cố định theo số điểm). */
-/* LCD: lưới điểm lấp gần kín cửa sổ, chỉ chừa viền mỏng như máy thật. */
-/* Phím điều hướng: tam giác nổi cùng màu và cùng kiểu đế tối như phím SHIFT/MENU. */
-/* DEL/AC màu xanh trên fx-580VN X, màu cam trên dòng ES PLUS. */
-
-/* MathTutor calculator spotlight. The calculator styles are scoped to its mount. */
-.landing-page .calculator-section {
-  padding: 32px 0;
-  background: #f6fbff;
-}
-.landing-page #may-tinh {
-  scroll-margin-top: 0;
-}
-.landing-page .calculator-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--blue-dark);
-  font-size: var(--type-label);
-  font-weight: 800;
-  margin-bottom: 16px;
-}
-.landing-page .calculator-label:before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  background: var(--sky);
-  border-radius: 50%;
-}
-.landing-page .guide-count {
-  display: inline-block;
-  color: var(--blue-dark);
-  font-size: var(--type-label);
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-.landing-page .guide-keys {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  max-width: 430px;
-  padding-bottom: 15px;
-}
-.landing-page .guide-keys kbd {
-  font: 700 12px var(--font);
-  min-width: 28px;
-  height: 31px;
-  padding: 3px 7px;
-  border: 1px solid #b7cddc;
-  border-bottom-width: 3px;
-  background: white;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-}
 @media (max-width: 1050px) {
   .landing-page .nav-links {
     gap: 15px;
-  }
-}
-@media (max-width: 800px) {
-  .landing-page .calculator-section {
-    padding: 52px 0;
-  }
-}
-@media (max-width: 480px) {
-  .landing-page .calculator-section {
-    padding: 42px 0;
   }
 }
 /* Bright sky-blue brand; darker text preserves legibility. */
@@ -3003,9 +2855,7 @@ body:has(.landing-page.modal-open) {
   z-index: 4;
 }
 .landing-page .hero-buttons .btn-primary {
-  font-size: 17px;
-  font-weight: 900;
-  letter-spacing: 0.01em;
+  font-size: var(--type-action);
 }
 .landing-page .hero-carousel {
   position: relative;
@@ -3157,7 +3007,6 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .school-proof-copy h2 {
   margin: 0;
-  font-size: clamp(1.5rem, 3vw, 2rem);
   line-height: 1.25;
   letter-spacing: -0.02em;
   text-wrap: balance;
@@ -3178,7 +3027,7 @@ body:has(.landing-page.modal-open) {
   align-items: baseline;
   gap: var(--proof-space-xs);
   color: var(--blue-dark);
-  font-weight: 900;
+  font-weight: 800;
 }
 .landing-page .school-proof-number {
   position: relative;
@@ -3234,7 +3083,7 @@ body:has(.landing-page.modal-open) {
   border-radius: var(--proof-radius);
   background: var(--proof-surface);
   color: var(--text);
-  font-size: 0.875rem;
+  font-size: var(--type-label);
   font-weight: 800;
   line-height: 1.4;
 }
@@ -3257,8 +3106,8 @@ body:has(.landing-page.modal-open) {
   align-items: center;
   gap: var(--proof-space-xs);
   color: var(--blue-dark);
-  font-size: 0.875rem;
-  font-weight: 900;
+  font-size: var(--type-label);
+  font-weight: 800;
   text-decoration: none;
 }
 .landing-page .school-proof-source a:hover {
@@ -3304,87 +3153,6 @@ body:has(.landing-page.modal-open) {
     align-items: flex-start;
     gap: 0;
     margin-top: var(--proof-space-sm);
-  }
-}
-.landing-page .calculator-section {
-  margin-block-start: var(--section-break);
-  padding-block: var(--section-tool-space);
-}
-.landing-page .calculator-link-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  padding: clamp(1.5rem, 4vw, 3rem);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #fff;
-  box-shadow: var(--shadow);
-}
-.landing-page .calculator-link-card h2 {
-  margin: 0.65rem 0;
-  color: var(--navy);
-  font-size: clamp(1.6rem, 3vw, 2.35rem);
-}
-.landing-page .calculator-link-card p {
-  margin: 0;
-  color: var(--text);
-}
-@media (max-width: 680px) {
-  .landing-page .calculator-link-card {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-}
-.landing-page .learning-cycle-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 2rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-.landing-page .learning-cycle-list li {
-  min-width: 0;
-  padding: 1.35rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #fff;
-  box-shadow: var(--shadow);
-}
-.landing-page .learning-cycle-list li > span {
-  display: inline-grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  border-radius: 50%;
-  background: #e8f7ff;
-  color: var(--blue-dark);
-  font-size: var(--type-caption);
-  font-weight: 900;
-}
-.landing-page .learning-cycle-list h3 {
-  margin: 0.8rem 0 0.35rem;
-  color: var(--navy);
-}
-.landing-page .learning-cycle-list p {
-  margin: 0;
-  color: var(--text);
-  font-size: var(--type-body);
-  line-height: 1.6;
-}
-@media (max-width: 800px) {
-  .landing-page .learning-cycle-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 420px) {
-  .landing-page .learning-cycle-list {
-    gap: 0.65rem;
-  }
-  .landing-page .learning-cycle-list li {
-    padding: 1rem;
   }
 }
 @media (max-width: 800px) {
@@ -3564,13 +3332,12 @@ body:has(.landing-page.modal-open) {
 .landing-page .hero-copy .hero-kicker {
   margin-bottom: 1rem;
   color: #28617e;
-  font-size: 0.8rem;
-  font-weight: 900;
+  font-size: var(--type-label);
+  font-weight: 800;
   letter-spacing: 0.1em;
 }
 .landing-page .hero-copy h1 {
   margin: 0;
-  font-size: clamp(2.8rem, 4.4vw, 4.2rem);
   line-height: 1.08;
   letter-spacing: -0.055em;
   text-wrap: balance;
@@ -3582,7 +3349,7 @@ body:has(.landing-page.modal-open) {
   max-width: 30rem;
   margin: 1.25rem 0 1.75rem;
   color: #536c7b;
-  font-size: clamp(1rem, 1.25vw, 1.1rem);
+  font-size: var(--type-lead);
   line-height: 1.7;
 }
 .landing-page .hero-copy .hero-buttons {
@@ -3638,8 +3405,8 @@ body:has(.landing-page.modal-open) {
   color: #637887;
   cursor: pointer;
   font: inherit;
-  font-size: clamp(0.75rem, 1vw, 0.9rem);
-  font-weight: 850;
+  font-size: var(--type-label);
+  font-weight: 800;
   line-height: 1.25;
   text-align: center;
   transition:
@@ -3661,8 +3428,8 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .hero-tab-step {
   color: #99aab5;
-  font-size: 0.72rem;
-  font-weight: 900;
+  font-size: var(--type-caption);
+  font-weight: 800;
 }
 .landing-page .hero-tab[aria-selected='true'] .hero-tab-step {
   color: #d18a11;
@@ -3693,21 +3460,20 @@ body:has(.landing-page.modal-open) {
   }
   .landing-page .hero-copy .hero-kicker {
     margin-bottom: 0.75rem;
-    font-size: 0.7rem;
+    font-size: var(--type-caption);
   }
   .landing-page .hero-copy h1 {
-    font-size: clamp(2.35rem, 10.8vw, 3rem);
     line-height: 1.1;
   }
   .landing-page .hero-copy .hero-copy-description {
     margin: 1rem 0 1.25rem;
-    font-size: 0.96rem;
+    font-size: var(--type-label);
     line-height: 1.55;
   }
   .landing-page .hero-copy .hero-buttons .btn {
     min-height: 2.9rem;
     padding-inline: 1rem;
-    font-size: 0.88rem;
+    font-size: var(--type-label);
   }
   .landing-page .hero-photo-panel {
     aspect-ratio: 1.16 / 1;
@@ -3723,7 +3489,7 @@ body:has(.landing-page.modal-open) {
     min-height: 3.25rem;
     gap: 0.3rem;
     padding-inline: 0.15rem;
-    font-size: 0.72rem;
+    font-size: var(--type-caption);
   }
   .landing-page .hero-tab-step {
     display: none;
@@ -3756,7 +3522,6 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .hero-copy h1 {
   max-width: none;
-  font-size: clamp(2.75rem, 4.5vw, 3.75rem);
   line-height: 1.08;
   text-wrap: balance;
 }
@@ -3800,7 +3565,7 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .exam-block-title {
   margin-bottom: 1.25rem;
-  font-size: clamp(1.25rem, 2vw, 1.375rem);
+  font-size: var(--type-h4);
 }
 .landing-page .exam-intro-top {
   display: grid;
@@ -3816,44 +3581,17 @@ body:has(.landing-page.modal-open) {
   background: #e1f4ff;
   color: var(--blue-dark);
   font-size: var(--type-label);
-  font-weight: 900;
+  font-weight: 800;
 }
 .landing-page .exam-intro-copy h2 {
   max-width: 560px;
-  font-size: clamp(27px, 3vw, 36px);
 }
 .landing-page .exam-intro-copy > p {
   max-width: 560px;
   margin-top: 1rem;
   color: var(--text);
-  font-size: 1.0625rem;
+  font-size: var(--type-lead);
   line-height: 1.7;
-}
-.landing-page .exam-visual {
-  margin: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, #dff3ff, #c9ebfd);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.landing-page .exam-visual figcaption {
-  padding: 0.6rem 1rem;
-  border-top: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--text);
-  font-size: var(--type-caption);
-  font-weight: 700;
-  text-align: center;
-}
-.landing-page .exam-sheet {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.landing-page .exam-sheet text {
-  font-family: var(--font);
-  font-weight: 900;
 }
 .landing-page .exam-table-wrap {
   overflow: hidden;
@@ -3894,7 +3632,7 @@ body:has(.landing-page.modal-open) {
 .landing-page .exam-table td {
   color: var(--tone, var(--navy));
   font-size: 1.75rem;
-  font-weight: 900;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 .landing-page .exam-table tbody th {
@@ -3903,8 +3641,8 @@ body:has(.landing-page.modal-open) {
   gap: 1rem;
   border-bottom: 0;
   color: var(--navy);
-  font-size: 1.125rem;
-  font-weight: 900;
+  font-size: var(--type-lead);
+  font-weight: 800;
 }
 .landing-page .exam-table tbody tr {
   border-bottom: 1px solid var(--line);
@@ -3939,8 +3677,8 @@ body:has(.landing-page.modal-open) {
   border-bottom: 0;
   background: #e1f4ff;
   color: var(--navy);
-  font-size: 1.125rem;
-  font-weight: 900;
+  font-size: var(--type-lead);
+  font-weight: 800;
 }
 .landing-page .exam-table tfoot td {
   color: var(--blue-dark);
@@ -3985,7 +3723,7 @@ body:has(.landing-page.modal-open) {
   border-radius: 50%;
   background: var(--blue);
   color: #fff;
-  font-weight: 900;
+  font-weight: 800;
 }
 .landing-page .exam-timeline li:not(:last-child)::after {
   content: '';
@@ -3996,8 +3734,10 @@ body:has(.landing-page.modal-open) {
   height: 2px;
   background: repeating-linear-gradient(90deg, #9fd8f5 0 6px, transparent 6px 12px);
 }
-.landing-page .exam-timeline h3 {
-  font-size: 1.0625rem;
+.landing-page .exam-timeline h4 {
+  margin: 0;
+  color: var(--navy);
+  font-size: var(--type-lead);
 }
 .landing-page .exam-timeline p {
   margin: 0.35rem 0 0;
@@ -4047,11 +3787,11 @@ body:has(.landing-page.modal-open) {
   }
   .landing-page .exam-table td,
   .landing-page .exam-table tfoot td {
-    font-size: 1.35rem;
+    font-size: var(--type-h4);
   }
   .landing-page .exam-table tbody th {
     gap: 0.75rem;
-    font-size: 1rem;
+    font-size: var(--type-body);
   }
   .landing-page .exam-icon {
     width: 2.5rem;
@@ -4073,7 +3813,6 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .faq-intro h2 {
   max-width: 10ch;
-  font-size: clamp(27px, 3vw, 36px);
 }
 .landing-page .faq-intro p {
   max-width: 34ch;
@@ -4090,7 +3829,7 @@ body:has(.landing-page.modal-open) {
   position: relative;
   padding: 20px 40px 20px 0;
   color: var(--navy);
-  font-size: 1.0625rem;
+  font-size: var(--type-lead);
   font-weight: 800;
   cursor: pointer;
   list-style: none;
@@ -4104,7 +3843,7 @@ body:has(.landing-page.modal-open) {
   right: 4px;
   color: var(--blue-dark);
   content: '+';
-  font-size: 1.5rem;
+  font-size: var(--type-h3);
   line-height: 1;
   transform: translateY(-50%);
 }
@@ -4134,7 +3873,6 @@ body:has(.landing-page.modal-open) {
 .landing-page .closing-cta h2 {
   max-width: 17ch;
   color: #fff;
-  font-size: clamp(2rem, 3.5vw, 3rem);
 }
 .landing-page .closing-cta p {
   margin-top: 12px;
@@ -4158,9 +3896,6 @@ body:has(.landing-page.modal-open) {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 0.95fr);
     min-height: 540px;
   }
-  .landing-page .hero-copy h1 {
-    font-size: clamp(2.5rem, 5vw, 3.5rem);
-  }
 }
 @media (max-width: 680px) {
   .landing-page .hero-grid {
@@ -4172,7 +3907,6 @@ body:has(.landing-page.modal-open) {
   }
   .landing-page .hero-copy h1 {
     max-width: 15ch;
-    font-size: clamp(2.5rem, 11vw, 3.5rem);
   }
   .landing-page .hero-showcase {
     margin-inline: -8px;
@@ -4236,7 +3970,6 @@ body:has(.landing-page.modal-open) {
 }
 .landing-page .hero-copy h1 {
   max-width: none;
-  font-size: clamp(2.55rem, 4vw, 3.7rem);
   line-height: 1.08;
   letter-spacing: -0.055em;
 }
@@ -4248,7 +3981,7 @@ body:has(.landing-page.modal-open) {
   max-width: 39ch;
   margin: 1.15rem 0 1.5rem;
   color: #435e72;
-  font-size: 1.1rem;
+  font-size: var(--type-lead);
   line-height: 1.65;
 }
 .landing-page .hero-showcase {
@@ -4380,13 +4113,12 @@ body:has(.landing-page.modal-open) {
   }
   .landing-page .hero-copy h1 {
     max-width: 13ch;
-    font-size: clamp(2.4rem, 10.5vw, 3.2rem);
   }
   .landing-page .hero-copy .hero-copy-description {
     max-width: 37ch;
     margin-top: 0.9rem;
     margin-bottom: 1.1rem;
-    font-size: 1rem;
+    font-size: var(--type-body);
   }
   .landing-page .hero-copy .hero-buttons {
     align-items: flex-start;
@@ -4407,5 +4139,666 @@ body:has(.landing-page.modal-open) {
   .landing-page .hero-slide img,
   .landing-page .hero-slide.is-active img {
     transform: none;
+  }
+}
+
+/*
+ * Restructured page: exam facts, courses, merged learning path, support, condensed exam section,
+ * and the header/footer shared with the public course pages. Section backgrounds alternate white
+ * and pale so sections separate without borders or ledges.
+ */
+.landing-page #chuong-trinh,
+.landing-page .journey,
+.landing-page .support-section,
+.landing-page .faq-section {
+  background: #fff;
+}
+.landing-page .courses-section,
+.landing-page #hoc-thu,
+.landing-page .exam-intro {
+  background: var(--pale);
+}
+.landing-page .exam-intro {
+  border-top: 0;
+}
+.landing-page .step-number {
+  border-color: #fff;
+}
+.landing-page .hero-access-note {
+  margin: 0.85rem 0 0;
+  color: var(--text);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+
+/* Header: cart and account menu for a signed-in visitor. */
+.landing-page .nav-icon-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--navy);
+}
+.landing-page .nav-icon-button:hover {
+  border-color: var(--blue);
+  color: var(--blue-dark);
+}
+.landing-page .account-menu {
+  position: relative;
+}
+.landing-page .account-trigger {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--navy);
+  font-size: var(--type-label);
+  font-weight: 800;
+}
+.landing-page .account-trigger:hover {
+  border-color: var(--blue);
+}
+.landing-page .account-trigger .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+.landing-page .account-avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: #e1f4ff;
+  color: var(--blue-dark);
+  font-size: var(--type-caption);
+  font-weight: 800;
+  object-fit: cover;
+}
+.landing-page .account-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.landing-page .account-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 22px 55px rgba(18, 53, 76, 0.16);
+}
+.landing-page .account-dropdown a,
+.landing-page .account-dropdown button {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--navy);
+  font-size: var(--type-label);
+  font-weight: 700;
+  text-align: left;
+}
+.landing-page .account-dropdown a:hover,
+.landing-page .account-dropdown button:hover {
+  background: var(--pale);
+}
+.landing-page .account-dropdown .is-danger {
+  color: #c2334d;
+}
+.landing-page .account-dropdown .ui-icon {
+  width: 18px;
+  height: 18px;
+}
+.landing-page .mobile-nav-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.landing-page .mobile-nav-account a,
+.landing-page .mobile-nav-account button {
+  padding: 10px 0;
+  border: 0;
+  background: none;
+  color: var(--navy);
+  font-size: var(--type-navigation);
+  font-weight: 800;
+  text-align: left;
+}
+@media (max-width: 640px) {
+  .landing-page .account-name {
+    display: none;
+  }
+  .landing-page .account-trigger {
+    padding-right: 8px;
+  }
+}
+
+/* Exam facts strip under the hero. */
+.landing-page .exam-facts {
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+.landing-page .exam-facts-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2.5rem;
+  padding-block: 1.5rem;
+}
+.landing-page .exam-facts-label {
+  color: var(--navy);
+  font-size: var(--type-label);
+  font-weight: 800;
+}
+.landing-page .exam-facts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2.5rem;
+  margin: 0;
+}
+.landing-page .exam-facts-list > div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.landing-page .exam-facts-list dt {
+  color: var(--text);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+.landing-page .exam-facts-list dd {
+  margin: 0;
+  color: var(--blue-dark);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 800px) {
+  .landing-page .exam-facts-list {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Courses. */
+.landing-page .course-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.landing-page .course-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 4px 0 var(--line);
+  color: var(--navy);
+  transition:
+    transform 0.18s,
+    border-color 0.18s;
+}
+.landing-page a.course-card:hover {
+  border-color: #9fd8f5;
+  transform: translateY(-2px);
+}
+.landing-page .course-cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, #e1f4ff, #f6fbff);
+}
+.landing-page .course-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.landing-page .course-cover-fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: var(--blue-dark);
+}
+.landing-page .course-cover-fallback .ui-icon {
+  width: 48px;
+  height: 48px;
+}
+.landing-page .course-owned {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e5f5ec;
+  color: #23845a;
+  font-size: var(--type-caption);
+  font-weight: 800;
+}
+.landing-page .course-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+}
+.landing-page .course-badge {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e1f4ff;
+  color: var(--blue-dark);
+  font-size: var(--type-caption);
+  font-weight: 800;
+}
+.landing-page .course-body h3,
+.landing-page .course-body p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.landing-page .course-body h3 {
+  font-size: var(--type-h4);
+  line-height: 1.3;
+  letter-spacing: -0.2px;
+}
+.landing-page .course-body p {
+  color: var(--text);
+  font-size: var(--type-label);
+  line-height: 1.55;
+}
+.landing-page .course-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+.landing-page .course-meta .ui-icon,
+.landing-page .course-cta .ui-icon {
+  width: 16px;
+  height: 16px;
+}
+.landing-page .course-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.landing-page .course-price {
+  color: var(--navy);
+  font-size: var(--type-h4);
+  font-weight: 800;
+}
+.landing-page .course-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--blue-dark);
+  font-size: var(--type-label);
+  font-weight: 800;
+}
+@keyframes course-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.landing-page .course-card.is-skeleton {
+  box-shadow: none;
+}
+.landing-page .course-card.is-skeleton .course-cover,
+.landing-page .course-card.is-skeleton .course-body span {
+  background: linear-gradient(90deg, #eef5fa 25%, #f7fbfe 50%, #eef5fa 75%);
+  background-size: 200% 100%;
+  animation: course-shimmer 1.4s ease-in-out infinite;
+}
+.landing-page .course-card.is-skeleton .course-body span {
+  display: block;
+  width: 60%;
+  height: 14px;
+  border-radius: 7px;
+}
+.landing-page .course-card.is-skeleton .course-body span:first-child {
+  width: 35%;
+}
+.landing-page .course-card.is-skeleton .course-body span:nth-child(2) {
+  width: 85%;
+  height: 22px;
+}
+.landing-page .courses-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: clamp(28px, 5vw, 48px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff;
+  text-align: center;
+}
+.landing-page .courses-state img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+}
+.landing-page .courses-state h3 {
+  font-size: var(--type-h4);
+}
+.landing-page .courses-state p {
+  max-width: 46ch;
+  color: var(--text);
+}
+.landing-page .courses-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 20px;
+  margin-top: 8px;
+}
+.landing-page .courses-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+@media (max-width: 960px) {
+  .landing-page .course-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .landing-page .course-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Learning path: the four start steps, then the repeating study cycle. */
+.landing-page .journey-cycle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px 40px;
+  margin-top: 48px;
+}
+.landing-page .journey-cycle-copy {
+  flex: 1 1 100%;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+.landing-page .journey-cycle-copy h3 {
+  font-size: var(--type-h4);
+}
+.landing-page .journey-cycle-copy p {
+  max-width: 60ch;
+  margin-top: 6px;
+  color: var(--text);
+}
+.landing-page .journey-cycle-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: cycle;
+}
+.landing-page .journey-cycle-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--navy);
+  font-size: var(--type-label);
+  font-weight: 800;
+}
+.landing-page .journey-cycle-list li::before {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e1f4ff;
+  color: var(--blue-dark);
+  content: counter(cycle);
+  counter-increment: cycle;
+  font-size: var(--type-caption);
+  font-weight: 800;
+}
+.landing-page .journey-cycle-list li:not(:last-child)::after {
+  color: #7fbfdf;
+  content: '\2192';
+}
+
+/* Support while learning. */
+.landing-page .support-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.landing-page .support-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #f7fbfe;
+}
+.landing-page .support-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  background: var(--soft);
+  color: var(--tone);
+}
+.landing-page .support-icon .ui-icon {
+  width: 24px;
+  height: 24px;
+}
+.landing-page .support-card h3 {
+  font-size: var(--type-h4);
+}
+.landing-page .support-card p {
+  color: var(--text);
+}
+.landing-page .support-card small {
+  color: var(--text);
+  font-size: var(--type-label);
+  font-weight: 700;
+}
+.landing-page .support-card .text-link {
+  margin-top: auto;
+}
+@media (max-width: 900px) {
+  .landing-page .support-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Condensed exam section: copy beside the structure table, the season on demand, no ledges. */
+.landing-page .exam-intro-top {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: start;
+}
+.landing-page .exam-intro .container > * + * {
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+}
+.landing-page .exam-intro-copy .exam-note {
+  margin-top: 1rem;
+}
+.landing-page .exam-table-wrap,
+.landing-page .exam-timeline li {
+  box-shadow: none;
+}
+.landing-page .exam-season {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.landing-page .exam-season summary {
+  position: relative;
+  padding: 18px 40px 18px 0;
+  color: var(--navy);
+  cursor: pointer;
+  font-size: var(--type-lead);
+  font-weight: 800;
+  list-style: none;
+}
+.landing-page .exam-season summary::-webkit-details-marker {
+  display: none;
+}
+.landing-page .exam-season summary::after {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  color: var(--blue-dark);
+  content: '+';
+  font-size: var(--type-h3);
+  line-height: 1;
+  transform: translateY(-50%);
+}
+.landing-page .exam-season[open] summary::after {
+  content: '\2212';
+}
+.landing-page .exam-season .exam-timeline {
+  padding-bottom: 20px;
+}
+@media (max-width: 960px) {
+  .landing-page .exam-intro-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Public course pages reuse this header and footer inside a .landing-page wrapper. */
+.landing-page.public-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.landing-page.public-chrome .header {
+  position: relative;
+}
+.landing-page.public-footer {
+  background: transparent;
+}
+.landing-page.public-footer .footer {
+  border-top: 1px solid var(--line);
+}
+.landing-page.public-footer .footer::before {
+  content: none;
+}
+
+/* Phones: the subject cards and the course cards become swipeable rows instead of long stacks,
+   the learning-path illustration steps aside and the support cards get compact. */
+@media (max-width: 640px) {
+  .landing-page {
+    --row-gutter: 28px;
+  }
+  .landing-page .catalog-grid,
+  .landing-page .course-grid {
+    display: grid;
+    grid-auto-columns: 84%;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    gap: 14px;
+    margin-inline: calc(var(--row-gutter) * -1);
+    padding: 4px var(--row-gutter) 14px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--row-gutter);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+  }
+  .landing-page .catalog-grid > *,
+  .landing-page .course-grid > * {
+    scroll-snap-align: start;
+  }
+  .landing-page .domain-card,
+  .landing-page .domain-card:nth-child(n + 4),
+  .landing-page .domain-card:last-child {
+    grid-column: auto;
+  }
+  .landing-page .course-cover {
+    aspect-ratio: 2 / 1;
+  }
+  .landing-page .journey-avatar-pair {
+    display: none;
+  }
+  .landing-page .support-card {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 4px;
+    padding: 18px;
+  }
+  .landing-page .support-icon {
+    grid-row: span 4;
+    margin: 0;
+  }
+  .landing-page .support-card .text-link {
+    min-height: 36px;
+  }
+}
+@media (max-width: 480px) {
+  .landing-page {
+    --row-gutter: 20px;
+  }
+}
+
+/* One fluid size for the hero title at every width, the only 900 weight on the page. */
+.landing-page .hero-copy h1 {
+  font-size: var(--type-h1);
+  font-weight: 900;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page .course-card,
+  .landing-page .course-card.is-skeleton .course-cover,
+  .landing-page .course-card.is-skeleton .course-body span {
+    animation: none;
+    transition: none;
   }
 }

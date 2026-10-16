@@ -1,7 +1,5 @@
-import Navbar from '../components/common/Navbar'
 import CourseCatalog from '../components/landing/CourseCatalog'
-import Footer from '../components/common/Footer'
-import Chatbot from '../components/landing/Chatbot'
+import { PublicFooter, PublicHeader } from '../components/landing-page/PublicChrome'
 import type { Course } from '../services/courseService'
 
 interface CourseCatalogPageProps {
@@ -11,10 +9,9 @@ interface CourseCatalogPageProps {
 function CourseCatalogPage({ onOpenCourse }: CourseCatalogPageProps) {
   return (
     <div style={{ minHeight: '100vh', background: '#fff' }}>
-      <Navbar />
+      <PublicHeader />
       <CourseCatalog onOpenCourse={onOpenCourse} />
-      <Footer />
-      <Chatbot />
+      <PublicFooter />
     </div>
   )
 }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useLearnerTheme } from '../../hooks/useLearnerTheme'
 import { ArrowLeft, Check, GraduationCap, Target, TrendingUp } from '../console/icons'
 import Logo from '../common/Logo'
 import Button from '../ui/Button'
@@ -50,14 +51,9 @@ function StudentOnboarding({ onBack }) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [scoreLimitOpen, setScoreLimitOpen] = useState(false)
 
-  // Onboarding renders outside StudentLayout, so it marks <html data-student> itself to get the
-  // landing-page token set (student-theme.css), including for the portalled dialog.
-  useEffect(() => {
-    document.documentElement.dataset.student = ''
-    return () => {
-      delete document.documentElement.dataset.student
-    }
-  }, [])
+  // Onboarding renders outside StudentLayout, so it opts into the learner token set itself,
+  // including for the portalled dialog.
+  useLearnerTheme()
 
   const update = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }))

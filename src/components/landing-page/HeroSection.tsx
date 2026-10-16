@@ -17,15 +17,18 @@ function HeroSection({ hero }: { hero: LandingHero }) {
           </h1>
           <p className="hero-copy-description">{hero.description}</p>
           <div className="hero-buttons">
-            <AuthLink className="btn btn-primary">
+            <AuthLink className="btn btn-primary" aria-describedby="hero-access-note">
               {hero.primaryCta}
               <Icon name="arrow-right" />
             </AuthLink>
-            <a className="btn btn-secondary" href="#chuong-trinh">
+            <a className="btn btn-secondary" href="#cac-khoa-hoc">
               <Icon name="book-open" />
               {hero.secondaryCta}
             </a>
           </div>
+          <p className="hero-access-note" id="hero-access-note">
+            {hero.accessNote}
+          </p>
         </div>
         <div
           className="hero-showcase hero-carousel"

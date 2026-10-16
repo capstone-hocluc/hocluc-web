@@ -37,7 +37,7 @@ function ProfileHero({
           <div className="flex min-w-0 items-center gap-3.5 max-[760px]:items-start">
             <img
               className="size-[76px] flex-none object-contain drop-shadow-[0_12px_18px_rgba(28, 176, 246,0.14)] max-[1181px]:size-[70px] max-[760px]:size-[62px]"
-              src="/landing-v2/assets/mai-avatar-interaction.png"
+              src="/landing-v2/assets/mai-avatar-interaction.webp"
               alt=""
               aria-hidden="true"
             />

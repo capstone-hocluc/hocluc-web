@@ -185,6 +185,9 @@ function SampleLessonSection({ questions, ref }: SampleLessonSectionProps) {
                 </li>
               ))}
             </ul>
+            <a className="text-link" href="#cac-khoa-hoc">
+              {sampleLesson.coursesLink} <Icon name="arrow-right" />
+            </a>
           </div>
         </div>
       </div>

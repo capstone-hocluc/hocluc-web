@@ -1,10 +1,10 @@
 .hl-pay-page {
   min-height: 100vh;
-  background: var(--color-surface-soft);
+  background: var(--color-app-bg);
 }
 
 .hl-pay-main-wrap {
-  padding: 130px 24px 100px;
+  padding: 48px 24px 100px;
 }
 
 .hl-pay-container {
@@ -291,6 +291,6 @@
 
 @media (max-width: 640px) {
   .hl-pay-main-wrap {
-    padding-top: 100px;
+    padding-top: 32px;
   }
 }

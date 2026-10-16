@@ -1,59 +1,8 @@
-import {
-  calculatorLink,
-  closingCta,
-  faq,
-  landingFooterNav,
-  learningCycle,
-} from '../../data/landing-content'
+import { closingCta, faq, landingFooterNav } from '../../data/landing-content'
+import AppLink from './AppLink'
+import AuthLink from './AuthLink'
 import Icon from './Icon'
 import LandingLogo from './LandingLogo'
-import AuthLink from './AuthLink'
-
-export function CalculatorLinkSection() {
-  return (
-    <section className="section calculator-section calculator-official" id="may-tinh">
-      <div className="container calculator-link-card">
-        <div>
-          <span className="calculator-label">{calculatorLink.label}</span>
-          <h2>{calculatorLink.title}</h2>
-          <p>{calculatorLink.text}</p>
-        </div>
-        <a className="btn btn-primary" href={calculatorLink.href} target="_blank" rel="noreferrer">
-          {calculatorLink.cta}
-          <Icon name="arrow-right" />
-        </a>
-      </div>
-    </section>
-  )
-}
-
-export function LearningCycleSection() {
-  return (
-    <section
-      className="section learning-cycle"
-      id="chu-trinh"
-      aria-labelledby="learning-cycle-title"
-    >
-      <div className="container">
-        <div className="catalog-heading">
-          <div>
-            <h2 id="learning-cycle-title">{learningCycle.title}</h2>
-            <p>{learningCycle.text}</p>
-          </div>
-        </div>
-        <ol className="learning-cycle-list">
-          {learningCycle.steps.map((step, index) => (
-            <li key={step.title}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  )
-}
 
 export function FaqSection() {
   return (
@@ -89,7 +38,7 @@ export function ClosingCtaSection() {
             {closingCta.primary}
             <Icon name="arrow-right" />
           </AuthLink>
-          <a className="btn btn-secondary" href="#chuong-trinh">
+          <a className="btn btn-secondary" href="#cac-khoa-hoc">
             {closingCta.secondary}
           </a>
         </div>
@@ -98,19 +47,39 @@ export function ClosingCtaSection() {
   )
 }
 
-export function LandingFooter() {
+// Shared footer of the landing page and the public course pages.
+export function LandingFooter({ onLanding = true }: { onLanding?: boolean }) {
   return (
     <footer className="footer" aria-label="Chân trang">
       <div className="container footer-compact">
-        <a className="logo" href="#top" aria-label="Về đầu trang hocluc.com">
-          <LandingLogo size={24} />
-        </a>
+        {onLanding ? (
+          <a className="logo" href="#top" aria-label="Về đầu trang hocluc.com">
+            <LandingLogo size={24} />
+          </a>
+        ) : (
+          <AppLink className="logo" href="/" aria-label="Về trang chủ hocluc.com">
+            <LandingLogo size={24} />
+          </AppLink>
+        )}
         <nav className="footer-nav" aria-label="Điều hướng cuối trang">
-          {landingFooterNav.map((link) => (
-            <a key={link.href} href={link.href}>
-              {link.label}
-            </a>
-          ))}
+          {landingFooterNav.map((link) => {
+            if (onLanding) {
+              return (
+                <a key={link.href} href={link.href}>
+                  {link.label}
+                </a>
+              )
+            }
+            return link.pageHref ? (
+              <AppLink key={link.href} href={link.pageHref}>
+                {link.label}
+              </AppLink>
+            ) : (
+              <a key={link.href} href={`/${link.href}`}>
+                {link.label}
+              </a>
+            )
+          })}
           <AuthLink>Đăng nhập</AuthLink>
           <a href="/console/login">Đăng nhập nhân sự</a>
         </nav>

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Clock, HelpCircle, XCircle } from '../../components/console/icons'
-import Navbar from '../../components/common/Navbar'
-import Footer from '../../components/common/Footer'
-import Chatbot from '../../components/landing/Chatbot'
+import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import { getOrder, type Order } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
 import { formatCoursePrice } from '../../lib/courseFormat'
@@ -63,7 +61,7 @@ function PaymentResultPage({ onGoToMyCourses, onOpenOrder, onGoToOrders }: Payme
 
   return (
     <div className="hl-payres-page">
-      <Navbar />
+      <PublicHeader />
       <main className="hl-payres-main-wrap">
         <div className="hl-payres-container">
           {status === 'checking' && (
@@ -220,8 +218,7 @@ function PaymentResultPage({ onGoToMyCourses, onOpenOrder, onGoToOrders }: Payme
           )}
         </div>
       </main>
-      <Footer />
-      <Chatbot />
+      <PublicFooter />
     </div>
   )
 }

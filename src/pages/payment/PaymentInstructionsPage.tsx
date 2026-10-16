@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from '../../components/console/icons'
-import Navbar from '../../components/common/Navbar'
-import Footer from '../../components/common/Footer'
+import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import PaymentInstructionsCard from '../../components/payment/PaymentInstructionsCard'
 import { getOrder, type Order, type OrderPaymentData } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
@@ -114,7 +113,7 @@ function PaymentInstructionsPage({
 
   return (
     <div className="hl-pay-page">
-      <Navbar />
+      <PublicHeader />
       <main className="hl-pay-main-wrap">
         <div className="hl-pay-container">
           <h1 className="hl-pay-title">Thanh toán khóa học</h1>
@@ -229,7 +228,7 @@ function PaymentInstructionsPage({
           )}
         </div>
       </main>
-      <Footer />
+      <PublicFooter />
     </div>
   )
 }

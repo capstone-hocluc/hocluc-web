@@ -6,17 +6,29 @@ export type LandingIconName =
   | 'arrow-up-right'
   | 'book-open'
   | 'calculator'
+  | 'calendar'
   | 'chart-column-increasing'
   | 'check'
+  | 'chevron-down'
+  | 'clock'
   | 'flask-conical'
   | 'languages'
+  | 'log-out'
   | 'menu'
+  | 'message-circle'
+  | 'package'
   | 'rotate-ccw'
+  | 'shopping-cart'
+  | 'sparkles'
+  | 'user-round'
   | 'x'
 
 export interface LandingLink {
   label: string
+  /** Anchor on the landing page. */
   href: string
+  /** Where the link goes from other pages; defaults to the same anchor on the landing page. */
+  pageHref?: string
 }
 
 export interface HeroSlide {
@@ -31,6 +43,7 @@ export interface LandingHero {
   titleLines: [string, string]
   description: string
   primaryCta: string
+  accessNote: string
   secondaryCta: string
   slides: HeroSlide[]
 }
@@ -50,10 +63,10 @@ export interface ExamIntro {
   eyebrow: string
   title: string
   summary: string
-  sheetCaption: string
   structureTitle: string
   parts: ExamPart[]
   totalQuestions: number
+  durationMinutes: number
   totalScore: string
   scoringNote: string
   seasonTitle: string
@@ -109,17 +122,15 @@ export interface SampleQuestion {
 
 export const landingNav: LandingLink[] = [
   { label: 'Chương trình học', href: '#chuong-trinh' },
+  { label: 'Khóa học', href: '#cac-khoa-hoc', pageHref: '/courses' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Bài học mẫu', href: '#hoc-thu' },
   { label: 'V-ACT', href: '#ky-thi' },
 ]
 
 export const landingFooterNav: LandingLink[] = [
-  { label: 'Chương trình học', href: '#chuong-trinh' },
-  { label: 'Cách học', href: '#lo-trinh' },
-  { label: 'Bài học mẫu', href: '#hoc-thu' },
-  { label: 'Tìm hiểu V-ACT', href: '#ky-thi' },
-  { label: 'Hỗ trợ', href: '#faq' },
+  ...landingNav,
+  { label: 'Câu hỏi thường gặp', href: '#faq' },
 ]
 
 const landingAssets = '/landing-v2/assets'
@@ -128,7 +139,8 @@ export const landingHero: LandingHero = {
   titleLines: ['Ôn đúng trọng tâm.', 'Vững bước vào V-ACT.'],
   description: 'Tìm phần cần học tiếp theo, luyện đúng trọng tâm.',
   primaryCta: 'Làm đánh giá miễn phí',
-  secondaryCta: 'Xem 5 nhóm kiến thức',
+  accessNote: 'Bài đánh giá miễn phí, cần đăng nhập để làm bài.',
+  secondaryCta: 'Xem khóa học',
   slides: [
     {
       id: 'hero-slide-0',
@@ -156,7 +168,6 @@ export const examIntro: ExamIntro = {
   title: 'Kỳ thi Đánh giá năng lực V-ACT là gì?',
   summary:
     'Đánh giá năng lực (ĐGNL) là tên gọi chung của các kỳ thi tuyển sinh sớm do đại học tổ chức. V-ACT là kỳ thi ĐGNL của Đại học Quốc gia TP.HCM: bài thi trắc nghiệm trên giấy, đo năng lực cốt lõi cần cho việc học đại học và được hơn 100 trường đại học, cao đẳng dùng để xét tuyển.',
-  sheetCaption: 'Minh họa phiếu trả lời trắc nghiệm',
   structureTitle: 'Cấu trúc đề thi',
   parts: [
     {
@@ -190,6 +201,7 @@ export const examIntro: ExamIntro = {
     },
   ],
   totalQuestions: 120,
+  durationMinutes: 150,
   totalScore: '1.200',
   scoringNote:
     'Điểm được tính theo lý thuyết ứng đáp câu hỏi (IRT): mỗi câu có trọng số khác nhau tùy độ khó.',
@@ -206,6 +218,27 @@ export const examIntro: ExamIntro = {
     updatedAt: '14/10/2026',
     note: 'Lịch thi và lệ phí xem thông báo mới nhất của ĐHQG-HCM.',
   },
+}
+
+export const examFacts = {
+  label: 'Kỳ thi V-ACT · ĐGNL ĐHQG-HCM',
+  link: 'Tìm hiểu kỳ thi',
+}
+
+export const coursesSection = {
+  title: 'Chọn khóa học cho mục tiêu V-ACT.',
+  text: 'Xem lịch khai giảng, học phí và nội dung từng khóa trước khi đăng ký.',
+  cardCta: 'Xem chi tiết',
+  owned: 'Đã sở hữu',
+  allCta: 'Xem tất cả khóa học',
+  loading: 'Đang tải khóa học…',
+  errorTitle: 'Chưa tải được danh sách khóa học.',
+  errorText: 'Kiểm tra kết nối rồi thử lại, hoặc mở trang Khóa học.',
+  retry: 'Thử lại',
+  emptyTitle: 'Khóa học đang được cập nhật.',
+  emptyText: 'Trong lúc chờ, bạn có thể làm bài đánh giá miễn phí để biết mình nên bắt đầu từ đâu.',
+  emptyCta: 'Làm đánh giá miễn phí',
+  emptyImage: `/landing-v2/assets/mai-avatar-interaction.webp`,
 }
 
 export const catalogHeading = {
@@ -302,7 +335,7 @@ export const domains: Domain[] = [
     soft: '#e7f5ff',
     art: {
       kind: 'image',
-      src: `${landingAssets}/owl-teacher-teaching.png`,
+      src: `${landingAssets}/owl-teacher-teaching.webp`,
       alt: 'Cú giảng bài Toán',
       width: 1280,
       height: 1280,
@@ -483,11 +516,16 @@ export const journey = {
       text: 'Lộ trình gợi ý khóa học, bài học và phần luyện tập phù hợp.',
     },
   ],
+  cycle: {
+    title: 'Sau đó, mỗi vòng học đi theo nhịp',
+    text: 'Mỗi vòng giúp bạn biết phần nào đã vững và phần nào cần quay lại củng cố.',
+    steps: ['Học', 'Luyện', 'Thực hành', 'Đánh giá', 'Củng cố', 'Đánh giá lại'],
+  },
   avatars: {
     label: 'Mai và Nam học cùng avatar hình khối',
     images: [
-      { src: `${landingAssets}/mai-avatar-interaction.png`, alt: 'Mai đang ghi chép' },
-      { src: `${landingAssets}/nam-avatar-interaction.png`, alt: 'Nam đang khám phá hình học' },
+      { src: `${landingAssets}/mai-avatar-interaction.webp`, alt: 'Mai đang ghi chép' },
+      { src: `${landingAssets}/nam-avatar-interaction.webp`, alt: 'Nam đang khám phá hình học' },
     ],
   },
 }
@@ -498,6 +536,7 @@ export const sampleLesson = {
   disclaimer: 'Câu luyện mẫu · không phải bài thi V-ACT đầy đủ',
   featureTitle: 'Mỗi câu trả lời mở ra',
   featureAccent: 'một bước học tiếp theo.',
+  coursesLink: 'Học tiếp với các khóa học',
   features: [
     {
       title: 'Biết câu hỏi thuộc nhóm nào',
@@ -540,24 +579,49 @@ export const sampleQuestions: SampleQuestion[] = [
   },
 ]
 
-export const calculatorLink = {
-  label: 'Công cụ học tập · Toán',
-  title: 'Muốn luyện thao tác trên fx-580VN X?',
-  text: 'Mở trình mô phỏng ClassWiz chính thức của CASIO ở ClassPad.net.',
-  cta: 'Mở ClassPad.net',
-  href: 'https://classpad.net/intl/',
+export interface SupportItem {
+  id: string
+  icon: LandingIconName
+  title: string
+  text: string
+  note: string
+  tone: string
+  soft: string
+  link?: { label: string; href: string }
 }
 
-export const learningCycle = {
-  title: 'Học, luyện rồi xem mình đã tiến bộ đến đâu.',
-  text: 'Mỗi vòng học giúp bạn biết phần nào đã vững và phần nào cần quay lại củng cố.',
-  steps: [
-    { title: 'Học', text: 'Nắm kiến thức và cách giải của từng kỹ năng.' },
-    { title: 'Luyện', text: 'Làm câu hỏi theo dạng và nhóm kiến thức.' },
-    { title: 'Thực hành', text: 'Kết hợp kỹ năng trong các bài luyện.' },
-    { title: 'Đánh giá', text: 'Xem kết quả, lỗi sai và phần còn yếu.' },
-    { title: 'Củng cố', text: 'Ôn lại kiến thức cần thiết rồi thử dạng tương tự.' },
-    { title: 'Đánh giá lại', text: 'Kiểm tra lại mức độ nắm vững sau khi ôn.' },
+export const support: { title: string; text: string; items: SupportItem[] } = {
+  title: 'Có người đồng hành khi học.',
+  text: 'Những hỗ trợ đi kèm khóa học, cùng một công cụ miễn phí cho phần Toán.',
+  items: [
+    {
+      id: 'mentor',
+      icon: 'message-circle',
+      title: 'Hỏi Mentor',
+      text: 'Nhắn câu hỏi theo môn cho mentor ngay trong khu học tập.',
+      note: 'Dành cho học viên đã có khóa học.',
+      tone: '#087dbd',
+      soft: '#e7f5ff',
+    },
+    {
+      id: 'ai-tutor',
+      icon: 'sparkles',
+      title: 'Gia sư AI',
+      text: 'Hỏi lại phần chưa hiểu và nhận thêm giải thích trong lúc học.',
+      note: 'Cần ít nhất một khóa học đã mua còn hiệu lực.',
+      tone: '#6a52d0',
+      soft: '#efeafd',
+    },
+    {
+      id: 'calculator',
+      icon: 'calculator',
+      title: 'Máy tính fx-580VN X',
+      text: 'Luyện thao tác trên trình mô phỏng ClassWiz chính thức của CASIO.',
+      note: 'Miễn phí · mở trang ClassPad.net của CASIO.',
+      tone: '#23845a',
+      soft: '#e5f5ec',
+      link: { label: 'Mở ClassPad.net', href: 'https://classpad.net/intl/' },
+    },
   ],
 }
 
@@ -569,6 +633,11 @@ export const faq = {
       question: 'Bài đánh giá đầu vào có mất phí không?',
       answer:
         'Bài đánh giá đầu vào của Học Lực miễn phí. Bạn cần đăng nhập để làm bài và xem lộ trình gợi ý.',
+    },
+    {
+      question: 'Xem học phí và lịch khai giảng ở đâu?',
+      answer:
+        'Mục Khóa học trên trang này và trang Khóa học có học phí, ngày khai giảng và nội dung từng khóa. Bạn xem được chi tiết khóa học mà không cần đăng nhập.',
     },
     {
       question: 'Chưa mua khóa học thì có thể xem nội dung nào?',
