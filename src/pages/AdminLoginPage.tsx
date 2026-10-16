@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Eye, EyeOff, LockKeyhole, Mail } from '../components/console/icons'
 import AuthShell from '../components/auth/AuthShell'
+import DevQuickLogin from '../components/auth/DevQuickLogin'
 import Button from '../components/console/button'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { clearTokens } from '../lib/api'
@@ -215,27 +216,17 @@ function AdminLoginPage({
           Bạn là học viên? <a href="/login">Đăng nhập tại đây</a>
         </p>
         {import.meta.env.DEV && (
-          <details className="hl-auth-dev-tools">
-            <summary>Công cụ phát triển</summary>
-            <div className="brand-auth-dev-accounts">
-              {DEV_ACCOUNTS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  disabled={loading}
-                  onClick={() => {
-                    setEmail(account.email)
-                    setPassword(DEV_PASSWORD)
-                    setShowPassword(false)
-                    setError('')
-                    void signIn(account.email, DEV_PASSWORD)
-                  }}
-                >
-                  Đăng nhập nhanh: {account.label}
-                </button>
-              ))}
-            </div>
-          </details>
+          <DevQuickLogin
+            accounts={DEV_ACCOUNTS}
+            disabled={loading}
+            onSelect={(account) => {
+              setEmail(account.email)
+              setPassword(DEV_PASSWORD)
+              setShowPassword(false)
+              setError('')
+              void signIn(account.email, DEV_PASSWORD)
+            }}
+          />
         )}
       </section>
     </AuthShell>

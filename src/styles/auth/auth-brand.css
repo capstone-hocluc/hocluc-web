@@ -357,22 +357,75 @@
   color: var(--blue-text);
   font-weight: 600;
 }
-.hl-brand-auth .hl-auth-dev-tools {
+.hl-brand-auth .brand-auth-dev-quick {
   border-top: 1px solid var(--line);
-  margin-top: var(--s4);
-  padding-top: var(--s3);
+  margin-top: var(--s6);
+  padding-top: var(--s4);
+}
+.hl-brand-auth .brand-auth-dev-quick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+.hl-brand-auth .brand-auth-dev-quick-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.hl-brand-auth .brand-auth-dev-quick-head span {
+  padding: 2px var(--s2);
+  border-radius: 999px;
   color: var(--muted);
-  font-size: 0.75rem;
+  background: var(--blue-soft);
+  font-size: 0.6875rem;
+  font-weight: 600;
 }
-.hl-brand-auth .hl-auth-dev-tools summary {
-  cursor: pointer;
+.hl-brand-auth .brand-auth-dev-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: var(--s2);
 }
-.hl-brand-auth .hl-auth-dev-tools button {
-  min-height: 44px;
+.hl-brand-auth .brand-auth-dev-quick-grid button {
+  display: grid;
+  gap: 2px;
+  min-height: 52px;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
   color: var(--blue-text);
+  text-align: left;
   cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
-.hl-brand-auth .brand-auth-dev-accounts,
+.hl-brand-auth .brand-auth-dev-quick-grid button strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.hl-brand-auth .brand-auth-dev-quick-grid button span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hl-brand-auth .brand-auth-dev-quick-grid button:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+.hl-brand-auth .brand-auth-dev-quick-grid button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.hl-brand-auth .brand-auth-dev-quick-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 .hl-brand-auth .brand-auth-role-choices {
   display: grid;
   gap: var(--s3);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, NotebookPen } from '../console/icons'
 import BrandAuthShell from './BrandAuthShell'
+import DevQuickLogin from './DevQuickLogin'
 import GoogleSignInButton from './GoogleSignInButton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
@@ -1012,23 +1013,15 @@ function AuthPage({
             </p>
           )}
           {import.meta.env.DEV && !isSignup && (
-            <details className="hl-auth-dev-tools">
-              <summary>Công cụ phát triển</summary>
-              {DEV_LEARNERS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  disabled={loginLoading}
-                  onClick={() => {
-                    setAuthEmail(account.email)
-                    setAuthPassword(DEV_PASSWORD)
-                    void submitLogin({ email: account.email, password: DEV_PASSWORD })
-                  }}
-                >
-                  Đăng nhập nhanh: {account.label}
-                </button>
-              ))}
-            </details>
+            <DevQuickLogin
+              accounts={DEV_LEARNERS}
+              disabled={loginLoading}
+              onSelect={(account) => {
+                setAuthEmail(account.email)
+                setAuthPassword(DEV_PASSWORD)
+                void submitLogin({ email: account.email, password: DEV_PASSWORD })
+              }}
+            />
           )}
         </>
       )}
