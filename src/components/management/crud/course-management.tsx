@@ -7,22 +7,25 @@ import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { BookOpen, PackageOpen, Pencil, Plus, Trash2 } from '../../console/icons'
-import { IconAction, RowActions } from '../../console/icon-action'
+import { Plus } from '../../console/icons'
 import { Pagination } from '../../tailgrids/core/pagination'
+import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getCategories } from '../../../services/categoryService'
 import {
-  changeCourseStatus,
   deleteAdminCourse,
+  getAdminCourse,
   getAdminCourses,
+  rejectCourseReview,
   type CourseAdmin,
   type CourseQuery,
-  type CourseStatus,
 } from '../../../services/courseAdminService'
 import { crudError, unknownMutation } from './crud-errors'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseDetailScreen from './course-detail-screen'
+import CourseRejectDialog from './course-reject-dialog'
+import CourseRowActions, { type CourseRowHandlers } from './course-row-actions'
+import { ACTION_COPY, runReviewAction, type ReviewAction } from './course-review-actions'
 
 import {
   COURSE_STATUS_LABELS,
@@ -30,6 +33,9 @@ import {
   courseDisplayStatus,
   REVIEW_STATE_LABELS,
 } from './course-labels'
+// Backend field when present (it knows per-subject reviewers); otherwise the roles that always review.
+const canReviewCourse = (course: CourseAdmin, role?: string) =>
+  course.canReview ?? (role === 'ADMINISTRATOR' || role === 'MANAGER')
 const price = (course: CourseAdmin) =>
   !course.paid
     ? 'Miễn phí'
@@ -45,10 +51,13 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
   const [editor, setEditor] = useState<{ course: CourseAdmin | null } | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [openOnContent, setOpenOnContent] = useState(false)
-  const [confirmation, setConfirmation] = useState<{
-    course: CourseAdmin
-    status?: CourseStatus
-  } | null>(null)
+  const [deleting, setDeleting] = useState<CourseAdmin | null>(null)
+  const [reviewing, setReviewing] = useState<{ course: CourseAdmin; action: ReviewAction } | null>(
+    null
+  )
+  const [rejecting, setRejecting] = useState<CourseAdmin | null>(null)
+  const { profile } = useCurrentUser()
+  const role = profile?.role
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -63,6 +72,29 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     setOpenOnContent(false)
     setSelectedId(id)
   }
+  const clearError = () => setError('')
+  const rowHandlers = useMemo<CourseRowHandlers>(
+    () => ({
+      onContent: (course) => {
+        setOpenOnContent(true)
+        setSelectedId(course.id)
+      },
+      onEdit: (course) => setEditor({ course }),
+      onReview: (course, action) => {
+        clearError()
+        setReviewing({ course, action })
+      },
+      onReject: (course) => {
+        clearError()
+        setRejecting(course)
+      },
+      onDelete: (course) => {
+        clearError()
+        setDeleting(course)
+      },
+    }),
+    []
+  )
   const columns = useMemo<ColumnDef<CourseAdmin>[]>(
     () => [
       {
@@ -114,56 +146,19 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       {
         id: 'actions',
         header: 'Thao tác',
-        meta: { className: 'w-52 text-right' },
+        meta: { className: 'w-64 text-right' },
         cell: ({ row }) => (
-          <RowActions>
-            {!readOnly && (
-              <>
-                <IconAction
-                  label="Soạn nội dung"
-                  icon={BookOpen}
-                  disabled={busy}
-                  onClick={() => {
-                    setOpenOnContent(true)
-                    setSelectedId(row.original.id)
-                  }}
-                />
-                <IconAction
-                  label="Sửa"
-                  icon={Pencil}
-                  onClick={() => setEditor({ course: row.original })}
-                  disabled={busy}
-                />
-                {row.original.status === 'PUBLISHED' && (
-                  <IconAction
-                    label="Lưu trữ"
-                    icon={PackageOpen}
-                    disabled={busy}
-                    onClick={() => {
-                      setError('')
-                      setConfirmation({ course: row.original, status: 'ARCHIVED' })
-                    }}
-                  />
-                )}
-                {row.original.status === 'DRAFT' && (
-                  <IconAction
-                    label="Xóa"
-                    icon={Trash2}
-                    variant="danger"
-                    disabled={busy}
-                    onClick={() => {
-                      setError('')
-                      setConfirmation({ course: row.original })
-                    }}
-                  />
-                )}
-              </>
-            )}
-          </RowActions>
+          <CourseRowActions
+            course={row.original}
+            canReview={canReviewCourse(row.original, role)}
+            readOnly={readOnly}
+            busy={busy}
+            handlers={rowHandlers}
+          />
         ),
       },
     ],
-    [readOnly, busy]
+    [readOnly, busy, role, rowHandlers]
   )
   // One status filter over the two backend fields (status, reviewState).
   const statusFilter =
@@ -187,22 +182,26 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     }))
   const setFilter = (key: 'type' | 'categoryId', value: string) =>
     setQuery((old) => ({ ...old, [key]: value === 'ALL' ? undefined : value, page: 0 }))
-  async function confirm() {
-    if (!confirmation || busy) return
+  // Runs one change on a course and refreshes the list; false means the dialog should stay open.
+  async function perform(work: () => Promise<unknown>, done: string): Promise<boolean> {
+    if (busy) return false
     setBusy(true)
     setError('')
     try {
-      if (confirmation.status) await changeCourseStatus(confirmation.course, confirmation.status)
-      else await deleteAdminCourse(confirmation.course.id)
-      setNotice(confirmation.status ? 'Đã cập nhật trạng thái khóa.' : 'Đã xóa khóa nháp.')
-      setConfirmation(null)
+      await work()
+      setNotice(done)
       resource.reload()
+      pending.reload()
+      return true
     } catch (err) {
       setError(crudError(err))
       if (unknownMutation(err)) {
-        setConfirmation(null)
+        setDeleting(null)
+        setReviewing(null)
+        setRejecting(null)
         resource.reload()
       }
+      return false
     } finally {
       setBusy(false)
     }
@@ -224,8 +223,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     <section className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-text-tertiary">
-          Soạn khóa, gửi duyệt và theo dõi trạng thái bán. Mở một khóa để thêm nội dung và gửi
-          duyệt.
+          Soạn khóa, gửi duyệt và theo dõi trạng thái bán. Bấm vào một khóa để xem chi tiết.
         </p>
         <div className="flex gap-2">
           <Button
@@ -365,15 +363,12 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
           }}
         />
       )}
-      {confirmation && (
+      {deleting && (
         <ConfirmDialog
-          title={confirmation.status === 'ARCHIVED' ? 'Lưu trữ khóa học?' : 'Xóa khóa nháp?'}
+          title="Xóa khóa nháp?"
           description={
             <>
-              {confirmation.course.title}.{' '}
-              {confirmation.status === 'ARCHIVED'
-                ? 'Ẩn khỏi danh sách mở bán; giữ lịch sử và quyền học đã cấp.'
-                : 'Không thể khôi phục; backend sẽ chặn nếu còn tham chiếu.'}
+              {deleting.title}. Không thể khôi phục; backend sẽ chặn nếu còn tham chiếu.
               {error && (
                 <span role="alert" className="mt-2 block text-danger">
                   {error}
@@ -382,11 +377,54 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
             </>
           }
           cancelLabel="Hủy"
-          confirmLabel={confirmation.status ? 'Xác nhận' : 'Xóa khóa'}
-          variant={confirmation.status ? 'primary' : 'danger'}
+          confirmLabel="Xóa khóa"
+          variant="danger"
           busy={busy}
-          onCancel={() => setConfirmation(null)}
-          onConfirm={() => void confirm()}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() =>
+            void perform(() => deleteAdminCourse(deleting.id), 'Đã xóa khóa nháp.').then(
+              (ok) => ok && setDeleting(null)
+            )
+          }
+        />
+      )}
+      {reviewing && (
+        <ConfirmDialog
+          title={ACTION_COPY[reviewing.action].title}
+          description={
+            <>
+              {reviewing.course.title}. {ACTION_COPY[reviewing.action].body}
+              {error && (
+                <span role="alert" className="mt-2 block text-danger">
+                  {error}
+                </span>
+              )}
+            </>
+          }
+          cancelLabel="Hủy"
+          confirmLabel={ACTION_COPY[reviewing.action].confirm}
+          busy={busy}
+          onCancel={() => setReviewing(null)}
+          onConfirm={() =>
+            void perform(
+              () => runReviewAction(reviewing.action, reviewing.course.id),
+              ACTION_COPY[reviewing.action].done
+            ).then((ok) => ok && setReviewing(null))
+          }
+        />
+      )}
+      {rejecting && (
+        <CourseRejectDialog
+          courseTitle={rejecting.title}
+          busy={busy}
+          error={error}
+          onCancel={() => setRejecting(null)}
+          onSubmit={(note) =>
+            void perform(
+              async () => rejectCourseReview(await getAdminCourse(rejecting.id), note),
+              'Đã trả lại khóa kèm lý do.'
+            ).then((ok) => ok && setRejecting(null))
+          }
         />
       )}
     </section>

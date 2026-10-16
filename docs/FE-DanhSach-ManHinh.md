@@ -190,7 +190,7 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 
 | Màn con | Nội dung | Ai sửa |
 | --- | --- | --- |
-| Danh sách khoá | Lọc loại (khoá chính / khoá tặng kèm), danh mục và **một bộ lọc trạng thái chung** (Nháp / Chờ duyệt / Bị trả lại / Đang bán / Lưu trữ), cùng một hàng; một cột Trạng thái; nút nhanh "Chờ duyệt (n)"; nút tạo | SF, AD (Teacher chỉ thấy khoá mình) |
+| Danh sách khoá | Lọc loại (Trọn bộ / Khoá nhỏ), danh mục và **một bộ lọc trạng thái chung** (Nháp / Chờ duyệt / Bị trả lại / Đang bán / Lưu trữ), cùng một hàng; một cột Trạng thái; nút nhanh "Chờ duyệt (n)"; nút tạo **Bấm vào dòng** để mở chi tiết. Cột Thao tác: **một nút bước tiếp theo** (Gửi duyệt / Duyệt và bán / Bán khoá) kế bên **menu ⋯** (Soạn nội dung, Sửa thông tin, Trả lại, Lưu trữ, Xoá). Gửi duyệt từ danh sách vẫn do BE kiểm tra điều kiện; lý do chưa đủ điều kiện hiện ngay trong hộp xác nhận. | SF, AD (Teacher chỉ thấy khoá mình) |
 | Chi tiết khoá — đầu trang | Tên, loại · danh mục · giá, chip trạng thái + chip duyệt, **một hành động chính theo trạng thái và vai trò**: Gửi duyệt (staff) / Đang chờ duyệt / Duyệt và bán + Trả lại (người duyệt) / Bán khoá / Lưu trữ. Nút bị khoá kèm lý do ngay dưới | SF, AD, MG |
 | Banner duyệt + các bước | Chờ duyệt (ai gửi, lúc nào); bị trả lại (ai, lúc nào, lý do); 5 bước ở đầu trang: Thông tin khoá → Soạn nội dung → Xuất bản nội dung → Gửi duyệt (hoặc Duyệt và bán) → Đang bán; bước hiện tại nổi bật kèm dòng "Tiếp theo", bấm một bước để nhảy tới tab liên quan | SF, AD, MG |
 | Tab Tổng quan | Thông tin khoá; "Sửa thông tin" mở form nhiều bước. Ảnh khoá học: dán link hoặc tải ảnh lên từ máy (PNG/JPG/WebP ≤ 5MB, qua `files/upload-urls` → MinIO → `complete-upload`) | SF, AD |
