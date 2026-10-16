@@ -7,7 +7,7 @@ import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Eye, PackageOpen, Pencil, Plus, Trash2 } from '../../console/icons'
+import { BookOpen, Eye, PackageOpen, Pencil, Plus, Trash2 } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
@@ -39,6 +39,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
   const [search, setSearch] = useState('')
   const [editor, setEditor] = useState<{ course: CourseAdmin | null } | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [openOnContent, setOpenOnContent] = useState(false)
   const [confirmation, setConfirmation] = useState<{
     course: CourseAdmin
     status?: CourseStatus
@@ -119,17 +120,29 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       {
         id: 'actions',
         header: 'Thao tác',
-        meta: { className: 'w-44 text-right' },
+        meta: { className: 'w-52 text-right' },
         cell: ({ row }) => (
           <RowActions>
             <IconAction
               label="Chi tiết"
               icon={Eye}
-              onClick={() => setSelectedId(row.original.id)}
+              onClick={() => {
+                setOpenOnContent(false)
+                setSelectedId(row.original.id)
+              }}
               disabled={busy}
             />
             {!readOnly && (
               <>
+                <IconAction
+                  label="Soạn nội dung"
+                  icon={BookOpen}
+                  disabled={busy}
+                  onClick={() => {
+                    setOpenOnContent(true)
+                    setSelectedId(row.original.id)
+                  }}
+                />
                 <IconAction
                   label="Sửa"
                   icon={Pencil}
@@ -194,6 +207,7 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       <CourseDetailScreen
         id={selectedId}
         readOnly={readOnly}
+        initialTab={openOnContent ? 'content' : 'overview'}
         onBack={() => {
           setSelectedId(null)
           resource.reload()

@@ -91,10 +91,12 @@ export default function CourseDetailScreen({
   id,
   readOnly,
   onBack,
+  initialTab = 'overview',
 }: {
   id: string
   readOnly: boolean
   onBack: () => void
+  initialTab?: CourseStepTab
 }) {
   const { profile } = useCurrentUser()
   const resource = useScheduleResource(`course-detail:${id}`, () => getAdminCourse(id))
@@ -102,7 +104,7 @@ export default function CourseDetailScreen({
     getContentSections(id)
   )
   const categories = useScheduleResource('course-categories', getCategories)
-  const [tab, setTab] = useState<CourseStepTab | 'instructors'>('overview')
+  const [tab, setTab] = useState<CourseStepTab | 'instructors'>(initialTab)
   const [chapters, setChapters] = useState<ChapterAdmin[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
