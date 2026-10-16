@@ -24,7 +24,7 @@ import { crudError, unknownMutation } from './crud-errors'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseDetailScreen from './course-detail-screen'
 
-import { COURSE_STATUS_LABELS, REVIEW_STATE_LABELS } from './course-labels'
+import { COURSE_STATUS_LABELS, courseDisplayStatus, REVIEW_STATE_LABELS } from './course-labels'
 const price = (course: CourseAdmin) =>
   !course.paid
     ? 'Miễn phí'
@@ -91,31 +91,10 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         header: 'Trạng thái',
         meta: { className: 'w-32' },
         cell: ({ row }) => (
-          <Status
-            tone={
-              row.original.status === 'PUBLISHED'
-                ? 'success'
-                : row.original.status === 'DRAFT'
-                  ? 'warning'
-                  : 'neutral'
-            }
-          >
-            {COURSE_STATUS_LABELS[row.original.status]}
+          <Status tone={courseDisplayStatus(row.original).tone}>
+            {courseDisplayStatus(row.original).label}
           </Status>
         ),
-      },
-      {
-        id: 'review',
-        header: 'Duyệt',
-        meta: { className: 'w-32' },
-        cell: ({ row }) =>
-          row.original.status === 'PUBLISHED' || row.original.reviewState === 'NONE' ? (
-            <span className="text-text-tertiary">—</span>
-          ) : (
-            <Status tone={row.original.reviewState === 'PENDING' ? 'info' : 'danger'}>
-              {REVIEW_STATE_LABELS[row.original.reviewState]}
-            </Status>
-          ),
       },
       {
         id: 'actions',
@@ -180,7 +159,27 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     ],
     [readOnly, busy]
   )
-  const setFilter = (key: 'type' | 'status' | 'categoryId' | 'reviewState', value: string) =>
+  // One status filter over the two backend fields (status, reviewState).
+  const statusFilter =
+    query.reviewState ?? (query.status === 'DRAFT' ? 'DRAFT' : (query.status ?? 'ALL'))
+  const setStatusFilter = (value: string) =>
+    setQuery((old) => ({
+      ...old,
+      status:
+        value === 'PUBLISHED' || value === 'ARCHIVED'
+          ? value
+          : value === 'DRAFT'
+            ? 'DRAFT'
+            : undefined,
+      reviewState:
+        value === 'PENDING' || value === 'REJECTED'
+          ? value
+          : value === 'DRAFT'
+            ? 'NONE'
+            : undefined,
+      page: 0,
+    }))
+  const setFilter = (key: 'type' | 'categoryId', value: string) =>
     setQuery((old) => ({ ...old, [key]: value === 'ALL' ? undefined : value, page: 0 }))
   async function confirm() {
     if (!confirmation || busy) return
@@ -224,11 +223,9 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
         </p>
         <div className="flex gap-2">
           <Button
-            appearance={query.reviewState === 'PENDING' ? 'fill' : 'outline'}
-            aria-pressed={query.reviewState === 'PENDING'}
-            onClick={() =>
-              setFilter('reviewState', query.reviewState === 'PENDING' ? 'ALL' : 'PENDING')
-            }
+            appearance={statusFilter === 'PENDING' ? 'fill' : 'outline'}
+            aria-pressed={statusFilter === 'PENDING'}
+            onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
           >
             Chờ duyệt{pending.data ? ` (${pending.data.totalElements})` : ''}
           </Button>
@@ -294,22 +291,15 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
             <FilterSelect
               className="sm:w-40"
               ariaLabel="Trạng thái khóa lọc"
-              value={query.status ?? 'ALL'}
-              onChange={(v) => setFilter('status', v)}
+              value={statusFilter}
+              onChange={setStatusFilter}
               options={[
                 { id: 'ALL', label: 'Tất cả trạng thái' },
-                ...Object.entries(COURSE_STATUS_LABELS).map(([id, label]) => ({ id, label })),
-              ]}
-            />
-            <FilterSelect
-              className="sm:w-40"
-              ariaLabel="Trạng thái duyệt lọc"
-              value={query.reviewState ?? 'ALL'}
-              onChange={(v) => setFilter('reviewState', v)}
-              options={[
-                { id: 'ALL', label: 'Trạng thái duyệt' },
+                { id: 'DRAFT', label: COURSE_STATUS_LABELS.DRAFT },
                 { id: 'PENDING', label: REVIEW_STATE_LABELS.PENDING },
                 { id: 'REJECTED', label: REVIEW_STATE_LABELS.REJECTED },
+                { id: 'PUBLISHED', label: COURSE_STATUS_LABELS.PUBLISHED },
+                { id: 'ARCHIVED', label: COURSE_STATUS_LABELS.ARCHIVED },
               ]}
             />
             <FilterSelect

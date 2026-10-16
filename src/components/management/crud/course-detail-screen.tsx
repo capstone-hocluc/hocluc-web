@@ -3,7 +3,7 @@ import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
 import Panel from '../../console/panel'
 import Notice from '../../console/notice'
-import Status, { type StatusTone } from '../../console/status'
+import Status from '../../console/status'
 import ConfirmDialog from '../../console/confirm-dialog'
 import DetailHeader from '../../console/detail/detail-header'
 import {
@@ -38,7 +38,13 @@ import CourseEditorDialog from './course-editor-dialog'
 import CourseRejectDialog from './course-reject-dialog'
 import CourseStepper from './course-stepper'
 import { courseSteps, firstBlocker, type CourseStep, type CourseStepTab } from './course-steps'
-import { COURSE_STATUS_LABELS, REVIEW_STATE_LABELS, type CourseMutation } from './course-labels'
+import {
+  COURSE_STATUS_LABELS,
+  COURSE_STATUS_TONES,
+  REVIEW_STATE_LABELS,
+  REVIEW_STATE_TONES,
+  type CourseMutation,
+} from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
 
 type ReviewAction = 'submit' | 'approve' | 'sell' | 'archive'
@@ -128,14 +134,6 @@ function courseStatusLine(
     }
   }
   return null
-}
-
-function statusTone(course: CourseAdmin): StatusTone {
-  return course.status === 'PUBLISHED'
-    ? 'success'
-    : course.status === 'DRAFT'
-      ? 'warning'
-      : 'neutral'
 }
 
 export default function CourseDetailScreen({
@@ -339,11 +337,11 @@ export default function CourseDetailScreen({
                 actions={
                   <>
                     {course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' ? (
-                      <Status tone={waiting ? 'info' : 'danger'}>
+                      <Status tone={REVIEW_STATE_TONES[course.reviewState]}>
                         {REVIEW_STATE_LABELS[course.reviewState]}
                       </Status>
                     ) : (
-                      <Status tone={statusTone(course)}>
+                      <Status tone={COURSE_STATUS_TONES[course.status]}>
                         {COURSE_STATUS_LABELS[course.status]}
                       </Status>
                     )}
