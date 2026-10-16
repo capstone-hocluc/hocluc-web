@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Pencil, Plus, Trash2 } from '../../console/icons'
+import { Pencil, Plus, Trash2, XCircle } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import Button from '../../console/button'
 import SelectField from '../../console/select-field'
@@ -35,6 +35,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
   const [busy, setBusy] = useState(false)
   // The select can report one choice twice before `busy` re-renders; this blocks the duplicate request.
   const moving = useRef(false)
+  const [quickEditId, setQuickEditId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const rows = useMemo(() => resource.data ?? [], [resource.data])
@@ -57,6 +58,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           expectedUpdatedAt: category.updatedAt,
         })
         setNotice(`Đã đổi danh mục cha của "${category.name}".`)
+        setQuickEditId(null)
         resource.reload()
       } catch (err) {
         setError(crudError(err))
@@ -86,20 +88,44 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
         accessorFn: (c) => (c.parentId ? (names.get(c.parentId) ?? '—') : '—'),
         cell: ({ row }) => {
           const category = row.original
-          if (readOnly) return category.parentId ? (names.get(category.parentId) ?? '—') : '—'
+          const parentName = category.parentId ? (names.get(category.parentId) ?? '—') : '—'
+          if (readOnly) return parentName
+          if (quickEditId !== category.id) {
+            return (
+              <div className="flex items-center gap-1">
+                <span>{parentName}</span>
+                <IconAction
+                  label={`Sửa nhanh danh mục cha của ${category.name}`}
+                  icon={Pencil}
+                  disabled={busy}
+                  onClick={() => setQuickEditId(category.id)}
+                />
+              </div>
+            )
+          }
           const blocked = blockedParents(category, rows)
           return (
-            <SelectField
-              ariaLabel={`Danh mục cha của ${category.name}`}
-              value={category.parentId ?? 'NONE'}
-              disabled={busy}
-              onChange={(value) => void changeParent(category, value)}
-              className="min-w-48"
-              options={[
-                { id: 'NONE', label: 'Không có (cấp gốc)' },
-                ...rows.filter((c) => !blocked.has(c.id)).map((c) => ({ id: c.id, label: c.name })),
-              ]}
-            />
+            <div className="flex items-center gap-1">
+              <SelectField
+                ariaLabel={`Danh mục cha của ${category.name}`}
+                value={category.parentId ?? 'NONE'}
+                disabled={busy}
+                onChange={(value) => void changeParent(category, value)}
+                className="min-w-48"
+                options={[
+                  { id: 'NONE', label: 'Không có (cấp gốc)' },
+                  ...rows
+                    .filter((c) => !blocked.has(c.id))
+                    .map((c) => ({ id: c.id, label: c.name })),
+                ]}
+              />
+              <IconAction
+                label="Hủy sửa nhanh"
+                icon={XCircle}
+                disabled={busy}
+                onClick={() => setQuickEditId(null)}
+              />
+            </div>
           )
         },
       },
@@ -143,7 +169,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           ]
         : []),
     ],
-    [readOnly, names, busy, rows, changeParent]
+    [readOnly, names, busy, rows, changeParent, quickEditId]
   )
   async function remove() {
     if (!deleting || busy) return
