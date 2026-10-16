@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, NotebookPen } from '../console/icons'
-import LearnerAuthShell from './LearnerAuthShell'
+import BrandAuthShell from './BrandAuthShell'
 import GoogleSignInButton from './GoogleSignInButton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
@@ -736,7 +736,7 @@ function AuthPage({
   )
 
   return (
-    <LearnerAuthShell
+    <BrandAuthShell
       onBack={onBack}
       className={`${isEmailVerification ? 'is-verification' : ''} ${isRecovery ? 'is-recovery' : ''}`}
     >
@@ -1032,7 +1032,7 @@ function AuthPage({
           )}
         </>
       )}
-    </LearnerAuthShell>
+    </BrandAuthShell>
   )
 }
 
