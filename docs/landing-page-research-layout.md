@@ -1,5 +1,7 @@
 # HocLuc landing page research and full-page layout
 
+> Desktop implementation updated on 2026-10-16. See [Landing page desktop redesign](landing-page-redesign.md) for the current layout and validation. This document preserves the earlier research.
+
 Research date: 2026-10-13 15:21 Asia/Saigon
 
 ## Summary
