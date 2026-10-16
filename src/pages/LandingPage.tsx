@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import CatalogSection from '../components/landing-page/CatalogSection'
 import DetailDialog, { type LandingDetail } from '../components/landing-page/DetailDialog'
-import ExamIntroSection, { ExamFacts } from '../components/landing-page/ExamIntroSection'
+import ExamIntroSection from '../components/landing-page/ExamIntroSection'
 import CoursesSection from '../components/landing-page/CoursesSection'
 import HeroSection from '../components/landing-page/HeroSection'
 import JourneySection from '../components/landing-page/JourneySection'
@@ -66,7 +66,6 @@ function LandingPage() {
       <LandingHeader />
       <main id="main">
         <HeroSection hero={landingHero} />
-        <ExamFacts exam={examIntro} />
         <CatalogSection domains={domains} onOpenDomain={openDomain} />
         <CoursesSection />
         <SampleLessonSection ref={lessonRef} questions={sampleQuestions} />

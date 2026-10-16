@@ -14,6 +14,22 @@ const dateFormat = new Intl.DateTimeFormat('vi-VN', {
   year: 'numeric',
 })
 
+// Opt-in local design preview. Never substitute sample data for a failed real request.
+const previewCourses: Course[] = import.meta.env.DEV
+  ? [
+      {
+        id: 'landing-design-preview',
+        title: 'V-ACT: Xây nền tảng, vững tư duy',
+        description:
+          'Củng cố 5 nhóm kiến thức, luyện tập theo chủ đề và hiểu cách giải qua từng bài học.',
+        imageUrl: '/landing-v2/assets/hero-mai-nam-learning.webp',
+        targetExam: 'V-ACT',
+        price: 1490000,
+        startDate: '2026-11-01',
+      },
+    ]
+  : []
+
 function CourseCover({ course }: { course: Course }) {
   const [failed, setFailed] = useState(false)
   return (
@@ -36,10 +52,18 @@ function CourseCover({ course }: { course: Course }) {
 }
 
 export default function CoursesSection() {
-  const [courses, setCourses] = useState<Course[]>([])
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [isPreview] = useState(
+    () =>
+      import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get('preview-course') === '1'
+  )
+  const [courses, setCourses] = useState<Course[]>(isPreview ? previewCourses : [])
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>(
+    isPreview ? 'ready' : 'loading'
+  )
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
+    if (isPreview) return
     let cancelled = false
     getMainCourses()
       .then((response) => {
@@ -53,7 +77,7 @@ export default function CoursesSection() {
     return () => {
       cancelled = true
     }
-  }, [attempt])
+  }, [attempt, isPreview])
   return (
     <section className="section courses-section" id="khoa-hoc" aria-labelledby="courses-title">
       <div className="container">
@@ -70,6 +94,11 @@ export default function CoursesSection() {
             Xem tất cả khóa học <Icon name="arrow-up-right" />
           </LandingLink>
         </div>
+        {isPreview && (
+          <p className="course-preview-notice">
+            Khóa học minh họa để xem giao diện. Tên, học phí và ngày khai giảng là dữ liệu mẫu.
+          </p>
+        )}
         <div aria-busy={status === 'loading'}>
           {status === 'loading' && (
             <>
@@ -133,9 +162,13 @@ export default function CoursesSection() {
                     <CourseCover course={course} />
                     <div className="course-info">
                       <h3>
-                        <LandingLink href={`/courses/${encodeURIComponent(course.id)}`}>
-                          {course.title}
-                        </LandingLink>
+                        {isPreview ? (
+                          course.title
+                        ) : (
+                          <LandingLink href={`/courses/${encodeURIComponent(course.id)}`}>
+                            {course.title}
+                          </LandingLink>
+                        )}
                       </h3>
                       {course.description && (
                         <p className="course-description">{course.description}</p>
@@ -156,13 +189,19 @@ export default function CoursesSection() {
                               </>
                             )}
                         </div>
-                        <LandingLink
-                          className="text-link"
-                          href={`/courses/${encodeURIComponent(course.id)}`}
-                        >
-                          Xem chi tiết <Icon name="arrow-right" />
-                          <span className="sr-only"> {course.title}</span>
-                        </LandingLink>
+                        {isPreview ? (
+                          <a className="text-link" href="#hoc-thu">
+                            Thử bài học mẫu <Icon name="arrow-right" />
+                          </a>
+                        ) : (
+                          <LandingLink
+                            className="text-link"
+                            href={`/courses/${encodeURIComponent(course.id)}`}
+                          >
+                            Xem chi tiết <Icon name="arrow-right" />
+                            <span className="sr-only"> {course.title}</span>
+                          </LandingLink>
+                        )}
                       </div>
                     </div>
                   </article>

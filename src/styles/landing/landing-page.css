@@ -1,57 +1,8 @@
-/* Landing-only styles: student and console surfaces keep their existing design. */
-@font-face {
-  font-family: 'Be Vietnam Pro';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/landing-v2/assets/fonts/be-vietnam-pro-400.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Be Vietnam Pro';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/landing-v2/assets/fonts/be-vietnam-pro-600.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Be Vietnam Pro';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/landing-v2/assets/fonts/be-vietnam-pro-700.ttf') format('truetype');
-}
+@import '../base/learner-brand.css';
+/* Landing-only layout and interactions. */
 .landing-page {
-  --paper: oklch(99% 0.003 240);
-  --soft: oklch(97% 0.009 240);
-  --blue-soft: oklch(95% 0.023 240);
-  --line: oklch(88% 0.021 240);
-  --ink: oklch(29% 0.055 250);
-  --muted: oklch(46% 0.035 250);
-  --blue: oklch(47% 0.135 248);
-  --blue-hover: oklch(39% 0.13 248);
-  --good: oklch(36% 0.08 165);
-  --good-bg: oklch(96% 0.025 165);
-  --error: oklch(44% 0.16 26);
-  --error-bg: oklch(97% 0.018 26);
-  --font: 'Be Vietnam Pro', sans-serif;
-  --small: 0.8125rem;
-  --body: 1rem;
-  --lead: 1.125rem;
-  --title: 1.25rem;
-  --heading: clamp(1.75rem, 2.7vw, 2.5rem);
-  --hero: clamp(2rem, 3.5vw, 3rem);
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 12px;
-  --s4: 16px;
-  --s6: 24px;
-  --s8: 32px;
-  --s12: 48px;
-  --s16: 64px;
-  --s24: 96px;
-  --radius: 16px;
-  --radius-sm: 8px;
-  --ease: cubic-bezier(0.25, 1, 0.5, 1);
+  --subject-art-height: 144px;
+  --subject-motion: 200ms;
   color: var(--ink);
   background: var(--paper);
   font: 400 var(--body)/1.7 var(--font);
@@ -74,7 +25,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .landing-page :where(a, button, input, select, summary):focus-visible {
-  outline: 3px solid var(--blue);
+  outline: 3px solid var(--blue-text);
   outline-offset: 4px;
 }
 .landing-page a {
@@ -130,11 +81,11 @@
   padding-block: var(--s24);
 }
 .landing-page .accent {
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .eyebrow {
   display: block;
-  color: var(--blue);
+  color: var(--blue-text);
   font-weight: 600;
   font-size: var(--small);
   margin-bottom: var(--s4);
@@ -173,7 +124,7 @@
   z-index: 60;
   padding: 12px 24px;
   background: var(--paper);
-  color: var(--blue);
+  color: var(--blue-text);
   transform: translateY(-200%);
   border: 1px solid var(--blue);
 }
@@ -205,11 +156,15 @@
   transform: translateY(1px);
 }
 .landing-page .btn-primary {
-  background: var(--blue);
-  color: var(--paper);
+  background: var(--action);
+  color: var(--on-action);
+  font-weight: 600;
+}
+.landing-page .btn-primary .ui-icon {
+  stroke-width: 1.5;
 }
 .landing-page .btn-primary:hover {
-  background: var(--blue-hover);
+  background: var(--action-hover);
 }
 .landing-page .btn-secondary {
   background: transparent;
@@ -233,7 +188,7 @@
   gap: 8px;
   min-height: 44px;
   padding-block: 8px;
-  color: var(--blue);
+  color: var(--blue-text);
   font-size: 0.875rem;
   font-weight: 600;
   border: 0;
@@ -291,7 +246,7 @@
   gap: 24px;
 }
 .landing-page .logo {
-  --logo-color: #1cb0f6;
+  --logo-color: var(--blue);
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -314,7 +269,7 @@
 }
 .landing-page .nav-links a:hover,
 .landing-page .login-link:hover {
-  color: var(--blue);
+  color: var(--blue-text);
   text-decoration: underline;
   text-underline-offset: 8px;
 }
@@ -439,31 +394,6 @@
   text-decoration: underline;
 }
 /* Compact discovery */
-.landing-page .exam-facts {
-  border-bottom: 1px solid var(--line);
-}
-.landing-page .exam-facts .container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding-block: 16px;
-}
-.landing-page .exam-facts p {
-  font-size: var(--small);
-  white-space: nowrap;
-}
-.landing-page .exam-facts > .container > span {
-  color: var(--muted);
-  font-size: var(--small);
-}
-.landing-page .exam-facts strong {
-  font-size: var(--lead);
-  font-weight: 600;
-  color: var(--ink);
-  margin-right: 4px;
-  font-variant-numeric: tabular-nums;
-}
 .landing-page .subjects-section {
   padding-top: 48px;
 }
@@ -475,7 +405,7 @@
   margin-bottom: 24px;
 }
 .landing-page .subjects-heading h2 {
-  font-size: var(--title);
+  font-size: var(--heading);
 }
 .landing-page .subjects-heading p {
   font-size: 0.875rem;
@@ -483,40 +413,66 @@
 .landing-page .subject-list {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--s3);
 }
 .landing-page .subject-item {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--s2);
   text-align: left;
-  padding: 24px;
-  border: 0;
-  border-radius: var(--radius-sm);
+  padding: var(--s4);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   background: var(--soft);
   color: var(--ink);
   transition:
-    background 250ms,
-    transform 250ms var(--ease);
+    background var(--subject-motion),
+    border-color var(--subject-motion),
+    transform var(--subject-motion) var(--ease);
 }
-.landing-page .subject-item:hover {
+.landing-page .subject-item:is(:hover, :focus-visible, .is-previewed) {
   background: var(--blue-soft);
-  transform: translateY(-4px);
+  border-color: var(--blue);
+  transform: translateY(calc(-1 * var(--s1)));
 }
 .landing-page .subject-item:active {
   transform: translateY(1px);
 }
+.landing-page .subject-art {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: var(--subject-art-height);
+  margin-bottom: var(--s2);
+}
+.landing-page .subject-art img {
+  width: 100%;
+  height: var(--subject-art-height);
+  min-height: 0;
+  object-fit: contain;
+  transition: transform var(--subject-motion) var(--ease);
+}
+.landing-page .subject-item:is(:hover, :focus-visible, .is-previewed) .subject-art img {
+  transform: scale(1.03);
+}
 .landing-page .subject-symbol {
   font-size: var(--title);
   font-weight: 600;
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .subject-name {
-  font-size: 0.875rem;
+  font-size: var(--body);
   font-weight: 600;
   line-height: 1.55;
-  padding-right: 12px;
+  min-height: 3.1em;
+  padding-right: var(--s2);
+}
+.landing-page .subject-caption {
+  font-size: var(--small);
+  line-height: 1.6;
+  color: var(--muted);
+  padding-right: var(--s4);
 }
 .landing-page .subject-item > .ui-icon {
   position: absolute;
@@ -526,7 +482,81 @@
   height: 16px;
   color: var(--muted);
 }
+.landing-page .subject-preview {
+  display: grid;
+  margin-top: var(--s6);
+  padding: var(--s6) var(--s8);
+  border-block: 1px solid var(--line);
+}
+.landing-page .subject-preview-prompt,
+.landing-page .subject-preview-content {
+  grid-area: 1 / 1;
+  min-width: 0;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(var(--s1));
+  transition:
+    opacity var(--subject-motion) var(--ease),
+    transform var(--subject-motion) var(--ease);
+}
+.landing-page .subject-preview .is-visible {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+}
+.landing-page .subject-preview-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s4);
+}
+.landing-page .subject-preview-prompt > .ui-icon {
+  width: var(--s8);
+  height: var(--s8);
+  color: var(--blue-text);
+}
+.landing-page .subject-preview h3 {
+  font-size: var(--body);
+  margin-bottom: var(--s2);
+}
+.landing-page .subject-preview p {
+  font-size: 0.875rem;
+}
+.landing-page .subject-preview-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s8);
+}
+.landing-page .subject-preview-copy {
+  max-width: 48ch;
+}
+.landing-page .subject-topics {
+  display: grid;
+  gap: var(--s1);
+  padding: 0;
+  list-style: none;
+  font-size: 0.875rem;
+}
+.landing-page .subject-topics li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.landing-page .subject-topics .ui-icon {
+  align-self: center;
+  width: var(--s4);
+  height: var(--s4);
+  color: var(--blue-text);
+}
+.landing-page .subject-preview-link {
+  white-space: nowrap;
+}
 /* Courses */
+.landing-page .course-preview-notice {
+  margin-bottom: var(--s6);
+  font-size: var(--small);
+}
 .landing-page .course-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -564,7 +594,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .course-cover-fallback .ui-icon {
   width: 48px;
@@ -595,7 +625,7 @@
   min-height: 44px;
 }
 .landing-page .course-info h3 a:hover {
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .course-description {
   display: -webkit-box;
@@ -641,7 +671,7 @@
 .landing-page .course-empty > .ui-icon {
   width: 48px;
   height: 48px;
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .course-empty > div {
   flex: 1;
@@ -728,7 +758,7 @@
   border-radius: inherit;
 }
 .landing-page .lesson-group {
-  color: var(--blue);
+  color: var(--blue-text);
   font-size: var(--small);
   margin-bottom: 16px;
 }
@@ -815,7 +845,7 @@
 }
 .landing-page .feature-check {
   margin-top: 4px;
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .feature-list h3 {
   font-size: var(--body);
@@ -845,7 +875,7 @@
 }
 .landing-page .step-number {
   font-variant-numeric: tabular-nums;
-  color: var(--blue);
+  color: var(--blue-text);
   font-size: 2rem;
   font-weight: 600;
 }
@@ -916,7 +946,7 @@
 .landing-page .support-items article > .ui-icon {
   width: 24px;
   height: 24px;
-  color: var(--blue);
+  color: var(--blue-text);
   margin-top: 8px;
 }
 .landing-page .support-items p {
@@ -941,7 +971,7 @@
   margin-top: 4px;
 }
 .landing-page .calculator-link:hover {
-  color: var(--blue);
+  color: var(--blue-text);
 }
 /* Reference material and questions */
 .landing-page .exam-layout {
@@ -1012,7 +1042,7 @@
   font-weight: 600;
 }
 .landing-page .exam-season summary:hover {
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .exam-season ol {
   padding: 0 0 24px 24px;
@@ -1054,11 +1084,11 @@
   display: none;
 }
 .landing-page .faq-list summary:hover {
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .faq-list summary span {
   font-size: var(--title);
-  color: var(--blue);
+  color: var(--blue-text);
 }
 .landing-page .faq-list details[open] summary span {
   transform: rotate(45deg);
@@ -1119,7 +1149,7 @@
   align-items: center;
 }
 .landing-page .footer a:hover {
-  color: var(--blue);
+  color: var(--blue-text);
   text-decoration: underline;
   text-underline-offset: 4px;
 }
@@ -1283,7 +1313,7 @@
     font-size: 0.875rem;
   }
   .landing-page .mobile-nav a:hover {
-    color: var(--blue);
+    color: var(--blue-text);
   }
   .landing-page .hero-grid {
     grid-template-columns: 1fr 1fr;
@@ -1388,26 +1418,6 @@
   .landing-page .hero-carousel-controls {
     height: 48px;
   }
-  .landing-page .exam-facts .container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    padding-block: 24px;
-  }
-  .landing-page .exam-facts > .container > span {
-    grid-column: 1/-1;
-  }
-  .landing-page .exam-facts p {
-    white-space: normal;
-    font-size: 0.75rem;
-  }
-  .landing-page .exam-facts strong {
-    display: block;
-    font-size: var(--title);
-  }
-  .landing-page .exam-facts .text-link {
-    grid-column: 1/-1;
-  }
   .landing-page .subjects-section {
     padding-top: 32px;
   }
@@ -1433,6 +1443,13 @@
   }
   .landing-page .subject-name {
     font-size: var(--small);
+  }
+  .landing-page .subject-preview {
+    padding: var(--s6) 0;
+  }
+  .landing-page .subject-preview-content {
+    grid-template-columns: 1fr;
+    gap: var(--s4);
   }
   .landing-page .section-heading {
     flex-direction: column;

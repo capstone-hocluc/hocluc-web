@@ -1,28 +1,6 @@
 import type { ExamIntro } from '../../data/landing-content'
 import Icon from './Icon'
 
-export function ExamFacts({ exam }: { exam: ExamIntro }) {
-  return (
-    <aside className="exam-facts" aria-label="Thông tin kỳ thi V-ACT">
-      <div className="container">
-        <span>Kỳ thi V-ACT</span>
-        <p>
-          <strong>{exam.totalQuestions}</strong> câu hỏi
-        </p>
-        <p>
-          <strong>150</strong> phút
-        </p>
-        <p>
-          <strong>{exam.totalScore}</strong> điểm tối đa
-        </p>
-        <a className="text-link" href="#ky-thi">
-          Tìm hiểu kỳ thi <Icon name="arrow-up-right" />
-        </a>
-      </div>
-    </aside>
-  )
-}
-
 export default function ExamIntroSection({ exam }: { exam: ExamIntro }) {
   return (
     <section className="section exam-intro" id="ky-thi" aria-labelledby="exam-intro-title">

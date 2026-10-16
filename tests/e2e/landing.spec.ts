@@ -27,6 +27,8 @@ test.beforeEach(async ({ page }) => {
 test('desktop hierarchy, anchors and empty state at common PC widths', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Khóa học đang được cập nhật' })).toBeVisible()
+  await expect(page.locator('.exam-facts')).toHaveCount(0)
+  await expect(page.locator('#ky-thi')).toHaveCount(1)
   await expect(page.locator('.hero-buttons a').last()).toHaveAttribute('href', '#khoa-hoc')
   await expect(page.locator('.nav-links a').first()).toHaveAttribute('href', '#khoa-hoc')
   for (const width of [1280, 1440, 1920]) {
@@ -47,6 +49,24 @@ test('desktop hierarchy, anchors and empty state at common PC widths', async ({ 
   expect(
     await page.locator('#khoa-hoc').evaluate((el) => el.getBoundingClientRect().top)
   ).toBeGreaterThanOrEqual(79)
+})
+
+test('local design preview shows one labeled course without requesting a real catalog', async ({
+  page,
+}) => {
+  let catalogRequests = 0
+  await page.route(catalog, (route) => {
+    catalogRequests++
+    return respond(route)
+  })
+  await page.goto('/?preview-course=1')
+  await expect(page.locator('.landing-course')).toHaveCount(1)
+  await expect(page.locator('.course-preview-notice')).toContainText('dữ liệu mẫu')
+  await expect(page.locator('.landing-course h3')).toHaveText('V-ACT: Xây nền tảng, vững tư duy')
+  await expect(page.locator('.landing-course a')).toHaveAttribute('href', '#hoc-thu')
+  expect(catalogRequests).toBe(0)
+  await page.locator('.landing-course a').click()
+  await expect(page).toHaveURL(/#hoc-thu$/)
 })
 
 test('loading skeleton resolves to real course cards without invented prices', async ({ page }) => {
@@ -146,6 +166,55 @@ test('subject dialog returns to sample with focus and FAQ expands', async ({ pag
   await item.locator('summary').click()
   await expect(item).toHaveAttribute('open', '')
   await expect(item.locator('p')).toBeVisible()
+})
+
+test('illustrated subjects preview on hover and focus without shifting the following section', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const cards = page.locator('.subject-item')
+  const preview = page.locator('.subject-preview-content.is-visible')
+  await cards.first().scrollIntoViewIfNeeded()
+  const courseTop = () =>
+    page.locator('#khoa-hoc').evaluate((el) => el.getBoundingClientRect().top + scrollY)
+  const initialCourseTop = await courseTop()
+
+  for (let index = 0; index < 5; index++) {
+    const card = cards.nth(index)
+    await card.hover()
+    await expect(preview.locator('h3')).toHaveText(await card.locator('.subject-name').innerText())
+    await expect(page.locator('#detail-dialog')).not.toBeVisible()
+    await expect(card.locator('img')).toHaveJSProperty('complete', true)
+    expect(
+      await card.locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)
+    ).toBeGreaterThan(0)
+    const imageDoesNotOverlap = await card.evaluate((el) => {
+      const image = el.querySelector('img')!.getBoundingClientRect()
+      const title = el.querySelector('.subject-name')!.getBoundingClientRect()
+      return image.bottom <= title.top
+    })
+    expect(imageDoesNotOverlap).toBe(true)
+    expect(Math.abs((await courseTop()) - initialCourseTop)).toBeLessThan(2)
+  }
+
+  // Moving into the preview keeps its content available for reading and clicking.
+  await preview.hover()
+  await expect(preview.locator('h3')).toHaveText('Suy luận Khoa học')
+  await preview.getByRole('button', { name: 'Xem nội dung nhóm' }).click()
+  await expect(page.locator('#detail-dialog h2')).toHaveText('Suy luận Khoa học')
+  await page.keyboard.press('Escape')
+
+  await cards.first().focus()
+  await page.keyboard.press('Tab')
+  await expect(cards.nth(1)).toBeFocused()
+  await expect(preview.locator('h3')).toHaveText('Tiếng Anh')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#detail-dialog h2')).toHaveText('Tiếng Anh')
+  await page.keyboard.press('Escape')
+  await expect(cards.nth(1)).toBeFocused()
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  expect(await cards.first().evaluate((el) => getComputedStyle(el).transitionDuration)).toBe('0s')
 })
 
 test('carousel has manual selection and pause controls', async ({ page }) => {
