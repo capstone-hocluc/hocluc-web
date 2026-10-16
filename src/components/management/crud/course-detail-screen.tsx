@@ -12,7 +12,7 @@ import {
   ConsoleTabsList,
   ConsoleTabsTrigger,
 } from '../../console/tabs'
-import { ArrowLeft, Clock3, Pencil, Send } from '../../console/icons'
+import { ArrowLeft, Pencil, Send } from '../../console/icons'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
@@ -253,16 +253,8 @@ export default function CourseDetailScreen({
         </>
       )
     }
-    if (waiting && !canReview) {
-      return (
-        <>
-          <span className="inline-flex h-10 items-center gap-2 px-2 text-sm font-medium text-text-secondary">
-            <Clock3 size={16} aria-hidden />
-            Đang chờ duyệt
-          </span>
-        </>
-      )
-    }
+    // Staff waiting on a review has nothing to do; the status chip says so.
+    if (waiting && !canReview) return null
     if (waiting) {
       return (
         <>
@@ -344,16 +336,20 @@ export default function CourseDetailScreen({
                     ? `${new Intl.NumberFormat('vi-VN').format(course.price ?? 0)} đ`
                     : 'Miễn phí',
                 ].join(' · ')}
-                chips={
-                  course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' ? (
-                    <Status tone={waiting ? 'info' : 'danger'}>
-                      {REVIEW_STATE_LABELS[course.reviewState]}
-                    </Status>
-                  ) : (
-                    <Status tone={statusTone(course)}>{COURSE_STATUS_LABELS[course.status]}</Status>
-                  )
+                actions={
+                  <>
+                    {course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' ? (
+                      <Status tone={waiting ? 'info' : 'danger'}>
+                        {REVIEW_STATE_LABELS[course.reviewState]}
+                      </Status>
+                    ) : (
+                      <Status tone={statusTone(course)}>
+                        {COURSE_STATUS_LABELS[course.status]}
+                      </Status>
+                    )}
+                    {primaryActions(course)}
+                  </>
                 }
-                actions={primaryActions(course)}
               />
               {canAct && (
                 <div className="mt-5 border-t border-card-border pt-3">
