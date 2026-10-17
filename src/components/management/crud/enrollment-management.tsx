@@ -211,7 +211,7 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
             />
           </FilterGroup>
         </FilterToolbar>
-        <ScheduleResourceState skeleton="table"
+        <ScheduleResourceState skeleton="table" inset
           status={resource.status}
           errorMessage={resource.errorMessage}
           onRetry={resource.reload}

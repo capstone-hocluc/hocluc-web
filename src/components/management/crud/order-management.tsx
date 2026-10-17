@@ -220,7 +220,7 @@ export default function OrderManagement({
             </Button>
           </Notice>
         )}
-        <ScheduleResourceState skeleton="table"
+        <ScheduleResourceState skeleton="table" inset
           status={resource.status}
           errorMessage={resource.errorMessage}
           onRetry={resource.reload}

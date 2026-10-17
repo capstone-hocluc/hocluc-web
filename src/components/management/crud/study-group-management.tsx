@@ -181,7 +181,7 @@ export default function StudyGroupManagement({ readOnly = false }: { readOnly?: 
         <Notice tone="warning">Chọn khóa trọn bộ (MAIN) để quản lý nhóm.</Notice>
       ) : (
         <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-          <ScheduleResourceState skeleton="table"
+          <ScheduleResourceState skeleton="table" inset
             status={groups.status}
             errorMessage={groups.errorMessage}
             onRetry={groups.reload}
