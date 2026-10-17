@@ -195,7 +195,7 @@
   border-top: 1px dashed var(--line);
 }
 
-/* What you get: the dark tile, the owl peeking from the corner. */
+/* What you get: the dark tile. */
 .course-page .ab-get {
   border: 0;
   background: linear-gradient(160deg, #0f2f4a, #123f63 60%, #0d5a86);
@@ -212,13 +212,6 @@
   align-items: flex-start;
   gap: 12px;
   color: #d6e7f5;
-}
-.course-page .ab-get-owl {
-  position: absolute;
-  top: -6px;
-  right: -10px;
-  width: 96px;
-  transform: rotate(8deg);
 }
 .course-page .ab-get-icon {
   display: grid;

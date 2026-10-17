@@ -98,7 +98,7 @@ export default function CatalogSection({
               aria-describedby={`subject-caption-${domain.id}`}
             >
               <span className="subject-art" aria-hidden="true">
-                {subjectVisuals[domain.id] ? (
+                {subjectVisuals[domain.id]?.image ? (
                   <img
                     src={`/landing-v2/assets/${subjectVisuals[domain.id].image}`}
                     alt=""

@@ -74,7 +74,6 @@ function Learn({ block }: { block: DescriptionBlock }) {
 function Get({ block }: { block: DescriptionBlock }) {
   return (
     <article className="ab-tile ab-get">
-      <img className="ab-get-owl" src="/landing-v2/assets/owl-teacher-teaching-card.webp" alt="" aria-hidden="true" loading="lazy" />
       <span className="ab-kicker">Trọn gói</span>
       <h3>{block.heading}</h3>
       <ul>
