@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getMyCourses } from '../../services/courseService'
 import type { MyCourseEnrollment } from '../../services/courseService'
+import { matchesSearch } from '../../lib/search'
 
 interface MyCoursesProps {
   onOpenCourse: (course: MyCourseEnrollment['course']) => void
@@ -45,11 +46,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
   )
 
   const visibleEnrollments = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    if (!normalizedQuery) return tabEnrollments
-    return tabEnrollments.filter((enrollment) =>
-      enrollment.course.title.toLowerCase().includes(normalizedQuery)
-    )
+    return tabEnrollments.filter((enrollment) => matchesSearch(query, enrollment.course.title))
   }, [tabEnrollments, query])
 
   return (

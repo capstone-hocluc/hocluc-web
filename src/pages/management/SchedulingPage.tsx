@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { matchesSearch } from '../../lib/search'
 import { CalendarPlus, Pencil, RefreshCw, Trash2 } from '../../components/console/icons'
 import type { Course, CourseSection } from '../../services/courseService'
 import { getCourseDetail, getMainCourses } from '../../services/courseService'
@@ -141,11 +142,9 @@ export default function SchedulingPage({ role }: Props) {
     return key >= weekStart && key <= weekEnd
   }), [allItems, weekStart, weekEnd])
   const visibleItems = useMemo(() => {
-    const text = query.trim().toLocaleLowerCase('vi-VN')
     const sorted = sortScheduleItems(weekItems)
-    if (!text) return sorted
     return sorted.filter((item) =>
-      (item.item.title + ' ' + itemSubtitle(item)).toLocaleLowerCase('vi-VN').includes(text)
+      matchesSearch(query, item.item.title, itemSubtitle(item))
     )
   }, [weekItems, query])
 

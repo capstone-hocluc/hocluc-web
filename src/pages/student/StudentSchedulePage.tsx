@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { matchesSearch } from '../../lib/search'
 import { CalendarDays, Info } from '../../components/console/icons'
 import type { AttendanceResponse, AttendanceStatus, ScheduleCalendarItem } from '../../types/scheduling'
 import { getMyCourses, type MyCourseEnrollment } from '../../services/courseService'
@@ -78,11 +79,9 @@ export default function StudentSchedulePage() {
     [scheduleRange, schedules.data]
   )
   const filteredItems = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('vi-VN')
     const scoped = sortScheduleItems(items)
-    if (!normalized) return scoped
     return scoped.filter((item) =>
-      (item.item.title + ' ' + (item.kind === 'schedule' ? item.item.courseName : '')).toLocaleLowerCase('vi-VN').includes(normalized)
+      matchesSearch(query, item.item.title, item.kind === 'schedule' ? item.item.courseName : '')
     )
   }, [items, query])
   const changeDate = (nextDate: string) => {

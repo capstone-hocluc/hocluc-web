@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import PageHeading from '../../console/page-heading'
 import Button from '../../console/button'
@@ -56,6 +56,15 @@ export default function CourseManagement({
 }) {
   const [query, setQuery] = useState<CourseQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
+  useEffect(() => {
+    const nextQuery = search.trim()
+    if (nextQuery === (query.query ?? '')) return
+
+    const timer = window.setTimeout(() => {
+      setQuery((old) => ({ ...old, query: nextQuery || undefined, page: 0 }))
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [search, query.query])
   const [editor, setEditor] = useState<{ course: CourseAdmin | null } | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [openOnContent, setOpenOnContent] = useState(false)
@@ -239,7 +248,7 @@ export default function CourseManagement({
           className="w-full sm:max-w-sm sm:min-w-40 sm:flex-1"
           onSubmit={(e) => {
             e.preventDefault()
-            setQuery((old) => ({ ...old, query: search.trim(), page: 0 }))
+            setQuery((old) => ({ ...old, query: search.trim() || undefined, page: 0 }))
           }}
         >
           <SearchInput
@@ -281,6 +290,7 @@ export default function CourseManagement({
       </FilterToolbar>
       <ScheduleResourceState
         skeleton="table"
+        inset
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef, RowData } from '@tanstack/react-table'
 import DataTable from './data-table'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from './filter-toolbar'
+import { matchesSearch } from '../../lib/search'
 
 // NextAdmin list card: search + optional filter on top, sortable table below.
 interface ListCardProps<T extends RowData> {
@@ -13,14 +14,6 @@ interface ListCardProps<T extends RowData> {
   filter?: { ariaLabel: string; allLabel: string; options: string[]; get: (row: T) => string }
   emptyMessage?: string
 }
-
-const normalize = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[đĐ]/g, 'd')
-    .toLocaleLowerCase('vi-VN')
-    .trim()
 
 function ListCard<T extends RowData>({
   data,
@@ -35,10 +28,9 @@ function ListCard<T extends RowData>({
   const [filterValue, setFilterValue] = useState('ALL')
 
   const rows = useMemo(() => {
-    const needle = normalize(query)
     return data.filter(
       (row) =>
-        (!needle || normalize(searchText(row)).includes(needle)) &&
+        matchesSearch(query, searchText(row)) &&
         (!filter || filterValue === 'ALL' || filter.get(row) === filterValue)
     )
   }, [data, query, filter, filterValue, searchText])

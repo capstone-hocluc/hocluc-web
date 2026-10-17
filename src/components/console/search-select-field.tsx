@@ -62,6 +62,8 @@ export default function SearchSelectField({
   const [failed, setFailed] = useState(false)
   const [busyMore, setBusyMore] = useState(false)
   const [picked, setPicked] = useState<{ id: string; label: string } | null>(null)
+  const searchRequestEpoch = useRef(0)
+  const busyMoreRef = useRef(false)
 
   // Callers pass an inline function; keeping it in a ref stops every keystroke from re-running the
   // query effect through a changed identity. The ref is synced in its own effect (declared first, so
@@ -72,44 +74,81 @@ export default function SearchSelectField({
   }, [loadPage])
 
   useEffect(() => {
+    const epoch = ++searchRequestEpoch.current
     if (!open) return
     let cancelled = false
+    setFailed(false)
+    busyMoreRef.current = false
+    setBusyMore(false)
+    const requestTerm = term.trim()
     const timer = setTimeout(() => {
       loadRef
-        .current(term, 0)
+        .current(requestTerm, 0)
         .then((result) => {
-          if (cancelled) return
+          if (cancelled || epoch !== searchRequestEpoch.current) return
           setFailed(false)
           setLoaded({ term, options: result.options, last: result.last })
           setPage(0)
         })
         .catch(() => {
-          if (!cancelled) setFailed(true)
+          if (!cancelled && epoch === searchRequestEpoch.current) setFailed(true)
         })
     }, DEBOUNCE_MS)
     return () => {
       cancelled = true
       clearTimeout(timer)
+      if (epoch === searchRequestEpoch.current) searchRequestEpoch.current += 1
     }
   }, [open, term])
 
+  function changeTerm(nextTerm: string) {
+    searchRequestEpoch.current += 1
+    busyMoreRef.current = false
+    setBusyMore(false)
+    setFailed(false)
+    setTerm(nextTerm)
+  }
+
   async function loadMore() {
+    if (busyMoreRef.current || !loaded || loaded.term !== term || loaded.last) return
     const next = page + 1
+    const epoch = searchRequestEpoch.current
+    const requestTerm = term.trim()
+    busyMoreRef.current = true
     setBusyMore(true)
     try {
-      const result = await loadRef.current(term, next)
-      setLoaded((current) =>
-        current ? { ...current, options: [...current.options, ...result.options], last: result.last } : current
-      )
+      const result = await loadRef.current(requestTerm, next)
+      if (epoch !== searchRequestEpoch.current) return
+      setFailed(false)
+      setLoaded((current) => {
+        if (!current || current.term !== term) return current
+        const existingIds = new Set(current.options.map((option) => option.id))
+        const nextOptions = result.options.filter((option) => {
+          if (existingIds.has(option.id)) return false
+          existingIds.add(option.id)
+          return true
+        })
+        return {
+          ...current,
+          options: [...current.options, ...nextOptions],
+          last: result.last,
+        }
+      })
       setPage(next)
     } catch {
-      setFailed(true)
+      if (epoch === searchRequestEpoch.current) setFailed(true)
     } finally {
-      setBusyMore(false)
+      if (epoch === searchRequestEpoch.current) {
+        busyMoreRef.current = false
+        setBusyMore(false)
+      }
     }
   }
 
   function choose(option: SearchSelectOption) {
+    searchRequestEpoch.current += 1
+    busyMoreRef.current = false
+    setBusyMore(false)
     // The trigger label is derived from the current value, so a form reset clears it too.
     setPicked({ id: option.id, label: option.label })
     setOpen(false)
@@ -118,6 +157,9 @@ export default function SearchSelectField({
   }
 
   function close() {
+    searchRequestEpoch.current += 1
+    busyMoreRef.current = false
+    setBusyMore(false)
     setOpen(false)
     setTerm('')
   }
@@ -159,7 +201,7 @@ export default function SearchSelectField({
         <Command.Input
           autoFocus
           value={term}
-          onValueChange={setTerm}
+          onValueChange={changeTerm}
           aria-label={`${ariaLabel}: tìm kiếm`}
           placeholder={searchPlaceholder ?? 'Nhập để tìm kiếm'}
           className="h-10 w-full flex-1 border-none bg-transparent text-sm text-text-primary outline-none placeholder:text-input-placeholder-text focus:ring-0"

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { matchesSearch } from '../../lib/search'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -159,13 +160,12 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
 
   const quizItems = (quizzes.data ?? []).filter((quiz) => {
     if (quiz.type === 'EXAM' || quiz.type === 'PLACEMENT') return false
-    const term = search.trim().toLocaleLowerCase('vi')
-    const matchesSearch = !term || `${quiz.title} ${quiz.courseTitle ?? ''} ${quiz.lessonTitle ?? ''}`.toLocaleLowerCase('vi').includes(term)
+    const matchesQuery = matchesSearch(search, quiz.title, quiz.courseTitle, quiz.lessonTitle)
     const matchesStatus = statusFilter === 'Tất cả' ||
       (statusFilter === 'Bản nháp' && quiz.status === 'DRAFT') ||
       (statusFilter === 'Đã xuất bản' && quiz.status === 'PUBLISHED') ||
       (statusFilter === 'Đã lưu trữ' && quiz.status === 'ARCHIVED')
-    return matchesSearch && matchesStatus
+    return matchesQuery && matchesStatus
   })
   const hasActiveFilters = Boolean(search.trim()) || statusFilter !== 'Tất cả'
 

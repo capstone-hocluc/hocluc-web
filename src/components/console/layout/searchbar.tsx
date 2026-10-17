@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '../../tailgrids/core/input-group';
 import { SearchIcon } from './header-icons';
 import type { NavSection } from './nav-types';
+import { matchesSearch } from '../../../lib/search';
 
 interface SearchBarProps {
   sections: NavSection[];
@@ -62,6 +63,7 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
       <Command.Dialog
         open={open}
         onOpenChange={setOpen}
+        filter={(value, search) => (matchesSearch(search, value) ? 1 : 0)}
         label="Tìm kiếm"
         overlayClassName="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs transition-opacity duration-200"
         contentClassName="fixed top-1/2 left-1/2 z-50 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-card-border bg-card-background text-text-primary shadow-2xl overflow-hidden outline-none max-sm:max-w-[calc(100%-2rem)]"

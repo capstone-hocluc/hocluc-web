@@ -56,14 +56,6 @@ function emptyPage(): UserListPage {
   return { content: [], pageNumber: 0, pageSize: PAGE_SIZE, totalElements: 0, totalPages: 0, last: true }
 }
 
-const normalize = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[đĐ]/g, 'd')
-    .toLocaleLowerCase('vi-VN')
-    .trim()
-
 interface UserManagementProps {
   /** Students are the platform's customers and personnel run it, so each has its own list. */
   audience: 'staff' | 'students'
@@ -95,45 +87,39 @@ function UserManagement({ audience, readOnly = false, canCreateUsers = false }: 
   useEffect(() => {
     let ignore = false
 
-    // The request lifecycle starts when the server-side filters or page change.
+    // The request lifecycle starts when the server-side filters, search, or page change.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setError('')
 
-    getUsers({
-      page,
-      size: PAGE_SIZE,
-      role: students ? 'STUDENT' : roleFilter === 'ALL' ? undefined : roleFilter,
-      excludeRole: students ? undefined : 'STUDENT',
-      status: statusFilter === 'ALL' ? undefined : statusFilter,
-      sort: 'createdAt,desc',
-    })
-      .then((nextPage) => {
-        if (!ignore) setPageData(nextPage)
+    const timer = window.setTimeout(() => {
+      getUsers({
+        page,
+        size: PAGE_SIZE,
+        role: students ? 'STUDENT' : roleFilter === 'ALL' ? undefined : roleFilter,
+        excludeRole: students ? undefined : 'STUDENT',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+        query: query.trim() || undefined,
+        sort: 'createdAt,desc',
       })
-      .catch((requestError: unknown) => {
-        if (!ignore) setError(getErrorMessage(requestError))
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false)
-      })
+        .then((nextPage) => {
+          if (!ignore) setPageData(nextPage)
+        })
+        .catch((requestError: unknown) => {
+          if (!ignore) setError(getErrorMessage(requestError))
+        })
+        .finally(() => {
+          if (!ignore) setLoading(false)
+        })
+    }, query.trim() ? 250 : 0)
 
     return () => {
       ignore = true
+      window.clearTimeout(timer)
     }
-  }, [page, reloadKey, roleFilter, statusFilter, students])
+  }, [page, query, reloadKey, roleFilter, statusFilter, students])
 
-  const visibleUsers = useMemo(() => {
-    const needle = normalize(query)
-    if (!needle) return pageData.content
-    return pageData.content.filter((user) =>
-      normalize(
-        [user.email, user.displayName, user.firstName, user.lastName, ...grantedRoles(user).map((role) => ROLE_LABELS[role])]
-          .filter(Boolean)
-          .join(' ')
-      ).includes(needle)
-    )
-  }, [pageData.content, query])
+  const visibleUsers = pageData.content
 
   const updateUserInPage = useCallback((userId: string, updated: UserProfile) => {
     setPageData((current) => ({
@@ -342,7 +328,10 @@ function UserManagement({ audience, readOnly = false, canCreateUsers = false }: 
           ariaLabel="Tìm theo tên hoặc email"
           placeholder="Tìm theo tên hoặc email..."
           value={query}
-          onChange={setQuery}
+          onChange={(value) => {
+            setQuery(value)
+            setPage(0)
+          }}
         />
         <FilterGroup>
           {!students && (
@@ -374,28 +363,32 @@ function UserManagement({ audience, readOnly = false, canCreateUsers = false }: 
         </FilterGroup>
       </FilterToolbar>
 
-      {feedback && (
-        <div
-          className="mx-5 mt-4 flex items-center gap-2 rounded-lg bg-badge-success-bg px-3 py-2 text-sm text-badge-success-text"
-          role="status"
-        >
-          <CheckCircle2 size={16} />
-          {feedback}
-        </div>
-      )}
+      {(feedback || error) && (
+        <div className="flex flex-col gap-2 px-5 py-4">
+          {feedback && (
+            <div
+              className="flex items-center gap-2 rounded-lg bg-badge-success-bg px-3 py-2 text-sm text-badge-success-text"
+              role="status"
+            >
+              <CheckCircle2 size={16} />
+              {feedback}
+            </div>
+          )}
 
-      {error && (
-        <div
-          className="mx-5 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-badge-danger-bg px-3 py-2 text-sm text-badge-danger-text"
-          role="alert"
-        >
-          <span className="flex items-center gap-2">
-            <AlertCircle size={16} />
-            {error}
-          </span>
-          <Button variant="danger" appearance="ghost" size="sm" onClick={() => setReloadKey((current) => current + 1)}>
-            Thử lại
-          </Button>
+          {error && (
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-badge-danger-bg px-3 py-2 text-sm text-badge-danger-text"
+              role="alert"
+            >
+              <span className="flex items-center gap-2">
+                <AlertCircle size={16} />
+                {error}
+              </span>
+              <Button variant="danger" appearance="ghost" size="sm" onClick={() => setReloadKey((current) => current + 1)}>
+                Thử lại
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
