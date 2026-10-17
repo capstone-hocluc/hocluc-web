@@ -1,4 +1,6 @@
-import { ApiError, request, type ApiResponse } from '../lib/api'
+import { accessTokenRole, ApiError, request, type ApiResponse } from '../lib/api'
+import { can, ROLE_PERMISSIONS } from '../lib/permissions'
+import type { UserRole } from './userService'
 
 export type TeacherQuizType = 'PLACEMENT' | 'QUICK' | 'LESSON' | 'CHAPTER' | 'EXAM'
 export type TeacherQuizStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
@@ -199,9 +201,20 @@ function isTeacherQuizQuestion(value: unknown): value is TeacherQuizQuestion {
 }
 
 async function requireData<T>(path: string, fallback: string, options?: Parameters<typeof request<T>>[1]): Promise<T> {
-  const response = await request<T>(path, { auth: true, ...options })
+  if (options?.method && options.method !== 'GET') assertQuizWriteAccess()
+  const response = await request<T>(path, { auth: true, guardIdentity: true, ...options })
   if (!response.data) throw new Error(fallback)
   return response.data
+}
+
+// Check again for every write, including later requests of a multi-step save after
+// an active-role switch. No grants are inferred from the /teacher URL or scopes
+// belonging to another role. BE remains authoritative for entity/state checks.
+export function assertQuizWriteAccess(): void {
+  const role = accessTokenRole()
+  if (!role || !Object.hasOwn(ROLE_PERMISSIONS, role) || !can(role as UserRole, 'QUIZ_WRITE')) {
+    throw new ApiError('Vai trò đang dùng không được quản lý bài kiểm tra.', 403)
+  }
 }
 
 const quizPath = (quizId?: string) =>
@@ -225,7 +238,8 @@ export function updateTeacherQuiz(quizId: string, payload: UpdateTeacherQuizRequ
 }
 
 export async function deleteTeacherQuiz(quizId: string): Promise<void> {
-  await request(quizPath(quizId), { method: 'DELETE', auth: true })
+  assertQuizWriteAccess()
+  await request(quizPath(quizId), { method: 'DELETE', auth: true, guardIdentity: true })
 }
 
 export function publishTeacherQuiz(quizId: string): Promise<TeacherQuizRecord> {
@@ -328,11 +342,13 @@ export async function updateTeacherQuizQuestion(questionId: string, payload: Sav
 }
 
 export async function deleteTeacherQuizQuestion(questionId: string): Promise<void> {
+  assertQuizWriteAccess()
   let response: ApiResponse<unknown>
   try {
     response = await request(`/api/v1/teacher/questions/${encodeURIComponent(questionId)}`, {
       method: 'DELETE',
       auth: true,
+      guardIdentity: true,
     })
   } catch (error) {
     if (isDefiniteTeacherQuestionWriteRejection(error)) throw error

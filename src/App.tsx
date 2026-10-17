@@ -55,6 +55,12 @@ function App() {
       return 'management-login'
     }
     const path = stripConsolePrefix(rawPath)
+    const quizRoute = path.match(/^\/(admin|staff|manager|teacher|mentor)\/(quizzes|mock-exams)(?:\/(new|[0-9a-f-]+)(?:\/(edit))?)?$/i)
+    if (quizRoute) {
+      const [, area, screen, target, edit] = quizRoute
+      const page = !target ? screen : target === 'new' ? `${screen}-new` : `${screen}-${edit ? 'edit' : 'view'}-${target}`
+      return `${area}-${page}`
+    }
     const profileMatch = path.match(/^\/(admin|staff|manager|mentor|teacher)\/profile$/)
     if (profileMatch) return `${profileMatch[1]}-profile`
     if (path === '/staff/dashboard') return 'staff-dashboard'

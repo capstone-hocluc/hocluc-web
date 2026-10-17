@@ -25,7 +25,8 @@ import {
   MentorSolutionQueue,
   MentorStudents,
 } from './role-screens'
-import { QuestionReview } from './quiz-review-screens'
+import QuizConsoleScreen from './quiz/QuizConsoleScreen'
+import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import { buildNavSections, canWrite, findNavItem, navLabel } from '../../lib/console-nav'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
@@ -53,11 +54,13 @@ export function ManagementScreen({
   conversationId,
   onSelectConversation = () => undefined,
 }: ManagementScreenProps) {
-  const item = findNavItem(role, page)
+  const item = findNavItem(role, quizMenuPage(page))
   if (!item) return <ForbiddenPage />
   const title = navLabel(role, item)
   if (item.soon) return <ComingSoonPage title={title} />
   const readOnly = !canWrite(role, page)
+
+  if (isQuizPage(page)) return <QuizConsoleScreen role={role} page={page} onNavigate={onNavigate} />
 
   switch (page) {
     case 'dashboard':
@@ -99,8 +102,6 @@ export function ManagementScreen({
       return <CategoryManagement readOnly={readOnly} />
     case 'courses':
       return <ManagementCourseList readOnly={readOnly} title={title} />
-    case 'question-review':
-      return <QuestionReview />
     case 'schedules':
       return (
         <Suspense fallback={<SchedulingPageFallback title={title} />}>
@@ -191,7 +192,7 @@ function ManagementDashboard({
   return (
     <ConsoleShell
       sections={buildNavSections(role)}
-      activeKey={page}
+      activeKey={quizMenuPage(page)}
       onNavigate={onNavigate}
       onOpenProfile={() => onNavigate('profile')}
       onLogout={onLogout}

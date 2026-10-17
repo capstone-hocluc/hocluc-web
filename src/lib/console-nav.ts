@@ -167,21 +167,31 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     soon: true,
   },
   {
+    page: 'quizzes',
+    label: 'Bài kiểm tra',
+    icon: ClipboardCheck,
+    group: 'content',
+    permission: 'QUIZ_READ',
+    writePermission: 'QUIZ_WRITE',
+  },
+  {
     page: 'question-review',
     label: 'Duyệt câu hỏi',
+    labels: { TEACHER: 'Câu hỏi cần kiểm tra' },
     icon: ListChecks,
     group: 'content',
-    permission: 'QUESTION_APPROVE',
+    permission: 'QUIZ_READ',
+    writePermission: 'QUIZ_WRITE',
     badgeKey: 'questionReview',
   },
-  // Only the teacher has a mock-exam screen so far.
+  // Shared quiz screens follow BE quiz rights, independently of course/taxonomy writes.
   {
     page: 'mock-exams',
     label: 'Bài thi thử',
     icon: ClipboardCheck,
     group: 'content',
-    permission: 'CONTENT_WRITE',
-    roles: ['TEACHER'],
+    permission: 'QUIZ_READ',
+    writePermission: 'QUIZ_WRITE',
   },
 
   {
@@ -275,8 +285,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     label: 'Bài làm học viên',
     icon: BookOpenCheck,
     group: 'review',
-    permission: 'REVIEW_QUEUE_HANDLE',
-    roles: ['TEACHER'],
+    permission: 'QUIZ_READ',
   },
   {
     page: 'solution-queue',

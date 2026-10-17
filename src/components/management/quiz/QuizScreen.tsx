@@ -1,5 +1,8 @@
+import { useQuizAccess } from '../../../hooks/useQuizAccess'
+import { ForbiddenPage } from '../../console/access-states'
+import QuizDetails from './QuizDetails'
 import { useRef, useState } from 'react'
-import { matchesSearch } from '../../lib/search'
+import { matchesSearch } from '../../../lib/search'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -11,8 +14,9 @@ import {
   Send,
   Trash2,
   X,
-} from '../console/icons'
-import { getCourseDetail, getMainCourses, type Course, type CourseDetail, type CourseLesson } from '../../services/courseService'
+} from '../../console/icons'
+import { getQuizCourseLessons, getQuizCourses } from '../../../services/quizCourseService'
+import type { CourseAdmin } from '../../../services/courseAdminService'
 import {
   addTeacherQuizQuestions,
   AmbiguousTeacherQuestionSaveError,
@@ -30,22 +34,24 @@ import {
   type TeacherQuizEditor,
   type TeacherQuizQuestion,
   type TeacherQuizRecord,
-} from '../../services/teacherQuizService'
-import { getErrorMessage } from '../../lib/errors'
-import { ApiError } from '../../lib/api'
-import { usePageResource } from '../../hooks/usePageResource'
-import Button from '../console/button'
-import TeacherPageHeader from './TeacherPageHeader'
-import Card, { CardEyebrow, CardTitle } from '../console/card'
-import ConfirmDialog from '../console/confirm-dialog'
-import DropdownField from '../console/dropdown-field'
-import SearchFilterBar from '../console/search-filter-bar'
-import { Skeleton } from '../tailgrids/core/skeleton'
-import Notice from '../console/notice'
-import StatusBadge from '../console/status'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
+} from '../../../services/teacherQuizService'
+import { getErrorMessage } from '../../../lib/errors'
+import { ApiError } from '../../../lib/api'
+import { usePageResource } from '../../../hooks/usePageResource'
+import Button from '../../console/button'
+import TeacherPageHeader from '../../teacher/TeacherPageHeader'
+import Card, { CardEyebrow, CardTitle } from '../../console/card'
+import ConfirmDialog from '../../console/confirm-dialog'
+import DropdownField from '../../console/dropdown-field'
+import SearchFilterBar from '../../console/search-filter-bar'
+import { Skeleton } from '../../tailgrids/core/skeleton'
+import Notice from '../../console/notice'
+import StatusBadge from '../../console/status'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
 
 interface TeacherQuizProps {
+  readOnly?: boolean
+  initialEditorId?: string | null
   course: { id: string; name: string }
   onBack: () => void
   onAction: (message: string) => void
@@ -102,12 +108,13 @@ function quizIsLocked(quiz: TeacherQuizRecord | undefined) {
   return Boolean(quiz?.locked || (quiz?.attemptCount ?? 0) > 0)
 }
 
-function TeacherQuiz({ course, onBack, onAction, startCreating = false }: TeacherQuizProps) {
-  const quizzes = usePageResource(() => getTeacherQuizzes(), [])
+function QuizScreen({ course, onBack, onAction, startCreating = false, readOnly = true, initialEditorId = null }: TeacherQuizProps) {
+  const quizzes = usePageResource(() => getTeacherQuizzes(course.id || undefined), [course.id])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<(typeof QUIZ_STATUS_FILTERS)[number]>('Tất cả')
-  const [editorQuizId, setEditorQuizId] = useState<string | null>(null)
-  const [creating, setCreating] = useState(startCreating)
+  const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
+  const [creating, setCreating] = useState(!readOnly && startCreating)
+  const [viewingId, setViewingId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
   const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
@@ -119,7 +126,7 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
     message: string,
     forceCopyAfterSuccess = false,
   ) => {
-    if (busyId) return
+    if (readOnly || busyId) return
     setBusyId(quiz.id)
     try {
       await operation()
@@ -138,7 +145,9 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
     }
   }
 
-  if (creating || editorQuizId) {
+  if (viewingId) return <QuizDetails quizId={viewingId} onBack={() => setViewingId(null)} />
+
+  if (!readOnly && (creating || editorQuizId)) {
     return (
       <TeacherQuizEditorScreen
         quizId={editorQuizId}
@@ -172,14 +181,14 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
   return (
     <section className="flex flex-col gap-5">
       <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
-        <ArrowLeft size={16} />Quay lại lớp học
+        <ArrowLeft size={16} />{course.id ? 'Quay lại lớp học' : 'Quay lại tổng quan'}
       </Button>
-      <TeacherPageHeader title="Bài kiểm tra" actions={<Button onClick={() => setCreating(true)}><Plus size={16} />Tạo quiz</Button>} />
+      <TeacherPageHeader title="Bài kiểm tra" actions={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />Tạo quiz</Button>} />
 
       <Card as="section" padding="lg" aria-labelledby="teacher-quiz-list-title">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardEyebrow>SOẠN VÀ QUẢN LÝ</CardEyebrow>
+            <CardEyebrow>{readOnly ? 'BÀI KIỂM TRA ĐƯỢC PHÂN CÔNG' : 'SOẠN VÀ QUẢN LÝ'}</CardEyebrow>
             <CardTitle id="teacher-quiz-list-title" className="text-base">Danh sách quiz</CardTitle>
           </div>
         </div>
@@ -201,7 +210,7 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
           </div>
         ) : quizzes.status !== 'ready' ? (
           <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
-            <p className="m-0 text-sm text-text-tertiary">{quizzes.errorMessage || 'Không thể tải danh sách quiz.'}</p>
+            <p className="m-0 text-sm text-text-tertiary">{quizzes.status === 'forbidden' ? 'Tài khoản hiện tại không có quyền xem các bài kiểm tra này.' : quizzes.errorMessage || 'Không thể tải danh sách quiz.'}</p>
             <Button appearance="outline" className="mt-3 min-h-11" onClick={refresh}>Thử lại</Button>
           </div>
         ) : quizItems.length === 0 ? (
@@ -211,7 +220,7 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
               {hasActiveFilters ? 'Không tìm thấy quiz phù hợp' : 'Chưa có quiz nào'}
             </strong>
             <p className="mt-1 mb-0 text-sm text-text-tertiary">
-              {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : 'Tạo quiz nhanh gắn với một bài học để bắt đầu.'}
+              {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : readOnly ? 'Bài kiểm tra sẽ xuất hiện khi bạn được phân công khóa học.' : 'Tạo quiz nhanh gắn với một bài học để bắt đầu.'}
             </p>
           </div>
         ) : (
@@ -239,6 +248,8 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2 md:justify-end">
+                  <Button appearance="outline" onClick={() => setViewingId(quiz.id)}>Xem nội dung</Button>
+                  {!readOnly && <>
                   <Button
                     className="min-h-11 flex-1 sm:flex-none"
                     disabled={busyId !== null}
@@ -295,6 +306,7 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </>}
                 </div>
               </article>
             ))}
@@ -302,7 +314,7 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
         )}
       </Card>
 
-      {confirmDelete && (
+      {!readOnly && confirmDelete && (
         <ConfirmDialog
           title="Xóa quiz?"
           description={<>Quiz <strong>{confirmDelete.title}</strong> sẽ bị xóa khỏi danh sách.</>}
@@ -314,6 +326,7 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
           busyLabel="Đang xóa..."
           onCancel={() => setConfirmDelete(null)}
           onConfirm={async () => {
+            if (readOnly) return
             const target = confirmDelete
             setBusyId(target.id)
             try {
@@ -344,7 +357,9 @@ function TeacherQuizEditorScreen({
   onCancel: () => void
   onSaved: (message: string) => void
 }) {
-  const editor = usePageResource(() => quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId])
+  const access = useQuizAccess()
+  const editor = usePageResource(() => access.canWrite && quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
+  if (!access.canWrite) return <ForbiddenPage />
   if (quizId && editor.status === 'loading') {
     return <div className="flex flex-col gap-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-56" /><Skeleton className="h-64" /></div>
   }
@@ -381,6 +396,7 @@ function TeacherQuizEditorForm({
   onCancel: () => void
   onSaved: (message: string) => void
 }) {
+  const access = useQuizAccess()
   const initialQuiz = initial?.quiz
   const initialQuestionsRef = useRef<TeacherQuizEditor | null>(initial)
   const [serverQuizId, setServerQuizId] = useState<string | null>(initialQuiz?.id ?? null)
@@ -399,20 +415,16 @@ function TeacherQuizEditorForm({
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
 
   const courseCatalog = usePageResource(async () => {
-    if (initialQuiz) return [] as Course[]
-    const response = await getMainCourses()
-    if (!response.data) throw new Error('Không thể tải danh sách khóa học.')
-    return response.data
+    if (initialQuiz) return [] as CourseAdmin[]
+    return getQuizCourses()
   }, [Boolean(initialQuiz)])
 
   const routeCourseId = UUID_PATTERN.test(course.id) ? course.id : ''
   const activeCourseId = selectedCourseId ?? routeCourseId
 
-  const courseDetail = usePageResource(async (): Promise<CourseDetail | null> => {
+  const courseDetail = usePageResource(async () => {
     if (!activeCourseId || initialQuiz) return null
-    const response = await getCourseDetail(activeCourseId)
-    if (!response.data) throw new Error('Không thể tải nội dung khóa học.')
-    return response.data
+    return getQuizCourseLessons(activeCourseId)
   }, [activeCourseId, Boolean(initialQuiz)])
 
   const activeCourseDetail = courseDetail.data?.id === activeCourseId ? courseDetail.data : null
@@ -424,13 +436,7 @@ function TeacherQuizEditorForm({
   const courseCatalogError = getResourceErrorMessage(courseCatalog.status, courseCatalog.errorMessage, 'danh sách khóa học')
   const courseDetailHasError = ['error', 'forbidden', 'not-found'].includes(courseDetail.status)
   const courseDetailError = getResourceErrorMessage(courseDetail.status, courseDetail.errorMessage, 'bài học')
-  const lessonOptions: Array<CourseLesson & { pathLabel: string }> = (activeCourseDetail?.phases ?? [])
-    .flatMap((phase) => phase.sections.flatMap((section) => section.chapters.flatMap((chapter) =>
-      chapter.lessons.map((lesson) => ({
-        ...lesson,
-        pathLabel: [phase.name, section.title, chapter.title, lesson.title].filter(Boolean).join(' · '),
-      }))
-    )))
+  const lessonOptions = activeCourseDetail?.lessons ?? []
   const effectiveLessonId = lessonOptions.some((lesson) => lesson.id === selectedLessonId)
     ? selectedLessonId
     : ''
@@ -453,7 +459,7 @@ function TeacherQuizEditorForm({
   }
 
   const saveQuiz = async (publish: boolean) => {
-    if (busy) return
+    if (!access.canWrite || busy) return
     if (ambiguousQuestionSave) {
       setError('Kết quả lưu câu hỏi chưa rõ. Hãy quay về danh sách và mở lại quiz để kiểm tra; không gửi lại biểu mẫu này.')
       return
@@ -926,4 +932,4 @@ function serverQuestionSignature(question: TeacherQuizQuestion) {
   })
 }
 
-export default TeacherQuiz
+export default QuizScreen

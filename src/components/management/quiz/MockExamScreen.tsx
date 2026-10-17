@@ -1,6 +1,9 @@
+import { useQuizAccess } from '../../../hooks/useQuizAccess'
+import { ForbiddenPage } from '../../console/access-states'
+import QuizDetails from './QuizDetails'
 import { useRef, useState } from 'react'
-import { matchesSearch } from '../../lib/search'
-import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { matchesSearch } from '../../../lib/search'
+import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import {
   ArrowDown,
   ArrowLeft,
@@ -18,8 +21,9 @@ import {
   Trash2,
   Users,
   X,
-} from '../console/icons'
-import { getMainCourses, type Course } from '../../services/courseService'
+} from '../../console/icons'
+import { getQuizCourses } from '../../../services/quizCourseService'
+import type { CourseAdmin } from '../../../services/courseAdminService'
 import {
   addTeacherQuizQuestions,
   AmbiguousTeacherQuestionSaveError,
@@ -41,22 +45,25 @@ import {
   type TeacherQuizQuestion,
   type TeacherQuizRecord,
   type TeacherQuizSectionSpec,
-} from '../../services/teacherQuizService'
-import { ApiError } from '../../lib/api'
-import { getErrorMessage } from '../../lib/errors'
-import { usePageResource } from '../../hooks/usePageResource'
-import Button from '../console/button'
-import TeacherPageHeader from './TeacherPageHeader'
-import Card, { CardEyebrow, CardTitle } from '../console/card'
-import ConfirmDialog from '../console/confirm-dialog'
-import DropdownField from '../console/dropdown-field'
-import SearchFilterBar from '../console/search-filter-bar'
-import { Skeleton } from '../tailgrids/core/skeleton'
-import Notice from '../console/notice'
-import StatusBadge from '../console/status'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
+} from '../../../services/teacherQuizService'
+import { ApiError } from '../../../lib/api'
+import { getErrorMessage } from '../../../lib/errors'
+import { usePageResource } from '../../../hooks/usePageResource'
+import Button from '../../console/button'
+import TeacherPageHeader from '../../teacher/TeacherPageHeader'
+import Card, { CardEyebrow, CardTitle } from '../../console/card'
+import ConfirmDialog from '../../console/confirm-dialog'
+import DropdownField from '../../console/dropdown-field'
+import SearchFilterBar from '../../console/search-filter-bar'
+import { Skeleton } from '../../tailgrids/core/skeleton'
+import Notice from '../../console/notice'
+import StatusBadge from '../../console/status'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
 
 interface TeacherMockExamsProps {
+  readOnly?: boolean
+  startCreating?: boolean
+  initialEditorId?: string | null
   onBack: () => void
   onAction: (message: string) => void
 }
@@ -432,12 +439,13 @@ function sameLayout(a: TeacherQuizSectionSpec[], b: TeacherQuizSectionSpec[]) {
   ]))
 }
 
-function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
+function MockExamScreen({ onBack, onAction, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
   const quizzes = usePageResource(() => getTeacherQuizzes(), [])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('Tất cả')
-  const [creating, setCreating] = useState(false)
-  const [editorQuizId, setEditorQuizId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(!readOnly && startCreating)
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
   const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
@@ -449,7 +457,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
     successMessage: string,
     forceCopyAfterSuccess = false,
   ) => {
-    if (busyId) return
+    if (readOnly || busyId) return
     setBusyId(quiz.id)
     try {
       await operation()
@@ -471,13 +479,14 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
   }
 
   const openExamForEdit = async (exam: TeacherQuizRecord) => {
+    if (readOnly) return
     const shouldDuplicate =
       exam.status !== 'DRAFT' || isLocked(exam) || forceCopyIds.has(exam.id)
     if (!shouldDuplicate) {
       setEditorQuizId(exam.id)
       return
     }
-    if (busyId) return
+    if (readOnly || busyId) return
     setBusyId(exam.id)
     try {
       const copy = await duplicateTeacherQuiz(exam.id)
@@ -491,7 +500,9 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
     }
   }
 
-  if (creating || editorQuizId) {
+  if (viewingId) return <QuizDetails quizId={viewingId} onBack={() => setViewingId(null)} />
+
+  if (!readOnly && (creating || editorQuizId)) {
     return (
       <TeacherMockExamEditor
         quizId={editorQuizId}
@@ -526,7 +537,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
       <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
         <ArrowLeft size={16} />Quay lại tổng quan
       </Button>
-      <TeacherPageHeader title="Bài thi thử" actions={<Button className="min-h-11" onClick={() => setCreating(true)}><Plus size={16} />Tạo đề thi thử</Button>} />
+      <TeacherPageHeader title="Bài thi thử" actions={!readOnly && <Button className="min-h-11" onClick={() => setCreating(true)}><Plus size={16} />Tạo đề thi thử</Button>} />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="flex items-center gap-3" padding="md">
@@ -545,7 +556,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
 
       <Card as="section" padding="lg" aria-labelledby="teacher-exam-list-title">
         <div className="mb-4">
-          <CardEyebrow>SOẠN VÀ QUẢN LÝ</CardEyebrow>
+          <CardEyebrow>{readOnly ? 'ĐỀ THI ĐƯỢC PHÂN CÔNG' : 'SOẠN VÀ QUẢN LÝ'}</CardEyebrow>
           <CardTitle id="teacher-exam-list-title" className="text-base">Danh sách đề thi thử</CardTitle>
         </div>
         <SearchFilterBar
@@ -580,7 +591,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
               {hasActiveFilters ? 'Không tìm thấy đề thi phù hợp' : 'Chưa có đề thi thử'}
             </strong>
             <p className="mt-1 mb-0 text-sm text-text-tertiary">
-              {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : 'Tạo đề thi thử đầu tiên cho một khóa học chính.'}
+              {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : readOnly ? 'Đề thi sẽ xuất hiện khi bạn được phân công khóa học.' : 'Tạo đề thi thử đầu tiên cho một khóa học chính.'}
             </p>
           </div>
         ) : (
@@ -607,6 +618,8 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2 md:justify-end">
+                  <Button appearance="outline" onClick={() => setViewingId(exam.id)}>Xem nội dung</Button>
+                  {!readOnly && <>
                   <Button
                     className="min-h-11 flex-1 sm:flex-none"
                     disabled={busyId !== null}
@@ -650,6 +663,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </>}
                 </div>
               </article>
             ))}
@@ -657,7 +671,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
         )}
       </Card>
 
-      {confirmDelete && (
+      {!readOnly && confirmDelete && (
         <ConfirmDialog
           title="Xóa đề thi thử?"
           description={<>Đề <strong>{confirmDelete.title}</strong> sẽ bị xóa khỏi danh sách.</>}
@@ -669,6 +683,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
           busyLabel="Đang xóa..."
           onCancel={() => setConfirmDelete(null)}
           onConfirm={async () => {
+            if (readOnly) return
             const target = confirmDelete
             setBusyId(target.id)
             try {
@@ -697,7 +712,9 @@ function TeacherMockExamEditor({
   onCancel: () => void
   onSaved: (message: string) => void
 }) {
-  const editor = usePageResource(() => quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId])
+  const access = useQuizAccess()
+  const editor = usePageResource(() => access.canWrite && quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
+  if (!access.canWrite) return <ForbiddenPage />
   if (quizId && editor.status === 'loading') {
     return <div className="flex flex-col gap-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48" /><Skeleton className="h-72" /></div>
   }
@@ -737,6 +754,7 @@ function TeacherMockExamForm({
   onCancel: () => void
   onSaved: (message: string) => void
 }) {
+  const access = useQuizAccess()
   const { profile: currentUser } = useCurrentUser()
   const originalEditorRef = useRef<TeacherQuizEditor | null>(initial)
   const initialQuiz = initial?.quiz ?? null
@@ -763,10 +781,8 @@ function TeacherMockExamForm({
   const pendingCreateRef = useRef<PendingExamCreate | null>(null)
 
   const courseCatalog = usePageResource(async () => {
-    if (initialQuiz) return [] as Course[]
-    const response = await getMainCourses()
-    if (!response.data) throw new Error('Không thể tải danh sách khóa học chính.')
-    return response.data
+    if (initialQuiz) return [] as CourseAdmin[]
+    return getQuizCourses('MAIN')
   }, [Boolean(initialQuiz)])
 
   const settingsLocked = isLocked(quizSnapshot)
@@ -904,6 +920,7 @@ function TeacherMockExamForm({
   }
 
   const save = async (publish: boolean) => {
+    if (!access.canWrite) return
     if (busy) return
     if (publishedQuiz) {
       setError('Đề đã xuất bản hoặc lưu trữ chỉ xem. Tạo bản nháp để chỉnh sửa nội dung.')
@@ -1491,4 +1508,4 @@ function TeacherMockExamForm({
   )
 }
 
-export default TeacherMockExams
+export default MockExamScreen

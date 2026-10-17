@@ -7,6 +7,16 @@
 
 export const CONSOLE_LOGIN_PATH = '/console/login'
 
+export function quizMenuPage(page: string): string {
+  if (/^(quizzes(?:-|$)|quiz-)/.test(page)) return 'quizzes'
+  if (/^mock-exams(?:-|$)/.test(page)) return 'mock-exams'
+  return page
+}
+
+export function isQuizPage(page: string): boolean {
+  return ['quizzes', 'mock-exams', 'question-review', 'attempts'].includes(quizMenuPage(page))
+}
+
 const LEGACY_AREA = /^\/(admin|manager|staff|teacher|mentor)(?=\/|$)/
 const LEGACY_LOGIN = /^\/(admin|management)\/login\/?$/
 
