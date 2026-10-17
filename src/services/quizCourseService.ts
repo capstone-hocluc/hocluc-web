@@ -19,15 +19,12 @@ export async function getQuizCourses(type?: CourseType): Promise<CourseAdmin[]> 
   return courses
 }
 
-export async function getQuizCourseLessons(courseId: string) {
+export async function getQuizCourseChapters(courseId: string) {
   const course = await getAdminCourse(courseId)
   const chapters = await getAdminChapters(courseId)
-  const groups = await Promise.all(chapters.map(async (chapter) =>
-    (await getAdminLessons(chapter.id)).map((lesson) => ({
-      id: lesson.id,
-      title: lesson.title,
-      pathLabel: [chapter.title, lesson.title].join(' · '),
-    }))
-  ))
-  return { id: course.id, title: course.title, lessons: groups.flat() }
+  return { id: course.id, title: course.title, chapters }
+}
+
+export async function getQuizChapterLessons(chapterId: string) {
+  return { chapterId, lessons: await getAdminLessons(chapterId) }
 }

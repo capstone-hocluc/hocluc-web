@@ -2,36 +2,70 @@ import { usePageResource } from '../../../hooks/usePageResource'
 import { getTeacherQuiz } from '../../../services/teacherQuizService'
 import Button from '../../console/button'
 import Card, { CardTitle } from '../../console/card'
+import PageHeading from '../../console/page-heading'
+import Status from '../../console/status'
+import { ArrowLeft, CheckCircle2 } from '../../console/icons'
+import { cn } from '../../../lib/cn'
+import { quizTypeLabel, quizRequirement } from '../../../lib/quiz-types'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
+
+const statusLabels = { DRAFT: 'Bản nháp', PUBLISHED: 'Đã xuất bản', ARCHIVED: 'Đã lưu trữ' }
 
 /** Read the existing editor response without mounting any editor or write handler. */
 export default function QuizDetails({ quizId, onBack }: { quizId: string; onBack: () => void }) {
   const resource = usePageResource(() => getTeacherQuiz(quizId), [quizId])
+  const editor = resource.status === 'ready' ? resource.data : null
+  const quiz = editor?.quiz
   return (
-    <section className="flex flex-col gap-5">
-      <Button appearance="ghost" onClick={onBack}>Quay lại danh sách</Button>
+    <section className="flex min-w-0 flex-col gap-5">
+      <Button appearance="ghost" size="sm" className="self-start" onClick={onBack}><ArrowLeft size={16} />Quay lại danh sách</Button>
+      <PageHeading title="Nội dung bài kiểm tra" subtitle="Xem câu hỏi, đáp án và thông tin bài kiểm tra." readOnly />
       <ScheduleResourceState status={resource.status} errorMessage={resource.errorMessage}
         onRetry={resource.reload} empty={resource.status === 'ready' && !resource.data}
         emptyMessage="Không có dữ liệu bài kiểm tra.">
-        {resource.status === 'ready' && resource.data && <>
+        {editor && quiz && <>
           <Card padding="lg">
-            <CardTitle>{resource.data.quiz.title}</CardTitle>
-            <p className="mt-2 text-sm text-text-tertiary">
-              {[resource.data.quiz.courseTitle, resource.data.quiz.lessonTitle, resource.data.quiz.status,
-                `${resource.data.questions.length} câu`].filter(Boolean).join(' · ')}
-            </p>
-            {resource.data.quiz.description && <p className="mt-2 text-sm">{resource.data.quiz.description}</p>}
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg break-words">{quiz.title}</CardTitle>
+                <Status tone="info">{quizTypeLabel(quiz.type)}</Status>
+                <p className="text-sm text-text-tertiary">{[quiz.courseTitle, quiz.chapterTitle, quiz.lessonTitle].filter(Boolean).join(' · ') || 'Chưa gắn khóa học'}</p>
+                <p className="text-sm text-text-tertiary">{quizRequirement(quiz.type)}</p>
+              </div>
+              <Status tone={quiz.status === 'PUBLISHED' ? 'success' : quiz.status === 'DRAFT' ? 'warning' : 'neutral'}>{statusLabels[quiz.status]}</Status>
+            </div>
+            <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-card-border pt-4 lg:grid-cols-4">
+              {[
+                ['Câu hỏi', `${editor.questions.length} câu`],
+                ['Thời gian', quiz.durationMinutes ? `${quiz.durationMinutes} phút` : 'Không giới hạn'],
+                ['Số lần làm tối đa', quiz.maxAttempts ?? '—'],
+                ['Lượt làm bài', quiz.attemptCount],
+              ].map(([label, value]) => <div key={label} className="space-y-1">
+                <dt className="text-xs text-text-tertiary">{label}</dt>
+                <dd className="text-sm font-medium text-text-primary">{value}</dd>
+              </div>)}
+            </dl>
+            {quiz.description && <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-text-secondary">{quiz.description}</p>}
           </Card>
-          {resource.data.questions.length === 0 && <p className="text-sm text-text-tertiary">Chưa có câu hỏi.</p>}
-          {resource.data.questions.map((question) => <Card key={question.id} padding="lg">
-            <CardTitle>Câu {question.sequence}. {question.questionText}</CardTitle>
-            {question.imageUrl && <img src={question.imageUrl} alt="" className="mt-3 max-h-64 rounded-lg" />}
-            <ul className="mt-3 space-y-2 text-sm">
-              {question.options.map((option) => <li key={option.id}>
-                {option.label}. {option.text}{option.correct ? ' · Đáp án đúng' : ''}
+          {editor.questions.length === 0 && <Card><p className="py-5 text-center text-sm text-text-tertiary">Chưa có câu hỏi.</p></Card>}
+          {editor.questions.map((question) => <Card key={question.id} padding="lg" as="article">
+            <div className="mb-4 flex items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-background-gray-secondary text-sm font-semibold text-text-secondary">{question.sequence}</span>
+              <h2 className="min-w-0 pt-1 text-sm leading-6 font-medium whitespace-pre-wrap break-words text-text-primary">{question.questionText}</h2>
+            </div>
+            {question.imageUrl && <img src={question.imageUrl} alt={`Hình minh họa câu ${question.sequence}`} className="mb-4 max-h-64 max-w-full rounded-lg object-contain" />}
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {question.options.map((option) => <li key={option.id}
+                className={cn('flex items-start gap-3 rounded-lg border border-card-border p-3 text-sm', option.correct && 'border-badge-success-text/20 bg-badge-success-bg')}>
+                <span className="font-medium text-text-secondary">{option.label}.</span>
+                <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-text-primary">{option.text}</span>
+                {option.correct && <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-badge-success-text"><CheckCircle2 size={15} /><span className="sr-only sm:not-sr-only">Đáp án đúng</span></span>}
               </li>)}
             </ul>
-            {question.explanation && <p className="mt-3 text-sm text-text-tertiary">{question.explanation}</p>}
+            {question.explanation && <div className="mt-4 rounded-lg bg-background-gray-secondary p-4">
+              <h3 className="mb-1 text-xs font-semibold text-text-secondary">Giải thích / hướng dẫn chấm</h3>
+              <p className="text-sm leading-6 whitespace-pre-wrap break-words text-text-secondary">{question.explanation}</p>
+            </div>}
           </Card>)}
         </>}
       </ScheduleResourceState>

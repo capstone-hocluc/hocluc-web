@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef, RowData } from '@tanstack/react-table'
 import DataTable from './data-table'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from './filter-toolbar'
@@ -12,6 +12,7 @@ interface ListCardProps<T extends RowData> {
   searchPlaceholder: string
   searchText: (row: T) => string
   filter?: { ariaLabel: string; allLabel: string; options: string[]; get: (row: T) => string }
+  extraFilters?: ReactNode
   emptyMessage?: string
 }
 
@@ -22,6 +23,7 @@ function ListCard<T extends RowData>({
   searchPlaceholder,
   searchText,
   filter,
+  extraFilters,
   emptyMessage = 'Không có dữ liệu phù hợp.',
 }: ListCardProps<T>) {
   const [query, setQuery] = useState('')
@@ -39,14 +41,15 @@ function ListCard<T extends RowData>({
     <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
       <FilterToolbar>
         <SearchInput value={query} onChange={setQuery} placeholder={searchPlaceholder} />
-        {filter && (
+        {(filter || extraFilters) && (
           <FilterGroup>
-            <FilterSelect
+            {filter && <FilterSelect
               ariaLabel={filter.ariaLabel}
               value={filterValue}
               onChange={setFilterValue}
               options={[{ id: 'ALL', label: filter.allLabel }, ...filter.options.map((option) => ({ id: option, label: option }))]}
-            />
+            />}
+            {extraFilters}
           </FilterGroup>
         )}
       </FilterToolbar>

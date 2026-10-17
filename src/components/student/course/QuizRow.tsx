@@ -4,7 +4,8 @@ import { getQuizLockMessage } from '../../../lib/quizLock'
 import LearningStatus from '../common/LearningStatus'
 import LearningTypeIcon from '../common/LearningTypeIcon'
 import CurriculumRow from './CurriculumRow'
-import { getQuizKind, quizKindLabel } from '../../../lib/learningType'
+import { getQuizKind } from '../../../lib/learningType'
+import { quizTypeLabel } from '../../../lib/quiz-types'
 
 const statusText = 'text-[13px]'
 const rowIcon = 'size-10 rounded-xl [&>svg]:size-5'
@@ -27,7 +28,7 @@ function QuizRow({ quiz, lockMessage, onOpenQuiz }: QuizRowProps) {
   return (
     <CurriculumRow
       icon={<LearningTypeIcon type={kind} locked={quiz.locked} className={rowIcon} />}
-      kind={quizKindLabel(kind)}
+      kind={quizTypeLabel(quiz.type)}
       title={quiz.title}
       meta={meta.length > 0 ? meta.join(' · ') : undefined}
       locked={quiz.locked}

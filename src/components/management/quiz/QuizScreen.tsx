@@ -2,12 +2,13 @@ import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { ForbiddenPage } from '../../console/access-states'
 import QuizDetails from './QuizDetails'
 import { useRef, useState } from 'react'
-import { matchesSearch } from '../../../lib/search'
 import {
   ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  Eye,
   CheckCircle2,
   Copy,
-  FilePlus2,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -15,7 +16,8 @@ import {
   Trash2,
   X,
 } from '../../console/icons'
-import { getQuizCourseLessons, getQuizCourses } from '../../../services/quizCourseService'
+import { getQuizCourseChapters, getQuizChapterLessons, getQuizCourses } from '../../../services/quizCourseService'
+import { COURSE_QUIZ_TYPES, isCourseQuizType, quizTypeLabel, quizRequirement, type CourseQuizType } from '../../../lib/quiz-types'
 import type { CourseAdmin } from '../../../services/courseAdminService'
 import {
   addTeacherQuizQuestions,
@@ -27,6 +29,7 @@ import {
   getTeacherQuiz,
   getTeacherQuizzes,
   publishTeacherQuiz,
+  reorderTeacherQuizQuestions,
   unpublishTeacherQuiz,
   updateTeacherQuiz,
   updateTeacherQuizQuestion,
@@ -39,11 +42,17 @@ import { getErrorMessage } from '../../../lib/errors'
 import { ApiError } from '../../../lib/api'
 import { usePageResource } from '../../../hooks/usePageResource'
 import Button from '../../console/button'
-import TeacherPageHeader from '../../teacher/TeacherPageHeader'
-import Card, { CardEyebrow, CardTitle } from '../../console/card'
+import PageHeading from '../../console/page-heading'
+import { IconAction, RowActions } from '../../console/icon-action'
+import { fieldControlClass, textareaControlClass } from '../../console/form-field'
+import QuizCatalog from './QuizCatalog'
+import DragHandle from '../crud/drag-handle'
+import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
+import { cn } from '../../../lib/cn'
+import Card, { CardTitle } from '../../console/card'
 import ConfirmDialog from '../../console/confirm-dialog'
 import DropdownField from '../../console/dropdown-field'
-import SearchFilterBar from '../../console/search-filter-bar'
+import SelectField from '../../console/select-field'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import Notice from '../../console/notice'
 import StatusBadge from '../../console/status'
@@ -76,7 +85,6 @@ interface DraftQuestion {
 type QuizFieldError = 'title' | 'duration' | 'attempts' | 'target' | 'questions'
 
 const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']
-const QUIZ_STATUS_FILTERS = ['Tất cả', 'Bản nháp', 'Đã xuất bản', 'Đã lưu trữ'] as const
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function createDraftQuestion(): DraftQuestion {
@@ -110,8 +118,6 @@ function quizIsLocked(quiz: TeacherQuizRecord | undefined) {
 
 function QuizScreen({ course, onBack, onAction, startCreating = false, readOnly = true, initialEditorId = null }: TeacherQuizProps) {
   const quizzes = usePageResource(() => getTeacherQuizzes(course.id || undefined), [course.id])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<(typeof QUIZ_STATUS_FILTERS)[number]>('Tất cả')
   const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [creating, setCreating] = useState(!readOnly && startCreating)
   const [viewingId, setViewingId] = useState<string | null>(null)
@@ -167,91 +173,21 @@ function QuizScreen({ course, onBack, onAction, startCreating = false, readOnly 
     )
   }
 
-  const quizItems = (quizzes.data ?? []).filter((quiz) => {
-    if (quiz.type === 'EXAM' || quiz.type === 'PLACEMENT') return false
-    const matchesQuery = matchesSearch(search, quiz.title, quiz.courseTitle, quiz.lessonTitle)
-    const matchesStatus = statusFilter === 'Tất cả' ||
-      (statusFilter === 'Bản nháp' && quiz.status === 'DRAFT') ||
-      (statusFilter === 'Đã xuất bản' && quiz.status === 'PUBLISHED') ||
-      (statusFilter === 'Đã lưu trữ' && quiz.status === 'ARCHIVED')
-    return matchesQuery && matchesStatus
-  })
-  const hasActiveFilters = Boolean(search.trim()) || statusFilter !== 'Tất cả'
+  const quizItems = (quizzes.data ?? []).filter(quiz => quiz.type !== 'EXAM' && quiz.type !== 'PLACEMENT')
 
   return (
-    <section className="flex flex-col gap-5">
-      <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
-        <ArrowLeft size={16} />{course.id ? 'Quay lại lớp học' : 'Quay lại tổng quan'}
-      </Button>
-      <TeacherPageHeader title="Bài kiểm tra" actions={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />Tạo quiz</Button>} />
-
-      <Card as="section" padding="lg" aria-labelledby="teacher-quiz-list-title">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardEyebrow>{readOnly ? 'BÀI KIỂM TRA ĐƯỢC PHÂN CÔNG' : 'SOẠN VÀ QUẢN LÝ'}</CardEyebrow>
-            <CardTitle id="teacher-quiz-list-title" className="text-base">Danh sách quiz</CardTitle>
-          </div>
-        </div>
-        <SearchFilterBar
-          query={search}
-          onQueryChange={setSearch}
-          placeholder="Tìm theo tên quiz hoặc khóa học"
-          filter={statusFilter}
-          onFilterChange={(value) => setStatusFilter(value as (typeof QUIZ_STATUS_FILTERS)[number])}
-          filterOptions={QUIZ_STATUS_FILTERS}
-          resultCount={quizzes.status === 'ready' ? quizItems.length : undefined}
-          resultLabel="quiz"
-        />
-
-        {quizzes.status === 'loading' ? (
-          <div className="flex flex-col gap-3" aria-label="Đang tải danh sách quiz">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
-          </div>
-        ) : quizzes.status !== 'ready' ? (
-          <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
-            <p className="m-0 text-sm text-text-tertiary">{quizzes.status === 'forbidden' ? 'Tài khoản hiện tại không có quyền xem các bài kiểm tra này.' : quizzes.errorMessage || 'Không thể tải danh sách quiz.'}</p>
-            <Button appearance="outline" className="mt-3 min-h-11" onClick={refresh}>Thử lại</Button>
-          </div>
-        ) : quizItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-card-border bg-background-gray-secondary px-5 py-8 text-center">
-            <FilePlus2 className="mx-auto mb-2 text-primary" size={24} aria-hidden="true" />
-            <strong className="block text-sm text-text-primary">
-              {hasActiveFilters ? 'Không tìm thấy quiz phù hợp' : 'Chưa có quiz nào'}
-            </strong>
-            <p className="mt-1 mb-0 text-sm text-text-tertiary">
-              {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : readOnly ? 'Bài kiểm tra sẽ xuất hiện khi bạn được phân công khóa học.' : 'Tạo quiz nhanh gắn với một bài học để bắt đầu.'}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {quizItems.map((quiz) => (
-              <article key={quiz.id} className="flex flex-col gap-3 rounded-xl border border-card-border bg-card-background p-4 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="m-0 truncate text-sm font-medium text-text-primary">{quiz.title}</h2>
-                    <StatusBadge
-                      tone={quiz.status === 'PUBLISHED' ? 'success' : quiz.status === 'DRAFT' ? 'warning' : 'neutral'}
-                    >
-                    {quiz.status === 'PUBLISHED' ? 'Đã xuất bản' : quiz.status === 'DRAFT' ? 'Bản nháp' : 'Đã lưu trữ'}
-                  </StatusBadge>
-                    {quizIsLocked(quiz) && <StatusBadge tone="neutral">Đã có lượt thi</StatusBadge>}
-                  </div>
-                  <p className="mt-1 mb-0 text-xs text-text-tertiary">
-                    {[quiz.courseTitle, quiz.lessonTitle, `${quiz.questionCount} câu`, quiz.durationMinutes ? `${quiz.durationMinutes} phút` : null]
-                      .filter(Boolean).join(' · ')}
-                  </p>
-                  {quiz.status === 'DRAFT' && (quiz.publishProblems?.length ?? 0) > 0 && (
-                    <p className="mt-1 mb-0 text-xs text-text-tertiary">
-                      Cần hoàn thiện: {quiz.publishProblems?.join(', ')}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 md:justify-end">
-                  <Button appearance="outline" onClick={() => setViewingId(quiz.id)}>Xem nội dung</Button>
+    <section className="flex min-w-0 flex-col gap-5">
+      {course.id && <Button appearance="ghost" size="sm" className="self-start" onClick={onBack}><ArrowLeft size={16} />Quay lại lớp học</Button>}
+      <PageHeading title="Bài kiểm tra" readOnly={readOnly}
+        subtitle={readOnly ? 'Xem nội dung và theo dõi bài kiểm tra trong các khóa được phân công.' : 'Quản lý quiz nhanh, kiểm tra cuối bài và cuối chương theo khóa học.'}
+        action={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />Tạo bài kiểm tra</Button>} />
+      <QuizCatalog items={quizItems} status={quizzes.status}
+        errorMessage={quizzes.errorMessage} onRetry={refresh} readOnly={readOnly}
+        renderActions={(quiz) => <RowActions>
+                  <IconAction label="Xem nội dung" icon={Eye} onClick={() => setViewingId(quiz.id)} />
                   {!readOnly && <>
                   <Button
-                    className="min-h-11 flex-1 sm:flex-none"
+                    size="sm" appearance="ghost"
                     disabled={busyId !== null}
                     onClick={() => {
                       const duplicateBeforeEdit =
@@ -277,7 +213,7 @@ function QuizScreen({ course, onBack, onAction, startCreating = false, readOnly 
                   </Button>
                   <Button
                     appearance="outline"
-                    className="min-h-11 flex-1 sm:flex-none"
+                    size="sm"
                     disabled={busyId !== null}
                     onClick={() => runQuizAction(
                       quiz,
@@ -307,12 +243,7 @@ function QuizScreen({ course, onBack, onAction, startCreating = false, readOnly 
                     </DropdownMenuContent>
                   </DropdownMenu>
                   </>}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </Card>
+        </RowActions>} />
 
       {!readOnly && confirmDelete && (
         <ConfirmDialog
@@ -405,9 +336,12 @@ function TeacherQuizEditorForm({
   const [attempts, setAttempts] = useState(String(initialQuiz?.maxAttempts ?? 1))
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
   const [selectedLessonId, setSelectedLessonId] = useState('')
+  const [selectedChapterId, setSelectedChapterId] = useState('')
+  const [selectedType, setSelectedType] = useState<CourseQuizType>('QUICK')
   const [questions, setQuestions] = useState<DraftQuestion[]>(() =>
     initial?.questions.map(fromServerQuestion) ?? [createDraftQuestion()]
   )
+  const pendingQuestionFocus = useRef<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<QuizFieldError, string>>>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -424,10 +358,10 @@ function TeacherQuizEditorForm({
 
   const courseDetail = usePageResource(async () => {
     if (!activeCourseId || initialQuiz) return null
-    return getQuizCourseLessons(activeCourseId)
+    return getQuizCourseChapters(activeCourseId)
   }, [activeCourseId, Boolean(initialQuiz)])
 
-  const activeCourseDetail = courseDetail.data?.id === activeCourseId ? courseDetail.data : null
+  const activeCourseDetail = courseDetail.status === 'ready' && courseDetail.data?.id === activeCourseId ? courseDetail.data : null
   const courseOptions = (courseCatalog.data ?? []).map((item) => ({ id: item.id, label: item.title }))
   if (routeCourseId && activeCourseId === routeCourseId && activeCourseDetail && !courseOptions.some((option) => option.id === routeCourseId)) {
     courseOptions.unshift({ id: routeCourseId, label: activeCourseDetail.title })
@@ -435,8 +369,15 @@ function TeacherQuizEditorForm({
   const courseCatalogHasError = ['error', 'forbidden', 'not-found'].includes(courseCatalog.status)
   const courseCatalogError = getResourceErrorMessage(courseCatalog.status, courseCatalog.errorMessage, 'danh sách khóa học')
   const courseDetailHasError = ['error', 'forbidden', 'not-found'].includes(courseDetail.status)
-  const courseDetailError = getResourceErrorMessage(courseDetail.status, courseDetail.errorMessage, 'bài học')
-  const lessonOptions = activeCourseDetail?.lessons ?? []
+  const courseDetailError = getResourceErrorMessage(courseDetail.status, courseDetail.errorMessage, 'chương')
+  const chapterOptions = activeCourseDetail?.chapters ?? []
+  const effectiveChapterId = chapterOptions.some(chapter => chapter.id === selectedChapterId) ? selectedChapterId : ''
+  const needsLesson = selectedType !== 'CHAPTER'
+  const chapterLessons = usePageResource(() => !initialQuiz && needsLesson && effectiveChapterId
+    ? getQuizChapterLessons(effectiveChapterId) : Promise.resolve(null), [Boolean(initialQuiz), needsLesson, effectiveChapterId])
+  const lessonOptions = chapterLessons.status === 'ready' && chapterLessons.data?.chapterId === effectiveChapterId ? chapterLessons.data.lessons : []
+  const lessonHasError = ['error', 'forbidden', 'not-found'].includes(chapterLessons.status)
+  const targetLocked = serverQuizId !== null || busy || ambiguousCreate || ambiguousQuestionSave
   const effectiveLessonId = lessonOptions.some((lesson) => lesson.id === selectedLessonId)
     ? selectedLessonId
     : ''
@@ -447,6 +388,27 @@ function TeacherQuizEditorForm({
     setFieldErrors((current) => ({ ...current, [field]: undefined }))
     setError('')
   }
+
+  const addQuestion = () => {
+    if (!access.canWrite || questionsLocked || busy) return
+    clearFieldError('questions')
+    const question = createDraftQuestion()
+    pendingQuestionFocus.current = question.clientId
+    setQuestions(items => [...items, question])
+  }
+  const reorderQuestions = (fromId: string, toId: string) => {
+    if (!access.canWrite || questionsLocked || busy) return
+    clearFieldError('questions')
+    setQuestions(items => {
+      const byId = new Map(items.map(item => [item.clientId, item]))
+      return arrayMove(items.map(item => item.clientId), fromId, toId).map(id => byId.get(id)!)
+    })
+  }
+  const shiftQuestion = (id: string, direction: -1 | 1) => {
+    const target = questions[questions.findIndex(item => item.clientId === id) + direction]
+    if (target) reorderQuestions(id, target.clientId)
+  }
+  const questionDrag = useDragReorder(reorderQuestions, shiftQuestion)
 
   const updateQuestion = (clientId: string, update: Partial<DraftQuestion>) => {
     clearFieldError('questions')
@@ -474,8 +436,8 @@ function TeacherQuizEditorForm({
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 999) {
       nextFieldErrors.attempts = 'Số lần thử tối đa phải từ 1 đến 999.'
     }
-    if (!serverQuizId && (!activeCourseId || !effectiveLessonId)) {
-      nextFieldErrors.target = 'Chọn khóa học và bài học để gắn quiz.'
+    if (!serverQuizId && (!activeCourseId || !effectiveChapterId || (needsLesson && !effectiveLessonId))) {
+      nextFieldErrors.target = needsLesson ? 'Chọn khóa học, chương và bài học.' : 'Chọn khóa học và chương.'
     }
 
     const questionsWithContent = questions.filter((question) =>
@@ -500,8 +462,8 @@ function TeacherQuizEditorForm({
     try {
       if (!quizId) {
         const created = await createTeacherQuiz({
-          type: 'QUICK',
-          lessonId: effectiveLessonId,
+          type: selectedType,
+          ...(needsLesson ? { lessonId: effectiveLessonId } : { chapterId: effectiveChapterId }),
           title: title.trim(),
           durationMinutes,
           maxAttempts,
@@ -567,10 +529,10 @@ function TeacherQuizEditorForm({
 
   return (
     <section className="flex flex-col gap-4">
-      <Button appearance="ghost" size="sm" type="button" onClick={onCancel}>
+      <Button appearance="ghost" size="sm" className="self-start" type="button" onClick={onCancel}>
         <ArrowLeft size={16} />Quay lại danh sách quiz
       </Button>
-      <TeacherPageHeader title={initialQuiz ? 'Chỉnh sửa quiz' : serverQuizId ? 'Hoàn thiện quiz nháp' : 'Tạo quiz nhanh'} />
+      <PageHeading title={initialQuiz ? 'Chỉnh sửa bài kiểm tra' : serverQuizId ? 'Hoàn thiện bản nháp' : 'Tạo bài kiểm tra'} />
 
       {ambiguousCreate && (
         <Notice tone="warning" role="alert" aria-live="assertive">
@@ -585,54 +547,56 @@ function TeacherQuizEditorForm({
 
       {!initialQuiz && (
         <Card as="section" padding="lg" aria-labelledby="quiz-target-title">
-          <CardTitle id="quiz-target-title" className="mb-3 text-base">Chọn vị trí quiz</CardTitle>
-          <div className="grid gap-3 md:grid-cols-2">
+          <CardTitle id="quiz-target-title" className="mb-3 text-base">Loại và vị trí bài kiểm tra</CardTitle>
+          <label className="mb-3 flex flex-col gap-1.5 text-sm font-medium text-text-primary">
+            Loại bài kiểm tra
+            <SelectField ariaLabel="Loại bài kiểm tra" className="w-full md:max-w-80" options={COURSE_QUIZ_TYPES} value={selectedType} disabled={targetLocked}
+              onChange={value => {
+                if (!isCourseQuizType(value) || targetLocked) return
+                setSelectedType(value)
+                if (value === 'CHAPTER') setSelectedLessonId('')
+                clearFieldError('target')
+              }} />
+          </label>
+          <p className="mb-4 text-sm text-text-tertiary">{quizRequirement(selectedType)}</p>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-              Khóa học chính
-              <DropdownField
-                ariaLabel="Khóa học chính"
-                placeholder="Chọn khóa học"
-                options={courseOptions}
-                value={activeCourseId || null}
-                isSearchable
-                isLoading={courseCatalog.status === 'loading'}
-                isError={courseCatalogHasError}
-                errorMessage={courseCatalogError}
-                emptyMessage="Không có khóa học đang mở."
-                mobileTouchTargets
-                isDisabled={serverQuizId !== null || ambiguousCreate}
-                isInvalid={Boolean(fieldErrors.target)}
+              Khóa học
+              <DropdownField ariaLabel="Khóa học" placeholder="Chọn khóa học" options={courseOptions} value={activeCourseId || null}
+                isSearchable isLoading={courseCatalog.status === 'loading'} isError={courseCatalogHasError} errorMessage={courseCatalogError}
+                emptyMessage="Không có khóa học khả dụng." mobileTouchTargets isDisabled={targetLocked} isInvalid={Boolean(fieldErrors.target)}
                 ariaDescribedBy={fieldErrors.target ? 'teacher-quiz-target-error' : undefined}
-                onChange={(value) => {
-                  clearFieldError('target')
-                  setSelectedCourseId(value ?? '')
-                  setSelectedLessonId('')
-                }}
-              />
+                onChange={value => {
+                  if (targetLocked) return
+                  clearFieldError('target'); setSelectedCourseId(value ?? ''); setSelectedChapterId(''); setSelectedLessonId('')
+                }} />
             </label>
             <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
+              Chương
+              <DropdownField ariaLabel="Chương" placeholder="Chọn chương" options={chapterOptions.map(chapter => ({ id: chapter.id, label: chapter.title }))}
+                value={effectiveChapterId || null} isSearchable isLoading={Boolean(activeCourseId && !activeCourseDetail && !courseDetailHasError)}
+                isError={Boolean(activeCourseId && courseDetailHasError)} errorMessage={courseDetailError} emptyMessage="Khóa học chưa có chương."
+                mobileTouchTargets isDisabled={!activeCourseId || targetLocked} isInvalid={Boolean(fieldErrors.target)}
+                ariaDescribedBy={fieldErrors.target ? 'teacher-quiz-target-error' : undefined}
+                onChange={value => {
+                  if (targetLocked) return
+                  clearFieldError('target'); setSelectedChapterId(value ?? ''); setSelectedLessonId('')
+                }} />
+            </label>
+            {needsLesson && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
               Bài học
-              <DropdownField
-                ariaLabel="Bài học"
-                placeholder={courseDetail.status === 'error' ? 'Không tải được bài học' : 'Chọn bài học'}
-                options={lessonOptions.map((lesson) => ({ id: lesson.id, label: lesson.pathLabel }))}
-                value={effectiveLessonId || null}
-                isSearchable
-                isLoading={Boolean(activeCourseId && (!activeCourseDetail || courseDetail.status === 'loading'))}
-                isError={Boolean(activeCourseId && courseDetailHasError)}
-                errorMessage={courseDetailError}
-                emptyMessage="Khóa học này chưa có bài học khả dụng."
-                mobileTouchTargets
-                isDisabled={!activeCourseId || serverQuizId !== null || ambiguousCreate}
-                isInvalid={Boolean(fieldErrors.target)}
+              <DropdownField ariaLabel="Bài học" placeholder="Chọn bài học" options={lessonOptions.map(lesson => ({ id: lesson.id, label: lesson.title }))}
+                value={effectiveLessonId || null} isSearchable isLoading={Boolean(effectiveChapterId && chapterLessons.data?.chapterId !== effectiveChapterId && !lessonHasError)}
+                isError={Boolean(effectiveChapterId && lessonHasError)} errorMessage={getResourceErrorMessage(chapterLessons.status, chapterLessons.errorMessage, 'bài học')}
+                emptyMessage="Chương chưa có bài học." mobileTouchTargets isDisabled={!effectiveChapterId || targetLocked} isInvalid={Boolean(fieldErrors.target)}
                 ariaDescribedBy={fieldErrors.target ? 'teacher-quiz-target-error' : undefined}
-                onChange={(value) => {
-                  clearFieldError('target')
-                  setSelectedLessonId(value ?? '')
-                }}
-              />
-            </label>
+                onChange={value => { if (!targetLocked) { clearFieldError('target'); setSelectedLessonId(value ?? '') } }} />
+            </label>}
           </div>
+          {needsLesson && effectiveChapterId && lessonHasError && <div className="mt-2 flex items-center gap-2" role="alert">
+            <p className="text-sm text-badge-error-text">{getResourceErrorMessage(chapterLessons.status, chapterLessons.errorMessage, 'bài học')}</p>
+            {chapterLessons.status === 'error' && <Button appearance="outline" onClick={chapterLessons.reload}>Thử lại</Button>}
+          </div>}
           {fieldErrors.target && <p id="teacher-quiz-target-error" className="mt-2 mb-0 text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.target}</p>}
           {courseCatalog.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-tertiary" role="status">Đang tải khóa học...</p>}
           {courseCatalogHasError && (
@@ -642,19 +606,19 @@ function TeacherQuizEditorForm({
             </div>
           )}
           {courseCatalog.status === 'ready' && (courseCatalog.data?.length ?? 0) === 0 && (
-            <p className="mt-2 mb-0 text-sm text-text-tertiary">Hiện chưa có khóa học đang mở để gắn quiz.</p>
+            <p className="mt-2 mb-0 text-sm text-text-tertiary">Hiện chưa có khóa học khả dụng để gắn bài kiểm tra.</p>
           )}
-          {activeCourseId && courseDetail.status === 'ready' && lessonOptions.length === 0 && (
-            <p className="mt-2 mb-0 text-sm text-text-tertiary">Khóa học này chưa có bài học để gắn quiz.</p>
+          {activeCourseId && activeCourseDetail && chapterOptions.length === 0 && (
+            <p className="mt-2 mb-0 text-sm text-text-tertiary">Khóa học này chưa có chương để gắn bài kiểm tra.</p>
           )}
-          {activeCourseId && courseDetail.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-tertiary" role="status">Đang tải bài học...</p>}
+          {activeCourseId && courseDetail.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-tertiary" role="status">Đang tải chương...</p>}
           {activeCourseId && courseDetailHasError && (
             <div className="mt-2 flex flex-wrap items-center gap-2" role="alert">
               <p className="m-0 text-sm text-badge-error-text">{courseDetailError}</p>
               {courseDetail.status === 'error' && <Button appearance="outline" className="min-h-11" onClick={courseDetail.reload}>Thử lại</Button>}
             </div>
           )}
-          {courseCatalog.status === 'ready' && (
+          {routeCourseId && courseCatalog.status === 'ready' && (
             <p className="mt-2 mb-0 text-xs text-text-tertiary" role="note">
               {routeCourseId && activeCourseId === routeCourseId && activeCourseDetail
                 ? 'Đã điền sẵn khóa học theo đường dẫn. Máy chủ sẽ xác thực quyền quản lý khi lưu.'
@@ -665,33 +629,36 @@ function TeacherQuizEditorForm({
                 : 'Khóa học từ đường dẫn không xuất hiện trong danh mục hiện có. Hãy chọn khóa học và bài học bạn được phép quản lý; máy chủ sẽ xác thực quyền khi lưu.'}
             </p>
           )}
-          {serverQuizId && <p className="mt-2 mb-0 text-xs text-text-tertiary">Quiz đã được tạo nháp. Nếu cần đổi vị trí, hãy tạo quiz mới.</p>}
+          {serverQuizId && <p className="mt-2 mb-0 text-xs text-text-tertiary">Bản nháp đã được tạo. Nếu cần đổi loại hoặc vị trí, hãy tạo bài kiểm tra mới.</p>}
         </Card>
       )}
 
       {initialQuiz && (
         <div className="rounded-xl border border-card-border bg-badge-blue-background px-4 py-3 text-sm text-text-tertiary">
-          {[initialQuiz.courseTitle, initialQuiz.lessonTitle, initialQuiz.type].filter(Boolean).join(' · ')}
+          <StatusBadge tone="info">{quizTypeLabel(initialQuiz.type)}</StatusBadge>
+          <p className="mt-2">{quizRequirement(initialQuiz.type)}</p>
+          {[initialQuiz.courseTitle, initialQuiz.chapterTitle, initialQuiz.lessonTitle].filter(Boolean).join(' · ')}
+          <p className="mt-2 text-xs">Loại và vị trí bài kiểm tra được giữ cố định sau khi tạo.</p>
           {quizIsLocked(initialQuiz) && <p className="mt-1 mb-0 font-medium">Quiz đã có lượt thi; câu hỏi và quy định làm bài đang khóa.</p>}
         </div>
       )}
 
       <Card as="section" padding="lg" aria-labelledby="quiz-settings-title">
-        <CardTitle id="quiz-settings-title" className="mb-3 text-base">Thông tin quiz</CardTitle>
-        <div className="grid gap-3 md:grid-cols-3">
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-1">
-            Tên quiz
-            <input id="teacher-quiz-title" className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal aria-invalid:border-input-error-focus-border" value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate || ambiguousQuestionSave} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
+        <CardTitle id="quiz-settings-title" className="mb-3 text-base">Thông tin bài kiểm tra</CardTitle>
+        <div className="grid gap-4 md:grid-cols-4">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
+            Tên bài kiểm tra
+            <input id="teacher-quiz-title" className={`${fieldControlClass} aria-invalid:border-input-error-focus-border`} value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate || ambiguousQuestionSave} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
             {fieldErrors.title && <span id="teacher-quiz-title-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.title}</span>}
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Thời gian (phút)
-            <input id="teacher-quiz-duration" className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal aria-invalid:border-input-error-focus-border" type="number" min="1" max="600" value={duration} onChange={(event) => { setDuration(event.target.value); clearFieldError('duration') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.duration ? true : undefined} aria-describedby={fieldErrors.duration ? 'teacher-quiz-duration-error' : undefined} />
+            <input id="teacher-quiz-duration" className={fieldControlClass} type="number" min="1" max="600" value={duration} onChange={(event) => { setDuration(event.target.value); clearFieldError('duration') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.duration ? true : undefined} aria-describedby={fieldErrors.duration ? 'teacher-quiz-duration-error' : undefined} />
             {fieldErrors.duration && <span id="teacher-quiz-duration-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.duration}</span>}
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Số lần làm tối đa
-            <input id="teacher-quiz-attempts" className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal aria-invalid:border-input-error-focus-border" type="number" min="1" max="999" value={attempts} onChange={(event) => { setAttempts(event.target.value); clearFieldError('attempts') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.attempts ? true : undefined} aria-describedby={fieldErrors.attempts ? 'teacher-quiz-attempts-error' : undefined} />
+            <input id="teacher-quiz-attempts" className={fieldControlClass} type="number" min="1" max="999" value={attempts} onChange={(event) => { setAttempts(event.target.value); clearFieldError('attempts') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.attempts ? true : undefined} aria-describedby={fieldErrors.attempts ? 'teacher-quiz-attempts-error' : undefined} />
             {fieldErrors.attempts && <span id="teacher-quiz-attempts-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.attempts}</span>}
           </label>
         </div>
@@ -700,7 +667,7 @@ function TeacherQuizEditorForm({
       <Card as="section" padding="lg" aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <CardTitle id="quiz-questions-title" className="text-base">Câu hỏi ({questions.length})</CardTitle>
-          <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={() => { clearFieldError('questions'); setQuestions((items) => [...items, createDraftQuestion()]) }}>
+          <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={addQuestion}>
             <Plus size={15} />Thêm câu hỏi
           </Button>
         </div>
@@ -709,15 +676,26 @@ function TeacherQuizEditorForm({
         ) : (
           <div className="flex flex-col gap-3">
             {questions.map((question, questionIndex) => (
-              <article key={question.clientId} className="rounded-xl border border-card-border bg-background-gray-secondary p-4">
+              <article key={question.clientId}
+                {...(!questionsLocked && !busy ? questionDrag.rowProps(question.clientId) : {})}
+                className={cn('rounded-xl border border-card-border bg-background-gray-secondary p-4', questionDrag.rowProps(question.clientId).className)}>
                 <div className="mb-3 flex items-center justify-between gap-2">
-                  <strong className="text-sm text-text-primary">Câu {questionIndex + 1}</strong>
+                  <div className="flex items-center gap-1">
+                    {!questionsLocked && <DragHandle {...questionDrag.handleProps(question.clientId, `câu ${questionIndex + 1}`, busy)} />}
+                    <strong className="text-sm text-text-primary">Câu {questionIndex + 1}</strong>
+                  </div>
+                  <RowActions>
+                    {!questionsLocked && <>
+                      <IconAction label={`Đưa câu hỏi ${questionIndex + 1} lên`} icon={ArrowUp} disabled={busy || questionIndex === 0} onClick={() => shiftQuestion(question.clientId, -1)} />
+                      <IconAction label={`Đưa câu hỏi ${questionIndex + 1} xuống`} icon={ArrowDown} disabled={busy || questionIndex === questions.length - 1} onClick={() => shiftQuestion(question.clientId, 1)} />
+                    </>}
                   {!question.editable && <StatusBadge tone="warning">Định dạng chỉ đọc</StatusBadge>}
                   {question.editable && !questionsLocked && (
                     <Button variant="danger" appearance="ghost" aria-label={`Xóa câu ${questionIndex + 1}`} className="min-h-11" disabled={busy} onClick={() => { clearFieldError('questions'); setQuestions((items) => items.filter((item) => item.clientId !== question.clientId)) }}>
                       <Trash2 size={15} />
                     </Button>
                   )}
+                  </RowActions>
                 </div>
                 {!question.editable ? (
                   <div className="text-sm text-text-tertiary">
@@ -729,20 +707,25 @@ function TeacherQuizEditorForm({
                   <div className="flex flex-col gap-3">
                     <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                       Nội dung câu hỏi
-                      <textarea className="min-h-20 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm font-normal" value={question.questionText} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { questionText: event.target.value })} />
+                      <textarea ref={node => {
+                        if (node && pendingQuestionFocus.current === question.clientId) {
+                          pendingQuestionFocus.current = null
+                          node.focus()
+                        }
+                      }} className={textareaControlClass} value={question.questionText} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { questionText: event.target.value })} />
                     </label>
                     <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                       Dạng đáp án
-                      <select className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal md:max-w-64" value={question.questionType} disabled={questionsLocked || busy} onChange={(event) => {
-                        const questionType = event.target.value as TeacherQuestionType
+                      <SelectField ariaLabel="Dạng đáp án" className="w-full md:max-w-64" value={question.questionType} disabled={questionsLocked || busy} onChange={(value) => {
+                        const questionType = value as TeacherQuestionType
                         const options = questionType === 'SINGLE_CHOICE'
                           ? question.options.map((option, index) => ({ ...option, correct: option.correct && question.options.findIndex((item) => item.correct) === index }))
                           : question.options
                         updateQuestion(question.clientId, { questionType, options })
-                      }}>
-                        <option value="SINGLE_CHOICE">Chọn một đáp án</option>
-                        <option value="MULTIPLE_CHOICE">Chọn nhiều đáp án</option>
-                      </select>
+                      }} options={[
+                        { id: 'SINGLE_CHOICE', label: 'Chọn một đáp án' },
+                        { id: 'MULTIPLE_CHOICE', label: 'Chọn nhiều đáp án' },
+                      ]} />
                     </label>
                     <div className="flex flex-col gap-2">
                       {question.options.map((option, optionIndex) => (
@@ -760,7 +743,7 @@ function TeacherQuizEditorForm({
                             }}
                           />
                           <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-card-background text-xs font-medium text-text-tertiary">{String.fromCharCode(65 + optionIndex)}</span>
-                          <input className="min-h-11 min-w-0 flex-1 rounded-xl border border-card-border bg-card-background px-3 text-sm" value={option.text} placeholder={`Lựa chọn ${String.fromCharCode(65 + optionIndex)}`} aria-label={`Nội dung lựa chọn ${String.fromCharCode(65 + optionIndex)} cho câu ${questionIndex + 1}`} disabled={questionsLocked || busy} onChange={(event) => updateOption(question, optionIndex, { text: event.target.value })} />
+                          <input className={`${fieldControlClass} min-w-0 flex-1`} value={option.text} placeholder={`Lựa chọn ${String.fromCharCode(65 + optionIndex)}`} aria-label={`Nội dung lựa chọn ${String.fromCharCode(65 + optionIndex)} cho câu ${questionIndex + 1}`} disabled={questionsLocked || busy} onChange={(event) => updateOption(question, optionIndex, { text: event.target.value })} />
                           {question.options.length > 2 && !questionsLocked && (
                             <Button appearance="ghost" className="min-h-11" aria-label={`Xóa lựa chọn ${String.fromCharCode(65 + optionIndex)}`} disabled={busy} onClick={() => updateQuestion(question.clientId, { options: question.options.filter((_, index) => index !== optionIndex) })}>
                               <X size={15} />
@@ -776,7 +759,7 @@ function TeacherQuizEditorForm({
                     </div>
                     <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                       Giải thích (không bắt buộc)
-                      <textarea className="min-h-16 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm font-normal" value={question.explanation} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { explanation: event.target.value })} />
+                      <textarea className={textareaControlClass} value={question.explanation} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { explanation: event.target.value })} />
                     </label>
                   </div>
                 )}
@@ -784,6 +767,10 @@ function TeacherQuizEditorForm({
             ))}
           </div>
         )}
+        <Button appearance="outline" className="mt-4 min-h-11 w-full border-dashed" disabled={questionsLocked || busy} onClick={addQuestion}>
+          <Plus size={16} />Thêm câu hỏi
+        </Button>
+        {!questionsLocked && <p className="mt-2 text-xs text-text-tertiary">Kéo biểu tượng bên cạnh số câu hoặc dùng nút lên/xuống để đổi vị trí. Nhấn lưu để giữ thứ tự mới.</p>}
         {fieldErrors.questions && <p id="teacher-quiz-questions-error" className="mt-4 mb-0 text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.questions}</p>}
         {error && <p className="mt-4 mb-0 text-sm font-medium text-badge-error-text" role="alert">{error}</p>}
         <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-card-border pt-4">
@@ -827,14 +814,25 @@ async function persistQuestionChanges(
   for (const question of existingChanges) {
     await updateTeacherQuizQuestion(question.serverId!, toSavePayload(question))
   }
-  if (newQuestions.length === 0) return drafts
-
-  const createdQuestions = await addTeacherQuizQuestions(quizId, newQuestions.map(toSavePayload))
+  const createdQuestions = newQuestions.length > 0
+    ? await addTeacherQuizQuestions(quizId, newQuestions.map(toSavePayload))
+    : []
   const savedIds = new Map(newQuestions.map((question, index) => [question.clientId, createdQuestions[index].id]))
-  return drafts.map((question) => {
+  const savedDrafts = drafts.map((question) => {
     const serverId = savedIds.get(question.clientId)
     return serverId ? { ...question, clientId: serverId, serverId } : question
   })
+  // BE requires every saved question exactly once, including unsupported read-only formats.
+  // New blank cards have no server ID and are excluded until they contain content.
+  const desiredOrder = savedDrafts.flatMap(question => question.serverId ? [question.serverId] : [])
+  const serverOrder = [
+    ...previousQuestions.filter(question => currentServerIds.has(question.id)).map(question => question.id),
+    ...createdQuestions.map(question => question.id),
+  ]
+  if (desiredOrder.length > 0 && JSON.stringify(desiredOrder) !== JSON.stringify(serverOrder)) {
+    await reorderTeacherQuizQuestions(quizId, desiredOrder)
+  }
+  return savedDrafts
 }
 
 function questionHasText(question: DraftQuestion) {
@@ -867,7 +865,7 @@ function mapTeacherQuizValidationErrors(errors: Record<string, string>) {
         ? 'duration'
         : normalizedKey.includes('attempt')
           ? 'attempts'
-          : normalizedKey.includes('course') || normalizedKey.includes('lesson')
+          : normalizedKey.includes('course') || normalizedKey.includes('chapter') || normalizedKey.includes('lesson') || normalizedKey === 'type'
             ? 'target'
             : normalizedKey.includes('question') || normalizedKey.includes('option')
               ? 'questions'
