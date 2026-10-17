@@ -107,6 +107,18 @@ export async function googleAuth({ idToken }: GoogleAuthRequest) {
   )
 }
 
+export async function googleConsoleAuth({ idToken }: GoogleAuthRequest) {
+  const response = await request<TokenData>('/api/v1/auth/google/console', {
+    method: 'POST',
+    body: { idToken } satisfies GoogleAuthRequest,
+  })
+
+  return ensureTokenData(
+    response,
+    'Đăng nhập với Google không thành công. Máy chủ chưa trả về đầy đủ token.'
+  )
+}
+
 export async function forgotPassword({ email }: ForgotPasswordRequest) {
   return request<string>('/api/v1/auth/forgot-password', {
     method: 'POST',
