@@ -65,7 +65,7 @@ The hero is followed by a white rest band, then the `#ky-thi` section; there is 
 
 ### 4. Five V-ACT knowledge groups
 
-Retain the existing five-group visual cards and the owl only on Mathematics & Quantitative Reasoning, per the accepted visual direction. Use the official curriculum labels consistently. Each card should state what the learner practices and link to relevant public course or preview content. Keep this as the primary content-discovery section.
+Retain the existing five-group visual cards and the owl only on Mathematics & Quantitative Reasoning. Use the official curriculum labels consistently. Each card should state what the learner practices and link to relevant public course or preview content. Keep this as the primary content-discovery section.
 
 ### 5. How HocLuc helps a learner start
 

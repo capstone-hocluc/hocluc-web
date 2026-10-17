@@ -6,6 +6,6 @@ The hero uses one transparent AI illustration, `hero-mai-nam-study.png`, based o
 
 ## Subject illustrations
 
-The four non-math subject-card illustrations stay as they were; the owl appears only on the “Toán & Tư duy định lượng” card. The other four subject cards use faceless silhouette icons, and course thumbnails cycle evenly through the seven avatar shapes. The shape paths are adapted from MathTutor's `bot-avatars` package under the MIT license; see `bot-avatars-LICENSE.txt`.
+The four non-math subject-card illustrations stay as they were; the owl appears only on the “Toán & Tư duy định lượng” card. Course thumbnails cycle evenly through the seven avatar shapes. The shape paths are adapted from MathTutor's `bot-avatars` package under the MIT license; see `bot-avatars-LICENSE.txt`.
 
 Mai and Nam retain their established character details in the hero and journey illustration. `index.html` is the landing source; regenerate `hocluc-standalone.html` with `build-standalone.ps1` after changes.

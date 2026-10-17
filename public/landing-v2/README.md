@@ -16,7 +16,7 @@ hero images; each entry is `{ id, src, alt, label }`.
 Hero scenes show Mai and Nam in three situations: taking a V-ACT practice test, writing and solving maths
 together, and receiving hints from the cloud, star and robot AI avatars. They are brand illustrations, not
 product screenshots or real students. The four subject illustrations (Vietnamese, English, Logic, Science)
-and the owl on the Mathematics card are unchanged.
+and the owl on the Mathematics card remain in use.
 
 Avatar silhouettes are adapted from the MathTutor `bot-avatars` package under the MIT licence
 (`assets/bot-avatars-LICENSE.txt`). UI icons are Lucide (ISC, `assets/icons/LICENSE`).
