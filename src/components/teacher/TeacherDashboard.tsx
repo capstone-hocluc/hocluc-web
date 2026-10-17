@@ -10,12 +10,11 @@ import {
 import TeacherCourses from './TeacherCourses'
 import ConsoleShell from '../console/console-shell'
 import ProfilePage from '../console/profile-page'
-import TeacherQuiz from './TeacherQuiz'
 import TeacherAssignments from './TeacherAssignments'
-import TeacherMockExams from './TeacherMockExams'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import TeacherPageHeader from './TeacherPageHeader'
-import { QuestionReview, TeacherAttempts } from '../management/quiz-review-screens'
+import QuizConsoleScreen from '../management/quiz/QuizConsoleScreen'
+import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import { ManagementScreen } from '../management/ManagementDashboard'
 import { ForbiddenPage } from '../console/access-states'
 import { buildNavSections, canAccessPage } from '../../lib/console-nav'
@@ -25,6 +24,7 @@ const PAGE_ALIASES: Record<string, string> = { questions: 'question-review' }
 
 // Course sub-pages (quiz editor, assignments) belong to "Lớp của tôi".
 function menuPageOf(page: string) {
+  if (isQuizPage(page)) return quizMenuPage(page)
   return /^(quiz-new-|quiz-|assignments-)/.test(page) ? 'courses' : page
 }
 
@@ -81,7 +81,7 @@ function TeacherDashboard({
     setQuizCourse(course)
     setSelectedCourse(course)
     setView('courses')
-    if (onNavigate) onNavigate(`quiz-new-${course.id}`)
+    if (onNavigate) onNavigate(`quiz-${course.id}`)
   }
   const openAssignments = (course, module = null) => {
     setAssignmentCourse(course)
@@ -122,7 +122,7 @@ function TeacherDashboard({
   return (
     <ConsoleShell
       sections={sections}
-      activeKey={view}
+      activeKey={menuPageOf(view)}
       onNavigate={navigate}
       onOpenProfile={() => navigate('profile')}
       onLogout={() => onLogout?.()}
@@ -137,6 +137,8 @@ function TeacherDashboard({
         )}
         {!allowed ? (
           <ForbiddenPage />
+        ) : isQuizPage(page) ? (
+          <QuizConsoleScreen role="TEACHER" page={page} onNavigate={navigate} />
         ) : !teacherScreens.includes(menuPageOf(view)) ? (
           <ManagementScreen role="TEACHER" page={view} onNavigate={navigate} />
         ) : view === 'schedule' ? (
@@ -147,14 +149,8 @@ function TeacherDashboard({
           <Suspense fallback={<SchedulingPageFallback title="Giờ rảnh" />}>
             <TeacherAvailabilityPage />
           </Suspense>
-        ) : view === 'question-review' ? (
-          <QuestionReview />
-        ) : view === 'attempts' ? (
-          <TeacherAttempts />
         ) : view === 'profile' ? (
           <ProfilePage />
-        ) : view === 'mock-exams' ? (
-          <TeacherMockExams onBack={() => onNavigate?.('dashboard')} onAction={action} />
         ) : view === 'dashboard' ? (
           <>
             <TeacherPageHeader title="Tổng quan" />
@@ -186,12 +182,7 @@ function TeacherDashboard({
             onAction={action}
           />
         ) : quizCourse ? (
-          <TeacherQuiz
-            course={quizCourse}
-            startCreating={quizCreateMode}
-            onBack={() => (onNavigate ? onNavigate('courses') : setQuizCourse(null))}
-            onAction={action}
-          />
+          <QuizConsoleScreen role="TEACHER" page={`quiz-${quizCourse.id}`} onNavigate={navigate} />
         ) : (
           <TeacherCourses
             selectedCourse={selectedCourse}

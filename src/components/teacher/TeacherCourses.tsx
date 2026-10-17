@@ -3,16 +3,17 @@ import TeacherPageHeader from './TeacherPageHeader'
 import Button from '../console/button'
 import Panel from '../console/panel'
 import ScheduleResourceState from '../console/schedule/schedule-resource-state'
-import { Progress } from '../tailgrids/core/progress'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getCourseDetail, getMainCourses, type Course } from '../../services/courseService'
+import { getAdminCourse, type CourseAdmin } from '../../services/courseAdminService'
+import { getQuizCourses } from '../../services/quizCourseService'
+import { getContentSections } from '../../services/contentSectionService'
 import CourseContentPanel from '../management/crud/course-content-panel'
 
 const formatDate = (value?: string) => (value ? new Intl.DateTimeFormat('vi-VN').format(new Date(value)) : '')
 
-const courseSubtitle = (course: Course) => [course.track, course.targetExam].filter(Boolean).join(' · ')
+const courseSubtitle = (course: CourseAdmin) => [course.track, course.targetExam].filter(Boolean).join(' · ')
 
-function CourseCard({ course, onOpen }: { course: Course; onOpen: (course: Course) => void }) {
+function CourseCard({ course, onOpen }: { course: CourseAdmin; onOpen: (course: CourseAdmin) => void }) {
   return (
     <button
       type="button"
@@ -35,7 +36,6 @@ function CourseCard({ course, onOpen }: { course: Course; onOpen: (course: Cours
           {formatDate(course.startDate)} – {formatDate(course.endDate)}
         </span>
       )}
-      <Progress progress={Math.round(course.elapsedPercentage ?? 0)} withLabel className="max-w-none" />
     </button>
   )
 }
@@ -45,12 +45,11 @@ const quickActionClass =
 
 function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
   const { data, status, errorMessage, reload } = usePageResource(async () => {
-    const response = await getCourseDetail(course.id)
-    if (!response.data) throw new Error('Không thể tải nội dung khóa học.')
-    return response.data
+    const [detail, sections] = await Promise.all([getAdminCourse(course.id), getContentSections(course.id)])
+    return { ...detail, contentSections: sections }
   }, [course.id])
   const phases = data?.phases ?? []
-  const sections = phases.flatMap((phase) => phase.sections.map((section) => ({ phase, section })))
+  const sections = data?.contentSections ?? []
   const title = data?.title ?? course.name ?? course.title
 
   return (
@@ -71,14 +70,13 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
             status={status}
             errorMessage={errorMessage}
             onRetry={reload}
-            empty={status === 'ready' && sections.length === 0}
-            emptyMessage="Khóa học chưa có phần nội dung. Nhân sự cần gắn SECTION vào khóa."
           >
-            {sections.map(({ phase, section }) => (
+            {status === 'ready' && (
               <CourseContentPanel
-                key={section.sectionCourseId}
-                courseId={section.sectionCourseId}
-                title={`${phase.name} · ${section.title}`}
+                courseId={course.id}
+                sections={sections}
+                readOnly
+                title="Nội dung khóa học"
                 chapterAction={(chapter) => (
                   <Button size="sm" appearance="ghost" onClick={() => onOpenAssignments(course, chapter)}>
                     <ClipboardList size={14} />
@@ -86,12 +84,12 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
                   </Button>
                 )}
               />
-            ))}
+            )}
           </ScheduleResourceState>
         </div>
 
         <aside className="flex flex-col gap-5">
-          <Panel title="Thao tác nhanh">
+          {status === 'ready' && <Panel title="Thao tác nhanh">
             <div className="-mx-2 flex flex-col">
               <button type="button" className={quickActionClass} onClick={() => onOpenAssignments(course)}>
                 <ClipboardList size={17} className="text-icon-tertiary" />
@@ -102,7 +100,7 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
                 Bài kiểm tra
               </button>
             </div>
-          </Panel>
+          </Panel>}
         </aside>
       </div>
     </section>
@@ -111,9 +109,7 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
 
 function TeacherCourses({ selectedCourse, onOpenCourse, onBack, onOpenQuiz, onOpenAssignments }) {
   const { data, status, errorMessage, reload } = usePageResource(async () => {
-    const response = await getMainCourses()
-    if (!response.data) throw new Error('Không thể tải danh sách khóa học.')
-    return response.data
+    return getQuizCourses()
   }, [])
   if (selectedCourse)
     return <CourseDetail course={selectedCourse} onBack={onBack} onOpenQuiz={onOpenQuiz} onOpenAssignments={onOpenAssignments} />

@@ -62,6 +62,12 @@ const course = (id: string, title: string, courseType: 'MAIN' | 'SECTION'): Cour
   accessDays: null,
   publishedAt: null,
   updatedAt: STAMP,
+  reviewState: 'NONE',
+  reviewNote: null,
+  reviewRequestedByName: null,
+  reviewRequestedAt: null,
+  reviewedByName: null,
+  reviewedAt: null,
   phases: [],
   sections: [],
   instructors: [],
@@ -569,7 +575,6 @@ export async function installCrudFixture(
           sectionCourseId: child.id,
           title: child.title,
           status: child.status,
-          phaseId: body.phaseId as string | null,
           sequence: current.sections.length + 1,
         })
         return answer(current)
@@ -860,6 +865,8 @@ export async function installCrudFixture(
             description: (body.description as string | null) ?? null,
             sequence: rows().length + 1,
             published: false,
+            sectionId: null,
+            sectionTitle: null,
             updatedAt: STAMP,
           }
           state.chapters.push(chapter)

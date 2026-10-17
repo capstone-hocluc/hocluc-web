@@ -1,6 +1,7 @@
 import type { UserRole } from '../services/userService'
 
-// Permission table for the console, taken from docs/06 §2.2 (decision of 09/10/2026).
+// Console permissions; quiz read/write is aligned with the current BE controller/service.
+// Other modules retain their existing permission decisions.
 // This only decides what the UI shows. The backend's @PreAuthorize rules are the
 // source of truth: hiding a button here never grants or removes access to an API.
 
@@ -8,6 +9,8 @@ export type Permission =
   | 'COURSE_READ'
   | 'COURSE_WRITE'
   | 'CONTENT_WRITE'
+  | 'QUIZ_READ'
+  | 'QUIZ_WRITE'
   | 'QUESTION_APPROVE'
   | 'SOLUTION_APPROVE'
   | 'REVIEW_QUEUE_HANDLE'
@@ -31,6 +34,8 @@ const ALL_PERMISSIONS: Permission[] = [
   'COURSE_READ',
   'COURSE_WRITE',
   'CONTENT_WRITE',
+  'QUIZ_READ',
+  'QUIZ_WRITE',
   'QUESTION_APPROVE',
   'SOLUTION_APPROVE',
   'REVIEW_QUEUE_HANDLE',
@@ -56,8 +61,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   MENTOR: ['SOLUTION_APPROVE', 'REVIEW_QUEUE_HANDLE', 'SUPPORT_HANDLE'],
   TEACHER: [
     'COURSE_READ',
+    'QUIZ_READ',
     'CONTENT_WRITE',
-    'QUESTION_APPROVE',
     'SOLUTION_APPROVE',
     'REVIEW_QUEUE_HANDLE',
     'TAXONOMY_WRITE',
@@ -65,6 +70,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   STAFF: [
     'COURSE_READ',
+    'QUIZ_READ',
+    'QUIZ_WRITE',
     'COURSE_WRITE',
     'CONTENT_WRITE',
     'QUESTION_APPROVE',
@@ -79,9 +86,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'ENROLLMENT_WRITE',
     'SUPPORT_HANDLE',
   ],
-  // D14: the manager watches and reports; no write permission until an exception is agreed.
+  // Other modules retain the Manager read-only policy; quiz is the verified BE exception.
   MANAGER: [
     'COURSE_READ',
+    // Quiz authoring is explicitly allowed by TeacherQuizController + Actor.isStaff.
+    // This does not grant writes to courses, taxonomy or other subject capabilities.
+    'QUIZ_READ',
+    'QUIZ_WRITE',
     'SCHEDULE_READ',
     'USER_READ',
     'ORDER_READ',

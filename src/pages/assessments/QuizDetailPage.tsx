@@ -15,7 +15,7 @@ import { getQuiz, startQuizAttempt } from '../../services/assessmentService'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast } from '../../lib/toastBus'
 import { getAssessmentLockMessage } from '../../lib/quizLock'
-import { prettifyEnum } from '../../lib/courseFormat'
+import { quizTypeLabel, quizRequirement } from '../../lib/quiz-types'
 import { getQuizKind } from '../../lib/learningType'
 
 interface QuizDetailPageProps {
@@ -79,7 +79,7 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
               size="sm"
               className="px-3 py-1 text-xs font-extrabold tracking-[0.04em] uppercase"
             >
-              {prettifyEnum(quiz.type)}
+              {quizTypeLabel(quiz.type)}
             </StatusBadge>
             <h1 className="text-2xl leading-tight font-black tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
               {quiz.title}
@@ -87,6 +87,7 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
             {quiz.description && (
               <p className="text-base leading-[1.6] text-text-body">{quiz.description}</p>
             )}
+            {quizRequirement(quiz.type) && <p className="text-sm leading-6 text-text-body">{quizRequirement(quiz.type)}</p>}
 
             <AssessmentFacts
               facts={[
