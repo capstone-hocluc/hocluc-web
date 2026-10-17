@@ -77,9 +77,6 @@ export default function SearchSelectField({
     const epoch = ++searchRequestEpoch.current
     if (!open) return
     let cancelled = false
-    setFailed(false)
-    busyMoreRef.current = false
-    setBusyMore(false)
     const requestTerm = term.trim()
     const timer = setTimeout(() => {
       loadRef
@@ -101,11 +98,22 @@ export default function SearchSelectField({
     }
   }, [open, term])
 
-  function changeTerm(nextTerm: string) {
+  // A new query starts from a clean state; resetting here rather than inside the query effect
+  // keeps the effect free of synchronous state updates.
+  function resetRequestState() {
     searchRequestEpoch.current += 1
     busyMoreRef.current = false
     setBusyMore(false)
     setFailed(false)
+  }
+
+  function openList() {
+    resetRequestState()
+    setOpen(true)
+  }
+
+  function changeTerm(nextTerm: string) {
+    resetRequestState()
     setTerm(nextTerm)
   }
 
@@ -171,7 +179,7 @@ export default function SearchSelectField({
         type="button"
         aria-label={ariaLabel}
         disabled={disabled}
-        onClick={() => setOpen(true)}
+        onClick={openList}
         className={cn(
           fieldControlClass,
           'flex items-center justify-between gap-2 text-left',
