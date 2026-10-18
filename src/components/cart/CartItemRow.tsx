@@ -1,51 +1,58 @@
+import { useState } from 'react'
 import { GraduationCap, Trash2 } from '../console/icons'
-import type { CartItem } from '../../services/cartService'
+import { cartItemIssue, type CartItem } from '../../services/cartService'
 import { formatCoursePrice, formatDate, prettifyEnum } from '../../lib/courseFormat'
 
-interface CartItemRowProps {
+interface Props {
   item: CartItem
-  onRemove: (courseId: string) => void
+  onRemove: (id: string) => void
   removing: boolean
+  disabled?: boolean
 }
-
-function CartItemRow({ item, onRemove, removing }: CartItemRowProps) {
-  const trackLabel = prettifyEnum(item.track)
-  const startLabel = formatDate(item.startDate)
-  const endLabel = formatDate(item.endDate)
-
+export default function CartItemRow({ item, onRemove, removing, disabled }: Props) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const issue = cartItemIssue(item)
   return (
-    <div className="hl-cart-item">
-      <div className="hl-cart-item-cover">
-        <GraduationCap size={24} />
-      </div>
-
-      <div className="hl-cart-item-body">
-        <h3>{item.title}</h3>
-        <div className="hl-cart-item-meta">
-          {trackLabel && <span>{trackLabel}</span>}
-          {startLabel && (
-            <span>
-              {startLabel}
-              {endLabel ? ` – ${endLabel}` : ''}
-            </span>
+    <article className={'purchase-course' + (issue ? ' is-ineligible' : '')}>
+      <a
+        className="purchase-cover"
+        href={'/courses/' + encodeURIComponent(item.courseId)}
+        tabIndex={-1}
+        aria-hidden="true"
+      >
+        {item.thumbnailUrl && !imageFailed ? (
+          <img src={item.thumbnailUrl} alt="" onError={() => setImageFailed(true)} />
+        ) : (
+          <GraduationCap size={32} />
+        )}
+      </a>
+      <div className="purchase-course-body">
+        <h2>
+          <a href={'/courses/' + encodeURIComponent(item.courseId)}>{item.title}</a>
+        </h2>
+        <p className="purchase-muted">
+          {prettifyEnum(item.track)}
+          {item.endDate && (
+            <>
+              {item.track ? ' · ' : ''}Đến {formatDate(item.endDate)}
+            </>
           )}
-        </div>
+        </p>
+        {issue && <p className="purchase-line-error">{issue}</p>}
       </div>
-
-      <div className="hl-cart-item-side">
-        <span className="hl-cart-item-price">{formatCoursePrice(item.price)}</span>
+      <div className="purchase-course-side">
+        <strong>{formatCoursePrice(item.price)}</strong>
         <button
           type="button"
-          className="hl-cart-item-remove"
+          className="purchase-remove"
           onClick={() => onRemove(item.courseId)}
-          disabled={removing}
+          disabled={disabled || removing}
+          aria-label={'Xóa ' + item.title}
         >
-          <Trash2 size={13} />
-          {removing ? 'Đang xóa...' : 'Xóa'}
+          <Trash2 size={17} />
+          {removing ? 'Đang xóa…' : 'Xóa'}
         </button>
       </div>
-    </div>
+    </article>
   )
 }
-
-export default CartItemRow

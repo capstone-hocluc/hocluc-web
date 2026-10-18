@@ -1,93 +1,74 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, PackageOpen } from '../../components/console/icons'
-import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
+import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/PurchaseLayout'
 import OrderCard from '../../components/orders/OrderCard'
 import { getMyOrders, type Order } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
-
-interface MyOrdersPageProps {
-  onOpenOrder: (orderId: string) => void
+interface Props {
+  onOpenOrder: (id: string) => void
   onBrowseCourses: () => void
 }
-
-function MyOrdersPage({ onOpenOrder, onBrowseCourses }: MyOrdersPageProps) {
+export default function MyOrdersPage({ onOpenOrder, onBrowseCourses }: Props) {
   const [orders, setOrders] = useState<Order[]>([])
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [errorMessage, setErrorMessage] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
-
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [reload, setReload] = useState(0)
   useEffect(() => {
-    let cancelled = false
+    let active = true
     getMyOrders()
       .then((data) => {
-        if (cancelled) return
-        setOrders(data)
-        setStatus('ready')
+        if (active) {
+          setOrders(data)
+          setError('')
+        }
       })
-      .catch((error) => {
-        if (cancelled) return
-        setErrorMessage(getErrorMessage(error))
-        setStatus('error')
+      .catch((e) => {
+        if (active) setError(getErrorMessage(e))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
       })
     return () => {
-      cancelled = true
+      active = false
     }
-  }, [reloadKey])
-
+  }, [reload])
   return (
-    <div className="hl-orders-page">
-      <PublicHeader />
-      <main className="hl-orders-main-wrap">
-        <div className="hl-orders-container">
-          <h1 className="hl-orders-title">Đơn hàng của tôi</h1>
-
-          {status === 'loading' && (
-            <div className="hl-orders-list">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div className="hl-orders-skeleton" key={index} />
-              ))}
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="hl-orders-state">
-              <AlertTriangle size={30} />
-              <p>{errorMessage}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus('loading')
-                  setReloadKey((current) => current + 1)
-                }}
-              >
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {status === 'ready' && orders.length === 0 && (
-            <div className="hl-orders-empty">
-              <PackageOpen size={36} />
-              <h2>Bạn chưa có đơn hàng nào</h2>
-              <p>Khám phá các khóa học phù hợp và bắt đầu hành trình học tập của bạn.</p>
-              <button type="button" onClick={onBrowseCourses}>
-                Khám phá khóa học
-              </button>
-            </div>
-          )}
-
-          {status === 'ready' && orders.length > 0 && (
-            <div className="hl-orders-list">
-              {orders.map((order) => (
-                <OrderCard key={order.id} order={order} onOpen={onOpenOrder} />
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-      <PublicFooter />
-    </div>
+    <PurchaseLayout title="Đơn hàng của tôi" step="ĐƠN HÀNG">
+      {error && (
+        <PurchaseNotice>
+          {error}{' '}
+          <button
+            className="purchase-link"
+            onClick={() => {
+              setLoading(true)
+              setReload((v) => v + 1)
+            }}
+          >
+            Thử lại
+          </button>
+        </PurchaseNotice>
+      )}
+      {loading ? (
+        <p className="purchase-skeleton" role="status">
+          Đang tải đơn hàng…
+        </p>
+      ) : (
+        !error &&
+        (orders.length ? (
+          <div className="purchase-list">
+            {orders.map((order) => (
+              <OrderCard key={order.id} order={order} onOpen={onOpenOrder} />
+            ))}
+          </div>
+        ) : (
+          <section className="purchase-panel purchase-empty">
+            <h2>Bạn chưa có đơn hàng nào</h2>
+            <p>Chọn khóa học phù hợp để bắt đầu hành trình học tập.</p>
+            <button className="btn" onClick={onBrowseCourses}>
+              Khám phá khóa học
+            </button>
+          </section>
+        ))
+      )}
+    </PurchaseLayout>
   )
 }
-
-export default MyOrdersPage

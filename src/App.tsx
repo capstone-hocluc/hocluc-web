@@ -26,6 +26,8 @@ import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRo
 import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
+import PurchaseGuard from './components/purchase/PurchaseGuard'
+import { safePurchaseReturnTo } from './lib/purchaseSession'
 
 const APP_HISTORY_INDEX = '__hoclucNavigationIndex'
 
@@ -157,7 +159,8 @@ function App() {
 
   const navigateAuth = (mode) => {
     runWithUnsavedActionGuard(() => {
-      pushHistoryEntry({}, `/${mode}`)
+      const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+      pushHistoryEntry({}, `/${mode}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode(mode)
       setCurrentPath(`/${mode}`)
     })
@@ -259,7 +262,8 @@ function App() {
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
-    navigateTo(roleHome(profile.role))
+    const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+    navigateTo(profile.role === 'STUDENT' && returnTo ? returnTo : roleHome(profile.role))
   }
 
   const managementLoginPath = () => {
@@ -506,8 +510,9 @@ function App() {
         onGoToCart={() => navigateTo('/cart')}
       />
     )
+  const purchase = (content) => <PurchaseGuard onNavigate={navigateTo}>{content}</PurchaseGuard>
   if (orderPaymentOrderId)
-    return (
+    return purchase(
       <PaymentInstructionsPage
         key={orderPaymentOrderId}
         orderId={orderPaymentOrderId}
@@ -516,7 +521,7 @@ function App() {
       />
     )
   if (orderDetailId)
-    return (
+    return purchase(
       <OrderDetailPage
         key={orderDetailId}
         orderId={orderDetailId}
@@ -531,14 +536,14 @@ function App() {
   if (authMode === 'courses')
     return <CourseCatalogPage />
   if (authMode === 'cart')
-    return (
+    return purchase(
       <CartPage
         onBrowseCourses={() => navigateTo('/courses')}
         onGoToCheckout={() => navigateTo('/checkout')}
       />
     )
   if (authMode === 'checkout')
-    return (
+    return purchase(
       <CheckoutPage
         onOrderCreated={(paymentData) =>
           navigateTo(`/orders/${paymentData.order.id}/payment`, paymentData)
@@ -547,14 +552,14 @@ function App() {
       />
     )
   if (authMode === 'orders')
-    return (
+    return purchase(
       <MyOrdersPage
         onOpenOrder={(orderId) => navigateTo(`/orders/${orderId}`)}
         onBrowseCourses={() => navigateTo('/courses')}
       />
     )
   if (authMode === 'payment-result')
-    return (
+    return purchase(
       <PaymentResultPage
         onGoToMyCourses={() => navigateTo(studentRoutes.courses())}
         onOpenOrder={(orderId) => navigateTo(`/orders/${orderId}`)}

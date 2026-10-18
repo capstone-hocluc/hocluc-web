@@ -20,7 +20,7 @@
   font-display: swap;
   src: url('/landing-v2/assets/fonts/be-vietnam-pro-700.ttf') format('truetype');
 }
-:where(.landing-page, .hl-brand-auth) {
+:where(.landing-page, .hl-brand-auth, .hl-purchase) {
   --paper: oklch(99% 0.003 240);
   --soft: oklch(97% 0.009 240);
   --blue-soft: #e8f7fe;

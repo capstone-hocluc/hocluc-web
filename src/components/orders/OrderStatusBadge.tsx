@@ -1,12 +1,8 @@
 import { getOrderStatusLabel, getOrderStatusTone } from '../../lib/orderStatus'
-import Status from '../ui/Status'
-
-interface OrderStatusBadgeProps {
-  status: string
+export default function OrderStatusBadge({ status }: { status: string }) {
+  return (
+    <span className={'purchase-status is-' + getOrderStatusTone(status)}>
+      {getOrderStatusLabel(status)}
+    </span>
+  )
 }
-
-function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
-  return <Status tone={getOrderStatusTone(status)}>{getOrderStatusLabel(status)}</Status>
-}
-
-export default OrderStatusBadge

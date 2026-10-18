@@ -1,257 +1,226 @@
-import { useEffect, useState } from 'react'
-import { AlertTriangle, ChevronLeft, SearchX } from '../../components/console/icons'
-import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
+import { useEffect, useRef, useState } from 'react'
+import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/PurchaseLayout'
 import OrderStatusBadge from '../../components/orders/OrderStatusBadge'
-import { cancelOrder, getOrder, payOrder, type Order, type OrderPaymentData } from '../../services/orderService'
+import {
+  cancelOrder,
+  getOrder,
+  payOrder,
+  type Order,
+  type OrderPaymentData,
+} from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
 import { ApiError } from '../../lib/api'
-import { showErrorToast, showSuccessToast } from '../../lib/toastBus'
 import { formatCoursePrice } from '../../lib/courseFormat'
 import { canCancelOrder, canPayOrder } from '../../lib/orderStatus'
+import { safePurchaseOrderId } from '../../lib/purchaseSession'
 
-interface OrderDetailPageProps {
+interface Props {
   orderId: string
   onBackToOrders: () => void
   onGoToMyCourses: () => void
-  onPaymentReady: (paymentData: OrderPaymentData) => void
-  onOpenCourse: (courseId: string) => void
+  onPaymentReady: (data: OrderPaymentData) => void
+  onOpenCourse: (id: string) => void
 }
-
-function formatDateTime(value: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('vi-VN')
+function date(value: string | null) {
+  return value ? new Date(value).toLocaleString('vi-VN') : '—'
 }
-
-function OrderDetailPage({
+export default function OrderDetailPage({
   orderId,
   onBackToOrders,
   onGoToMyCourses,
   onPaymentReady,
   onOpenCourse,
-}: OrderDetailPageProps) {
+}: Props) {
   const [order, setOrder] = useState<Order | null>(null)
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'not-found'>('loading')
-  const [errorMessage, setErrorMessage] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
-  const [payLoading, setPayLoading] = useState(false)
-  const [cancelLoading, setCancelLoading] = useState(false)
-  const [confirmingCancel, setConfirmingCancel] = useState(false)
-
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const busyRef = useRef(false)
+  const mounted = useRef(true)
   useEffect(() => {
-    let cancelled = false
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  const [confirm, setConfirm] = useState(false)
+  useEffect(() => {
+    let active = true
     getOrder(orderId)
-      .then((data) => {
-        if (cancelled) return
-        setOrder(data)
-        setStatus('ready')
-      })
-      .catch((error) => {
-        if (cancelled) return
-        if (error instanceof ApiError && error.status === 404) {
-          setStatus('not-found')
-          return
+      .then((next) => {
+        if (active) {
+          setOrder(next)
+          setError('')
         }
-        setErrorMessage(getErrorMessage(error))
-        setStatus('error')
+      })
+      .catch((e) => {
+        if (active)
+          setError(
+            e instanceof ApiError && e.status === 404
+              ? 'Không tìm thấy đơn hàng này.'
+              : getErrorMessage(e)
+          )
+      })
+      .finally(() => {
+        if (active) setLoading(false)
       })
     return () => {
-      cancelled = true
+      active = false
     }
-  }, [orderId, reloadKey])
-
-  const handlePay = async () => {
-    if (!order || payLoading) return
-    setPayLoading(true)
+  }, [orderId, reload])
+  const mutate = async (action: 'pay' | 'cancel') => {
+    if (!order || busyRef.current) return
+    busyRef.current = true
+    setBusy(true)
+    setError('')
+    setActiveOrderId(null)
     try {
-      const result = await payOrder(order.id)
-      setOrder(result.order)
-      onPaymentReady(result)
-    } catch (error) {
-      showErrorToast(getErrorMessage(error))
+      if (action === 'pay') {
+        const next = await payOrder(order.id)
+        setOrder(next.order)
+        if (mounted.current) onPaymentReady(next)
+      } else {
+        setOrder(await cancelOrder(order.id))
+        setConfirm(false)
+      }
+    } catch (e) {
+      setError(getErrorMessage(e))
+      if (e instanceof ApiError && e.code === 'ORDER_PAYMENT_IN_PROGRESS')
+        setActiveOrderId(safePurchaseOrderId(e.errors?.activeOrderId))
     } finally {
-      setPayLoading(false)
+      busyRef.current = false
+      setBusy(false)
     }
   }
-
-  const handleCancel = async () => {
-    if (!order || cancelLoading) return
-    setCancelLoading(true)
-    try {
-      const cancelledOrder = await cancelOrder(order.id)
-      setOrder(cancelledOrder)
-      setConfirmingCancel(false)
-      showSuccessToast('Đã hủy đơn hàng.')
-    } catch (error) {
-      showErrorToast(getErrorMessage(error))
-    } finally {
-      setCancelLoading(false)
-    }
-  }
-
   return (
-    <div className="hl-orders-page">
-      <PublicHeader />
-      <main className="hl-orders-main-wrap">
-        <div className="hl-orders-container">
-          {status === 'loading' && (
-            <div className="hl-orders-detail-grid">
-              <div className="hl-orders-skeleton" style={{ height: 260 }} />
-              <div className="hl-orders-skeleton" style={{ height: 220 }} />
-            </div>
+    <PurchaseLayout
+      title={order ? 'Đơn hàng #' + order.orderCode : 'Chi tiết đơn hàng'}
+      step="ĐƠN HÀNG"
+    >
+      <button className="purchase-link purchase-back" onClick={onBackToOrders}>
+        ← Đơn hàng của tôi
+      </button>
+      {error && (
+        <PurchaseNotice>
+          {error}{' '}
+          {activeOrderId && (
+            <a className="purchase-link" href={`/orders/${activeOrderId}/payment`}>
+              Tiếp tục thanh toán đơn đang chờ
+            </a>
           )}
-
-          {status === 'error' && (
-            <div className="hl-orders-state">
-              <AlertTriangle size={30} />
-              <p>{errorMessage}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus('loading')
-                  setReloadKey((current) => current + 1)
-                }}
-              >
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {status === 'not-found' && (
-            <div className="hl-orders-state">
-              <SearchX size={30} />
-              <p>Không tìm thấy đơn hàng này.</p>
-              <button type="button" onClick={onBackToOrders}>
-                Quay lại đơn hàng của tôi
-              </button>
-            </div>
-          )}
-
-          {status === 'ready' && order && (
-            <>
-            <button type="button" className="hl-orders-back" onClick={onBackToOrders}>
-              <ChevronLeft size={16} />
-              Đơn hàng của tôi
-            </button>
-            <div className="hl-orders-detail-grid">
-              <div className="hl-orders-detail-main">
-                <section className="hl-orders-section">
-                  <h2>Thông tin đơn hàng</h2>
-                  <dl className="hl-orders-info-list">
-                    <div>
-                      <dt>Mã đơn</dt>
-                      <dd>#{order.orderCode}</dd>
-                    </div>
-                    <div>
-                      <dt>Trạng thái</dt>
-                      <dd>
-                        <OrderStatusBadge status={order.status} />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Ngày tạo</dt>
-                      <dd>{formatDateTime(order.createdAt)}</dd>
-                    </div>
-                    {order.expiresAt && (
-                      <div>
-                        <dt>Hết hạn</dt>
-                        <dd>{formatDateTime(order.expiresAt)}</dd>
-                      </div>
-                    )}
-                    {order.paidAt && (
-                      <div>
-                        <dt>Thanh toán lúc</dt>
-                        <dd>{formatDateTime(order.paidAt)}</dd>
-                      </div>
-                    )}
-                    <div>
-                      <dt>Số lần thanh toán</dt>
-                      <dd>{order.paymentAttempts}</dd>
-                    </div>
-                  </dl>
-                </section>
-
-                <section className="hl-orders-section">
-                  <h2>Khóa học</h2>
-                  <div className="hl-orders-items">
-                    {order.items.map((item) => (
-                      <button
-                        type="button"
-                        className="hl-orders-item is-clickable"
-                        key={item.courseId}
-                        onClick={() => onOpenCourse(item.courseId)}
-                      >
-                        <span>{item.courseTitle}</span>
-                        <strong>{formatCoursePrice(item.unitPrice)}</strong>
-                      </button>
-                    ))}
+          <button className="purchase-link" disabled={busy} onClick={() => setReload((v) => v + 1)}>
+            Kiểm tra lại
+          </button>
+        </PurchaseNotice>
+      )}
+      {loading ? (
+        <p className="purchase-skeleton" role="status">
+          Đang tải đơn hàng…
+        </p>
+      ) : (
+        order && (
+          <div className="purchase-grid">
+            <div className="purchase-stack">
+              <section className="purchase-panel">
+                <h2>Thông tin đơn hàng</h2>
+                <dl className="purchase-details">
+                  <div>
+                    <dt>Trạng thái</dt>
+                    <dd>
+                      <OrderStatusBadge status={order.status} />
+                    </dd>
                   </div>
-                </section>
-              </div>
-
-              <aside className="hl-orders-aside">
-                <div className="hl-orders-summary">
-                  <div className="hl-orders-summary-row is-total">
-                    <span>Tổng cộng</span>
-                    <strong>{formatCoursePrice(order.totalAmount)}</strong>
+                  <div>
+                    <dt>Ngày tạo</dt>
+                    <dd>{date(order.createdAt)}</dd>
                   </div>
-
-                  {canPayOrder(order.status) && (
-                    <button type="button" className="hl-orders-cta" onClick={handlePay} disabled={payLoading}>
-                      {payLoading ? 'Đang chuẩn bị thanh toán...' : 'Thanh toán ngay'}
-                    </button>
-                  )}
-
-                  {canCancelOrder(order.status) && !confirmingCancel && (
-                    <button
-                      type="button"
-                      className="hl-orders-cta is-danger-outline"
-                      onClick={() => setConfirmingCancel(true)}
-                    >
-                      Hủy đơn hàng
-                    </button>
-                  )}
-
-                  {confirmingCancel && (
-                    <div className="hl-orders-cancel-confirm">
-                      <p>Bạn có chắc muốn hủy đơn hàng này?</p>
-                      <div className="hl-orders-cancel-actions">
-                        <button
-                          type="button"
-                          className="hl-orders-cta is-secondary"
-                          onClick={() => setConfirmingCancel(false)}
-                          disabled={cancelLoading}
-                        >
-                          Giữ đơn hàng
-                        </button>
-                        <button
-                          type="button"
-                          className="hl-orders-cta is-danger"
-                          onClick={handleCancel}
-                          disabled={cancelLoading}
-                        >
-                          {cancelLoading ? 'Đang hủy...' : 'Hủy đơn'}
-                        </button>
-                      </div>
+                  {order.expiresAt && (
+                    <div>
+                      <dt>Hết hạn</dt>
+                      <dd>{date(order.expiresAt)}</dd>
                     </div>
                   )}
-
-                  {order.status === 'PAID' && (
-                    <button type="button" className="hl-orders-cta is-owned" onClick={onGoToMyCourses}>
-                      Vào học ngay
-                    </button>
+                  {order.paidAt && (
+                    <div>
+                      <dt>Thanh toán lúc</dt>
+                      <dd>{date(order.paidAt)}</dd>
+                    </div>
                   )}
+                </dl>
+              </section>
+              <section className="purchase-panel">
+                <h2>Khóa học</h2>
+                {order.items.map((item) => (
+                  <div className="purchase-checkout-course" key={item.courseId}>
+                    <button className="purchase-link" onClick={() => onOpenCourse(item.courseId)}>
+                      {item.courseTitle}
+                    </button>
+                    <strong>{formatCoursePrice(item.unitPrice)}</strong>
+                  </div>
+                ))}
+              </section>
+            </div>
+            <aside>
+              <section className="purchase-panel purchase-summary">
+                <div className="purchase-total-row is-total">
+                  <span>Tổng cộng</span>
+                  <strong>{formatCoursePrice(order.totalAmount)}</strong>
                 </div>
-              </aside>
-            </div>
-            </>
-          )}
-        </div>
-      </main>
-      <PublicFooter />
-    </div>
+                {canPayOrder(order.status) && (
+                  <button
+                    className="btn"
+                    disabled={busy || confirm}
+                    onClick={() => void mutate('pay')}
+                  >
+                    {busy
+                      ? 'Đang xử lý…'
+                      : order.status === 'PENDING'
+                        ? 'Tiếp tục thanh toán'
+                        : 'Thanh toán lại'}
+                  </button>
+                )}
+                {canCancelOrder(order.status) && !confirm && (
+                  <button
+                    className="btn is-secondary"
+                    disabled={busy}
+                    onClick={() => setConfirm(true)}
+                  >
+                    Hủy đơn hàng
+                  </button>
+                )}
+                {confirm && (
+                  <div role="alert">
+                    <p>Bạn muốn hủy đơn hàng này?</p>
+                    <div className="purchase-actions">
+                      <button
+                        className="btn is-secondary"
+                        disabled={busy}
+                        onClick={() => setConfirm(false)}
+                      >
+                        Giữ đơn hàng
+                      </button>
+                      <button
+                        className="btn is-danger"
+                        disabled={busy}
+                        onClick={() => void mutate('cancel')}
+                      >
+                        {busy ? 'Đang hủy…' : 'Xác nhận hủy'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {order.status === 'PAID' && (
+                  <button className="btn" onClick={onGoToMyCourses}>
+                    Vào học ngay
+                  </button>
+                )}
+              </section>
+            </aside>
+          </div>
+        )
+      )}
+    </PurchaseLayout>
   )
 }
-
-export default OrderDetailPage
