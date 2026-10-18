@@ -46,7 +46,7 @@ function PracticeTestCard({
   return (
     <button
       type="button"
-      className="flex min-w-0 cursor-pointer flex-col rounded-3xl border-[1.5px] border-line-card bg-surface p-4 text-left shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]"
+      className="flex min-w-0 cursor-pointer flex-col rounded-2xl border border-line-card bg-surface p-4 text-left shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
       onClick={onOpen}
     >
       <div className={cover({ tone: tone as CoverTone })}>
@@ -57,7 +57,7 @@ function PracticeTestCard({
           <ClipboardCheck size={20} />
         </span>
       </div>
-      <h4 className="mb-1.5 text-[17px] leading-[1.35] font-black text-text-heading">{title}</h4>
+      <h4 className="mb-1.5 text-[17px] leading-[1.35] font-bold text-text-heading">{title}</h4>
       <p className="mb-4 text-sm text-text-body">
         {questions} · {duration}
       </p>

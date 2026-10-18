@@ -21,4 +21,5 @@
 @import './styles/tailgrids/tailgrids-theme.css';
 @import './styles/tailgrids/tailgrids-default.css';
 @import './styles/tailgrids/tailgrids-dark.css';
+@import './styles/base/dashboard-brand.css';
 @custom-variant dark (&:where(html[data-theme='dark'], html[data-theme='dark'] *));

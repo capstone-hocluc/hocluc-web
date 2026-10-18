@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { DashboardActions, RoleDashboardWelcome } from '../common/DashboardWelcome'
 import MentorChatScreen from './screens/MentorChatScreen'
 import ChatAssignmentScreen from './screens/ChatAssignmentScreen'
 import ChatFeatureGate from '../chat-feature-gate'
@@ -61,11 +62,12 @@ export function ManagementScreen({
 
   switch (page) {
     case 'dashboard':
-      if (role === 'MENTOR') return <MentorOverview onNavigate={onNavigate} />
       return (
         <>
-          <PageHeading title={title} />
-          {role === 'MANAGER' ? (
+          <RoleDashboardWelcome role={role} />
+          {role === 'MENTOR' ? (
+            <MentorOverview onNavigate={onNavigate} />
+          ) : role === 'MANAGER' ? (
             <ManagerOverview onNavigate={onNavigate} />
           ) : (
             <AdminOverview
@@ -73,6 +75,7 @@ export function ManagementScreen({
               areaLabel={role === 'ADMINISTRATOR' ? 'quản trị' : 'vận hành'}
             />
           )}
+          <DashboardActions role={role} onNavigate={onNavigate} />
         </>
       )
     case 'users':

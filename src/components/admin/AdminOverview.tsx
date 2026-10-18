@@ -142,7 +142,7 @@ function AdminOverview({ onNavigate, areaLabel = 'quản trị' }: AdminOverview
           <StatCard
             key={stat.label}
             label={stat.label}
-            value={loading ? '—' : stat.value}
+            value={loading || error ? '—' : stat.value}
             icon={stat.icon}
             tone={stat.tone}
           />

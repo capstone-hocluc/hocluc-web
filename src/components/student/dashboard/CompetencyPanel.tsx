@@ -21,7 +21,7 @@ function LevelLine({ title, data }: { title: string; data: DashboardDimension })
       </div>
       <div className="grid grid-cols-3 gap-2">
         {values.map(([label, value]) => (
-          <span key={label} className="text-xl font-black text-text-heading">
+          <span key={label} className="text-xl font-bold text-text-heading">
             <small className="mb-1 block text-xs font-bold text-text-muted">{label}</small>
             {value}
           </span>
@@ -34,7 +34,7 @@ function LevelLine({ title, data }: { title: string; data: DashboardDimension })
 function SummaryRow({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
     <p className="my-2.5 flex items-center gap-2.5 text-sm font-semibold text-text-body [&>svg]:text-primary-text">
-      {icon} {label} <b className="ml-auto font-black text-primary-text">{value}</b>
+      {icon} {label} <b className="ml-auto font-bold text-primary-text">{value}</b>
     </p>
   )
 }
@@ -53,9 +53,9 @@ interface CompetencyPanelProps {
 // "Hồ sơ năng lực" box: competency rows (current / predicted / target) + study summary.
 function CompetencyPanel({ dimensions, summary }: CompetencyPanelProps) {
   return (
-    <div className="flex h-full flex-col gap-5 rounded-3xl border-[1.5px] border-line-card bg-surface p-5 shadow-card">
+    <div className="flex h-full flex-col gap-5 rounded-2xl border border-line-card bg-surface p-5 shadow-card">
       <div className="flex min-h-0 flex-[1_1_auto] flex-col gap-4">
-        <h4 className="text-[17px] leading-[1.35] font-black text-text-heading">
+        <h4 className="text-[17px] leading-[1.35] font-bold text-text-heading">
           Điểm năng lực ĐGNL của bạn
         </h4>
         <div className="flex min-h-0 flex-[1_1_auto] flex-col justify-evenly gap-5">
@@ -65,7 +65,7 @@ function CompetencyPanel({ dimensions, summary }: CompetencyPanelProps) {
         </div>
       </div>
       <div className="shrink-0 border-t-[1.5px] border-line pt-4">
-        <strong className="mb-3 block text-[17px] font-black text-text-heading">
+        <strong className="mb-3 block text-[17px] font-bold text-text-heading">
           Tổng quan ôn luyện
         </strong>
         <SummaryRow icon={<Clock3 size={18} />} label="Tổng thời lượng" value={summary.studyTime} />

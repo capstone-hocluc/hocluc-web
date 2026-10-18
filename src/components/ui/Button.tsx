@@ -108,6 +108,9 @@ function Button({
   return (
     <Comp
       {...(asChild ? {} : { type })}
+      data-ui-button=""
+      data-variant={variant ?? 'primary'}
+      data-appearance={appearance ?? 'fill'}
       className={cn(button({ variant, appearance, size, shape }), className)}
       {...props}
     >

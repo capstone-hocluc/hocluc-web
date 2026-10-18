@@ -1,0 +1,235 @@
+/* Shared Học Lực identity. Keep tokens on html so menus and dialogs inherit them. */
+:root {
+  --hocluc-navy: #0b3a82;
+  --hocluc-blue: #1e88ff;
+  --hocluc-sky: #7cc8ff;
+  --hocluc-ink: #0b2348;
+  --hocluc-muted: #526984;
+  --hocluc-soft: #edf5ff;
+  --hocluc-line: #d8e5f4;
+}
+
+html[data-console],
+html[data-learner] {
+  --font-sans: 'Manrope', 'Be Vietnam Pro', sans-serif;
+  --logo-color: var(--color-text-heading);
+  --logo-accent: var(--hocluc-blue);
+}
+
+html[data-console]:not([data-theme='dark']),
+html[data-learner]:not([data-theme='dark']) {
+  --color-primary: var(--hocluc-navy);
+  --color-primary-dark: #082e68;
+  --color-primary-bright: var(--hocluc-blue);
+  --color-primary-text: var(--hocluc-navy);
+  --color-primary-soft: var(--hocluc-soft);
+  --color-brand: var(--hocluc-blue);
+  --color-brand-bright: var(--hocluc-sky);
+  --color-brand-soft: #cce6ff;
+  --color-brand-soft-bg: var(--hocluc-soft);
+  --color-accent: var(--hocluc-blue);
+  --color-link: var(--hocluc-navy);
+  --color-heading: var(--hocluc-ink);
+  --color-body: var(--hocluc-muted);
+  --color-text-heading: var(--hocluc-ink);
+  --color-text-heading-soft: #24466f;
+  --color-text-strong: var(--hocluc-ink);
+  --color-text-label: #365576;
+  --color-text-body: var(--hocluc-muted);
+  --color-text-muted: #60758f;
+  --color-text-subtle: #60758f;
+  --color-text-secondary: var(--hocluc-muted);
+  --color-text-dark: var(--hocluc-ink);
+  --color-text-emphasis: #24466f;
+  --color-app-bg: #fff;
+  --color-surface-brand: var(--hocluc-soft);
+  --color-surface-tint: #f8faff;
+  --color-surface-sky: #f6f9ff;
+  --color-surface-hover: var(--hocluc-soft);
+  --color-line: var(--hocluc-line);
+  --color-line-card: var(--hocluc-line);
+  --color-line-shell: var(--hocluc-line);
+  --color-line-blue: var(--hocluc-line);
+  --color-line-soft: #eaf0f8;
+  --color-line-brand: #a9d4ff;
+  --color-border-primary: var(--hocluc-line);
+  --color-border-subtle: #eaf0f8;
+  --color-focus-ring: var(--hocluc-blue);
+  --color-badge-info-bg: var(--hocluc-soft);
+  --color-badge-info-text: var(--hocluc-navy);
+  --shadow-card: 0 4px 16px rgb(11 58 130 / 5%);
+  --shadow-card-soft: 0 2px 8px rgb(11 58 130 / 4%);
+  --shadow-card-hover: 0 8px 24px rgb(11 58 130 / 10%);
+
+  /* Console kit tokens, including the copied table, form and button primitives. */
+  --primary-50: #edf5ff;
+  --primary-100: #d9ecff;
+  --primary-200: #b6dcff;
+  --primary-300: var(--hocluc-sky);
+  --primary-400: #4fa4ff;
+  --primary-500: var(--hocluc-blue);
+  --primary-600: #096ddd;
+  --primary-700: #0b54b5;
+  --primary-800: var(--hocluc-navy);
+  --primary-900: #082e68;
+  --primary-950: var(--hocluc-ink);
+  --neutral-brand-color: var(--hocluc-blue);
+  --brand-100: #d9ecff;
+  --brand-200: #b6dcff;
+  --brand-300: var(--hocluc-sky);
+  --brand-400: #4fa4ff;
+  --brand-500: var(--hocluc-blue);
+  --brand-600: var(--hocluc-navy);
+  --button-primary-background: var(--hocluc-navy);
+  --button-primary-hover-background: #082e68;
+  --button-primary-focus-ring: rgb(30 136 255 / 20%);
+  --button-primary-outline-text: var(--hocluc-navy);
+  --button-primary-outline-stroke: var(--hocluc-line);
+  --button-primary-outline-hover-background: var(--hocluc-soft);
+  --button-group-primary-hover-background: var(--hocluc-navy);
+  --button-group-primary-text: var(--hocluc-navy);
+  --text-primary: var(--hocluc-ink);
+  --text-secondary: var(--hocluc-muted);
+  --text-tertiary: #60758f;
+  --icon-primary: var(--hocluc-navy);
+  --icon-secondary: var(--hocluc-muted);
+  --icon-tertiary: #60758f;
+  --background-gray-secondary_alt_2: #f6f9ff;
+  --background-gray-secondary_alt: #f6f9ff;
+  --background-gray-secondary: #f4f8fe;
+  --background-gray-primary: #f8faff;
+  --card-surface-area: #fff;
+  --card-background: #fff;
+  --card-border: var(--hocluc-line);
+  --card-surface-border: var(--hocluc-line);
+  --input-border: #c4d6ec;
+  --border-primary: var(--hocluc-line);
+  --border-secondary: #eaf0f8;
+  --sidebar-navigation-nav-item-nav-hover-background: var(--hocluc-soft);
+  --badge-primary-background: var(--hocluc-soft);
+  --badge-primary-text: var(--hocluc-navy);
+  --badge-primary-icon-color: var(--hocluc-blue);
+  --badge-blue-background: var(--hocluc-soft);
+  --badge-blue-text: var(--hocluc-navy);
+  --badge-blue-icon-color: var(--hocluc-blue);
+}
+
+.dashboard-layout {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Manrope needs a medium body weight at the console's compact text sizes. */
+html[data-console] {
+  --font-weight-normal: 500;
+}
+
+.console-layout,
+html[data-console] :where(input, textarea, select) {
+  font-weight: 500;
+}
+
+html[data-console] :where(nav button, label, th) {
+  font-weight: 600;
+}
+
+.dashboard-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-line-shell);
+  margin-bottom: 8px;
+}
+
+.student-dashboard > .dashboard-welcome { margin-bottom: 32px; }
+.dashboard-role {
+  margin-bottom: 8px;
+  color: var(--color-primary-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.dashboard-welcome h1 {
+  color: var(--color-text-heading);
+  font-size: 1.875rem;
+  line-height: 1.3;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.dashboard-description {
+  margin-top: 12px;
+  max-width: 68ch;
+  color: var(--color-text-body);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.dashboard-welcome-action { flex-shrink: 0; }
+.dashboard-actions h2 {
+  margin-bottom: 16px;
+  color: var(--color-text-heading);
+  font-size: 1rem;
+  font-weight: 700;
+}
+.dashboard-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.dashboard-action {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 96px;
+  padding: 24px;
+  border: 1px solid var(--color-line-card);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  text-align: left;
+  transition: border-color 180ms, background-color 180ms;
+  cursor: pointer;
+}
+.dashboard-action:hover {
+  border-color: var(--color-primary-bright);
+  background: var(--color-surface-sky);
+}
+.dashboard-action-icon {
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-text);
+}
+.dashboard-action strong { display: block; color: var(--color-text-heading); font-size: 0.875rem; font-weight: 700; }
+.dashboard-action-description { display: block; margin-top: 4px; font-size: 0.8125rem; line-height: 1.6; }
+.dashboard-layout [data-ui-button] {
+  border-width: 1px;
+  border-radius: 12px;
+  box-shadow: none;
+  font-weight: 700;
+  transform: none;
+}
+.dashboard-layout [data-ui-button][data-variant='primary'][data-appearance='fill']:hover {
+  background: var(--color-primary-dark);
+}
+.dashboard-layout :focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 4px; }
+.student-dashboard :where(article, section) { scroll-margin-top: 96px; }
+.student-dashboard h3 { font-size: 1.125rem; font-weight: 700; }
+
+@media (max-width: 760px) {
+  .dashboard-welcome { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .dashboard-welcome h1 { font-size: 1.5rem; }
+  .dashboard-action { padding: 16px; }
+}
+@media (max-width: 560px) {
+  .dashboard-action-grid { grid-template-columns: 1fr; }
+  .student-topbar hocluc-logo::part(wordmark) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-action { transition: none; }
+}

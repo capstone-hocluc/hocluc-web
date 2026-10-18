@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import DashboardWelcome from '../../components/common/DashboardWelcome'
 import { studyPlan, testPractice, todaysGoal } from '../../data/studentDashboard'
 import { usePageResource } from '../../hooks/usePageResource'
 import { useTransientMessage } from '../../hooks/useTransientMessage'
@@ -45,7 +46,7 @@ interface StudentDashboardProps {
   onContinueLearning: (courseId: string, lessonId: string | null) => void
 }
 
-const pageClass = 'pb-10 max-[760px]:pb-[30px]'
+const pageClass = 'student-dashboard pb-10 max-[760px]:pb-[30px]'
 
 // Layout and sections are the original dashboard. Data: real API for courses,
 // progress, recent lesson, competency and lessons-completed (view-model);
@@ -60,6 +61,12 @@ function StudentDashboard(props: StudentDashboardProps) {
 
   return (
     <StudentPageContainer width="wide" className={pageClass}>
+      <DashboardWelcome
+        role="STUDENT"
+        title="Mỗi ngày học, một bước tiến."
+        description="Tiếp tục bài học, theo dõi năng lực và chọn phần cần luyện tiếp theo."
+        action={<Button appearance="outline" onClick={props.onOpenMyCourses}>Khóa học của tôi</Button>}
+      />
       <ResourceState
         status={status}
         errorMessage={errorMessage}
@@ -202,7 +209,7 @@ function DashboardContent({
           <section className="flex h-full flex-col gap-3.5">
             <SectionHeader
               title="Hồ sơ năng lực"
-                            actions={
+              actions={
                 <Button
                   appearance="ghost"
                   className={linkButtonClass}

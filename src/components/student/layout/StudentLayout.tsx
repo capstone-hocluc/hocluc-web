@@ -43,7 +43,7 @@ function StudentLayout({
   return (
     <div
       className={cn(
-        'grid min-h-screen grid-rows-[72px_minmax(0,1fr)] bg-app-bg text-text-heading transition-[grid-template-columns] duration-250',
+        'dashboard-layout student-layout grid min-h-screen grid-rows-[72px_minmax(0,1fr)] bg-app-bg text-text-heading transition-[grid-template-columns] duration-250',
         sidebarCollapsed ? 'grid-cols-[88px_minmax(0,1fr)]' : 'grid-cols-[272px_minmax(0,1fr)]',
         'max-[1180px]:grid-cols-[88px_minmax(0,1fr)] max-[760px]:block'
       )}

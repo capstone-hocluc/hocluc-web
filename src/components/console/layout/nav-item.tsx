@@ -22,6 +22,7 @@ export default function NavItem({ item, active, collapsed, onSelect }: NavItemPr
               type="button"
               onClick={() => onSelect(item.key)}
               aria-label={item.title}
+              aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex items-center justify-center rounded-lg px-3 py-2.5',
                 active
@@ -53,11 +54,11 @@ export default function NavItem({ item, active, collapsed, onSelect }: NavItemPr
       className={cn(
         'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
         active
-          ? 'bg-sidebar-navigation-nav-item-nav-hover-background text-text-primary'
+          ? 'bg-sidebar-navigation-nav-item-nav-hover-background text-primary-text'
           : 'text-text-secondary hover:bg-sidebar-navigation-nav-item-nav-hover-background hover:text-text-primary',
       )}
     >
-      <span className="text-icon-tertiary">
+      <span className={active ? 'text-primary-text' : 'text-icon-tertiary'}>
         <Icon size={20} />
       </span>
       <span className="min-w-0 flex-1">{item.title}</span>

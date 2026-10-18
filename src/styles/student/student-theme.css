@@ -1,12 +1,12 @@
 /*
- * Learner look shared by the landing page, the public course pages and the student area: Nunito,
+ * Learner look shared by the landing page, the public course pages and the student area: Manrope,
  * navy headings, blue-grey body text and "ledge" shadows (a solid bottom edge instead of a soft
  * blur). Set while a learner screen is mounted (html[data-learner], see useLearnerTheme); the token
  * names stay the same, so every learner screen picks it up. The student area's dark mode keeps
  * its own token set from tokens.css; public pages are light only.
  */
 html[data-learner]:not([data-theme='dark']) {
-  --font-sans: 'Nunito', 'Segoe UI', Arial, sans-serif;
+  --font-sans: 'Manrope', 'Be Vietnam Pro', sans-serif;
 
   --color-heading: #173555;
   --color-body: #4c6275;

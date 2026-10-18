@@ -48,7 +48,7 @@ function StudentTopbar({
   onNotify,
 }: StudentTopbarProps) {
   return (
-    <header className="sticky top-0 z-60 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-[18px] border-b border-line-shell bg-surface/92 px-7 py-3 backdrop-blur-md backdrop-saturate-[180%] max-[760px]:flex-wrap max-[760px]:gap-2.5 max-[760px]:px-3.5 max-[760px]:py-2.5">
+    <header className="student-topbar sticky top-0 z-60 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-[18px] border-b border-line-shell bg-surface/92 px-7 py-3 backdrop-blur-md backdrop-saturate-[180%] max-[760px]:flex-wrap max-[760px]:gap-2.5 max-[760px]:px-3.5 max-[760px]:py-2.5">
       <div className="flex min-w-0 flex-none items-center gap-3 max-[760px]:flex-[1_0_auto]">
         <button
           type="button"
