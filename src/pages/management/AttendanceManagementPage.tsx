@@ -1,3 +1,4 @@
+import SelectField from '../../components/console/select-field'
 import { useState } from 'react'
 import { Check, ClipboardCheck, RefreshCw } from '../../components/console/icons'
 import { getMainCourses, type Course } from '../../services/courseService'
@@ -261,17 +262,16 @@ function AttendanceRow({
       </div>
       <label className="flex items-center gap-2 text-sm text-text-tertiary">
           <span className="sr-only">Trạng thái</span>
-        <select
+        <SelectField
           name="attendanceStatus"
           autoComplete="off"
-          aria-label={'Điểm danh ' + record.studentName}
+          ariaLabel={'Điểm danh ' + record.studentName}
           value={value}
           disabled={disabled}
-          onChange={(event) => onChange(event.target.value as AttendanceStatus)}
-          className={`${fieldControlClass} min-w-36`}
-        >
-          {statuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-        </select>
+          onChange={(nextValue) => onChange(nextValue as AttendanceStatus)}
+          triggerClassName={`${fieldControlClass} min-w-36`}
+          options={statuses.map((status) => ({ id: String(status.value), label: status.label }))}
+        />
       </label>
     </div>
   )

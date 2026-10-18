@@ -36,16 +36,26 @@ function DropdownField({
   emptyMessage,
   isDisabled,
   isInvalid,
+  isRequired,
   ariaDescribedBy,
   className,
   triggerClassName,
 }: DropdownFieldProps) {
-  const hint = isLoading ? 'Đang tải…' : isError ? errorMessage : options.length === 0 ? emptyMessage : null
+  const hint = isLoading
+    ? 'Đang tải…'
+    : isError
+      ? errorMessage
+      : options.length === 0
+        ? emptyMessage
+        : null
   return (
     <div className="flex flex-col gap-1.5" aria-describedby={ariaDescribedBy}>
       <SelectField
         ariaLabel={ariaLabel}
-        options={[...options]}
+        ariaDescribedBy={ariaDescribedBy}
+        required={isRequired}
+        invalid={isInvalid}
+        options={options}
         value={value ?? ''}
         onChange={(next) => onChange(next)}
         disabled={isDisabled || isLoading || (options.length === 0 && !value)}
@@ -53,7 +63,13 @@ function DropdownField({
         className={className ?? 'w-full'}
         triggerClassName={`${isInvalid ? 'border-input-error-focus-border ' : ''}${triggerClassName ?? 'w-full'}`}
       />
-      {hint && <p className={`text-xs font-normal ${isError ? 'text-badge-error-text' : 'text-text-tertiary'}`}>{hint}</p>}
+      {hint && (
+        <p
+          className={`text-xs font-normal ${isError ? 'text-badge-error-text' : 'text-text-tertiary'}`}
+        >
+          {hint}
+        </p>
+      )}
     </div>
   )
 }

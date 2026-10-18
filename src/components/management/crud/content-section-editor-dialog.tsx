@@ -1,3 +1,4 @@
+import SelectField from '../../console/select-field'
 import { useState, type FormEvent } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
@@ -84,14 +85,16 @@ export default function ContentSectionEditorDialog({ courseId, section, phases, 
           />
         </Field>
         <Field label="Giai đoạn" hint="Tùy chọn. Xếp phần học vào một giai đoạn của lộ trình.">
-          <select name="phaseId" defaultValue={section?.phaseId ?? ''} className={fieldControlClass}>
-            <option value="">Không thuộc giai đoạn nào</option>
-            {phases.map((phase) => (
-              <option key={phase.id} value={phase.id}>
-                {phase.name}
-              </option>
-            ))}
-          </select>
+          <SelectField
+            ariaLabel="Giai đoạn"
+            name="phaseId"
+            defaultValue={section?.phaseId ?? ''}
+            triggerClassName={fieldControlClass}
+            options={[
+              { id: '', label: 'Không thuộc giai đoạn nào' },
+              ...phases.map((phase) => ({ id: String(phase.id), label: phase.name })),
+            ]}
+          />
         </Field>
         <Field label="Mô tả">
           <textarea

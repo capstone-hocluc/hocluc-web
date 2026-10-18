@@ -1,3 +1,4 @@
+import SelectField from '../../console/select-field'
 import { useState, type FormEvent } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
@@ -103,18 +104,19 @@ export default function ChapterEditorDialog({
         </Field>
         {sections.length > 0 && (
           <Field label="Phần học" hint="Nhóm chương theo phần để học viên dễ theo dõi lộ trình.">
-            <select
+            <SelectField
+              ariaLabel="Phần học"
               name="sectionId"
               defaultValue={chapter ? (chapter.sectionId ?? '') : (defaultSectionId ?? '')}
-              className={fieldControlClass}
-            >
-              <option value="">Chưa xếp vào phần nào</option>
-              {sections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.phaseName ? `${section.phaseName} · ${section.title}` : section.title}
-                </option>
-              ))}
-            </select>
+              triggerClassName={fieldControlClass}
+              options={[
+                { id: '', label: 'Chưa xếp vào phần nào' },
+                ...sections.map((section) => ({
+                  id: String(section.id),
+                  label: section.phaseName ? `${section.phaseName} · ${section.title}` : section.title,
+                })),
+              ]}
+            />
           </Field>
         )}
         <Field label="Mô tả">

@@ -1,3 +1,4 @@
+import SelectField from '../../components/console/select-field'
 import { useState, type FormEvent } from 'react'
 import { instantToLocalDateTimeInput, localDateTimeToInstant, SCHEDULING_TIMEZONE } from '../../lib/scheduling'
 import type { ClassSessionResponse, DeliveryMode, ScheduleStatus, UpdateClassSessionRequest } from '../../types/scheduling'
@@ -93,20 +94,34 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Hình thức">
-              <select name="mode" disabled={busy} defaultValue={session.mode} className={fieldControlClass}>
-                <option value="PHYSICAL">Trực tiếp</option>
-                <option value="ONLINE">Trực tuyến</option>
-                <option value="HYBRID">Kết hợp</option>
-                <option value="OFFLINE">Ngoại tuyến</option>
-              </select>
+              <SelectField
+                ariaLabel="Hình thức"
+                name="mode"
+                disabled={busy}
+                defaultValue={session.mode}
+                triggerClassName={fieldControlClass}
+                options={[
+                  { id: 'PHYSICAL', label: 'Trực tiếp' },
+                  { id: 'ONLINE', label: 'Trực tuyến' },
+                  { id: 'HYBRID', label: 'Kết hợp' },
+                  { id: 'OFFLINE', label: 'Ngoại tuyến' },
+                ]}
+              />
             </Field>
             <Field label="Trạng thái">
-              <select name="status" disabled={busy} defaultValue={session.status} className={fieldControlClass}>
-                <option value="SCHEDULED">Sắp diễn ra</option>
-                <option value="ONGOING">Đang diễn ra</option>
-                <option value="COMPLETED">Đã hoàn thành</option>
-                <option value="CANCELLED">Đã hủy</option>
-              </select>
+              <SelectField
+                ariaLabel="Trạng thái"
+                name="status"
+                disabled={busy}
+                defaultValue={session.status}
+                triggerClassName={fieldControlClass}
+                options={[
+                  { id: 'SCHEDULED', label: 'Sắp diễn ra' },
+                  { id: 'ONGOING', label: 'Đang diễn ra' },
+                  { id: 'COMPLETED', label: 'Đã hoàn thành' },
+                  { id: 'CANCELLED', label: 'Đã hủy' },
+                ]}
+              />
             </Field>
           </div>
           <Field label="Phòng học">
@@ -114,12 +129,19 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nền tảng họp">
-              <select name="meetingProvider" disabled={busy} defaultValue={session.meetingProvider ?? 'ZOOM'} className={fieldControlClass}>
-                <option value="ZOOM">Zoom</option>
-                <option value="GOOGLE_MEET">Google Meet</option>
-                <option value="MICROSOFT_TEAMS">Microsoft Teams</option>
-                <option value="OTHER">Khác</option>
-              </select>
+              <SelectField
+                ariaLabel="Nền tảng họp"
+                name="meetingProvider"
+                disabled={busy}
+                defaultValue={session.meetingProvider ?? 'ZOOM'}
+                triggerClassName={fieldControlClass}
+                options={[
+                  { id: 'ZOOM', label: 'Zoom' },
+                  { id: 'GOOGLE_MEET', label: 'Google Meet' },
+                  { id: 'MICROSOFT_TEAMS', label: 'Microsoft Teams' },
+                  { id: 'OTHER', label: 'Khác' },
+                ]}
+              />
             </Field>
             <Field label="Link phòng">
               <input name="meetingLink" autoComplete="off" type="url" disabled={busy} defaultValue={session.meetingLink ?? ''} className={fieldControlClass} />

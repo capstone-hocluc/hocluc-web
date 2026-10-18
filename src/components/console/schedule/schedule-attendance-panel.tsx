@@ -1,3 +1,4 @@
+import SelectField from '../select-field'
 import { useEffect, useState } from 'react'
 import { Check } from '../icons'
 import { getScheduleAttendances, saveScheduleAttendances } from '../../../services/attendanceService'
@@ -120,17 +121,16 @@ function AttendanceRow({
         <span className="block truncate text-sm font-medium text-text-primary">{record.studentName}</span>
         <span className="block truncate text-xs text-text-tertiary">{record.studentEmail}</span>
       </span>
-      <select
+      <SelectField
         name="attendanceStatus"
         autoComplete="off"
-        aria-label={'Điểm danh ' + record.studentName}
+        ariaLabel={'Điểm danh ' + record.studentName}
         value={value}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value as AttendanceStatus)}
-        className={`${fieldControlClass} sm:w-40`}
-      >
-        {statuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-      </select>
+        onChange={(nextValue) => onChange(nextValue as AttendanceStatus)}
+        triggerClassName={`${fieldControlClass} sm:w-40`}
+        options={statuses.map((status) => ({ id: String(status.value), label: status.label }))}
+      />
     </label>
   )
 }

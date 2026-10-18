@@ -25,6 +25,7 @@ function Modal({ open, onClose, title, description, maxWidth = 480, className = 
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-80 grid place-items-center bg-surface-overlay p-5 backdrop-blur-[5px]">
           <Dialog.Content
+            data-select-portal=""
             className={cn(
               'relative grid w-full gap-3 rounded-[18px] border border-border-primary bg-surface-elevated p-[25px] text-text-heading shadow-[0_28px_70px_rgba(10,16,35,0.25)]',
               '[&_h2]:m-0 [&_h2]:text-xl [&>p]:-mt-1.5 [&>p]:mb-1 [&>p]:text-[13px] [&>p]:text-text-muted',
@@ -35,6 +36,13 @@ function Modal({ open, onClose, title, description, maxWidth = 480, className = 
             )}
             style={{ width: `min(${maxWidth}px, 100%)` }}
             tabIndex={-1}
+            onEscapeKeyDown={(event) => {
+              // The first Escape closes the select menu; the next closes this modal.
+              const content = event.target instanceof Element
+                ? event.target.closest('[data-select-portal]')
+                : null
+              if (content?.querySelector('[data-hocluc-select-menu]')) event.preventDefault()
+            }}
             onOpenAutoFocus={(event) => {
               // Radix would focus the first interactive child (e.g. an input)
               // and the app intentionally avoids that. Focus the dialog

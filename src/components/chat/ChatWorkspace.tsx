@@ -1,3 +1,4 @@
+import SelectField from '../console/select-field'
 import { useEffect, useRef, useState, useCallback, type ComponentProps } from 'react'
 import ConsoleButton from '../console/button'
 import ConsoleNotice from '../console/notice'
@@ -219,7 +220,16 @@ export default function ChatWorkspace({ conversationId, onSelectConversation, co
               <Button appearance="ghost" size="sm" aria-pressed={unread} className={`min-h-11 flex-1 ${unread ? 'bg-background-gray-secondary text-text-primary' : ''}`} onClick={() => setUnread(true)}>Chưa đọc</Button>
             </div>
           </> : <>
-            <select aria-label="Trạng thái hội thoại" className={field} value={status} onChange={event => setStatus(event.target.value as ChatStatus | '')}><option value="">Tất cả trạng thái</option>{Object.entries(statusLabels).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select>
+            <SelectField
+              ariaLabel="Trạng thái hội thoại"
+              triggerClassName={field}
+              value={status}
+              onChange={(nextValue) => setStatus(nextValue as ChatStatus | '')}
+              options={[
+                { id: '', label: 'Tất cả trạng thái' },
+                ...Object.entries(statusLabels).map(([key, label]) => ({ id: String(key), label })),
+              ]}
+            />
             <label className="flex min-h-11 items-center gap-2 text-[15px] font-bold text-text-heading"><input type="checkbox" className="size-4 accent-primary" checked={unread} onChange={event => setUnread(event.target.checked)} />Chưa đọc</label>
           </>}
         </div>
@@ -290,5 +300,16 @@ function NewRequest({ field, onCancel, onCreated, renderButton }: { field: strin
     catch (cause) { if (alive.current && scope.current === chatIdentity()) setError(chatError(cause)) }
     finally { if (alive.current && scope.current === chatIdentity()) setBusy(false) }
   }
-  return <Modal open title="Tạo yêu cầu hỗ trợ" maxWidth={560} onClose={() => { if (!busy) onCancel() }}><form onSubmit={event => { event.preventDefault(); void create() }} className="space-y-4">{error && <p role="alert" className="text-danger">{error}</p>}<label className="block text-sm font-extrabold text-text-heading">Môn học<select required aria-label="Môn học" className={`mt-1 ${field}`} value={subject} disabled={busy || locked} onChange={event => setSubject(event.target.value)}><option value="">Chọn môn học</option>{subjects.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className="block text-sm font-extrabold text-text-heading">Tiêu đề<input required aria-label="Tiêu đề yêu cầu" maxLength={200} className={`mt-1 ${field}`} value={title} disabled={busy || locked} onChange={event => setTitle(event.target.value)} /></label><label className="block text-sm font-extrabold text-text-heading">Bài toán hoặc câu hỏi<textarea required aria-label="Nội dung yêu cầu" rows={5} className={`mt-1 ${field}`} value={body} disabled={busy || locked} onChange={event => setBody(event.target.value)} /></label><p className="text-[13px] text-text-body">Bạn có thể đính kèm ảnh hoặc PDF sau khi tạo hội thoại.</p><div className="flex justify-end gap-3">{renderButton({ appearance: 'outline', disabled: busy, onClick: onCancel, children: 'Hủy' })}{renderButton({ type: 'submit', disabled: busy || !subject || !title.trim() || !body.trim(), children: busy ? 'Đang tạo…' : locked ? 'Thử tạo lại' : 'Tạo yêu cầu' })}</div></form></Modal>
+  return <Modal open title="Tạo yêu cầu hỗ trợ" maxWidth={560} onClose={() => { if (!busy) onCancel() }}><form onSubmit={event => { event.preventDefault(); void create() }} className="space-y-4">{error && <p role="alert" className="text-danger">{error}</p>}<label className="block text-sm font-extrabold text-text-heading">Môn học<SelectField
+    required
+    ariaLabel="Môn học"
+    triggerClassName={`mt-1 ${field}`}
+    value={subject}
+    disabled={busy || locked}
+    onChange={(nextValue) => setSubject(nextValue)}
+    options={[
+      { id: '', label: 'Chọn môn học' },
+      ...subjects.map((item) => ({ id: String(item.id), label: item.name })),
+    ]}
+  /></label><label className="block text-sm font-extrabold text-text-heading">Tiêu đề<input required aria-label="Tiêu đề yêu cầu" maxLength={200} className={`mt-1 ${field}`} value={title} disabled={busy || locked} onChange={event => setTitle(event.target.value)} /></label><label className="block text-sm font-extrabold text-text-heading">Bài toán hoặc câu hỏi<textarea required aria-label="Nội dung yêu cầu" rows={5} className={`mt-1 ${field}`} value={body} disabled={busy || locked} onChange={event => setBody(event.target.value)} /></label><p className="text-[13px] text-text-body">Bạn có thể đính kèm ảnh hoặc PDF sau khi tạo hội thoại.</p><div className="flex justify-end gap-3">{renderButton({ appearance: 'outline', disabled: busy, onClick: onCancel, children: 'Hủy' })}{renderButton({ type: 'submit', disabled: busy || !subject || !title.trim() || !body.trim(), children: busy ? 'Đang tạo…' : locked ? 'Thử tạo lại' : 'Tạo yêu cầu' })}</div></form></Modal>
 }

@@ -147,6 +147,7 @@ export function Select<T extends object>({ className, children, ...props }: Sele
 // SelectTrigger
 
 interface SelectTriggerProps extends AriaButtonProps {
+  ref?: React.Ref<HTMLButtonElement>;
   isInvalid?: boolean;
   variant?: ButtonProps["variant"];
   appearance?: ButtonProps["appearance"];

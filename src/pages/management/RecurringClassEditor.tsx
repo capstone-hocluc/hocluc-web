@@ -165,17 +165,27 @@ export default function RecurringClassEditor({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Ngày trong tuần">
-            <select name="dayOfWeek" defaultValue={initial?.dayOfWeek ?? 'MONDAY'} className={fieldControlClass}>
-              {weekdays.map((day) => <option key={day.id} value={day.id}>{day.label}</option>)}
-            </select>
+            <SelectField
+              ariaLabel="Ngày trong tuần"
+              name="dayOfWeek"
+              defaultValue={initial?.dayOfWeek ?? 'MONDAY'}
+              triggerClassName={fieldControlClass}
+              options={weekdays.map((day) => ({ id: String(day.id), label: day.label }))}
+            />
           </Field>
           <Field label="Hình thức">
-            <select name="defaultMode" defaultValue={initial?.defaultMode ?? 'PHYSICAL'} className={fieldControlClass}>
-              <option value="PHYSICAL">Trực tiếp</option>
-              <option value="ONLINE">Trực tuyến</option>
-              <option value="HYBRID">Kết hợp</option>
-              <option value="OFFLINE">Ngoại tuyến</option>
-            </select>
+            <SelectField
+              ariaLabel="Hình thức"
+              name="defaultMode"
+              defaultValue={initial?.defaultMode ?? 'PHYSICAL'}
+              triggerClassName={fieldControlClass}
+              options={[
+                { id: 'PHYSICAL', label: 'Trực tiếp' },
+                { id: 'ONLINE', label: 'Trực tuyến' },
+                { id: 'HYBRID', label: 'Kết hợp' },
+                { id: 'OFFLINE', label: 'Ngoại tuyến' },
+              ]}
+            />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
