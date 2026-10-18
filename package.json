@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:e2e:purchase": "tsc --noEmit -p tsconfig.e2e.purchase.json && playwright test purchase.spec.ts",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

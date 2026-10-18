@@ -1,198 +1,240 @@
-import { useEffect, useState } from 'react'
-import { AlertTriangle, Landmark, ShoppingBag } from '../../components/console/icons'
-import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
-import { getCart, getEndedCartItems, type Cart } from '../../services/cartService'
+import { useEffect, useRef, useState } from 'react'
+import { Landmark } from '../../components/console/icons'
+import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/PurchaseLayout'
+import { getCart, cartItemIssue, canCheckoutCart, type Cart } from '../../services/cartService'
 import { checkout, type OrderPaymentData } from '../../services/orderService'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
-import { showErrorToast } from '../../lib/toastBus'
+import { ApiError } from '../../lib/api'
 import { formatCoursePrice } from '../../lib/courseFormat'
+import { checkoutIntent, clearCheckoutIntent } from '../../lib/purchaseSession'
 
-interface CheckoutPageProps {
-  onOrderCreated: (paymentData: OrderPaymentData) => void
+interface Props {
+  onOrderCreated: (data: OrderPaymentData) => void
   onBackToCart: () => void
 }
-
-function CheckoutPage({ onOrderCreated, onBackToCart }: CheckoutPageProps) {
+export default function CheckoutPage({ onOrderCreated, onBackToCart }: Props) {
   const { profile } = useCurrentUser()
   const [cart, setCart] = useState<Cart | null>(null)
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [errorMessage, setErrorMessage] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
-
+  const [changed, setChanged] = useState(false)
+  const [reconfirmVersion, setReconfirmVersion] = useState<string | null>(null)
+  const submittingRef = useRef(false)
+  const mounted = useRef(true)
   useEffect(() => {
-    let cancelled = false
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  const [reload, setReload] = useState(0)
+  useEffect(() => {
+    let active = true
     getCart()
-      .then((response) => {
-        if (cancelled) return
-        setCart(response.data || { items: [], itemCount: 0, totalAmount: 0 })
-        setStatus('ready')
+      .then((r) => {
+        if (active) {
+          if (!r.data) throw new Error('Không tải được giỏ hàng.')
+          setCart(r.data)
+        }
       })
-      .catch((error) => {
-        if (cancelled) return
-        setErrorMessage(getErrorMessage(error))
-        setStatus('error')
+      .catch((e) => {
+        if (active) setError(getErrorMessage(e))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
       })
     return () => {
-      cancelled = true
+      active = false
     }
-  }, [reloadKey])
-
-  const buyerName =
+  }, [reload])
+  const buyer =
     profile?.displayName ||
     [profile?.lastName, profile?.firstName].filter(Boolean).join(' ') ||
-    ''
-
-  const handleSubmit = async () => {
-    if (submitting) return
+    profile?.email
+  const eligible = !!cart && canCheckoutCart(cart) && !!cart.version && !!profile
+  const submit = async () => {
+    if (!eligible || !cart?.version || !profile || submittingRef.current || changed) return
+    submittingRef.current = true
     setSubmitting(true)
-    setSubmitError('')
+    setError('')
+    const version = cart.version
+    const key = checkoutIntent(profile.id, version)
     try {
-      const result = await checkout()
-      onOrderCreated(result)
-    } catch (error) {
-      const message = getErrorMessage(error)
-      showErrorToast(message)
-      // Checkout rejects the whole cart when one course cannot be bought, so keep the reason on
-      // screen and point the buyer back to the cart to remove it.
-      setSubmitError(message)
+      const result = await checkout(version, key)
+      clearCheckoutIntent(profile.id, version)
+      if (mounted.current) onOrderCreated(result)
+    } catch (e) {
+      if (
+        e instanceof ApiError &&
+        (e.code === 'CART_CHANGED' || e.code === 'ORDER_IDEMPOTENCY_CONFLICT')
+      ) {
+        setChanged(true)
+        setReconfirmVersion(version)
+        setError(
+          'Giỏ hàng đã thay đổi. Kiểm tra lại khóa học và tổng tiền, rồi xác nhận để tiếp tục.'
+        )
+        try {
+          const fresh = await getCart()
+          if (!fresh.data)
+            throw new Error('Không tải được phiên bản giỏ hàng mới. Vui lòng thử lại.', {
+              cause: e,
+            })
+          setCart(fresh.data)
+        } catch (refreshError) {
+          setCart(null)
+          setError(getErrorMessage(refreshError))
+        }
+      } else setError(getErrorMessage(e))
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
-
   return (
-    <div className="hl-checkout-page">
-      <PublicHeader />
-      <main className="hl-checkout-main-wrap">
-        <div className="hl-checkout-container">
-          <h1 className="hl-checkout-title">Thanh toán</h1>
-
-          {status === 'loading' && (
-            <div className="hl-checkout-grid">
-              <div className="hl-checkout-skeleton" style={{ height: 260 }} />
-              <div className="hl-checkout-skeleton" style={{ height: 220 }} />
-            </div>
+    <PurchaseLayout title="Xác nhận đơn hàng" step="02 / THANH TOÁN">
+      <button className="purchase-link purchase-back" disabled={submitting} onClick={onBackToCart}>
+        ← Quay lại giỏ hàng
+      </button>
+      <p className="purchase-intro">Kiểm tra khóa học và thông tin người mua trước khi tạo đơn.</p>
+      {error && (
+        <PurchaseNotice>
+          {error}
+          {!cart && (
+            <button
+              className="purchase-link"
+              onClick={() => {
+                setError('')
+                setLoading(true)
+                setReload((v) => v + 1)
+              }}
+            >
+              Thử lại
+            </button>
           )}
-
-          {status === 'error' && (
-            <div className="hl-checkout-state">
-              <AlertTriangle size={30} />
-              <p>{errorMessage}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setStatus('loading')
-                  setReloadKey((current) => current + 1)
-                }}
-              >
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {status === 'ready' && cart && cart.items.length === 0 && (
-            <div className="hl-checkout-state">
-              <ShoppingBag size={30} />
-              <p>Giỏ hàng của bạn đang trống, không có gì để thanh toán.</p>
-              <button type="button" onClick={onBackToCart}>
-                Quay lại giỏ hàng
-              </button>
-            </div>
-          )}
-
-          {status === 'ready' && cart && cart.items.length > 0 && (
-            <div className="hl-checkout-grid">
-              <div className="hl-checkout-main">
-                <section className="hl-checkout-section">
-                  <h2>Thông tin người mua</h2>
-                  <dl className="hl-checkout-info-list">
-                    {buyerName && (
-                      <div>
-                        <dt>Họ và tên</dt>
-                        <dd>{buyerName}</dd>
-                      </div>
-                    )}
-                    {profile?.email && (
-                      <div>
-                        <dt>Email</dt>
-                        <dd>{profile.email}</dd>
-                      </div>
-                    )}
-                    {profile?.phone && (
-                      <div>
-                        <dt>Số điện thoại</dt>
-                        <dd>{profile.phone}</dd>
-                      </div>
-                    )}
-                  </dl>
-                </section>
-
-                <section className="hl-checkout-section">
-                  <h2>Phương thức thanh toán</h2>
-                  <div className="hl-checkout-payment-method">
-                    <Landmark size={20} />
-                    <div>
-                      <strong>Chuyển khoản ngân hàng</strong>
-                      <span>Thanh toán qua cổng SePay</span>
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              <aside className="hl-checkout-aside">
-                <div className="hl-checkout-summary">
-                  <h2>Thông tin đơn hàng</h2>
-                  <div className="hl-checkout-items">
-                    {cart.items.map((item) => (
-                      <div className="hl-checkout-item" key={item.courseId}>
-                        <span>{item.title}</span>
-                        <strong>{formatCoursePrice(item.price)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="hl-checkout-summary-row">
-                    <span>Số khóa học</span>
-                    <strong>{cart.itemCount}</strong>
-                  </div>
-                  <div className="hl-checkout-summary-row is-total">
-                    <span>Tổng cộng</span>
-                    <strong>{formatCoursePrice(cart.totalAmount)}</strong>
-                  </div>
-                  {getEndedCartItems(cart.items).length > 0 && (
-                    <p className="hl-pay-warning" role="alert">
-                      Giỏ hàng có khóa học đã kết thúc ({getEndedCartItems(cart.items).map((item) => item.title).join(', ')}).
-                      Quay lại giỏ hàng để xóa trước khi đặt hàng.
-                    </p>
-                  )}
-                  {submitError && (
-                    <p className="hl-pay-warning" role="alert">
-                      {submitError} Nếu một khóa học trong giỏ không còn mở bán, hãy{' '}
-                      <button type="button" className="hl-checkout-link" onClick={onBackToCart}>
-                        quay lại giỏ hàng
-                      </button>{' '}
-                      để xóa khóa học đó rồi thử lại.
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    className="hl-checkout-cta"
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                  >
-                    {submitting ? 'Đang tạo đơn hàng...' : 'Đặt hàng & Thanh toán'}
-                  </button>
-                </div>
-              </aside>
-            </div>
-          )}
+        </PurchaseNotice>
+      )}
+      {loading ? (
+        <div className="purchase-skeleton" role="status">
+          Đang kiểm tra giỏ hàng…
         </div>
-      </main>
-      <PublicFooter />
-    </div>
+      ) : cart && !cart.items.length ? (
+        <section className="purchase-panel purchase-empty">
+          <h2>Chưa có khóa học để thanh toán</h2>
+          <button className="btn" onClick={onBackToCart}>
+            Quay lại giỏ hàng
+          </button>
+        </section>
+      ) : (
+        cart && (
+          <div className="purchase-grid">
+            <div className="purchase-stack">
+              <section className="purchase-panel">
+                <h2>Thông tin người mua</h2>
+                <dl className="purchase-details">
+                  <div>
+                    <dt>Họ và tên</dt>
+                    <dd>{buyer}</dd>
+                  </div>
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{profile?.email}</dd>
+                  </div>
+                  {profile?.phone && (
+                    <div>
+                      <dt>Số điện thoại</dt>
+                      <dd>{profile.phone}</dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="purchase-muted">
+                  Quyền học sẽ được cấp cho tài khoản này sau khi thanh toán được xác nhận.
+                </p>
+              </section>
+              <section className="purchase-panel">
+                <h2>Phương thức thanh toán</h2>
+                <div className="purchase-payment-method">
+                  <Landmark size={28} />
+                  <div>
+                    <strong>Chuyển khoản ngân hàng</strong>
+                    <p className="purchase-muted">
+                      Quét VietQR hoặc chuyển khoản theo hướng dẫn ở bước tiếp theo.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <section className="purchase-panel">
+                <h2>Khóa học đã chọn</h2>
+                {cart.items.map((item) => (
+                  <div className="purchase-checkout-course" key={item.courseId}>
+                    <a href={'/courses/' + encodeURIComponent(item.courseId)}>{item.title}</a>
+                    <strong>{formatCoursePrice(item.price)}</strong>
+                    {cartItemIssue(item) && (
+                      <p className="purchase-line-error">{cartItemIssue(item)}</p>
+                    )}
+                  </div>
+                ))}
+              </section>
+            </div>
+            <aside>
+              <section className="purchase-panel purchase-summary">
+                <h2>Thông tin đơn hàng</h2>
+                <div className="purchase-total-row">
+                  <span>Số khóa học</span>
+                  <strong>{cart.itemCount}</strong>
+                </div>
+                <div className="purchase-total-row is-total">
+                  <span>Tổng thanh toán</span>
+                  <strong>{formatCoursePrice(cart.totalAmount)}</strong>
+                </div>
+                {!canCheckoutCart(cart) && (
+                  <p className="purchase-line-error">
+                    Có khóa học không còn đủ điều kiện. Quay lại giỏ hàng để xóa trước khi đặt hàng.
+                  </p>
+                )}
+                {!cart.version && (
+                  <p className="purchase-line-error">
+                    Chưa tải được phiên bản giỏ hàng. Hãy tải lại trang để kiểm tra.
+                  </p>
+                )}
+                {changed && (
+                  <button
+                    className="btn is-secondary"
+                    disabled={submitting}
+                    onClick={() => {
+                      if (profile && reconfirmVersion)
+                        clearCheckoutIntent(profile.id, reconfirmVersion)
+                      if (profile && cart.version) clearCheckoutIntent(profile.id, cart.version)
+                      setChanged(false)
+                      setError('')
+                      setReconfirmVersion(null)
+                    }}
+                  >
+                    Tôi đã kiểm tra thay đổi
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={!eligible || submitting || changed}
+                  onClick={() => void submit()}
+                >
+                  {submitting
+                    ? 'Đang tạo đơn hàng…'
+                    : cart.totalAmount === 0
+                      ? 'Đăng ký khóa học miễn phí'
+                      : 'Tạo đơn & tiếp tục thanh toán'}
+                </button>
+                <p className="purchase-muted">
+                  Đơn hàng chỉ được xác nhận sau khi hệ thống ghi nhận thanh toán. Nếu mạng gián
+                  đoạn, bạn có thể thử lại mà không tạo ý định thanh toán mới.
+                </p>
+              </section>
+            </aside>
+          </div>
+        )
+      )}
+    </PurchaseLayout>
   )
 }
-
-export default CheckoutPage

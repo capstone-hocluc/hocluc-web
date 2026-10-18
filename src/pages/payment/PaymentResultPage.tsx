@@ -1,226 +1,92 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Clock, HelpCircle, XCircle } from '../../components/console/icons'
-import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
+import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/PurchaseLayout'
 import { getOrder, type Order } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
 import { formatCoursePrice } from '../../lib/courseFormat'
 import { getOrderStatusLabel } from '../../lib/orderStatus'
-
-interface PaymentResultPageProps {
+interface Props {
   onGoToMyCourses: () => void
-  onOpenOrder: (orderId: string) => void
+  onOpenOrder: (id: string) => void
   onGoToOrders: () => void
 }
-
-function formatDateTime(value: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('vi-VN')
-}
-
-// The payment gateway is expected to redirect back with the order id in the
-// query string. No provider-specific params (VNPay or otherwise) are parsed
-// here - just this one generic, provider-neutral key.
-function getOrderIdFromUrl() {
-  return new URLSearchParams(window.location.search).get('orderId')
-}
-
-function PaymentResultPage({ onGoToMyCourses, onOpenOrder, onGoToOrders }: PaymentResultPageProps) {
-  const [orderId] = useState(getOrderIdFromUrl)
+export default function PaymentResultPage({ onGoToMyCourses, onOpenOrder, onGoToOrders }: Props) {
+  const orderId = new URLSearchParams(window.location.search).get('orderId')
   const [order, setOrder] = useState<Order | null>(null)
-  const [status, setStatus] = useState<'checking' | 'ready' | 'error' | 'no-order'>(
-    orderId ? 'checking' : 'no-order'
-  )
-  const [errorMessage, setErrorMessage] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
-
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(!!orderId)
+  const [reload, setReload] = useState(0)
   useEffect(() => {
     if (!orderId) return
-    let cancelled = false
+    let active = true
     getOrder(orderId)
-      .then((data) => {
-        if (cancelled) return
-        setOrder(data)
-        setStatus('ready')
+      .then((next) => {
+        if (active) {
+          setOrder(next)
+          setError('')
+        }
       })
-      .catch((error) => {
-        if (cancelled) return
-        setErrorMessage(getErrorMessage(error))
-        setStatus('error')
+      .catch((e) => {
+        if (active) setError(getErrorMessage(e))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
       })
     return () => {
-      cancelled = true
+      active = false
     }
-  }, [orderId, reloadKey])
-
-  const recheck = () => {
-    setStatus('checking')
-    setReloadKey((current) => current + 1)
-  }
-
+  }, [orderId, reload])
   return (
-    <div className="hl-payres-page">
-      <PublicHeader />
-      <main className="hl-payres-main-wrap">
-        <div className="hl-payres-container">
-          {status === 'checking' && (
-            <div className="hl-payres-state">
-              <Clock size={32} />
-              <p>Đang kiểm tra trạng thái thanh toán...</p>
-            </div>
-          )}
-
-          {status === 'no-order' && (
-            <div className="hl-payres-state">
-              <HelpCircle size={32} />
-              <p>Không tìm thấy thông tin đơn hàng để kiểm tra.</p>
-              <button type="button" onClick={onGoToOrders}>
-                Xem đơn hàng của tôi
+    <PurchaseLayout title="Trạng thái thanh toán" step="XÁC NHẬN">
+      {error && (
+        <PurchaseNotice>
+          {error}{' '}
+          <button
+            className="purchase-link"
+            onClick={() => {
+              setLoading(true)
+              setReload((v) => v + 1)
+            }}
+          >
+            Kiểm tra lại
+          </button>
+        </PurchaseNotice>
+      )}
+      {loading ? (
+        <p className="purchase-skeleton" role="status">
+          Đang kiểm tra với máy chủ…
+        </p>
+      ) : order ? (
+        <section className="purchase-panel purchase-empty">
+          <h2>{getOrderStatusLabel(order.status)}</h2>
+          <p>
+            Đơn #{order.orderCode} · {formatCoursePrice(order.totalAmount)}
+          </p>
+          <p>
+            {order.status === 'PAID'
+              ? 'Quyền học đã được cập nhật cho tài khoản của bạn.'
+              : 'Mở đơn hàng để xem thông tin và tiếp tục thanh toán nếu cần.'}
+          </p>
+          <div className="purchase-actions">
+            {order.status === 'PAID' && (
+              <button className="btn" onClick={onGoToMyCourses}>
+                Vào khóa học của tôi
               </button>
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="hl-payres-state">
-              <AlertTriangle size={32} />
-              <p>{errorMessage}</p>
-              <button type="button" onClick={recheck}>
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {status === 'ready' && order && (
-            <div className="hl-payres-card">
-              {order.status === 'PAID' && (
-                <>
-                  <CheckCircle2 size={44} className="is-success" />
-                  <h1>Thanh toán thành công</h1>
-                  <p>Đơn hàng #{order.orderCode} đã được thanh toán.</p>
-                  <div className="hl-payres-actions">
-                    <button type="button" className="hl-payres-cta" onClick={onGoToMyCourses}>
-                      Xem khóa học của tôi
-                    </button>
-                    <button
-                      type="button"
-                      className="hl-payres-cta is-secondary"
-                      onClick={() => onOpenOrder(order.id)}
-                    >
-                      Xem đơn hàng
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {order.status === 'PENDING' && (
-                <>
-                  <Clock size={44} className="is-warning" />
-                  <h1>Đang chờ xác nhận thanh toán</h1>
-                  <dl className="hl-payres-info-list">
-                    <div>
-                      <dt>Mã đơn</dt>
-                      <dd>#{order.orderCode}</dd>
-                    </div>
-                    <div>
-                      <dt>Tổng cộng</dt>
-                      <dd>{formatCoursePrice(order.totalAmount)}</dd>
-                    </div>
-                    {order.expiresAt && (
-                      <div>
-                        <dt>Hết hạn</dt>
-                        <dd>{formatDateTime(order.expiresAt)}</dd>
-                      </div>
-                    )}
-                  </dl>
-                  <div className="hl-payres-actions">
-                    <button type="button" className="hl-payres-cta" onClick={recheck}>
-                      Kiểm tra lại trạng thái
-                    </button>
-                    <button
-                      type="button"
-                      className="hl-payres-cta is-secondary"
-                      onClick={() => onOpenOrder(order.id)}
-                    >
-                      Xem đơn hàng
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {order.status === 'FAILED' && (
-                <>
-                  <XCircle size={44} className="is-danger" />
-                  <h1>Thanh toán chưa thành công</h1>
-                  <p>Đơn hàng #{order.orderCode} chưa được thanh toán thành công.</p>
-                  <div className="hl-payres-actions">
-                    <button
-                      type="button"
-                      className="hl-payres-cta"
-                      onClick={() => onOpenOrder(order.id)}
-                    >
-                      Xem đơn hàng
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {order.status === 'EXPIRED' && (
-                <>
-                  <XCircle size={44} className="is-danger" />
-                  <h1>Đơn hàng đã hết hạn</h1>
-                  <p>Đơn hàng #{order.orderCode} đã hết hạn thanh toán.</p>
-                  <div className="hl-payres-actions">
-                    <button
-                      type="button"
-                      className="hl-payres-cta"
-                      onClick={() => onOpenOrder(order.id)}
-                    >
-                      Xem đơn hàng
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {order.status === 'CANCELLED' && (
-                <>
-                  <XCircle size={44} className="is-danger" />
-                  <h1>Đơn hàng đã được hủy</h1>
-                  <p>Đơn hàng #{order.orderCode} đã bị hủy.</p>
-                  <div className="hl-payres-actions">
-                    <button
-                      type="button"
-                      className="hl-payres-cta"
-                      onClick={() => onOpenOrder(order.id)}
-                    >
-                      Xem đơn hàng
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {!['PAID', 'PENDING', 'FAILED', 'EXPIRED', 'CANCELLED'].includes(order.status) && (
-                <>
-                  <HelpCircle size={44} />
-                  <h1>Trạng thái đơn hàng: {getOrderStatusLabel(order.status)}</h1>
-                  <div className="hl-payres-actions">
-                    <button
-                      type="button"
-                      className="hl-payres-cta"
-                      onClick={() => onOpenOrder(order.id)}
-                    >
-                      Xem đơn hàng
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </main>
-      <PublicFooter />
-    </div>
+            )}
+            <button className="btn is-secondary" onClick={() => onOpenOrder(order.id)}>
+              Xem đơn hàng
+            </button>
+          </div>
+        </section>
+      ) : (
+        !error && (
+          <section className="purchase-panel purchase-empty">
+            <h2>Chưa có đơn hàng để kiểm tra</h2>
+            <button className="btn" onClick={onGoToOrders}>
+              Đơn hàng của tôi
+            </button>
+          </section>
+        )
+      )}
+    </PurchaseLayout>
   )
 }
-
-export default PaymentResultPage

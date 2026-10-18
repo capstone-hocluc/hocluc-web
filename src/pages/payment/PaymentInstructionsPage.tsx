@@ -1,236 +1,204 @@
-import { useEffect, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Clock, XCircle } from '../../components/console/icons'
-import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
+import { useEffect, useState } from 'react'
+import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/PurchaseLayout'
 import PaymentInstructionsCard from '../../components/payment/PaymentInstructionsCard'
-import { getOrder, type Order, type OrderPaymentData } from '../../services/orderService'
+import { getPaymentData, payOrder, type OrderPaymentData } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
-import { getOrderStatusLabel } from '../../lib/orderStatus'
+import { canPayOrder, getOrderStatusLabel } from '../../lib/orderStatus'
 import { formatCoursePrice } from '../../lib/courseFormat'
+import { ApiError } from '../../lib/api'
+import { safePurchaseOrderId } from '../../lib/purchaseSession'
 
-interface PaymentInstructionsPageProps {
+interface Props {
   orderId: string
   onGoToOrderDetail: () => void
   onGoToMyCourses: () => void
 }
-
-const POLL_INTERVAL_MS = 4000
-
-function formatRemaining(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-}
-
-// Seconds until the payment window closes; null when the order carries no deadline.
-function useSecondsUntil(deadline: string | null | undefined) {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (!deadline) return
-    const id = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(id)
-  }, [deadline])
-  if (!deadline) return null
-  return Math.max(0, Math.ceil((new Date(deadline).getTime() - now) / 1000))
-}
-
-// The QR/bank-transfer instructions only ever come from the checkout/pay
-// response - GET /orders/{orderId} never returns them (confirmed contract).
-// They're handed to this page via navigation history state, which survives
-// an in-tab refresh (F5) but not a brand-new navigation (new tab, shared
-// link, reopened tab). That second case is a real, reported limitation, not
-// something this page tries to paper over with invented data.
-function readNavigationPaymentData(orderId: string): OrderPaymentData | null {
-  const state = window.history.state as OrderPaymentData | null
-  if (state && state.order && state.order.id === orderId) return state
-  return null
-}
-
-function PaymentInstructionsPage({
+export default function PaymentInstructionsPage({
   orderId,
   onGoToOrderDetail,
   onGoToMyCourses,
-}: PaymentInstructionsPageProps) {
-  const [paymentData] = useState<OrderPaymentData | null>(() => readNavigationPaymentData(orderId))
-  const [order, setOrder] = useState<Order | null>(paymentData?.order ?? null)
-  const [status, setStatus] = useState<'checking' | 'ready' | 'error'>('checking')
-  const [errorMessage, setErrorMessage] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
-
-  const pollInFlightRef = useRef(false)
-  const secondsLeft = useSecondsUntil(order?.status === 'PENDING' ? order.expiresAt : null)
-
+}: Props) {
+  const [data, setData] = useState<OrderPaymentData | null>(null)
+  const [error, setError] = useState('')
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
+  const [retrying, setRetrying] = useState(false)
+  const [now, setNow] = useState(Date.now)
   useEffect(() => {
-    let cancelled = false
-    let polling = true
-
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+  useEffect(() => {
+    let active = true,
+      inFlight = false,
+      failures = 0,
+      terminal = false
+    let timer: number | undefined
+    const schedule = (delay: number) => {
+      window.clearTimeout(timer)
+      if (active && !terminal) timer = window.setTimeout(() => void fetchOnce(), delay)
+    }
     const fetchOnce = async () => {
-      if (pollInFlightRef.current) return
-      pollInFlightRef.current = true
+      if (!active || inFlight) return
+      if (!navigator.onLine) {
+        setError('Bạn đang ngoại tuyến. Kết nối lại để kiểm tra thanh toán.')
+        schedule(15_000)
+        return
+      }
+      if (document.hidden) {
+        schedule(15_000)
+        return
+      }
+      inFlight = true
       try {
-        const data = await getOrder(orderId)
-        if (cancelled) return
-        setOrder(data)
-        setStatus('ready')
-        // Only PENDING is worth continuing to poll for - any other status
-        // (known terminal or unrecognized) stops it rather than polling
-        // indefinitely on a state we don't understand.
-        if (data.status !== 'PENDING') {
-          polling = false
-          window.clearInterval(intervalId)
+        const next = await getPaymentData(orderId)
+        if (!active) return
+        setData(next)
+        setError('')
+        failures = 0
+        terminal = next.order.status !== 'PENDING'
+      } catch (e) {
+        if (active) {
+          setError(getErrorMessage(e))
+          failures++
         }
-      } catch (error) {
-        if (cancelled) return
-        setErrorMessage(getErrorMessage(error))
-        setStatus('error')
       } finally {
-        pollInFlightRef.current = false
+        inFlight = false
+        if (active && !terminal) schedule(Math.min(30_000, 4000 * 2 ** Math.min(failures, 3)))
       }
     }
-
-    fetchOnce()
-    const intervalId = window.setInterval(() => {
-      if (!polling || document.hidden) return
-      fetchOnce()
-    }, POLL_INTERVAL_MS)
-
-    const onVisibilityChange = () => {
-      if (polling && document.visibilityState === 'visible') fetchOnce()
+    const resume = () => {
+      if (!terminal) {
+        window.clearTimeout(timer)
+        void fetchOnce()
+      }
     }
-    document.addEventListener('visibilitychange', onVisibilityChange)
-
+    void fetchOnce()
+    window.addEventListener('online', resume)
+    window.addEventListener('focus', resume)
+    document.addEventListener('visibilitychange', resume)
     return () => {
-      cancelled = true
-      polling = false
-      window.clearInterval(intervalId)
-      document.removeEventListener('visibilitychange', onVisibilityChange)
+      active = false
+      window.clearTimeout(timer)
+      window.removeEventListener('online', resume)
+      window.removeEventListener('focus', resume)
+      document.removeEventListener('visibilitychange', resume)
     }
-  }, [orderId, reloadKey])
-
-  const retry = () => {
-    setStatus('checking')
-    setReloadKey((current) => current + 1)
+  }, [orderId, reload])
+  const retryPayment = async () => {
+    if (retrying) return
+    setRetrying(true)
+    setError('')
+    setActiveOrderId(null)
+    try {
+      setData(await payOrder(orderId))
+      setReload((v) => v + 1)
+    } catch (e) {
+      setError(getErrorMessage(e))
+      if (e instanceof ApiError && e.code === 'ORDER_PAYMENT_IN_PROGRESS')
+        setActiveOrderId(safePurchaseOrderId(e.errors?.activeOrderId))
+    } finally {
+      setRetrying(false)
+    }
   }
-
+  const order = data?.order
+  const pending = order?.status === 'PENDING'
+  const seconds = order?.expiresAt
+    ? Math.max(0, Math.ceil((Date.parse(order.expiresAt) - now) / 1000))
+    : null
+  const ready =
+    pending && data?.accountNumber && data.paymentCode && data.amount !== null && seconds !== 0
   return (
-    <div className="hl-pay-page">
-      <PublicHeader />
-      <main className="hl-pay-main-wrap">
-        <div className="hl-pay-container">
-          <h1 className="hl-pay-title">Thanh toán khóa học</h1>
-
-          {status === 'checking' && !order && (
-            <div className="hl-pay-grid">
-              <div className="hl-pay-skeleton" style={{ height: 340 }} />
-              <div className="hl-pay-skeleton" style={{ height: 200 }} />
-            </div>
+    <PurchaseLayout
+      title={order?.status === 'PAID' ? 'Thanh toán thành công' : 'Thanh toán khóa học'}
+      step="03 / XÁC NHẬN"
+    >
+      <button className="purchase-link purchase-back" onClick={onGoToOrderDetail}>
+        ← Chi tiết đơn hàng
+      </button>
+      {error && (
+        <PurchaseNotice>
+          {error}{' '}
+          {activeOrderId && (
+            <a className="purchase-link" href={`/orders/${activeOrderId}/payment`}>
+              Tiếp tục thanh toán đơn đang chờ
+            </a>
           )}
-
-          {status === 'error' && !order && (
-            <div className="hl-pay-state">
-              <AlertTriangle size={30} />
-              <p>{errorMessage}</p>
-              <button type="button" onClick={retry}>
-                Thử lại
-              </button>
-            </div>
-          )}
-
-          {order && order.status === 'PENDING' && (
+          <button className="purchase-link" onClick={() => setReload((v) => v + 1)}>
+            Kiểm tra lại
+          </button>
+        </PurchaseNotice>
+      )}
+      {!data && !error && (
+        <div className="purchase-skeleton" role="status">
+          Đang tải thông tin thanh toán…
+        </div>
+      )}
+      {order && (
+        <>
+          <div className="purchase-payment-heading">
+            <strong>Đơn #{order.orderCode}</strong>
+            <span>{getOrderStatusLabel(order.status)}</span>
+            <strong>{formatCoursePrice(order.totalAmount)}</strong>
+          </div>
+          {pending ? (
             <>
-              {paymentData && secondsLeft !== 0 ? (
-                <PaymentInstructionsCard paymentData={paymentData} />
-              ) : paymentData ? (
-                <div className="hl-pay-state">
-                  <AlertTriangle size={30} />
-                  <p>
-                    Đơn hàng đã hết thời gian thanh toán. Vui lòng không chuyển khoản vào mã QR này nữa; hãy
-                    mở chi tiết đơn hàng và bấm "Thanh toán" để lấy mã mới.
-                  </p>
-                  <button type="button" onClick={onGoToOrderDetail}>
-                    Xem chi tiết đơn hàng
-                  </button>
-                </div>
+              {ready ? (
+                <PaymentInstructionsCard key={data.paymentCode} paymentData={data} />
               ) : (
-                <div className="hl-pay-state">
-                  <AlertTriangle size={30} />
-                  <p>
-                    Không tìm thấy thông tin thanh toán cho đơn hàng này. Vui lòng quay lại chi
-                    tiết đơn hàng và bấm "Thanh toán" để lấy lại mã QR và thông tin chuyển khoản
-                    mới nhất.
+                <section className="purchase-panel">
+                  <p role="status">
+                    {seconds === 0
+                      ? 'Đã hết thời gian hiển thị mã. Đang kiểm tra trạng thái đơn với máy chủ; nếu bạn đã chuyển khoản, vui lòng chờ xác nhận.'
+                      : 'Chưa có đủ thông tin chuyển khoản. Vui lòng kiểm tra lại hoặc mở chi tiết đơn.'}
                   </p>
-                  <button type="button" onClick={onGoToOrderDetail}>
-                    Xem chi tiết đơn hàng
+                  <button className="btn is-secondary" onClick={() => setReload((v) => v + 1)}>
+                    Kiểm tra trạng thái
                   </button>
-                </div>
+                </section>
               )}
-              {secondsLeft !== 0 && (
-                <>
-                  <div className="hl-pay-pending-note">
-                    <Clock size={16} />
-                    Đang chờ thanh toán — hệ thống sẽ tự động cập nhật khi nhận được chuyển khoản.
-                    {secondsLeft !== null && secondsLeft > 0 && <> Còn {formatRemaining(secondsLeft)}.</>}
-                  </div>
-                  <p className="hl-pay-warning">
-                    Chỉ chuyển khoản theo mã QR và nội dung đang hiển thị trên trang này. Nếu bạn đã tạo lại đơn hoặc
-                    bấm "Thanh toán" lần nữa, mã cũ không còn hiệu lực và khoản chuyển vào mã cũ sẽ không được tự động
-                    ghi nhận.
-                  </p>
-                </>
-              )}
+              <p className="purchase-muted" role="status">
+                Hệ thống tự cập nhật khi nhận được giao dịch hợp lệ.
+                {seconds !== null && seconds > 0 && (
+                  <>
+                    {' '}
+                    Thời gian chuyển khoản: {Math.floor(seconds / 60)}:
+                    {String(seconds % 60).padStart(2, '0')}.
+                  </>
+                )}
+              </p>
+              <p className="purchase-muted">
+                Nếu đã chuyển khoản nhưng chưa được xác nhận, không chuyển thêm lần nữa; hãy giữ
+                chứng từ để đối chiếu.
+              </p>
             </>
-          )}
-
-          {order && order.status === 'PAID' && (
-            <div className="hl-pay-result-card">
-              <CheckCircle2 size={44} className="is-success" />
-              <h2>Thanh toán thành công</h2>
-              <p>Đơn hàng #{order.orderCode} đã được thanh toán.</p>
-              <div className="hl-pay-result-actions">
-                <button type="button" className="hl-pay-result-cta" onClick={onGoToMyCourses}>
-                  Vào khóa học của tôi
-                </button>
-                <button
-                  type="button"
-                  className="hl-pay-result-cta is-secondary"
-                  onClick={onGoToOrderDetail}
-                >
+          ) : (
+            <section className="purchase-panel purchase-empty">
+              <h2>{getOrderStatusLabel(order.status)}</h2>
+              <p>
+                {order.status === 'PAID'
+                  ? 'Quyền học đã được cập nhật cho tài khoản của bạn.'
+                  : 'Kiểm tra trạng thái đơn trước khi tiếp tục thanh toán.'}
+              </p>
+              <div className="purchase-actions">
+                {order.status === 'PAID' && (
+                  <button className="btn" onClick={onGoToMyCourses}>
+                    Vào khóa học của tôi
+                  </button>
+                )}
+                {canPayOrder(order.status) && (
+                  <button className="btn" disabled={retrying} onClick={() => void retryPayment()}>
+                    {retrying ? 'Đang chuẩn bị…' : 'Thanh toán lại'}
+                  </button>
+                )}
+                <button className="btn is-secondary" onClick={onGoToOrderDetail}>
                   Xem đơn hàng
                 </button>
               </div>
-            </div>
+            </section>
           )}
-
-          {order && ['FAILED', 'CANCELLED', 'EXPIRED'].includes(order.status) && (
-            <div className="hl-pay-result-card">
-              <XCircle size={44} className="is-danger" />
-              <h2>{getOrderStatusLabel(order.status)}</h2>
-              <p>
-                Đơn hàng #{order.orderCode} · {formatCoursePrice(order.totalAmount)}
-              </p>
-              <div className="hl-pay-result-actions">
-                <button type="button" className="hl-pay-result-cta" onClick={onGoToOrderDetail}>
-                  Xem chi tiết đơn hàng
-                </button>
-              </div>
-            </div>
-          )}
-
-          {order && !['PENDING', 'PAID', 'FAILED', 'CANCELLED', 'EXPIRED'].includes(order.status) && (
-            <div className="hl-pay-result-card">
-              <AlertTriangle size={44} />
-              <h2>Trạng thái đơn hàng: {getOrderStatusLabel(order.status)}</h2>
-              <div className="hl-pay-result-actions">
-                <button type="button" className="hl-pay-result-cta" onClick={onGoToOrderDetail}>
-                  Xem chi tiết đơn hàng
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </main>
-      <PublicFooter />
-    </div>
+        </>
+      )}
+    </PurchaseLayout>
   )
 }
-
-export default PaymentInstructionsPage

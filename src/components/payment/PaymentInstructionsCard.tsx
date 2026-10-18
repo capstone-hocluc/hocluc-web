@@ -48,7 +48,7 @@ function PaymentInstructionsCard({ paymentData }: PaymentInstructionsCardProps) 
       <div className="hl-pay-qr-section">
         {showQr ? (
           <img
-            src={paymentData.qrUrl}
+            src={paymentData.qrUrl || undefined}
             alt="Mã QR thanh toán"
             className="hl-pay-qr-image"
             onError={() => setQrError(true)}
@@ -70,8 +70,8 @@ function PaymentInstructionsCard({ paymentData }: PaymentInstructionsCardProps) 
 
         <CopyField
           label="Số tài khoản"
-          value={paymentData.accountNumber}
-          copyValue={paymentData.accountNumber}
+          value={paymentData.accountNumber || ''}
+          copyValue={paymentData.accountNumber || ''}
           successMessage="Đã sao chép số tài khoản."
         />
 
@@ -90,8 +90,8 @@ function PaymentInstructionsCard({ paymentData }: PaymentInstructionsCardProps) 
 
         <CopyField
           label="Nội dung chuyển khoản"
-          value={paymentData.paymentCode}
-          copyValue={paymentData.paymentCode}
+          value={paymentData.paymentCode || ''}
+          copyValue={paymentData.paymentCode || ''}
           successMessage="Đã sao chép nội dung chuyển khoản."
           emphasize
         />
