@@ -3,7 +3,7 @@
 
   class HocLucLogo extends HTMLElement {
     static get observedAttributes() {
-      return ['size', 'light']
+      return ['size', 'light', 'mark-only']
     }
 
     connectedCallback() {
@@ -22,28 +22,29 @@
       root.innerHTML = `
         <style>
           :host { display: inline-flex; vertical-align: middle; }
+          .logo { display: inline-flex; align-items: center; gap: ${Math.round(size * 0.22)}px; }
+          .mark { display: block; width: ${Math.round(size * 0.9)}px; height: ${Math.round(size * 1.15)}px; object-fit: contain; flex: none; }
+          :host([mark-only]) .wordmark { display: none; }
           .wordmark {
-            color: ${light ? '#fff' : 'var(--logo-color, var(--blue, #1cb0f6))'};
+            color: ${light ? '#fff' : 'var(--logo-color, #0B3A82)'};
             display: inline-flex;
             align-items: baseline;
-            font-family: inherit;
+            font-family: 'Manrope', 'Be Vietnam Pro', sans-serif;
             font-size: ${size}px;
-            font-weight: 900;
-            letter-spacing: -.65px;
-            line-height: 1.2;
+            font-weight: 800;
+            letter-spacing: -.055em;
+            line-height: 1;
             white-space: nowrap;
-            text-shadow: 0 1px 0 #0797d6, 0 2px 0 #0797d6, 0 3px 0 #087fb5;
           }
           .dot {
-            color: #f4b72e;
-            text-shadow: 0 1px 0 #dda021, 0 2px 0 #dda021, 0 3px 0 #bd8419;
-          }
-          @media (max-width: 480px) {
-            .wordmark { text-shadow: 0 1px 0 #0797d6, 0 2px 0 #087fb5; }
-            .dot { text-shadow: 0 1px 0 #dda021, 0 2px 0 #bd8419; }
+            color: ${light ? '#7CC8FF' : 'var(--logo-accent, #1E88FF)'};
+            font-weight: 700;
           }
         </style>
-        <span class="wordmark" part="wordmark">hocluc<span class="dot" part="dot">.</span>com</span>
+        <span class="logo" part="logo">
+          <img class="mark" src="/hocluc-mark.svg" alt="" />
+          <span class="wordmark" part="wordmark"><span>HocLuc</span><span class="dot" part="domain">.com</span></span>
+        </span>
       `
     }
   }

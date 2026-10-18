@@ -9,7 +9,7 @@ import LandingLogo from './LandingLogo'
 import AuthLink from './AuthLink'
 
 // Matches the breakpoint where the CSS switches from the inline nav to the menu button.
-const DESKTOP_QUERY = '(min-width: 1051px)'
+const DESKTOP_QUERY = '(min-width: 1181px)'
 
 interface NavItemProps {
   link: LandingLink
@@ -94,11 +94,11 @@ function LandingHeader({ onLanding = true }: { onLanding?: boolean }) {
         <nav className="container nav" aria-label="Điều hướng chính">
           {onLanding ? (
             <a className="logo" href="#top" aria-label="hocluc.com — Trang chủ">
-              <LandingLogo size={27} />
+              <LandingLogo size={29} />
             </a>
           ) : (
             <AppLink className="logo" href="/" aria-label="hocluc.com — Trang chủ">
-              <LandingLogo size={27} />
+              <LandingLogo size={29} />
             </AppLink>
           )}
           <div className="nav-links">

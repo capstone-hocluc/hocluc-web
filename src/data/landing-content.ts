@@ -38,8 +38,9 @@ export interface HeroSlide {
   id: string
   src: string
   alt: string
-  /** Short description announced by screen readers, e.g. "Mai và Nam làm đề luyện V-ACT". */
+  /** Theme of the photograph, also announced by screen readers. */
   label: string
+  caption: string
 }
 
 export interface LandingHero {
@@ -150,21 +151,24 @@ export const landingHero: LandingHero = {
   slides: [
     {
       id: 'hero-slide-0',
-      src: `${landingAssets}/hero-vact-exam.webp`,
-      alt: 'Mai và Nam tập trung làm đề V-ACT với máy tính khoa học',
-      label: 'Mai và Nam làm đề luyện V-ACT',
+      src: `${landingAssets}/hero-self-study-v2.webp`,
+      alt: 'Nam sinh Việt Nam tự học với sách bài tập trong không gian học tập sáng bên cửa sổ',
+      label: 'Tự học có định hướng',
+      caption: 'Tập trung từng phần, hiểu sâu từng bài.',
     },
     {
       id: 'hero-slide-1',
-      src: `${landingAssets}/hero-mai-nam-learning.webp`,
-      alt: 'Mai ghi phép tính vào vở, Nam cùng xem và giải thích',
-      label: 'Mai ghi bài và Nam cùng giải toán',
+      src: `${landingAssets}/hero-mentor-group-v2.webp`,
+      alt: 'Hai học sinh Việt Nam trao đổi cách giải bài cùng mentor tại bàn học nhóm trong phòng học sáng',
+      label: 'Cùng trao đổi, cùng tiến bộ',
+      caption: 'Thêm một góc nhìn để hiểu rõ cách làm.',
     },
     {
       id: 'hero-slide-2',
-      src: `${landingAssets}/hero-mai-nam-ai.webp`,
-      alt: 'Mai và Nam chạy theo avatar AI hình mây, sao và robot; Nam cầm máy tính khoa học',
-      label: 'Avatar AI hình mây, sao và robot đồng hành cùng Mai và Nam',
+      src: `${landingAssets}/hero-exam-practice-v2.webp`,
+      alt: 'Nữ sinh Việt Nam tập trung đọc đề và làm bài trắc nghiệm trên giấy trong lớp học',
+      label: 'Luyện đề, vững tâm thế',
+      caption: 'Làm quen cách thi, chủ động nhịp làm bài.',
     },
   ],
 }

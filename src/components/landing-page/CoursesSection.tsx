@@ -13,7 +13,7 @@ const previewCourses: Course[] = import.meta.env.DEV
         title: 'V-ACT: Xây nền tảng, vững tư duy',
         description:
           'Củng cố 5 nhóm kiến thức, luyện tập theo chủ đề và hiểu cách giải qua từng bài học.',
-        imageUrl: '/landing-v2/assets/hero-mai-nam-learning.webp',
+        imageUrl: '/landing-v2/assets/hero-mentor-group-v2.webp',
         targetExam: 'V-ACT',
         price: 1490000,
         startDate: '2026-11-01',

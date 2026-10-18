@@ -47,10 +47,10 @@ export default function BrandAuthShell({
         </div>
         <img
           className="brand-auth-art"
-          src="/landing-v2/assets/hero-mai-nam-learning.webp"
-          alt="Mai và Nam cùng học, trao đổi cách giải bài"
-          width={1672}
-          height={940}
+          src="/landing-v2/assets/hero-mentor-group-v2.webp"
+          alt="Học sinh Việt Nam trao đổi cách giải bài cùng mentor"
+          width={1536}
+          height={1024}
         />
         <p className="brand-auth-story-note">
           {management

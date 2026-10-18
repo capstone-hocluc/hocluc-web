@@ -63,7 +63,7 @@ function LandingPage() {
   }
 
   return (
-    <div ref={rootRef} className={`landing-page${detail || startOpen ? ' modal-open' : ''}`}>
+    <div id="top" ref={rootRef} className={`landing-page${detail || startOpen ? ' modal-open' : ''}`}>
       <a className="skip-link" href="#main">
         Đến nội dung chính
       </a>
