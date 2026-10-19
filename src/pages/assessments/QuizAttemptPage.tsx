@@ -38,8 +38,8 @@ function QuizAttemptPage({ quizId, attemptId, onExit, onSubmitted }: QuizAttempt
         onRetry={reload}
         loading={
           <>
-            <Skeleton className="h-80 rounded-2xl" />
-            <Skeleton className="h-[220px] rounded-2xl" />
+            <Skeleton className="h-80 rounded-xl" />
+            <Skeleton className="h-[220px] rounded-xl" />
           </>
         }
         forbidden={{

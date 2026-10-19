@@ -15,12 +15,12 @@ function ScoreLimitDialog({ open, onClose }: ScoreLimitDialogProps) {
         <Dialog.Overlay className="fixed inset-0 z-60 grid place-items-center bg-[rgba(10,16,35,0.42)] p-6 backdrop-blur-[8px]">
           <Dialog.Content
             aria-describedby="onboarding-score-limit-text"
-            className="w-[min(520px,100%)] rounded-3xl border-[1.5px] border-line-card bg-surface px-[22px] pt-6 pb-5 text-center shadow-[0_5px_0_#dce8f0,0_28px_70px_rgba(9,16,36,0.28)] outline-none max-[701px]:rounded-[20px] max-[701px]:px-[18px] max-[701px]:pt-5 max-[701px]:pb-[18px]"
+            className="w-[min(520px,100%)] rounded-2xl border border-line-card bg-surface px-[22px] pt-6 pb-5 text-center shadow-xl outline-none max-[701px]:rounded-2xl max-[701px]:px-[18px] max-[701px]:pt-5 max-[701px]:pb-[18px]"
           >
-            <div className="mx-auto mb-3.5 grid size-[52px] place-items-center rounded-2xl bg-primary text-[28px] leading-none font-black text-white">
+            <div className="mx-auto mb-3.5 grid size-[52px] place-items-center rounded-xl bg-primary text-[28px] leading-none font-bold text-white">
               !
             </div>
-            <Dialog.Title className="text-[22px] leading-[1.2] font-black tracking-[-0.4px] text-text-heading max-[701px]:text-[20px]">
+            <Dialog.Title className="text-[22px] leading-[1.2] font-bold tracking-[-0.4px] text-text-heading max-[701px]:text-[20px]">
               Điểm tối đa đã đạt tới
             </Dialog.Title>
             <p
@@ -28,14 +28,11 @@ function ScoreLimitDialog({ open, onClose }: ScoreLimitDialogProps) {
               className="mt-3 text-[15px] leading-[1.7] text-text-body"
             >
               Điểm tối đa của kỳ thi đánh giá năng lực do{' '}
-              <strong className="font-extrabold text-text-heading">Đại học Quốc gia TP. HCM</strong>{' '}
-              tổ chức là <strong className="font-extrabold text-text-heading">1.200 điểm.</strong>{' '}
+              <strong className="font-semibold text-text-heading">Đại học Quốc gia TP. HCM</strong>{' '}
+              tổ chức là <strong className="font-semibold text-text-heading">1.200 điểm.</strong>{' '}
               Bạn vui lòng chọn lại nhé.
             </p>
-            <Button
-              className="mt-[18px]"
-              onClick={onClose}
-            >
+            <Button className="mt-[18px]" onClick={onClose}>
               Đã hiểu
             </Button>
           </Dialog.Content>

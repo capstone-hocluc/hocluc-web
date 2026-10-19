@@ -60,7 +60,7 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
-        loading={<Skeleton className="h-[260px] rounded-2xl" />}
+        loading={<Skeleton className="h-[260px] rounded-xl" />}
         error={{ title: 'Không thể tải bài kiểm tra đầu vào.' }}
       />
 
@@ -78,11 +78,11 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
             <StatusBadge
               tone="assessment"
               size="sm"
-              className="px-3 py-1 text-xs font-extrabold tracking-[0.04em] uppercase"
+              className="px-3 py-1 text-xs font-semibold tracking-[0.04em] uppercase"
             >
               Kiểm tra đầu vào
             </StatusBadge>
-            <h1 className="text-2xl leading-tight font-black tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
+            <h1 className="text-2xl leading-tight font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
               {data.test.title}
             </h1>
             {data.test.description && (
@@ -91,9 +91,21 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
 
             <AssessmentFacts
               facts={[
-                { icon: ListChecks, label: 'Số câu hỏi', value: `${data.test.questions.length} câu`, tone: 'primary' },
+                {
+                  icon: ListChecks,
+                  label: 'Số câu hỏi',
+                  value: `${data.test.questions.length} câu`,
+                  tone: 'primary',
+                },
                 ...(data.test.durationMinutes > 0
-                  ? [{ icon: Clock, label: 'Thời gian', value: `${data.test.durationMinutes} phút`, tone: 'assessment' as const }]
+                  ? [
+                      {
+                        icon: Clock,
+                        label: 'Thời gian',
+                        value: `${data.test.durationMinutes} phút`,
+                        tone: 'assessment' as const,
+                      },
+                    ]
                   : []),
               ]}
             />
@@ -101,7 +113,7 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
             <Button
               shape="pill"
               size="lg"
-              className="px-8 text-base font-extrabold max-[640px]:w-full"
+              className="px-8 text-base font-semibold max-[640px]:w-full"
               onClick={handleStart}
               disabled={starting}
             >

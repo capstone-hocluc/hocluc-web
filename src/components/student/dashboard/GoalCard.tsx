@@ -11,7 +11,7 @@ interface GoalCardProps {
 
 function GoalCard({ title, description, lockedNote, onStart }: GoalCardProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-line-card bg-surface">
+    <section className="overflow-hidden rounded-xl border border-line-card bg-surface">
       <div className="flex items-center gap-3 border-b border-line-soft bg-surface-brand px-6 py-4">
         <Target size={20} className="shrink-0 text-primary-text" aria-hidden="true" />
         <h2 className="text-base font-bold text-text-heading">Mục tiêu hôm nay</h2>

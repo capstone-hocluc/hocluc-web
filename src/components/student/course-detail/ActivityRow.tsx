@@ -44,15 +44,14 @@ const typeTone: Record<string, string> = {
 }
 
 const row = cva(
-  'grid w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_auto_18px] items-center gap-3.5 rounded-2xl border-[1.5px] border-line bg-surface px-3.5 py-3 text-left transition duration-150 hover:border-[#84d8ff] hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd] max-[760px]:grid-cols-[40px_minmax(0,1fr)]',
+  'grid w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_auto_18px] items-center gap-3.5 rounded-xl border border-line bg-surface px-3.5 py-3 text-left transition duration-150 hover:border-primary-bright hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-[760px]:grid-cols-[40px_minmax(0,1fr)]',
   {
     variants: {
       status: {
         completed: '',
         'not-started': '',
         locked: 'cursor-default bg-surface-soft hover:border-line hover:bg-surface-soft',
-        'in-progress':
-          'border-transparent bg-surface-brand hover:bg-surface-brand',
+        'in-progress': 'border-transparent bg-surface-brand hover:bg-surface-brand',
         overdue: 'border-danger-line bg-danger-soft hover:border-danger-line hover:bg-danger-soft',
       },
     },
@@ -105,14 +104,14 @@ function ActivityRow({ activity, onAction, onOpenActivity }: ActivityRowProps) {
       <span className="grid min-w-0 gap-0.5">
         <small
           className={cn(
-            'text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase',
+            'text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase',
             lockedText
           )}
         >
           {activity.type}
         </small>
         <strong
-          className={cn('text-[15px] leading-[1.35] font-extrabold text-text-heading', lockedText)}
+          className={cn('text-[15px] leading-[1.35] font-semibold text-text-heading', lockedText)}
         >
           {activity.title}
         </strong>
@@ -128,7 +127,7 @@ function ActivityRow({ activity, onAction, onOpenActivity }: ActivityRowProps) {
         )}
       </span>
       <span className="flex items-center gap-2 justify-self-end whitespace-nowrap max-[760px]:col-start-2 max-[760px]:flex-wrap max-[760px]:justify-self-start max-[760px]:text-center">
-        {activity.score && <b className="text-sm font-black text-practice">{activity.score}</b>}
+        {activity.score && <b className="text-sm font-bold text-practice">{activity.score}</b>}
         <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-text-secondary">
           <StatusIcon size={16} />
           {statusMeta[activity.status]?.label || activity.status}

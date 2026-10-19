@@ -8,8 +8,8 @@ const status = cva('inline-flex items-center gap-1.5 text-xs whitespace-nowrap',
   variants: {
     status: {
       completed: 'font-bold text-practice',
-      current: 'font-extrabold text-primary-text',
-      action: 'font-extrabold text-primary-text',
+      current: 'font-semibold text-primary-text',
+      action: 'font-semibold text-primary-text',
       locked: 'font-bold text-lock',
       idle: 'font-bold text-text-secondary',
     },

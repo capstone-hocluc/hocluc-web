@@ -15,14 +15,14 @@ function CourseMiniCard({ title, category, progress, score, onOpen }: CourseMini
   return (
     <button
       type="button"
-      className="flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-line-card bg-surface text-left shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+      className="flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-xl border border-line-card bg-surface text-left shadow-card transition duration-200  hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
       onClick={onOpen}
     >
       <div className="relative flex min-h-[120px] items-start justify-between overflow-hidden bg-primary-soft p-5 after:absolute after:-right-8 after:-bottom-12 after:size-36 after:rounded-full after:border-[10px] after:border-white/70 after:content-['']">
-        <span className="relative z-1 max-w-[70%] rounded-full bg-surface px-3 py-1 text-xs font-extrabold text-primary-text uppercase">
+        <span className="relative z-1 max-w-[70%] rounded-full bg-surface px-3 py-1 text-xs font-semibold text-primary-text uppercase">
           {category}
         </span>
-        <span className="relative z-1 grid size-12 place-items-center rounded-2xl bg-primary text-white">
+        <span className="relative z-1 grid size-12 place-items-center rounded-xl bg-primary text-white">
           <BookOpen size={24} />
         </span>
       </div>

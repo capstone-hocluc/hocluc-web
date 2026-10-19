@@ -21,7 +21,7 @@ type StreamState =
   | { streamKey: string; status: 'ready'; streamUrl: string }
   | { streamKey: string; status: 'error'; message: string }
 
-const surface = 'overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-surface shadow-card'
+const surface = 'overflow-hidden rounded-2xl border border-line-card bg-surface shadow-card'
 const MAX_STREAM_RETRIES = 2
 
 function EmptyContent({ title, message }: { title: string; message: string }) {
@@ -47,7 +47,10 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
 
   const retryStream = () => {
     if (retryCount >= MAX_STREAM_RETRIES) return
-    setRetryCounts((current) => ({ ...current, [selectedStreamKey]: (current[selectedStreamKey] ?? 0) + 1 }))
+    setRetryCounts((current) => ({
+      ...current,
+      [selectedStreamKey]: (current[selectedStreamKey] ?? 0) + 1,
+    }))
     setStreamState({ streamKey: selectedStreamKey, status: 'loading' })
     setRequestKey((current) => current + 1)
   }
@@ -60,11 +63,16 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
 
     getLessonVideoStreamUrl(lesson.id, videoId)
       .then(({ streamUrl }) => {
-        if (!cancelled) setStreamState({ streamKey: `${lesson.id}:${videoId}`, status: 'ready', streamUrl })
+        if (!cancelled)
+          setStreamState({ streamKey: `${lesson.id}:${videoId}`, status: 'ready', streamUrl })
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setStreamState({ streamKey: `${lesson.id}:${videoId}`, status: 'error', message: getErrorMessage(error) })
+          setStreamState({
+            streamKey: `${lesson.id}:${videoId}`,
+            status: 'error',
+            message: getErrorMessage(error),
+          })
         }
       })
 
@@ -142,7 +150,7 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
           </div>
         )}
 
-        <div className="grid min-h-[220px] place-items-center overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-[#0d1326] shadow-card">
+        <div className="grid min-h-[220px] place-items-center overflow-hidden rounded-2xl border border-line-card bg-[#0d1326] shadow-card">
           {isReady && currentStream.status === 'ready' ? (
             <video
               key={`${selectedVideo.id}:${currentStream.streamUrl}`}
@@ -165,7 +173,10 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
                   Thử lấy liên kết mới ({retryCount + 1}/{MAX_STREAM_RETRIES})
                 </Button>
               ) : (
-                <p className="m-0 text-center text-sm font-semibold text-text-secondary" role="status">
+                <p
+                  className="m-0 text-center text-sm font-semibold text-text-secondary"
+                  role="status"
+                >
                   Đã hết số lần thử lại cho video này. Hãy quay lại sau hoặc chọn video khác.
                 </p>
               )}
@@ -193,7 +204,9 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
       )
     }
     return (
-      <div className={`${surface} flex flex-col gap-3.5 p-6 text-base leading-[1.75] text-text-body max-[640px]:p-4`}>
+      <div
+        className={`${surface} flex flex-col gap-3.5 p-6 text-base leading-[1.75] text-text-body max-[640px]:p-4`}
+      >
         {lesson.content
           .split('\n')
           .map((paragraph, index) => (paragraph.trim() ? <p key={index}>{paragraph}</p> : null))}

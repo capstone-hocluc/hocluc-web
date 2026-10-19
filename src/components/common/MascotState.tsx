@@ -1,6 +1,6 @@
 import Button from '../ui/Button'
 import { cn } from '../../lib/cn'
-import SubjectAvatarIcon from './SubjectAvatarIcon'
+import { Info } from '../console/icons'
 
 interface MascotStateProps {
   title: string
@@ -10,20 +10,22 @@ interface MascotStateProps {
   className?: string
 }
 
-// Shared empty / error state: friendly avatar + title + hint (+ optional action).
+// Shared empty / error state: status icon, title, hint and optional action.
 // The one implementation for "nothing to show" and "something went wrong" -
 // error states pass a retry action, empty states usually don't.
 function MascotState({ title, message, actionLabel, onAction, className }: MascotStateProps) {
   return (
     <div
       className={cn(
-        'grid min-h-[200px] place-items-center gap-2 p-5 text-center text-text-secondary',
+        'flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-line-card bg-surface p-6 text-center text-text-secondary',
         className
       )}
     >
-      <SubjectAvatarIcon type="cloud" className="size-[76px] drop-shadow-[0_10px_16px_rgba(28,176,246,0.12)]" />
-      <strong className="text-lg font-black text-text-heading">{title}</strong>
-      {message && <p className="m-0 text-[15px] text-text-body">{message}</p>}
+      <span className="grid size-12 place-items-center rounded-xl bg-primary-soft text-primary-text">
+        <Info size={24} aria-hidden="true" />
+      </span>
+      <strong className="text-lg font-bold text-text-heading">{title}</strong>
+      {message && <p className="m-0 max-w-lg text-sm leading-relaxed text-text-body">{message}</p>}
       {actionLabel && onAction && (
         <Button shape="pill" className="mt-2 px-6 text-[15px]" onClick={onAction}>
           {actionLabel}

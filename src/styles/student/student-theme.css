@@ -1,62 +1,132 @@
-/*
- * Learner look shared by the landing page, the public course pages and the student area: Manrope,
- * navy headings, blue-grey body text and "ledge" shadows (a solid bottom edge instead of a soft
- * blur). Set while a learner screen is mounted (html[data-learner], see useLearnerTheme); the token
- * names stay the same, so every learner screen picks it up. The student area's dark mode keeps
- * its own token set from tokens.css; public pages are light only.
- */
-html[data-learner]:not([data-theme='dark']) {
+/* Learner identity also reaches portalled menus, dialogs and onboarding. */
+html[data-learner] {
   --font-sans: 'Manrope', 'Be Vietnam Pro', sans-serif;
+  --learner-control-radius: 12px;
+  --learner-panel-radius: 16px;
+  --learner-motion: 180ms;
+  --ledge-brand: none;
+  --ledge-neutral: none;
+}
 
-  --color-heading: #173555;
-  --color-body: #4c6275;
-  --color-text-heading: #173555;
-  --color-text-heading-soft: #2c4a68;
-  --color-text-strong: #24405d;
-  --color-text-label: #3d5a73;
-  --color-text-body: #4c6275;
-  --color-text-muted: #5b7083;
-  --color-text-subtle: #677c8e;
-  --color-text-secondary: #566b7e;
-  --color-text-emphasis: #2c4a68;
-  --color-text-faint: #677c8e;
-  --color-text-dark: #173555;
-  --color-text-dim: #4c6275;
-  --color-text-heading-muted: #3d5a73;
+html[data-learner]:not([data-theme='dark']) {
+  --color-surface: #fff;
+  --color-surface-elevated: #fff;
+  --color-surface-input: #fff;
+  --color-surface-soft: #f6f9ff;
+  --color-text-faint: #60758f;
+  --color-text-dim: #526984;
+  --color-text-heading-muted: #365576;
+  --color-shell-sidebar: #fff;
+  --color-shell-sidebar-text: #0b2348;
+  --color-shell-sidebar-muted: #526984;
+  --color-shell-sidebar-active: #edf5ff;
+  --color-accent-dark: #0b3a82;
+  --color-sky: #1e88ff;
+  --color-lock: #60758f;
+  --color-lock-soft: #f0f4fa;
+  --color-streak: #965600;
+  --color-streak-soft: #fff6e8;
+  --color-skeleton-highlight: #f8faff;
+  --color-scrollbar-track: #f6f9ff;
+  --color-scrollbar-thumb: #c4d6ec;
+}
 
-  --color-border-primary: #cfe3ef;
-  --color-border-subtle: #dde8ef;
-  --color-surface-hover: #eaf7fe;
-
-  --color-app-bg: #f1f9ff;
-  --color-surface-tint: #f8fcff;
-  --color-surface-brand: #eaf7fe;
-  --color-surface-sky: #f3faff;
-  --color-line: #dde8ef;
-  --color-line-soft: #e8eff4;
-  --color-line-card: #dde8ef;
-  --color-line-brand: #b9e3f7;
-  --color-line-blue: #d3e8f4;
-  --color-line-shell: #dde8ef;
-
-  --shadow-card: 0 5px 0 #dce8f0;
-  --shadow-card-soft: 0 4px 0 #e2e9ef;
-  --shadow-card-hover: 0 6px 0 #c9e1ef;
-
-  /* Ledges: the brand one only under primary buttons, the neutral one under secondary buttons
-     and the few cards that invite a click. Everything else stays flat with a 1px line. */
-  --ledge-brand: 0 4px 0 #0797d6;
-  --ledge-neutral: 0 4px 0 #dde8ef;
+html[data-learner][data-theme='dark'] {
+  --color-primary: #1755a4;
+  --color-primary-dark: #104587;
+  --color-primary-bright: #7cc8ff;
+  --color-primary-text: #a8d7ff;
+  --color-primary-soft: #142f50;
+  --color-brand: #7cc8ff;
+  --color-brand-bright: #a8d7ff;
+  --color-brand-soft: #254d77;
+  --color-brand-soft-bg: #142f50;
+  --color-accent: #7cc8ff;
+  --color-accent-dark: #1755a4;
+  --color-link: #a8d7ff;
+  --color-sky: #7cc8ff;
+  --color-app-bg: #0d1828;
+  --color-surface: #142238;
+  --color-surface-elevated: #192c45;
+  --color-surface-input: #101e32;
+  --color-surface-soft: #101e32;
+  --color-surface-hover: #1c3657;
+  --color-surface-brand: #162d49;
+  --color-surface-tint: #14253d;
+  --color-surface-sky: #142a45;
+  --color-line: #304763;
+  --color-line-card: #304763;
+  --color-line-shell: #2a405a;
+  --color-line-soft: #233851;
+  --color-line-blue: #304e70;
+  --color-line-brand: #416e9d;
+  --color-border-primary: #304763;
+  --color-border-subtle: #2a405a;
+  --color-focus-ring: #7cc8ff;
+  --color-badge-info-bg: #142f50;
+  --color-badge-info-text: #a8d7ff;
+  --shadow-card: none;
+  --shadow-card-soft: 0 2px 8px rgb(0 0 0 / 12%);
+  --shadow-card-hover: 0 8px 24px rgb(0 0 0 / 24%);
 }
 
 html[data-learner] body {
   background: var(--color-app-bg);
 }
-
 html[data-learner] :where(h1, h2, h3) {
   text-wrap: balance;
 }
-
 html[data-learner] :focus-visible {
-  outline-color: #174fbd;
+  outline-color: var(--color-focus-ring);
+}
+/* Tailwind emits named shadow utilities as static values. Resolve the learner
+   shadow tokens at runtime so portal surfaces and dark mode use this identity. */
+html[data-learner] .shadow-card {
+  box-shadow: var(--shadow-card);
+}
+html[data-learner] .shadow-card-soft {
+  box-shadow: var(--shadow-card-soft);
+}
+html[data-learner] .shadow-card-hover,
+html[data-learner] [class~='hover:shadow-card-hover']:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+.student-layout {
+  font-weight: 500;
+  line-height: 1.6;
+}
+.student-layout :where(h1, h2, h3, h4) {
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+html[data-learner] :where(input:not([type='checkbox']):not([type='radio']), textarea) {
+  font-size: 1rem;
+}
+.student-layout :where(button, a, input, textarea, [role='tab']) {
+  touch-action: manipulation;
+}
+.student-layout .hl-scheduling {
+  --color-scheduling-primary-text: var(--color-primary-text);
+}
+html[data-learner] .dropdown-field-trigger {
+  min-height: 44px;
+  border-radius: var(--learner-control-radius);
+  font-weight: 500;
+}
+
+@media (max-width: 360px) {
+  .student-topbar hocluc-logo::part(wordmark) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-learner] *,
+  html[data-learner] *::before,
+  html[data-learner] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

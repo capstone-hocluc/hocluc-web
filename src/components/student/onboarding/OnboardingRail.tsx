@@ -1,10 +1,8 @@
 import { Check } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 
-const railCard =
-  'rounded-3xl border-[1.5px] border-line-card bg-surface p-[22px] shadow-card'
-const railKicker =
-  'inline-flex items-center gap-2 text-xs font-black tracking-[0.1em] uppercase'
+const railCard = 'rounded-2xl border border-line-card bg-surface p-[22px] shadow-card'
+const railKicker = 'inline-flex items-center gap-2 text-xs font-bold tracking-[0.1em] uppercase'
 
 const perks = [
   'Gợi ý môn học nên ưu tiên',
@@ -19,14 +17,9 @@ function OnboardingRail() {
       className="flex min-w-0 flex-col gap-4 max-[701px]:order-2"
       aria-label="Tóm tắt cá nhân hóa"
     >
-      <div
-        className={cn(
-          railCard,
-          "border-primary bg-primary text-white shadow-[0_5px_0_#0797d6]"
-        )}
-      >
+      <div className={cn(railCard, 'border-primary bg-primary text-white shadow-none')}>
         <span className={cn(railKicker, 'relative z-1 text-white/90')}>Lộ trình tinh gọn</span>
-        <h2 className="relative z-1 my-2.5 text-2xl leading-[1.12] font-black tracking-[-0.6px]">
+        <h2 className="relative z-1 my-2.5 text-2xl leading-[1.12] font-bold tracking-[-0.6px]">
           Hồ sơ này giúp hệ thống hiểu bạn nhanh hơn.
         </h2>
         <p className="relative z-1 text-[15px] leading-[1.65] text-white/90">

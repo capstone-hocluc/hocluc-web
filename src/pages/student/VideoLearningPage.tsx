@@ -176,14 +176,18 @@ function VideoLearningPage({
       messages: [
         ...messages,
         { id: `user-${Date.now()}`, role: 'user', text },
-        { id: `ai-${Date.now()}`, role: 'ai', text: getMockAiResponse(text, context.activity.title) },
+        {
+          id: `ai-${Date.now()}`,
+          role: 'ai',
+          text: getMockAiResponse(text, context.activity.title),
+        },
       ],
     })
     setInput('')
   }
 
   if (!mockContext && real.status === 'loading') {
-    return <Skeleton className="h-[520px] rounded-3xl" />
+    return <Skeleton className="h-[520px] rounded-2xl" />
   }
 
   if (!context || !['Video', 'Buổi giải đề'].includes(context.activity.type)) {
@@ -202,7 +206,7 @@ function VideoLearningPage({
   }
 
   return (
-    <section className="flex h-[calc(100vh-156px)] min-h-[520px] flex-col overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-surface-brand text-text-heading shadow-card max-[760px]:h-auto max-[760px]:min-h-[calc(100dvh-130px)]">
+    <section className="flex h-[calc(100vh-156px)] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-line-card bg-surface-brand text-text-heading shadow-card max-[760px]:h-auto max-[760px]:min-h-[calc(100dvh-130px)]">
       <LessonNavBar
         context={context}
         previous={adjacent.previous}

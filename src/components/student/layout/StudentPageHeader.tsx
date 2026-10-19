@@ -11,9 +11,14 @@ interface StudentPageHeaderProps {
 
 function StudentPageHeader({ title, description, actions, className }: StudentPageHeaderProps) {
   return (
-    <header className={cn('mb-6 flex flex-wrap items-end justify-between gap-4', className)}>
+    <header
+      className={cn(
+        'mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-line-shell pb-6',
+        className
+      )}
+    >
       <div className="min-w-0">
-        <h1 className="mb-1.5 text-[32px] leading-[1.18] font-black tracking-[-0.8px] text-balance text-text-heading max-[560px]:text-[25px]">
+        <h1 className="mb-2 text-[30px] leading-[1.3] font-bold tracking-tight text-balance text-text-heading max-[560px]:text-2xl">
           {title}
         </h1>
         {description && (

@@ -32,15 +32,10 @@ function CourseHero({
   onContinue,
 }: CourseHeroProps) {
   return (
-    <Card
-      as="header"
-      padding="none"
-      radius="xl"
-      className="bg-surface-brand p-6 max-[760px]:p-4"
-    >
+    <Card as="header" padding="none" radius="xl" className="bg-surface-brand p-6 max-[760px]:p-4">
       <Button
         appearance="ghost"
-        className="h-auto gap-2 border-0 p-0 text-sm font-extrabold text-primary-text hover:bg-transparent hover:underline"
+        className="h-auto gap-2 border-0 p-0 text-sm font-semibold text-primary-text hover:bg-transparent hover:underline"
         onClick={onBack}
       >
         <ArrowLeft size={17} />
@@ -51,12 +46,10 @@ function CourseHero({
           <StatusBadge tone="primary" size="sm" className="bg-surface px-3 py-1 text-xs uppercase">
             {subject}
           </StatusBadge>
-          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(24px,2.6vw,32px)] leading-[1.16] font-black tracking-[-0.5px] text-text-heading">
+          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(24px,2.6vw,32px)] leading-[1.16] font-bold tracking-[-0.5px] text-text-heading">
             {title}
           </h1>
-          <p className="max-w-[760px] text-base leading-[1.6] text-text-body">
-            {description}
-          </p>
+          <p className="max-w-[760px] text-base leading-[1.6] text-text-body">{description}</p>
           <div className="mt-4 flex flex-wrap gap-2.5">
             <span className={metaPill}>
               <GraduationCap size={16} />
@@ -68,13 +61,15 @@ function CourseHero({
             </span>
           </div>
         </div>
-        <div className="flex flex-col gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface p-5 shadow-card-soft">
-          <span className="text-sm font-extrabold text-text-heading">Tiến độ khóa học</span>
+        <div className="flex flex-col gap-3 rounded-xl border border-line-card bg-surface p-5 shadow-card-soft">
+          <span className="text-sm font-semibold text-text-heading">Tiến độ khóa học</span>
           <div className="flex items-center justify-between gap-3">
             <small className="text-sm font-semibold text-text-secondary">
               {completedCount}/{contentCount} bài học
             </small>
-            <strong className="text-4xl leading-none font-black text-primary-text">{progress}%</strong>
+            <strong className="text-4xl leading-none font-bold text-primary-text">
+              {progress}%
+            </strong>
           </div>
           <Progress value={progress} />
           <Button size="lg" onClick={onContinue}>

@@ -12,7 +12,7 @@ function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.L
   return (
     <TabsPrimitive.List
       className={cn(
-        'inline-flex w-max max-w-full gap-1.5 overflow-x-auto rounded-2xl border-2 border-line bg-surface p-1',
+        'inline-flex w-max max-w-full gap-6 overflow-x-auto border-b border-line bg-transparent',
         className
       )}
       {...props}
@@ -24,7 +24,7 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'min-h-10 cursor-pointer rounded-xl px-5 text-[15px] font-extrabold whitespace-nowrap text-text-body transition-colors hover:bg-surface-brand hover:text-primary-text focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd] data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:hover:bg-primary',
+        'min-h-12 shrink-0 cursor-pointer border-b-2 border-transparent px-1 py-3 text-sm font-semibold whitespace-nowrap text-text-body transition-colors hover:border-line-brand hover:text-primary-text focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring data-[state=active]:border-primary-bright data-[state=active]:text-primary-text',
         className
       )}
       {...props}

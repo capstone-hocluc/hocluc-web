@@ -15,10 +15,12 @@ interface CourseExamsTabProps {
 }
 
 function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
-  const { data: exams, status, errorMessage, reload } = usePageResource(
-    () => getCourseExams(courseId),
-    [courseId]
-  )
+  const {
+    data: exams,
+    status,
+    errorMessage,
+    reload,
+  } = usePageResource(() => getCourseExams(courseId), [courseId])
 
   return (
     <>
@@ -52,7 +54,10 @@ function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
                 Theo dõi lượt làm và tiếp tục bài thi còn dang dở.
               </p>
             </div>
-            <span className="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-extrabold text-primary-text" aria-live="polite">
+            <span
+              className="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-semibold text-primary-text"
+              aria-live="polite"
+            >
               {exams.length} bài thi
             </span>
           </div>
@@ -64,7 +69,11 @@ function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
               className="min-h-[220px]"
             />
           ) : (
-            <div className="mt-2 divide-y-[1.5px] divide-line" role="list" aria-label="Danh sách bài thi">
+            <div
+              className="mt-2 divide-y-[1.5px] divide-line"
+              role="list"
+              aria-label="Danh sách bài thi"
+            >
               {exams.map((exam) => {
                 const state = exam.locked
                   ? { label: 'Chưa khả dụng', tone: 'locked' as const }
@@ -87,7 +96,9 @@ function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
                     className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4 first:pt-3 last:pb-1"
                   >
                     <div className="min-w-0 flex-1">
-                      <h3 className="m-0 text-base font-extrabold text-text-heading">{exam.title}</h3>
+                      <h3 className="m-0 text-base font-semibold text-text-heading">
+                        {exam.title}
+                      </h3>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm font-semibold text-text-secondary">
                         <span className="inline-flex items-center gap-1">
                           <FileQuestion size={16} aria-hidden="true" />
@@ -104,9 +115,11 @@ function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
                             {exam.attemptsUsed}/{exam.maxAttempts} lượt
                           </span>
                         )}
-                        {availability.map((item) => <span key={item}>{item}</span>)}
+                        {availability.map((item) => (
+                          <span key={item}>{item}</span>
+                        ))}
                         {exam.passed && exam.bestPercentage != null && (
-                          <span className="inline-flex items-center gap-1 font-extrabold text-badge-success-text">
+                          <span className="inline-flex items-center gap-1 font-semibold text-badge-success-text">
                             <CheckCircle2 size={16} aria-hidden="true" />
                             Kết quả tốt nhất {exam.bestPercentage}%
                           </span>
@@ -115,7 +128,9 @@ function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
                     </div>
 
                     <div className="flex min-h-11 w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
-                      <StatusBadge tone={state.tone} size="sm" className="text-xs">{state.label}</StatusBadge>
+                      <StatusBadge tone={state.tone} size="sm" className="text-xs">
+                        {state.label}
+                      </StatusBadge>
                       <Button
                         size="sm"
                         className="min-h-11 sm:min-h-8.5"

@@ -65,7 +65,7 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
         <div className="mt-3 mb-2 flex items-center justify-between text-sm font-semibold text-text-secondary">
           {/* Course-timeline-elapsed, NOT lesson/learning progress. */}
           <span>Tiến trình thời gian khóa học</span>
-          <strong className="font-black text-primary-text">{elapsed}%</strong>
+          <strong className="font-bold text-primary-text">{elapsed}%</strong>
         </div>
         <Progress value={elapsed} aria-label="Tiến trình thời gian khóa học" />
       </Card>
@@ -113,7 +113,7 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
           <div className="flex flex-col">
             {sortedSections.map((item) => (
               <div
-                className="flex items-center gap-3 border-t-[1.5px] border-line py-3.5 first:border-t-0"
+                className="flex items-center gap-3 border-t border-line py-3.5 first:border-t-0"
                 key={item.sectionCourseId}
               >
                 {item.priority && (
@@ -123,7 +123,7 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
                   </StatusBadge>
                 )}
                 <div className="flex min-w-0 flex-col gap-[3px]">
-                  <strong className="text-base font-extrabold text-text-heading">
+                  <strong className="text-base font-semibold text-text-heading">
                     {item.sectionCourseTitle}
                   </strong>
                   <span className="text-sm font-semibold text-text-secondary">

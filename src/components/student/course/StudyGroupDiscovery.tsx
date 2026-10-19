@@ -56,7 +56,10 @@ function StudyGroupDiscovery({
   const [selectedHouse, setSelectedHouse] = useState<StudyGroupHouseType | null>(null)
   const houses = usePageResource(() => loadHouses(courseId), [courseId])
   const houseOptions = houses.data?.kind === 'ready' ? houses.data.houses : null
-  const activeHouse = selectedHouse ?? houseOptions?.find((house) => house.recommended)?.houseType ?? houseOptions?.[0]?.houseType
+  const activeHouse =
+    selectedHouse ??
+    houseOptions?.find((house) => house.recommended)?.houseType ??
+    houseOptions?.[0]?.houseType
   const profileIncomplete = houses.data?.kind === 'profile-incomplete'
 
   return (
@@ -175,12 +178,13 @@ function StudyGroupList({
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-soft px-4 py-3.5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-soft px-4 py-3.5">
         <div>
-          <strong className="text-base font-extrabold text-text-heading">{house.label}</strong>
+          <strong className="text-base font-semibold text-text-heading">{house.label}</strong>
           <p className="mt-0.5 mb-0 text-sm font-semibold text-text-secondary">
             Điểm mục tiêu {house.minScore}–{house.maxScore}
-            {' · '}{house.groupCount} nhóm
+            {' · '}
+            {house.groupCount} nhóm
           </p>
         </div>
         {house.recommended && (
@@ -220,12 +224,14 @@ function StudyGroupList({
               <article
                 key={group.id}
                 role="listitem"
-                className="rounded-2xl border-[1.5px] border-line-card bg-surface p-4 shadow-card-soft"
+                className="rounded-xl border border-line-card bg-surface p-4 shadow-card-soft"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="m-0 text-base font-extrabold text-text-heading">{group.name}</h3>
+                      <h3 className="m-0 text-base font-semibold text-text-heading">
+                        {group.name}
+                      </h3>
                       {group.recommended && (
                         <StatusBadge tone="primary" size="sm" className="text-xs">
                           <Sparkles size={12} aria-hidden="true" />
@@ -242,22 +248,32 @@ function StudyGroupList({
                     </div>
                     {group.mentors.length > 0 && (
                       <p className="mt-2 mb-0 text-sm font-semibold text-text-secondary">
-                        Mentor chính: {group.mentors.find((mentor) => mentor.primaryMentor)?.fullName ?? group.mentors[0].fullName}
+                        Mentor chính:{' '}
+                        {group.mentors.find((mentor) => mentor.primaryMentor)?.fullName ??
+                          group.mentors[0].fullName}
                       </p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {group.matchesWeakSubject && (
-                        <StatusBadge tone="success" size="sm" className="text-xs">Khớp môn cần cải thiện</StatusBadge>
+                        <StatusBadge tone="success" size="sm" className="text-xs">
+                          Khớp môn cần cải thiện
+                        </StatusBadge>
                       )}
                       {group.matchesLevel && (
-                        <StatusBadge tone="info" size="sm" className="text-xs">Phù hợp trình độ</StatusBadge>
+                        <StatusBadge tone="info" size="sm" className="text-xs">
+                          Phù hợp trình độ
+                        </StatusBadge>
                       )}
                     </div>
                   </div>
-                  {full && <StatusBadge tone="neutral" size="sm" className="text-xs">Đã đủ thành viên</StatusBadge>}
+                  {full && (
+                    <StatusBadge tone="neutral" size="sm" className="text-xs">
+                      Đã đủ thành viên
+                    </StatusBadge>
+                  )}
                 </div>
 
-                <div className="mt-3 flex flex-wrap justify-end gap-2 border-t-[1.5px] border-line pt-3.5">
+                <div className="mt-3 flex flex-wrap justify-end gap-2 border-t border-line pt-3.5">
                   <Button
                     appearance="outline"
                     className="min-h-11 flex-1 sm:flex-none"
@@ -330,9 +346,10 @@ function StudyGroupDetailsDialog({
 
       {group.status === 'ready' && group.data && (
         <div>
-          <h3 className="mt-0 mb-1 text-xl font-black text-text-heading">{group.data.name}</h3>
+          <h3 className="mt-0 mb-1 text-xl font-bold text-text-heading">{group.data.name}</h3>
           <p className="mt-0 mb-4 text-[15px] font-semibold text-text-secondary">
-            {group.data.houseLabel} · {formatStudyGroupLevel(group.data.level)} · {formatMemberCount(group.data)}
+            {group.data.houseLabel} · {formatStudyGroupLevel(group.data.level)} ·{' '}
+            {formatMemberCount(group.data)}
           </p>
           {group.data.joined && (
             <StatusBadge tone="success" className="mb-4">
@@ -341,15 +358,26 @@ function StudyGroupDetailsDialog({
             </StatusBadge>
           )}
           <div className="flex flex-col gap-3">
-            <h4 className="m-0 text-base font-extrabold text-text-heading">Mentor của nhóm</h4>
+            <h4 className="m-0 text-base font-semibold text-text-heading">Mentor của nhóm</h4>
             {group.data.mentors.length === 0 ? (
-              <p className="m-0 text-[15px] text-text-secondary">Nhóm chưa có mentor được cập nhật.</p>
+              <p className="m-0 text-[15px] text-text-secondary">
+                Nhóm chưa có mentor được cập nhật.
+              </p>
             ) : (
               group.data.mentors.map((mentor) => (
-                <div key={mentor.id} className="rounded-2xl border-[1.5px] border-line bg-surface-soft p-3.5">
+                <div
+                  key={mentor.id}
+                  className="rounded-xl border border-line bg-surface-soft p-3.5"
+                >
                   <div className="flex flex-wrap items-center gap-2">
-                    <strong className="text-[15px] font-extrabold text-text-heading">{mentor.fullName}</strong>
-                    {mentor.primaryMentor && <StatusBadge tone="primary" size="sm" className="text-xs">Mentor chính</StatusBadge>}
+                    <strong className="text-[15px] font-semibold text-text-heading">
+                      {mentor.fullName}
+                    </strong>
+                    {mentor.primaryMentor && (
+                      <StatusBadge tone="primary" size="sm" className="text-xs">
+                        Mentor chính
+                      </StatusBadge>
+                    )}
                   </div>
                   {mentor.strongSubjects.length > 0 && (
                     <p className="mt-1.5 mb-0 text-sm font-semibold text-text-secondary">

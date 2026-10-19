@@ -32,25 +32,25 @@ function CurriculumRow({
   onClick,
 }: CurriculumRowProps) {
   const className = cn(
-    'flex w-full flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl border-[1.5px] p-3 text-left transition duration-150 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+    'flex w-full flex-wrap items-center gap-x-3.5 gap-y-2 rounded-xl border p-3 text-left transition duration-150 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
     current
       ? 'border-transparent bg-surface-brand'
       : locked
         ? 'border-line bg-surface-soft'
         : 'border-line bg-surface',
-    locked
-      ? 'cursor-default'
-      : 'cursor-pointer hover:border-[#84d8ff] hover:bg-surface-brand active:translate-y-0.5'
+    locked ? 'cursor-default' : 'cursor-pointer hover:border-primary-bright hover:bg-surface-brand '
   )
 
   const content = (
     <>
       {icon}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase">{kind}</span>
+        <span className="text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase">
+          {kind}
+        </span>
         <span
           className={cn(
-            'flex flex-wrap items-center gap-1.5 text-[15px] leading-[1.35] font-extrabold',
+            'flex flex-wrap items-center gap-1.5 text-[15px] leading-[1.35] font-semibold',
             locked ? 'text-text-secondary' : 'text-text-heading'
           )}
         >
@@ -63,7 +63,9 @@ function CurriculumRow({
         {!locked && <ChevronRight size={18} className="text-lock/70" />}
       </span>
       {locked && lockNote && (
-        <span className="basis-full pl-[52px] text-[13px] font-semibold text-text-secondary">{lockNote}</span>
+        <span className="basis-full pl-[52px] text-[13px] font-semibold text-text-secondary">
+          {lockNote}
+        </span>
       )}
     </>
   )

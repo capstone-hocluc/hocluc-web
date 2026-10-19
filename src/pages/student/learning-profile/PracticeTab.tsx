@@ -19,13 +19,13 @@ import { useLearningProfileData } from './learningProfileContext'
 import { componentColors, practiceFilters, practiceOverviewIcons, practiceStatIcons } from './icons'
 import ScoreChart from './ScoreChart'
 
-const detailBox = 'rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-4'
+const detailBox = 'rounded-xl border border-line-card bg-surface-brand p-4'
 
 function PracticeAiDetailModal({ analysis, isOpen, onClose }) {
   return (
     <ScrollableModal title="Phân tích luyện đề" isOpen={isOpen} onClose={onClose} maxWidth={720}>
       <div>
-        <span className="block text-[13px] font-extrabold text-text-body">{analysis.basedOn}</span>
+        <span className="block text-[13px] font-semibold text-text-body">{analysis.basedOn}</span>
         <p className="mt-2 mb-4 text-[15px] leading-[1.65] font-bold text-text-body">
           {analysis.summary}
         </p>
@@ -33,17 +33,15 @@ function PracticeAiDetailModal({ analysis, isOpen, onClose }) {
           {analysis.recommendations.map((item) => (
             <article key={item.title} className={detailBox}>
               <div className="flex items-center justify-between gap-3 max-[760px]:items-start">
-                <strong className="text-[15px] font-black text-text-heading">{item.title}</strong>
-                <b className="text-[13px] font-black whitespace-nowrap text-primary-text">
+                <strong className="text-[15px] font-bold text-text-heading">{item.title}</strong>
+                <b className="text-[13px] font-bold whitespace-nowrap text-primary-text">
                   {item.accuracy}% chính xác
                 </b>
               </div>
               <p className="my-2 text-sm leading-[1.55] font-bold text-text-body">
                 {item.explanation}
               </p>
-              <small className="text-[13px] font-black text-warning">
-                Ưu tiên: {item.priority}
-              </small>
+              <small className="text-[13px] font-bold text-warning">Ưu tiên: {item.priority}</small>
             </article>
           ))}
         </div>
@@ -64,15 +62,13 @@ function PracticeAiHistoryModal({ analysis, isOpen, onClose }) {
         {analysis.history.map((item) => (
           <article
             key={item.id}
-            className="rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-4"
+            className="rounded-xl border border-line-card bg-surface-brand p-4"
           >
             <div className="mb-2 flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-1">
-              <strong className="text-sm font-black text-text-heading">{item.createdAt}</strong>
+              <strong className="text-sm font-bold text-text-heading">{item.createdAt}</strong>
               <span className="text-[13px] font-bold text-text-body">{item.basedOn}</span>
             </div>
-            <p className="text-sm leading-[1.55] font-bold text-text-body">
-              {item.summary}
-            </p>
+            <p className="text-sm leading-[1.55] font-bold text-text-body">{item.summary}</p>
           </article>
         ))}
       </div>
@@ -88,8 +84,8 @@ function formatFeedbackDate(date) {
 }
 
 const metaLine = 'mt-[3px] block text-[13px] font-bold text-text-body'
-const detailSection = 'rounded-2xl border-[1.5px] border-line-card bg-surface p-4'
-const detailTitle = 'mb-2.5 text-[15px] font-black text-text-heading'
+const detailSection = 'rounded-xl border border-line-card bg-surface p-4'
+const detailTitle = 'mb-2.5 text-[15px] font-bold text-text-heading'
 
 function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
   if (!feedback) return null
@@ -102,9 +98,9 @@ function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
       maxWidth={760}
     >
       <div className="flex flex-col gap-3.5">
-        <div className="flex items-center gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-4 max-[760px]:items-start">
+        <div className="flex items-center gap-3 rounded-xl border border-line-card bg-surface-brand p-4 max-[760px]:items-start">
           <span
-            className="grid size-11 flex-none place-items-center overflow-hidden rounded-2xl bg-primary-soft text-primary-text"
+            className="grid size-11 flex-none place-items-center overflow-hidden rounded-xl bg-primary-soft text-primary-text"
             aria-hidden="true"
           >
             {feedback.teacher.avatar ? (
@@ -114,7 +110,7 @@ function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
             )}
           </span>
           <div>
-            <strong className="block text-[15px] font-black text-text-heading">
+            <strong className="block text-[15px] font-bold text-text-heading">
               {feedback.teacher.name}
             </strong>
             <span className={metaLine}>
@@ -143,9 +139,7 @@ function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
 
         <section className={detailSection}>
           <h3 className={detailTitle}>Lời khuyên</h3>
-          <p className="text-[15px] leading-[1.6] font-bold text-text-body">
-            {feedback.comment}
-          </p>
+          <p className="text-[15px] leading-[1.6] font-bold text-text-body">{feedback.comment}</p>
         </section>
       </div>
     </ScrollableModal>
@@ -168,9 +162,9 @@ function TeacherFeedbackPanel({
 
   if (!feedbackList.length) {
     return (
-      <div className="grid min-h-36 place-items-center content-center gap-2 rounded-3xl border-2 border-dashed border-line-brand bg-surface-brand p-5 text-center [&>svg]:text-primary-text">
+      <div className="grid min-h-36 place-items-center content-center gap-2 rounded-2xl border border-dashed border-line-brand bg-surface-brand p-5 text-center [&>svg]:text-primary-text">
         <GraduationCap size={28} />
-        <strong className="text-base font-black text-text-heading">
+        <strong className="text-base font-bold text-text-heading">
           Chưa có nhận xét từ giáo viên
         </strong>
         <p className="max-w-[460px] text-sm leading-[1.55] font-bold text-text-body">
@@ -184,11 +178,11 @@ function TeacherFeedbackPanel({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-stretch">
-        <span className="text-[13px] font-extrabold text-text-body">Lọc theo ngày</span>
+        <span className="text-[13px] font-semibold text-text-body">Lọc theo ngày</span>
         <DropdownField
           ariaLabel="Lọc nhận xét theo ngày"
           className="w-auto"
-          triggerClassName="min-h-10 rounded-xl border-2 border-line bg-surface px-3 text-sm font-extrabold text-text-heading outline-0"
+          triggerClassName="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-text-heading outline-0"
           options={[
             { id: 'all', label: 'Tất cả nhận xét' },
             ...feedbackDates.map((date) => ({ id: date, label: formatFeedbackDate(date) })),
@@ -207,12 +201,12 @@ function TeacherFeedbackPanel({
           <button
             key={item.id}
             type="button"
-            className="grid min-h-[92px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_18px] items-start gap-3 rounded-2xl border-[1.5px] border-line-brand bg-surface-brand p-3.5 text-left transition hover:-translate-y-0.5 hover:border-primary hover:bg-primary-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd] max-[760px]:grid-cols-[minmax(0,1fr)] [&>svg]:mt-1 [&>svg]:text-[var(--color-lock)] max-[760px]:[&>svg]:hidden"
+            className="grid min-h-[92px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_18px] items-start gap-3 rounded-xl border border-line-brand bg-surface-brand p-3.5 text-left transition  hover:border-primary hover:bg-primary-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-[760px]:grid-cols-[minmax(0,1fr)] [&>svg]:mt-1 [&>svg]:text-[var(--color-lock)] max-[760px]:[&>svg]:hidden"
             onClick={() => onOpenDetail(item)}
           >
             <div>
               <div className="flex items-center justify-between gap-2.5 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-[3px]">
-                <strong className="text-[15px] font-extrabold text-text-heading">
+                <strong className="text-[15px] font-semibold text-text-heading">
                   {item.teacher.name}
                 </strong>
                 <time className="text-[13px] font-semibold text-text-body">
@@ -331,7 +325,7 @@ function PracticeAiRecommendations({ onAction }) {
                       key: item.title,
                       text: item.title,
                       extra: (
-                        <small className="ml-auto text-[13px] font-black whitespace-nowrap text-warning">
+                        <small className="ml-auto text-[13px] font-bold whitespace-nowrap text-warning">
                           {item.accuracy}%
                         </small>
                       ),
@@ -459,7 +453,7 @@ function PracticeTab({ onAction, panelId, labelledBy }) {
               {learningProfilePage.components.map((component) => (
                 <label
                   key={component.key}
-                  className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border-2 border-line bg-surface px-3.5 text-sm font-extrabold text-text-heading"
+                  className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm font-semibold text-text-heading"
                 >
                   <input
                     type="checkbox"

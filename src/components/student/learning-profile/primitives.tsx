@@ -12,7 +12,7 @@ export function ProfileCard({ className, ...props }: ComponentProps<typeof Card>
   return (
     <Card
       padding="none"
-      className={cn('rounded-3xl border-line-card bg-surface shadow-card', className)}
+      className={cn('rounded-2xl border-line-card bg-surface shadow-card', className)}
       {...props}
     />
   )
@@ -45,12 +45,15 @@ export function ProfileHeading({
       )}
     >
       <div>
-        <h2 className={cn('text-xl leading-[1.25] font-black tracking-[-0.3px] text-text-heading', titleClassName)}>
+        <h2
+          className={cn(
+            'text-xl leading-[1.25] font-bold tracking-[-0.3px] text-text-heading',
+            titleClassName
+          )}
+        >
           {title}
         </h2>
-        {subtitle && (
-          <p className="mt-1 text-sm leading-[1.5] text-text-body">{subtitle}</p>
-        )}
+        {subtitle && <p className="mt-1 text-sm leading-[1.5] text-text-body">{subtitle}</p>}
       </div>
       {action && (
         <Button appearance="outline" size="sm" onClick={onAction}>
@@ -66,7 +69,10 @@ export function TextButton({ className, ...props }: ComponentProps<typeof Button
   return (
     <Button
       appearance="ghost"
-      className={cn('h-auto min-h-8 border-0 p-0 text-[13px] font-extrabold text-primary-text hover:bg-transparent', className)}
+      className={cn(
+        'h-auto min-h-8 border-0 p-0 text-[13px] font-semibold text-primary-text hover:bg-transparent',
+        className
+      )}
       {...props}
     />
   )
@@ -89,7 +95,7 @@ export function TrendBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-[5px] text-[13px] font-extrabold',
+        'inline-flex items-center gap-[5px] text-[13px] font-semibold',
         positive ? 'text-success' : 'text-danger'
       )}
     >
@@ -113,9 +119,9 @@ const tile = cva('grid shrink-0 place-items-center', {
     },
     size: {
       sm: 'size-9 rounded-xl',
-      md: 'size-[38px] rounded-[13px]',
+      md: 'size-[38px] rounded-xl',
       lg: 'size-[38px] rounded-xl',
-      xl: 'size-[42px] rounded-[14px]',
+      xl: 'size-[42px] rounded-xl',
     },
   },
   defaultVariants: { tone: 'blue', size: 'sm' },
@@ -144,9 +150,9 @@ export function IconTile({
 }
 
 const metricBase =
-  'flex min-h-[102px] min-w-0 flex-col justify-center gap-1.5 rounded-2xl border-[1.5px] border-line-card bg-surface p-4 shadow-card-soft'
+  'flex min-h-[102px] min-w-0 flex-col justify-center gap-1.5 rounded-xl border border-line-card bg-surface p-4 shadow-card-soft'
 const metricLabel = 'text-[13px] leading-[1.35] font-bold text-text-body'
-const metricValue = 'text-2xl leading-[1.1] font-black tracking-[-0.4px] text-text-heading'
+const metricValue = 'text-2xl leading-[1.1] font-bold tracking-[-0.4px] text-text-heading'
 
 interface MetricCardProps {
   icon?: ComponentType<{ size?: number }>
@@ -178,10 +184,7 @@ interface IconMetricCardProps {
 export function IconMetricCard({ icon: Icon, tone, label, value }: IconMetricCardProps) {
   return (
     <div
-      className={cn(
-        metricBase,
-        'min-h-[132px] items-start justify-between gap-[9px] text-left'
-      )}
+      className={cn(metricBase, 'min-h-[132px] items-start justify-between gap-[9px] text-left')}
     >
       <IconTile tone={tone} size="md">
         <Icon size={18} />

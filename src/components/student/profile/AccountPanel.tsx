@@ -12,9 +12,15 @@ interface AccountPanelProps {
 // Card + heading shared by every account-settings section.
 export function AccountPanel({ title, subtitle, children }: AccountPanelProps) {
   return (
-    <Card as="section" variant="elevated" padding="none" radius="xl" className="p-6 max-[560px]:p-4">
+    <Card
+      as="section"
+      variant="elevated"
+      padding="none"
+      radius="xl"
+      className="p-6 max-[560px]:p-4"
+    >
       <div className="mb-5">
-        <h2 className="text-[22px] font-black tracking-[-0.3px] text-text-heading">{title}</h2>
+        <h2 className="text-[22px] font-bold tracking-[-0.3px] text-text-heading">{title}</h2>
         {subtitle && <p className="mt-1 text-[15px] text-text-body">{subtitle}</p>}
       </div>
       {children}
@@ -31,7 +37,7 @@ export function AccountForm({ children }: { children: ReactNode }) {
 
 export function FormGroupTitle({ children }: { children: ReactNode }) {
   return (
-    <div className="col-span-full mt-1 border-b border-line pb-2 text-base font-black text-text-heading first:mt-0">
+    <div className="col-span-full mt-1 border-b border-line pb-2 text-base font-bold text-text-heading first:mt-0">
       {children}
     </div>
   )
@@ -48,7 +54,14 @@ interface SaveBarProps {
 }
 
 // Submit / cancel buttons and the transient "saved" badge of a form.
-export function SaveBar({ saving, saved, submitLabel, savedLabel, onSubmit, onCancel }: SaveBarProps) {
+export function SaveBar({
+  saving,
+  saved,
+  submitLabel,
+  savedLabel,
+  onSubmit,
+  onCancel,
+}: SaveBarProps) {
   return (
     <div className="col-span-full flex flex-wrap items-center gap-3 pt-1">
       <Button onClick={onSubmit} disabled={saving}>
@@ -63,7 +76,7 @@ export function SaveBar({ saving, saved, submitLabel, savedLabel, onSubmit, onCa
       {saved && (
         <span
           role="status"
-          className="inline-flex items-center gap-1.5 text-sm font-extrabold text-badge-success-text"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-badge-success-text"
         >
           <CheckCircle2 size={14} />
           {savedLabel}

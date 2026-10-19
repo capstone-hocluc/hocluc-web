@@ -69,7 +69,7 @@ function QuizTimer({ deadlineAt, onExpire, className }: QuizTimerProps) {
     <div
       role="timer"
       className={cn(
-        'flex items-center gap-3 rounded-2xl border-2 px-4 py-3',
+        'flex items-center gap-3 rounded-xl border px-4 py-3',
         urgent
           ? 'border-danger-line bg-danger-soft text-badge-danger-text'
           : 'border-line-brand bg-surface-brand text-text-heading',
@@ -86,7 +86,7 @@ function QuizTimer({ deadlineAt, onExpire, className }: QuizTimerProps) {
       </span>
       <span className="flex min-w-0 flex-col leading-tight">
         <span className="text-xs font-bold text-text-secondary">Thời gian còn lại</span>
-        <span className="text-[28px] font-black tracking-[-0.5px] tabular-nums">
+        <span className="text-[28px] font-bold tracking-[-0.5px] tabular-nums">
           {formatCountdown(remaining)}
         </span>
       </span>

@@ -114,6 +114,12 @@ html[data-learner]:not([data-theme='dark']) {
   --badge-blue-icon-color: var(--hocluc-blue);
 }
 
+html[data-learner]:not([data-theme='dark']) {
+  --shadow-card: none;
+  --shadow-card-soft: 0 2px 8px rgb(11 58 130 / 4%);
+  --shadow-card-hover: 0 8px 24px rgb(11 58 130 / 10%);
+}
+
 .dashboard-layout {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
@@ -143,7 +149,9 @@ html[data-console] :where(nav button, label, th) {
   margin-bottom: 8px;
 }
 
-.student-dashboard > .dashboard-welcome { margin-bottom: 32px; }
+.student-dashboard > .dashboard-welcome {
+  margin-bottom: 32px;
+}
 .dashboard-role {
   margin-bottom: 8px;
   color: var(--color-primary-text);
@@ -165,7 +173,9 @@ html[data-console] :where(nav button, label, th) {
   font-size: 0.875rem;
   line-height: 1.7;
 }
-.dashboard-welcome-action { flex-shrink: 0; }
+.dashboard-welcome-action {
+  flex-shrink: 0;
+}
 .dashboard-actions h2 {
   margin-bottom: 16px;
   color: var(--color-text-heading);
@@ -188,7 +198,9 @@ html[data-console] :where(nav button, label, th) {
   background: var(--color-surface);
   color: var(--color-text-muted);
   text-align: left;
-  transition: border-color 180ms, background-color 180ms;
+  transition:
+    border-color 180ms,
+    background-color 180ms;
   cursor: pointer;
 }
 .dashboard-action:hover {
@@ -205,8 +217,18 @@ html[data-console] :where(nav button, label, th) {
   background: var(--color-primary-soft);
   color: var(--color-primary-text);
 }
-.dashboard-action strong { display: block; color: var(--color-text-heading); font-size: 0.875rem; font-weight: 700; }
-.dashboard-action-description { display: block; margin-top: 4px; font-size: 0.8125rem; line-height: 1.6; }
+.dashboard-action strong {
+  display: block;
+  color: var(--color-text-heading);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.dashboard-action-description {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
 .dashboard-layout [data-ui-button] {
   border-width: 1px;
   border-radius: 12px;
@@ -217,19 +239,38 @@ html[data-console] :where(nav button, label, th) {
 .dashboard-layout [data-ui-button][data-variant='primary'][data-appearance='fill']:hover {
   background: var(--color-primary-dark);
 }
-.dashboard-layout :focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 4px; }
-.student-dashboard :where(article, section) { scroll-margin-top: 96px; }
-.student-dashboard h3 { font-size: 1.125rem; font-weight: 700; }
+.dashboard-layout :focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
+}
+.student-dashboard :where(article, section) {
+  scroll-margin-top: 96px;
+}
+.student-dashboard h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
 
 @media (max-width: 760px) {
-  .dashboard-welcome { align-items: flex-start; flex-direction: column; gap: 16px; }
-  .dashboard-welcome h1 { font-size: 1.5rem; }
-  .dashboard-action { padding: 16px; }
+  .dashboard-welcome {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .dashboard-welcome h1 {
+    font-size: 1.5rem;
+  }
+  .dashboard-action {
+    padding: 16px;
+  }
 }
 @media (max-width: 560px) {
-  .dashboard-action-grid { grid-template-columns: 1fr; }
-  .student-topbar hocluc-logo::part(wordmark) { display: none; }
+  .dashboard-action-grid {
+    grid-template-columns: 1fr;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dashboard-action { transition: none; }
+  .dashboard-action {
+    transition: none;
+  }
 }

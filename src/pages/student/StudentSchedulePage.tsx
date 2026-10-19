@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react'
 import { matchesSearch } from '../../lib/search'
 import { CalendarDays, Info } from '../../components/console/icons'
-import type { AttendanceResponse, AttendanceStatus, ScheduleCalendarItem } from '../../types/scheduling'
+import type {
+  AttendanceResponse,
+  AttendanceStatus,
+  ScheduleCalendarItem,
+} from '../../types/scheduling'
 import { getMyCourses, type MyCourseEnrollment } from '../../services/courseService'
 import { getStudentSchedules } from '../../services/scheduleService'
 import { getMyAttendanceForSchedule, getMyCourseAttendance } from '../../services/attendanceService'
@@ -72,10 +76,11 @@ export default function StudentSchedulePage() {
   )
 
   const items = useMemo<ScheduleCalendarItem[]>(
-    () => filterScheduleItemsToInstantRange(
-      (schedules.data ?? []).map((item) => ({ kind: 'schedule', sourceId: item.id, item })),
-      scheduleRange
-    ),
+    () =>
+      filterScheduleItemsToInstantRange(
+        (schedules.data ?? []).map((item) => ({ kind: 'schedule', sourceId: item.id, item })),
+        scheduleRange
+      ),
     [scheduleRange, schedules.data]
   )
   const filteredItems = useMemo(() => {
@@ -100,10 +105,14 @@ export default function StudentSchedulePage() {
         title="Lịch học"
         description="Theo dõi các lịch học đã đăng ký trong tài khoản của bạn."
         actions={
-          <Button appearance="outline" className="max-[767px]:min-h-11" onClick={() => {
-            setSelectedItem(null)
-            schedules.reload()
-          }}>
+          <Button
+            appearance="outline"
+            className="max-[767px]:min-h-11"
+            onClick={() => {
+              setSelectedItem(null)
+              schedules.reload()
+            }}
+          >
             <CalendarDays size={16} />
             Tải lại
           </Button>
@@ -112,7 +121,8 @@ export default function StudentSchedulePage() {
 
       <Notice tone="info">
         <Info size={17} aria-hidden="true" />
-        Một số buổi thuộc chuỗi chưa hiển thị trong lịch này. Chúng sẽ xuất hiện khi quyền truy cập lớp học được xác nhận.
+        Một số buổi thuộc chuỗi chưa hiển thị trong lịch này. Chúng sẽ xuất hiện khi quyền truy cập
+        lớp học được xác nhận.
       </Notice>
 
       <ScheduleFilters
@@ -128,7 +138,11 @@ export default function StudentSchedulePage() {
         status={schedules.status}
         errorMessage={schedules.errorMessage}
         empty={!filteredItems.length}
-        emptyMessage={query.trim() ? 'Không tìm thấy lịch phù hợp trong tuần này.' : 'Bạn chưa có lịch học trong tuần này.'}
+        emptyMessage={
+          query.trim()
+            ? 'Không tìm thấy lịch phù hợp trong tuần này.'
+            : 'Bạn chưa có lịch học trong tuần này.'
+        }
         onRetry={schedules.reload}
       >
         {view === 'agenda' ? (
@@ -145,16 +159,24 @@ export default function StudentSchedulePage() {
 
       <Card as="section" variant="elevated" radius="xl" padding="lg" className="space-y-4">
         <div>
-          <h2 className="text-xl font-black tracking-[-0.3px] text-text-heading">Chuyên cần</h2>
-          <p className="mt-1 text-[15px] text-text-body">Tổng số buổi, trạng thái và tỷ lệ chuyên cần theo khóa học.</p>
+          <h2 className="text-xl font-bold tracking-[-0.3px] text-text-heading">Chuyên cần</h2>
+          <p className="mt-1 text-[15px] text-text-body">
+            Tổng số buổi, trạng thái và tỷ lệ chuyên cần theo khóa học.
+          </p>
         </div>
         <Notice tone="warning">
-          Tỷ lệ = (có mặt + 0,8 × đi muộn) ÷ tổng số buổi. Tổng số hiện có thể bao gồm cả buổi học trong tương lai.
+          Tỷ lệ = (có mặt + 0,8 × đi muộn) ÷ tổng số buổi. Tổng số hiện có thể bao gồm cả buổi học
+          trong tương lai.
         </Notice>
         {(courses.status === 'error' || courses.status === 'forbidden') && (
           <Notice tone={courses.status === 'forbidden' ? 'warning' : 'danger'}>
             Không tải được khóa học đã ghi danh.
-            <Button size="sm" appearance="outline" className="max-[767px]:min-h-11" onClick={courses.reload}>
+            <Button
+              size="sm"
+              appearance="outline"
+              className="max-[767px]:min-h-11"
+              onClick={courses.reload}
+            >
               Thử lại
             </Button>
           </Notice>
@@ -181,7 +203,10 @@ export default function StudentSchedulePage() {
         >
           {attendance.data && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <AttendanceMetric label="Chuyên cần" value={attendance.data.attendanceRate.toFixed(1) + '%'} />
+              <AttendanceMetric
+                label="Chuyên cần"
+                value={attendance.data.attendanceRate.toFixed(1) + '%'}
+              />
               <AttendanceMetric label="Tổng số buổi" value={attendance.data.totalSchedules} />
               <AttendanceMetric label="Có mặt" value={attendance.data.presentCount} />
               <AttendanceMetric label="Đi muộn" value={attendance.data.lateCount} />
@@ -196,9 +221,14 @@ export default function StudentSchedulePage() {
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
         timezone={SCHEDULING_TIMEZONE}
-        body={selectedItem?.kind === 'schedule' ? (
-          <StudentScheduleAttendancePanel key={selectedItem.item.id} scheduleId={selectedItem.item.id} />
-        ) : undefined}
+        body={
+          selectedItem?.kind === 'schedule' ? (
+            <StudentScheduleAttendancePanel
+              key={selectedItem.item.id}
+              scheduleId={selectedItem.item.id}
+            />
+          ) : undefined
+        }
       />
     </StudentPageContainer>
   )
@@ -206,14 +236,17 @@ export default function StudentSchedulePage() {
 
 function AttendanceMetric({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-3.5">
+    <div className="rounded-xl border border-line-card bg-surface-brand p-3.5">
       <p className="text-[13px] font-bold text-text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-black tracking-[-0.4px] text-text-heading">{value}</p>
+      <p className="mt-1 text-2xl font-bold tracking-[-0.4px] text-text-heading">{value}</p>
     </div>
   )
 }
 
-const attendancePresentation: Record<AttendanceStatus, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }> = {
+const attendancePresentation: Record<
+  AttendanceStatus,
+  { label: string; tone: 'success' | 'warning' | 'danger' | 'info' }
+> = {
   PRESENT: { label: 'Có mặt', tone: 'success' },
   ABSENT: { label: 'Vắng mặt', tone: 'danger' },
   LATE: { label: 'Đi muộn', tone: 'warning' },
@@ -232,9 +265,8 @@ function formatAttendanceTime(value?: string | null) {
 }
 
 function StudentScheduleAttendancePanel({ scheduleId }: { scheduleId: string }) {
-  const attendance = useScheduleResource(
-    'student-schedule-attendance:' + scheduleId,
-    () => getMyAttendanceForSchedule(scheduleId)
+  const attendance = useScheduleResource('student-schedule-attendance:' + scheduleId, () =>
+    getMyAttendanceForSchedule(scheduleId)
   )
   const record = attendance.data
 
@@ -263,27 +295,31 @@ function AttendanceDetail({ record }: { record: AttendanceResponse }) {
   const leftAt = formatAttendanceTime(record.leftAt)
 
   return (
-    <dl className="grid gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-3.5 text-sm sm:grid-cols-2">
+    <dl className="grid gap-3 rounded-xl border border-line-card bg-surface-brand p-3.5 text-sm sm:grid-cols-2">
       <div>
         <dt className="text-[13px] font-bold text-text-muted">Trạng thái</dt>
-        <dd className="mt-1"><StatusBadge tone={presentation.tone} size="sm">{presentation.label}</StatusBadge></dd>
+        <dd className="mt-1">
+          <StatusBadge tone={presentation.tone} size="sm">
+            {presentation.label}
+          </StatusBadge>
+        </dd>
       </div>
       {record.attendanceMinutes != null && (
         <div>
           <dt className="text-[13px] font-bold text-text-muted">Thời gian tham gia</dt>
-          <dd className="mt-1 font-extrabold text-text-heading">{record.attendanceMinutes} phút</dd>
+          <dd className="mt-1 font-semibold text-text-heading">{record.attendanceMinutes} phút</dd>
         </div>
       )}
       {joinedAt && (
         <div>
           <dt className="text-[13px] font-bold text-text-muted">Tham gia lúc</dt>
-          <dd className="mt-1 font-extrabold text-text-heading">{joinedAt}</dd>
+          <dd className="mt-1 font-semibold text-text-heading">{joinedAt}</dd>
         </div>
       )}
       {leftAt && (
         <div>
           <dt className="text-[13px] font-bold text-text-muted">Rời buổi học lúc</dt>
-          <dd className="mt-1 font-extrabold text-text-heading">{leftAt}</dd>
+          <dd className="mt-1 font-semibold text-text-heading">{leftAt}</dd>
         </div>
       )}
     </dl>

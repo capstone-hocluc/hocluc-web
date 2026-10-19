@@ -65,13 +65,17 @@ function StudentDashboard(props: StudentDashboardProps) {
         role="STUDENT"
         title="Mỗi ngày học, một bước tiến."
         description="Tiếp tục bài học, theo dõi năng lực và chọn phần cần luyện tiếp theo."
-        action={<Button appearance="outline" onClick={props.onOpenMyCourses}>Khóa học của tôi</Button>}
+        action={
+          <Button appearance="outline" onClick={props.onOpenMyCourses}>
+            Khóa học của tôi
+          </Button>
+        }
       />
       <ResourceState
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
-        loading={<Skeleton className="h-[640px] rounded-3xl" />}
+        loading={<Skeleton className="h-[640px] rounded-2xl" />}
         error={{ title: 'Không thể tải tổng quan học tập' }}
       />
       {status === 'ready' && vm && <DashboardContent vm={vm} {...props} />}

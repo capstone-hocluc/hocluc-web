@@ -29,13 +29,13 @@ function ChapterBlock({
   onOpenQuiz,
 }: CurriculumHandlers & { chapter: CourseStudyChapter }) {
   return (
-    <AccordionItem value={chapter.id} className="rounded-2xl border-[1.5px] border-line bg-surface p-3.5">
+    <AccordionItem value={chapter.id} className="rounded-xl border border-line bg-surface p-3.5">
       <AccordionTrigger iconSize={18} className="gap-3 text-heading">
-        <span className="inline-flex min-w-0 flex-1 items-center gap-2 text-base font-extrabold text-text-heading">
+        <span className="inline-flex min-w-0 flex-1 items-center gap-2 text-base font-semibold text-text-heading">
           {chapter.title}
           {chapter.completed && <CheckCircle2 size={16} className="shrink-0 text-practice" />}
         </span>
-        <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-[13px] font-extrabold whitespace-nowrap text-primary-text">
+        <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-[13px] font-semibold whitespace-nowrap text-primary-text">
           {chapter.completedLessonCount}/{chapter.lessonCount}
         </span>
       </AccordionTrigger>
@@ -70,19 +70,17 @@ function SectionBlock({
   return (
     <AccordionItem
       value={section.sectionCourseId}
-      className="rounded-[20px] border-[1.5px] border-line bg-surface-tint p-4 max-[640px]:p-3"
+      className="rounded-2xl border border-line bg-surface-tint p-4 max-[640px]:p-3"
     >
       <AccordionTrigger>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[17px] font-extrabold text-text-heading">{section.title}</span>
+          <span className="text-[17px] font-semibold text-text-heading">{section.title}</span>
           <span className="text-[13px] font-semibold text-text-secondary">
             {section.categoryName ? `${section.categoryName} · ` : ''}
             {section.completedLessonCount}/{section.lessonCount} bài học
           </span>
         </span>
-        <span className="text-sm font-black whitespace-nowrap text-primary-text">
-          {percent}%
-        </span>
+        <span className="text-sm font-bold whitespace-nowrap text-primary-text">{percent}%</span>
       </AccordionTrigger>
       <Progress value={percent} size="sm" className="mt-3" aria-label={section.title} />
       <AccordionContent>
@@ -122,12 +120,12 @@ function PhaseBlock({
   return (
     <AccordionItem
       value={phase.id}
-      className="rounded-3xl border-[1.5px] border-line-card bg-surface p-5 shadow-card max-[640px]:p-3.5"
+      className="rounded-2xl border border-line-card bg-surface p-5 shadow-card max-[640px]:p-3.5"
     >
       <AccordionTrigger>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="inline-flex items-center gap-2.5 text-xl font-black tracking-[-0.3px] text-text-heading max-[640px]:text-lg">
-            <b className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm font-black text-primary-text">
+          <span className="inline-flex items-center gap-2.5 text-xl font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-lg">
+            <b className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm font-bold text-primary-text">
               {String(index + 1).padStart(2, '0')}
             </b>
             {phase.name}
@@ -136,9 +134,7 @@ function PhaseBlock({
             <span className="text-sm font-semibold text-text-secondary">{phase.description}</span>
           )}
         </span>
-        <span className="text-base font-black whitespace-nowrap text-primary-text">
-          {percent}%
-        </span>
+        <span className="text-base font-bold whitespace-nowrap text-primary-text">{percent}%</span>
       </AccordionTrigger>
       <Progress value={percent} className="mt-3.5" aria-label={phase.name} />
       <AccordionContent>

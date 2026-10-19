@@ -40,7 +40,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
           <Button
             shape="pill"
             size="sm"
-            className="h-auto px-4 py-2 text-sm font-extrabold"
+            className="h-auto px-4 py-2 text-sm font-semibold"
             onClick={onViewResult}
           >
             Xem kết quả
@@ -65,7 +65,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
             <Button
               appearance="outline"
               shape="pill"
-              className="h-12 border-[1.5px] px-6 text-[15px] font-extrabold text-text-heading"
+              className="h-12 border px-6 text-[15px] font-semibold text-text-heading"
               disabled={currentIndex === 0}
               onClick={() => setCurrentIndex((current) => Math.max(0, current - 1))}
             >
@@ -76,7 +76,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
             {isLast ? (
               <Button
                 shape="pill"
-                className="h-12 px-6 text-[15px] font-extrabold"
+                className="h-12 px-6 text-[15px] font-semibold"
                 disabled={inputsDisabled}
                 onClick={() => session.setShowSubmitDialog(true)}
               >
@@ -85,7 +85,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
             ) : (
               <Button
                 shape="pill"
-                className="h-12 px-6 text-[15px] font-extrabold"
+                className="h-12 px-6 text-[15px] font-semibold"
                 onClick={() =>
                   setCurrentIndex((current) => Math.min(questions.length - 1, current + 1))
                 }
@@ -111,8 +111,8 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
           <Card variant="panel" padding="none" radius="xl" className="flex flex-col gap-4 p-5">
             <div className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-base font-black text-text-heading">Tiến độ làm bài</h2>
-                <span className="text-sm font-extrabold text-primary-text">
+                <h2 className="text-base font-bold text-text-heading">Tiến độ làm bài</h2>
+                <span className="text-sm font-semibold text-primary-text">
                   {session.answeredCount}/{questions.length}
                 </span>
               </div>
@@ -141,16 +141,17 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
                 <span className="size-3 rounded-[4px] bg-primary" /> Đang làm
               </li>
               <li className="flex items-center gap-1.5">
-                <span className="size-3 rounded-[4px] border-2 border-line-brand bg-surface-brand" /> Đã trả lời
+                <span className="size-3 rounded-[4px] border border-line-brand bg-surface-brand" />{' '}
+                Đã trả lời
               </li>
               <li className="flex items-center gap-1.5">
-                <span className="size-3 rounded-[4px] border-2 border-line bg-surface" /> Chưa làm
+                <span className="size-3 rounded-[4px] border border-line bg-surface" /> Chưa làm
               </li>
             </ul>
 
             <Button
               variant="danger"
-              className="h-12 w-full rounded-2xl text-[15px] font-extrabold"
+              className="h-12 w-full rounded-xl text-[15px] font-semibold"
               disabled={inputsDisabled}
               onClick={() => session.setShowSubmitDialog(true)}
             >

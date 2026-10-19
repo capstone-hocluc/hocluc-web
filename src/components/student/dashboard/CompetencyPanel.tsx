@@ -10,7 +10,7 @@ function LevelLine({ title, data }: { title: string; data: DashboardDimension })
   ]
   return (
     <div>
-      <strong className="block text-[15px] font-extrabold text-text-heading">{title}</strong>
+      <strong className="block text-[15px] font-semibold text-text-heading">{title}</strong>
       <div className="relative mx-1 mt-4 mb-2.5 flex justify-between before:absolute before:top-[7px] before:right-2.5 before:left-2.5 before:border-t-2 before:border-dashed before:border-line-brand before:content-['']">
         {values.map(([label]) => (
           <span
@@ -53,7 +53,7 @@ interface CompetencyPanelProps {
 // "Hồ sơ năng lực" box: competency rows (current / predicted / target) + study summary.
 function CompetencyPanel({ dimensions, summary }: CompetencyPanelProps) {
   return (
-    <div className="flex h-full flex-col gap-5 rounded-2xl border border-line-card bg-surface p-5 shadow-card">
+    <div className="flex h-full flex-col gap-5 rounded-xl border border-line-card bg-surface p-5 shadow-card">
       <div className="flex min-h-0 flex-[1_1_auto] flex-col gap-4">
         <h4 className="text-[17px] leading-[1.35] font-bold text-text-heading">
           Điểm năng lực ĐGNL của bạn
@@ -64,7 +64,7 @@ function CompetencyPanel({ dimensions, summary }: CompetencyPanelProps) {
           ))}
         </div>
       </div>
-      <div className="shrink-0 border-t-[1.5px] border-line pt-4">
+      <div className="shrink-0 border-t border-line pt-4">
         <strong className="mb-3 block text-[17px] font-bold text-text-heading">
           Tổng quan ôn luyện
         </strong>

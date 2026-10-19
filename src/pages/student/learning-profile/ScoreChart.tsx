@@ -91,7 +91,7 @@ function ScoreChart({
       <div className="flex items-start justify-between gap-3.5 max-[760px]:flex-col">
         <ProfileHeading title={title} subtitle={subtitle} className="mb-2" />
         {filterLabel && (
-          <span className="inline-flex min-h-8 flex-none items-center rounded-full border-2 border-line bg-surface px-3 text-[13px] font-extrabold text-text-body">
+          <span className="inline-flex min-h-8 flex-none items-center rounded-full border border-line bg-surface px-3 text-[13px] font-semibold text-text-body">
             {filterLabel}
           </span>
         )}
@@ -199,7 +199,7 @@ function ScoreChart({
                 x={Math.min(chartWidth - 72, latestCoordinates[0] + 10)}
                 y={latestCoordinates[1] - 34}
                 textAnchor="middle"
-                className="fill-primary-text text-[13px] font-black"
+                className="fill-primary-text text-[13px] font-bold"
               >
                 {latest.score} điểm
               </text>

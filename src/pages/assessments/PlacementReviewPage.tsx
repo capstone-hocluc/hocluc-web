@@ -31,8 +31,8 @@ function PlacementReviewPage({ attemptId, onBack }: PlacementReviewPageProps) {
         onRetry={reload}
         loading={
           <>
-            <Skeleton className="h-40 rounded-2xl" />
-            <Skeleton className="h-80 rounded-2xl" />
+            <Skeleton className="h-40 rounded-xl" />
+            <Skeleton className="h-80 rounded-xl" />
           </>
         }
         notFound={{
@@ -48,7 +48,9 @@ function PlacementReviewPage({ attemptId, onBack }: PlacementReviewPageProps) {
           <BackLink onClick={onBack}>Quay lại kết quả</BackLink>
 
           <section className="flex flex-col gap-4">
-            <h2 className="text-xl font-black tracking-[-0.2px] text-text-heading">Xem lại đáp án</h2>
+            <h2 className="text-xl font-bold tracking-[-0.2px] text-text-heading">
+              Xem lại đáp án
+            </h2>
             <div className="flex flex-col gap-4">
               {bySequence(review.questions).map((question, index) => (
                 <QuizReviewQuestionCard

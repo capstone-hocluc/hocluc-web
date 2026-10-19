@@ -24,7 +24,7 @@ function LessonInfoCard({ lesson, completing, onMarkComplete }: LessonInfoCardPr
     <Card as="section" padding="none" radius="xl" className="p-6 max-[640px]:p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="mb-1.5 text-[26px] leading-tight font-black tracking-[-0.4px] text-text-heading max-[640px]:text-[22px]">
+          <h1 className="mb-1.5 text-[26px] leading-tight font-bold tracking-[-0.4px] text-text-heading max-[640px]:text-[22px]">
             {lesson.title}
           </h1>
           <span className="text-sm font-semibold text-text-secondary">
@@ -45,13 +45,17 @@ function LessonInfoCard({ lesson, completing, onMarkComplete }: LessonInfoCardPr
         <p className="mt-4 text-base leading-[1.65] text-text-body">{lesson.description}</p>
       )}
 
-      <div className="mt-5 flex items-center gap-3 text-sm font-extrabold text-text-heading max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
-        <Progress value={percent} className="flex-1 max-[640px]:flex-none" aria-label="Tiến độ bài học" />
+      <div className="mt-5 flex items-center gap-3 text-sm font-semibold text-text-heading max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:gap-2">
+        <Progress
+          value={percent}
+          className="flex-1 max-[640px]:flex-none"
+          aria-label="Tiến độ bài học"
+        />
         <span className="whitespace-nowrap">Tiến độ bài học: {percent}%</span>
       </div>
 
       {lesson.progress?.chapterCompleted && (
-        <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-extrabold text-badge-success-text">
+        <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-badge-success-text">
           <CheckCircle2 size={16} />
           Chương đã hoàn thành
         </span>
@@ -59,7 +63,7 @@ function LessonInfoCard({ lesson, completing, onMarkComplete }: LessonInfoCardPr
 
       <div className="mt-5">
         {isCompleted ? (
-          <span className="inline-flex items-center gap-1.5 text-[15px] font-extrabold text-badge-success-text">
+          <span className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-badge-success-text">
             <CheckCircle2 size={18} />
             Đã hoàn thành
           </span>

@@ -11,7 +11,7 @@ const stateLabel: Record<AnswerState, string> = {
 }
 
 // Pill at the top-right of a question ("Chọn 1 đáp án" / review result).
-const topPill = cva('rounded-full px-3 py-1 text-xs font-extrabold', {
+const topPill = cva('rounded-full px-3 py-1 text-xs font-semibold', {
   variants: {
     state: {
       neutral: 'bg-lock-soft text-text-secondary',
@@ -29,7 +29,7 @@ const reviewBorder: Record<AnswerState, string> = {
   unanswered: 'border-live-line',
 }
 
-const optionLetter = 'grid place-items-center bg-primary-soft text-sm font-black text-primary-text'
+const optionLetter = 'grid place-items-center bg-primary-soft text-sm font-bold text-primary-text'
 
 interface QuestionCardProps {
   question: ActivityQuestion
@@ -41,7 +41,7 @@ interface QuestionCardProps {
 export function QuestionCard({ question, selectedId, onChoose }: QuestionCardProps) {
   return (
     <ActivityCard className="grid gap-3">
-      <div className="flex items-center justify-between gap-3 text-sm font-extrabold text-text-secondary">
+      <div className="flex items-center justify-between gap-3 text-sm font-semibold text-text-secondary">
         <span>Câu {question.number}</span>
         <small className={topPill()}>
           {question.type === 'single-choice' ? 'Chọn 1 đáp án' : question.type}
@@ -56,7 +56,7 @@ export function QuestionCard({ question, selectedId, onChoose }: QuestionCardPro
               key={option.id}
               type="button"
               className={cn(
-                'flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border-2 border-line bg-surface px-3.5 py-2.5 text-left text-[15px] font-semibold text-text-body transition-colors hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+                'flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 text-left text-[15px] font-semibold text-text-body transition-colors hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
                 selected && 'border-primary bg-primary-soft text-text-heading'
               )}
               onClick={() => onChoose(option.id)}
@@ -80,7 +80,7 @@ export function QuestionCard({ question, selectedId, onChoose }: QuestionCardPro
 }
 
 const reviewOption = cva(
-  'flex min-h-11 items-center gap-2.5 rounded-2xl border-2 border-line bg-surface px-3 py-2 text-[15px] font-semibold text-text-body',
+  'flex min-h-11 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 text-[15px] font-semibold text-text-body',
   {
     variants: {
       tone: {
@@ -110,7 +110,7 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
       id={`review-question-${question.number}`}
       className={cn('grid gap-3', reviewBorder[state])}
     >
-      <div className="flex items-center justify-between gap-3 text-sm font-extrabold text-text-secondary">
+      <div className="flex items-center justify-between gap-3 text-sm font-semibold text-text-secondary">
         <span>Câu {question.number}</span>
         <small className={topPill({ state })}>{stateLabel[state]}</small>
       </div>
@@ -128,9 +128,7 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
                 })
               )}
             >
-              <b className={cn(optionLetter, 'size-8 shrink-0 rounded-xl')}>
-                {option.id}
-              </b>
+              <b className={cn(optionLetter, 'size-8 shrink-0 rounded-xl')}>{option.id}</b>
               <span>{option.text}</span>
             </p>
           )
@@ -138,24 +136,24 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
       </div>
       <div className="grid gap-2">
         <p>
-          <span className="block text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase">
+          <span className="block text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase">
             Đáp án của bạn:
           </span>
-          <strong className="mt-0.5 block text-[15px] font-extrabold text-text-heading">
+          <strong className="mt-0.5 block text-[15px] font-semibold text-text-heading">
             {selectedOption ? `${selectedOption.id}. ${selectedOption.text}` : 'Chưa trả lời'}
           </strong>
         </p>
         <p>
-          <span className="block text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase">
+          <span className="block text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase">
             Đáp án đúng:
           </span>
-          <strong className="mt-0.5 block text-[15px] font-extrabold text-text-heading">
+          <strong className="mt-0.5 block text-[15px] font-semibold text-text-heading">
             {correctOption.id}. {correctOption.text}
           </strong>
         </p>
       </div>
-      <div className="rounded-2xl bg-surface-brand p-3.5">
-        <strong className="text-sm font-extrabold text-text-heading">Giải thích</strong>
+      <div className="rounded-xl bg-surface-brand p-3.5">
+        <strong className="text-sm font-semibold text-text-heading">Giải thích</strong>
         <p className="mt-1 text-[15px] leading-[1.5] text-text-body">{question.explanation}</p>
       </div>
     </ActivityCard>

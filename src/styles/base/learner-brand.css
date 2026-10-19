@@ -21,24 +21,24 @@
   src: url('/landing-v2/assets/fonts/be-vietnam-pro-700.ttf') format('truetype');
 }
 :where(.landing-page, .hl-brand-auth, .hl-purchase) {
-  --paper: oklch(99% 0.003 240);
-  --soft: oklch(97% 0.009 240);
-  --blue-soft: #e8f7fe;
-  --line: oklch(88% 0.021 240);
-  --ink: oklch(29% 0.055 250);
-  --muted: oklch(46% 0.035 250);
-  --blue: #1cb0f6;
-  --blue-hover: #15a5e8;
-  --blue-text: #006d9f;
-  --action: #007eb5;
-  --action-hover: #006d9f;
+  --paper: #fff;
+  --soft: #f6f9ff;
+  --blue-soft: #edf5ff;
+  --line: #d8e5f4;
+  --ink: #0b2348;
+  --muted: #526984;
+  --blue: #1e88ff;
+  --blue-hover: #096ddd;
+  --blue-text: #0b3a82;
+  --action: #0b3a82;
+  --action-hover: #082e68;
   --on-action: #fff;
 
   --good: oklch(36% 0.08 165);
   --good-bg: oklch(96% 0.025 165);
   --error: oklch(44% 0.16 26);
   --error-bg: oklch(97% 0.018 26);
-  --font: 'Be Vietnam Pro', sans-serif;
+  --font: 'Manrope', 'Be Vietnam Pro', sans-serif;
   --small: 0.8125rem;
   --body: 1rem;
   --lead: 1.125rem;
@@ -55,6 +55,6 @@
   --s16: 64px;
   --s24: 96px;
   --radius: 16px;
-  --radius-sm: 8px;
+  --radius-sm: 12px;
   --ease: cubic-bezier(0.25, 1, 0.5, 1);
 }

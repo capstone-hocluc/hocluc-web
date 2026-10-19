@@ -133,7 +133,7 @@ function StudyGroupCard({
               Tìm bạn học và mentor phù hợp với mục tiêu của bạn.
             </p>
           </div>
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
             <BookOpenCheck size={22} aria-hidden="true" />
           </span>
         </div>
@@ -144,13 +144,13 @@ function StudyGroupCard({
             <Skeleton className="h-4 w-72 max-w-full" />
           </div>
         ) : groupResource.status === 'ready' && group ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-[1.5px] border-line-brand bg-primary-soft px-4 py-3.5">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-brand bg-primary-soft px-4 py-3.5">
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-surface text-primary">
                 <Users size={19} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <strong className="block truncate text-base font-extrabold text-text-heading">
+                <strong className="block truncate text-base font-semibold text-text-heading">
                   {group.name}
                 </strong>
                 <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold text-text-secondary">
@@ -185,9 +185,9 @@ function StudyGroupCard({
             </div>
           </div>
         ) : groupResource.status === 'ready' ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-[1.5px] border-line bg-surface-soft px-4 py-3.5">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface-soft px-4 py-3.5">
             <div>
-              <strong className="block text-base font-extrabold text-text-heading">
+              <strong className="block text-base font-semibold text-text-heading">
                 Bạn chưa tham gia nhóm học nào
               </strong>
               <p className="mt-1 mb-0 text-[15px] text-text-body">

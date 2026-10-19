@@ -27,10 +27,10 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
       )}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2.5">
-        <span className="grid size-9 place-items-center rounded-xl bg-assess-soft text-base font-black text-assess">
+        <span className="grid size-9 place-items-center rounded-xl bg-assess-soft text-base font-bold text-assess">
           {index + 1}
         </span>
-        <span className="text-base font-extrabold text-text-heading">Câu {index + 1}</span>
+        <span className="text-base font-semibold text-text-heading">Câu {index + 1}</span>
         {question.categoryName && (
           <StatusBadge tone="primary" size="sm" className="font-bold">
             {question.categoryName}
@@ -39,7 +39,7 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
         <StatusBadge
           tone={verdict === 'correct' ? 'success' : verdict === 'incorrect' ? 'danger' : 'neutral'}
           size="sm"
-          className="ml-auto px-3 py-1 text-xs font-extrabold"
+          className="ml-auto px-3 py-1 text-xs font-semibold"
         >
           {verdict === 'correct' && <CheckCircle2 size={14} />}
           {verdict === 'incorrect' && <XCircle size={14} />}
@@ -48,10 +48,16 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
       </div>
 
       {question.imageUrl && (
-        <img className="mb-3 max-w-full rounded-2xl border-[1.5px] border-line-card" src={question.imageUrl} alt="" />
+        <img
+          className="mb-3 max-w-full rounded-xl border border-line-card"
+          src={question.imageUrl}
+          alt=""
+        />
       )}
 
-      <p className="mb-4 text-base leading-[1.6] font-bold text-text-heading">{question.questionText}</p>
+      <p className="mb-4 text-base leading-[1.6] font-bold text-text-heading">
+        {question.questionText}
+      </p>
 
       <div className="flex flex-col gap-2.5">
         {bySequence(question.options).map((option, optionIndex) => {
@@ -61,18 +67,18 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
             <div
               key={option.optionId}
               className={cn(
-                'flex min-h-12 items-center gap-3 rounded-2xl border-2 px-4 py-2.5 text-[15px]',
+                'flex min-h-12 items-center gap-3 rounded-xl border px-4 py-2.5 text-[15px]',
                 option.correct
-                  ? 'border-success bg-badge-success-bg font-extrabold text-badge-success-text'
+                  ? 'border-success bg-badge-success-bg font-semibold text-badge-success-text'
                   : isWrongPick
-                    ? 'border-danger-line bg-badge-danger-bg font-extrabold text-badge-danger-text'
+                    ? 'border-danger-line bg-badge-danger-bg font-semibold text-badge-danger-text'
                     : 'border-line bg-surface font-semibold text-text-body'
               )}
             >
               <span
                 aria-hidden="true"
                 className={cn(
-                  'grid size-8 shrink-0 place-items-center rounded-lg text-sm font-black',
+                  'grid size-8 shrink-0 place-items-center rounded-lg text-sm font-bold',
                   option.correct
                     ? 'bg-success text-white'
                     : isWrongPick
@@ -91,8 +97,8 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
       </div>
 
       {question.explanation && (
-        <div className="mt-4 rounded-2xl border-[1.5px] border-line-brand bg-surface-brand px-4 py-3.5 text-[15px]">
-          <strong className="mb-1 block font-black text-text-heading">Giải thích</strong>
+        <div className="mt-4 rounded-xl border border-line-brand bg-surface-brand px-4 py-3.5 text-[15px]">
+          <strong className="mb-1 block font-bold text-text-heading">Giải thích</strong>
           <p className="leading-[1.6] text-text-body">{question.explanation}</p>
         </div>
       )}

@@ -18,7 +18,7 @@ export interface AssessmentFact {
   tone: FactTone
 }
 
-// Row of small ledge tiles (icon, label, value) under an assessment title: question count,
+// Row of compact fact tiles (icon, label, value) under an assessment title: question count,
 // duration, pass mark, attempts. Same pastel tile language as the landing score table.
 function AssessmentFacts({ facts, className }: { facts: AssessmentFact[]; className?: string }) {
   return (
@@ -26,16 +26,16 @@ function AssessmentFacts({ facts, className }: { facts: AssessmentFact[]; classN
       {facts.map(({ icon: Icon, label, value, tone }) => (
         <li
           key={label}
-          className="flex min-w-0 items-center gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface px-3.5 py-3 shadow-card-soft"
+          className="flex min-w-0 items-center gap-3 rounded-xl border border-line-card bg-surface px-3.5 py-3 shadow-card-soft"
         >
-          <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', toneClass[tone])}>
+          <span
+            className={cn('grid size-10 shrink-0 place-items-center rounded-xl', toneClass[tone])}
+          >
             <Icon size={20} />
           </span>
           <span className="flex min-w-0 flex-col">
             <span className="text-xs font-bold text-text-secondary">{label}</span>
-            <strong className="text-lg leading-tight font-black text-text-heading">
-              {value}
-            </strong>
+            <strong className="text-lg leading-tight font-bold text-text-heading">{value}</strong>
           </span>
         </li>
       ))}
