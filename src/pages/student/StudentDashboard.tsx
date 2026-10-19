@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import DashboardWelcome from '../../components/common/DashboardWelcome'
 import { studyPlan, testPractice, todaysGoal } from '../../data/studentDashboard'
 import { usePageResource } from '../../hooks/usePageResource'
 import { useTransientMessage } from '../../hooks/useTransientMessage'
@@ -45,10 +46,7 @@ interface StudentDashboardProps {
   onContinueLearning: (courseId: string, lessonId: string | null) => void
 }
 
-// The dotted background lives on the page container; children that must sit above
-// it (the grid and the practice section) are `relative z-1`.
-const pageClass =
-  "relative px-[18px] pt-3.5 pb-10 before:pointer-events-none before:fixed before:inset-x-0 before:top-[86px] before:bottom-0 before:z-0 before:bg-[radial-gradient(#dce8f7_1.2px,transparent_1.2px)] before:bg-[length:18px_18px] before:opacity-[0.42] before:content-[''] max-[760px]:px-0 max-[760px]:pt-2 max-[760px]:pb-[30px]"
+const pageClass = 'student-dashboard pb-10 max-[760px]:pb-[30px]'
 
 // Layout and sections are the original dashboard. Data: real API for courses,
 // progress, recent lesson, competency and lessons-completed (view-model);
@@ -63,11 +61,21 @@ function StudentDashboard(props: StudentDashboardProps) {
 
   return (
     <StudentPageContainer width="wide" className={pageClass}>
+      <DashboardWelcome
+        role="STUDENT"
+        title="Mỗi ngày học, một bước tiến."
+        description="Tiếp tục bài học, theo dõi năng lực và chọn phần cần luyện tiếp theo."
+        action={
+          <Button appearance="outline" onClick={props.onOpenMyCourses}>
+            Khóa học của tôi
+          </Button>
+        }
+      />
       <ResourceState
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
-        loading={<Skeleton className="relative z-1 h-[640px] rounded-[28px]" />}
+        loading={<Skeleton className="h-[640px] rounded-2xl" />}
         error={{ title: 'Không thể tải tổng quan học tập' }}
       />
       {status === 'ready' && vm && <DashboardContent vm={vm} {...props} />}
@@ -115,7 +123,7 @@ function DashboardContent({
     <>
       <StudentToast message={message} />
 
-      <div className="relative z-1 grid grid-cols-[minmax(0,1fr)_360px] items-stretch gap-10 max-[1181px]:grid-cols-1 max-[1181px]:gap-[30px]">
+      <div className="grid grid-cols-[minmax(0,1fr)_360px] items-stretch gap-10 max-[1181px]:grid-cols-1 max-[1181px]:gap-[30px]">
         <div className="flex min-w-0 flex-col gap-6">
           <GoalCard
             title={todaysGoal.title}
@@ -205,7 +213,6 @@ function DashboardContent({
           <section className="flex h-full flex-col gap-3.5">
             <SectionHeader
               title="Hồ sơ năng lực"
-              titleClassName="text-base leading-normal"
               actions={
                 <Button
                   appearance="ghost"
@@ -221,7 +228,7 @@ function DashboardContent({
         </aside>
       </div>
 
-      <section className="relative z-1 mt-7">
+      <section className="mt-8">
         <SectionHeader
           title="Luyện đề"
           actions={

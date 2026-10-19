@@ -5,10 +5,10 @@ import { Sheet, SheetBody } from '../../ui/Sheet'
 import type { VideoActivity, VideoContext, VideoLessonItem } from './types'
 
 function StatusIcon({ status }: { status: string }) {
-  if (status === 'completed') return <CheckCircle2 size={14} />
-  if (status === 'locked') return <Lock size={14} />
-  if (status === 'in-progress') return <Play size={14} />
-  return <Circle size={14} />
+  if (status === 'completed') return <CheckCircle2 size={18} className="text-practice" />
+  if (status === 'locked') return <Lock size={18} />
+  if (status === 'in-progress') return <Play size={18} className="text-primary" />
+  return <Circle size={18} />
 }
 
 interface LessonDrawerProps {
@@ -47,10 +47,10 @@ function LessonDrawer({
       title="Nội dung khóa học"
       closeLabel="Đóng danh sách bài học"
     >
-      <SheetBody className="flex flex-col gap-3.5 p-3.5">
+      <SheetBody className="flex flex-col gap-5 p-4">
         {grouped.map(([chapterTitle, items]) => (
           <section className="grid gap-2" key={chapterTitle}>
-            <strong className="text-[13px] font-bold text-text-heading">{chapterTitle}</strong>
+            <strong className="text-base font-semibold text-text-heading">{chapterTitle}</strong>
             {items.map((item) => {
               const isCurrent = item.activity.id === context.activity.id
               const locked = item.activity.status === 'locked'
@@ -59,11 +59,13 @@ function LessonDrawer({
                   key={item.activity.id}
                   type="button"
                   className={cn(
-                    'grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2 rounded-xl border px-2.5 py-[9px] text-left text-xs leading-[18px] font-medium',
+                    'grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm leading-[1.4] font-bold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
                     isCurrent
-                      ? 'border-line-brand bg-surface-brand text-primary'
-                      : 'border-line bg-surface-tint text-text-dim',
-                    locked ? 'cursor-default text-lock' : 'cursor-pointer'
+                      ? 'border-transparent bg-surface-brand text-primary-text'
+                      : 'border-line bg-surface text-text-body hover:border-primary-bright hover:bg-surface-brand',
+                    locked
+                      ? 'cursor-default bg-surface-soft text-lock hover:border-line hover:bg-surface-soft'
+                      : 'cursor-pointer'
                   )}
                   onClick={() => {
                     if (locked) {

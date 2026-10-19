@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { matchesSearch } from '../../lib/search'
 import { CalendarDays } from '../../components/console/icons'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
@@ -57,11 +58,8 @@ export default function TeacherSchedulePage() {
   )
   const unsavedGuard = useUnsavedActionGuard(attendancePanelState.dirty, attendancePanelState.busy)
   const items = useMemo(() => {
-    const text = query.trim().toLocaleLowerCase('vi-VN')
     const sorted = sortScheduleItems(resource.data ?? [])
-    return text
-      ? sorted.filter((item) => (item.item.title + ' ' + itemSubtitle(item)).toLocaleLowerCase('vi-VN').includes(text))
-      : sorted
+    return sorted.filter((item) => matchesSearch(query, item.item.title, itemSubtitle(item)))
   }, [query, resource.data])
   const changeDate = (nextDate: string) => {
     runWithUnsavedActionGuard(() => {
@@ -95,7 +93,7 @@ export default function TeacherSchedulePage() {
         view={view}
         onViewChange={setView}
       />
-      <ScheduleResourceState
+      <ScheduleResourceState skeleton="schedule"
         status={resource.status}
         errorMessage={resource.errorMessage}
         empty={!items.length}
@@ -112,9 +110,9 @@ export default function TeacherSchedulePage() {
         item={selectedItem}
         onClose={closeDetails}
         body={selectedItem?.kind === 'classSession' ? (
-          <ClassSessionRecordingsPanel session={selectedItem.item} role="TEACHER" />
+          <ClassSessionRecordingsPanel session={selectedItem.item} role="TEACHER" embedded />
         ) : selectedItem?.kind === 'schedule' ? (
-          <ScheduleAttendancePanel scheduleId={selectedItem.item.id} onStateChange={setAttendancePanelState} />
+          <ScheduleAttendancePanel scheduleId={selectedItem.item.id} onStateChange={setAttendancePanelState} embedded />
         ) : undefined}
       />
       {unsavedGuard.hasPendingAction && (

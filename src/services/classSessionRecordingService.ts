@@ -26,17 +26,6 @@ export function getClassSessionRecordings(
   )
 }
 
-export function getSectionRecordings(
-  courseId: string,
-  sectionId: string
-): Promise<ClassSessionRecordingResponse[]> {
-  return requestSchedulingData<ClassSessionRecordingResponse[]>(
-    API + '/courses/' + encodeURIComponent(courseId) + '/sections/' + encodeURIComponent(sectionId) + '/recordings',
-    { auth: true },
-    'Không thể tải bản ghi của lớp.'
-  )
-}
-
 export function attachClassSessionRecording(
   classSessionId: string,
   payload: AttachSessionRecordingRequest

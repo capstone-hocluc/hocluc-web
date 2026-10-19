@@ -176,14 +176,18 @@ function VideoLearningPage({
       messages: [
         ...messages,
         { id: `user-${Date.now()}`, role: 'user', text },
-        { id: `ai-${Date.now()}`, role: 'ai', text: getMockAiResponse(text, context.activity.title) },
+        {
+          id: `ai-${Date.now()}`,
+          role: 'ai',
+          text: getMockAiResponse(text, context.activity.title),
+        },
       ],
     })
     setInput('')
   }
 
   if (!mockContext && real.status === 'loading') {
-    return <Skeleton className="h-[520px] rounded-[18px]" />
+    return <Skeleton className="h-[520px] rounded-2xl" />
   }
 
   if (!context || !['Video', 'Buổi giải đề'].includes(context.activity.type)) {
@@ -202,7 +206,7 @@ function VideoLearningPage({
   }
 
   return (
-    <section className="flex h-[calc(100vh-156px)] min-h-[520px] flex-col overflow-hidden rounded-[18px] border border-line-card bg-surface-brand text-text-heading max-[760px]:h-auto max-[760px]:min-h-[calc(100dvh-130px)]">
+    <section className="flex h-[calc(100vh-156px)] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-line-card bg-surface-brand text-text-heading shadow-card max-[760px]:h-auto max-[760px]:min-h-[calc(100dvh-130px)]">
       <LessonNavBar
         context={context}
         previous={adjacent.previous}
@@ -217,7 +221,7 @@ function VideoLearningPage({
       />
       <div
         className={cn(
-          'relative grid min-h-0 flex-1 place-items-center overflow-hidden bg-surface-brand bg-[linear-gradient(rgba(190,216,255,0.34)_1px,transparent_1px),linear-gradient(90deg,rgba(190,216,255,0.34)_1px,transparent_1px),radial-gradient(circle_at_80%_10%,rgba(251,195,79,0.18),transparent_30%)] bg-[length:42px_42px,42px_42px,auto] p-[22px] max-[760px]:p-3',
+          'relative grid min-h-0 flex-1 place-items-center overflow-hidden bg-surface-brand p-6 max-[760px]:p-3',
           aiOpen &&
             'grid-cols-[minmax(0,1fr)_minmax(340px,390px)] gap-[18px] [place-items:center_stretch] max-[760px]:grid-cols-1'
         )}

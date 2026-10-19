@@ -2,7 +2,6 @@ import type {
   EnrollmentStatus,
   EnrollmentType,
 } from '../../../services/enrollmentAdminService'
-import type { CourseType } from '../../../services/courseAdminService'
 import type { StatusTone } from '../../console/status'
 
 export const ENROLLMENT_STATUS_LABELS: Record<EnrollmentStatus, string> = {
@@ -28,7 +27,4 @@ export const ENROLLMENT_TYPE_LABELS: Record<EnrollmentType, string> = {
   PURCHASED: 'Mua online',
 }
 
-export const COURSE_TYPE_LABELS: Record<CourseType, string> = {
-  MAIN: 'Trọn bộ',
-  SECTION: 'Khóa nhỏ',
-}
+export { COURSE_TYPE_LABELS } from './course-labels'

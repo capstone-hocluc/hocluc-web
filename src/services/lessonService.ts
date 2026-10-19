@@ -94,17 +94,6 @@ export async function getLessonVideoStreamUrl(
   return response.data
 }
 
-// Kept for explicit/lightweight refresh use cases (not called on initial
-// Lesson Detail load - see getLesson above).
-export async function getLessonProgress(lessonId: string): Promise<LessonProgress> {
-  const response = await request<LessonProgress>(
-    `/api/v1/lessons/${encodeURIComponent(lessonId)}/progress`,
-    { auth: true }
-  )
-  if (!response.data) throw new Error('Không thể tải tiến độ bài học.')
-  return response.data
-}
-
 export async function updateLessonProgress(
   lessonId: string,
   payload: UpdateLessonProgressRequest

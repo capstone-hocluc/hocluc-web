@@ -33,9 +33,9 @@ const REVIEW_TONES: Record<ReviewStatus, StatusTone> = { PENDING: 'warning', APP
 
 function statusTone(status: string): StatusTone {
   if (['Đang dùng', 'Đã thanh toán', 'Còn hạn'].includes(status)) return 'success'
-  if (['Chờ thanh toán', 'Sắp hết hạn', 'Nháp'].includes(status)) return 'warning'
+  if (['Chờ thanh toán', 'Sắp hết hạn'].includes(status)) return 'warning'
   if (['Đã hủy', 'Hết hạn'].includes(status)) return 'danger'
-  return 'neutral'
+  return 'neutral' // includes 'Nháp', same grey as course drafts
 }
 
 const statusColumn = <T extends { status: string }>(): ColumnDef<T> => ({
@@ -189,7 +189,7 @@ export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => v
     { page: 'solution-queue', label: 'Lời giải chờ duyệt', value: pending, icon: Clock3, tone: 'warning' as const },
   ]
   return (
-    <Page title="Tổng quan">
+    <section aria-label="Tình hình đồng hành">
       <div className="grid gap-3 sm:grid-cols-3">
         {cards.map(({ page, ...card }) => (
           <button key={page} type="button" className="text-left" onClick={() => onNavigate(page)}>
@@ -197,7 +197,7 @@ export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => v
           </button>
         ))}
       </div>
-    </Page>
+    </section>
   )
 }
 

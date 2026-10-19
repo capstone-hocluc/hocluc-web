@@ -17,26 +17,30 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
   const sorted = [...attempts].sort((a, b) => b.attemptNumber - a.attemptNumber)
 
   return (
-    <Card as="section" padding="none" radius="lg" className="border-border-subtle p-[22px]">
-      <CardTitle className="mb-3.5 text-base">Lịch sử làm bài</CardTitle>
-      <div className="flex flex-col gap-2.5">
+    <Card as="section" variant="panel" padding="none" radius="xl" className="p-6 max-[640px]:p-5">
+      <CardTitle className="mb-4 text-xl">Lịch sử làm bài</CardTitle>
+      <div className="flex flex-col gap-3">
         {sorted.map((attempt) => {
           const canReview = allowReview && attempt.status !== 'IN_PROGRESS'
           return (
             <div
-              className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-border-subtle px-3.5 py-3"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-card bg-surface-sky px-4 py-3.5"
               key={attempt.attemptId}
             >
-              <div className="flex flex-col gap-[3px]">
-                <span className="text-[13px] font-bold text-text-heading">
+              <div className="flex min-w-[96px] flex-col gap-0.5">
+                <span className="text-base font-semibold text-text-heading">
                   Lần {attempt.attemptNumber}
                 </span>
-                <span className="text-[11.5px] text-text-faint">
+                <span className="text-sm text-text-secondary">
                   {getAttemptStatusLabel(attempt.status)}
                 </span>
               </div>
-              <div className="flex gap-3.5 text-[12.5px] text-text-faint">
-                {attempt.status !== 'IN_PROGRESS' && <span>{attempt.percentage}%</span>}
+              <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
+                {attempt.status !== 'IN_PROGRESS' && (
+                  <strong className="text-base font-bold text-primary-text">
+                    {attempt.percentage}%
+                  </strong>
+                )}
                 {attempt.timeSpentSeconds > 0 && (
                   <span>{formatDuration(attempt.timeSpentSeconds)}</span>
                 )}
@@ -47,10 +51,10 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
                   appearance="outline"
                   shape="pill"
                   size="sm"
-                  className="h-auto border-primary px-3.5 py-1.5 text-xs font-bold"
+                  className="h-auto border-primary px-4 py-2 text-sm font-semibold"
                   onClick={() => onOpenReview(attempt.attemptId)}
                 >
-                  <Eye size={14} />
+                  <Eye size={16} />
                   Xem lại
                 </Button>
               )}

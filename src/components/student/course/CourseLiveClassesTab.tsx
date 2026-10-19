@@ -21,8 +21,8 @@ function LiveClassSection({
   emptyText: string
 }) {
   return (
-    <Card as="section">
-      <CardTitle>{title}</CardTitle>
+    <Card as="section" padding="lg" radius="xl">
+      <CardTitle className="text-xl">{title}</CardTitle>
       {items.length > 0 ? (
         <div className="flex flex-col">
           {items.map((item) => (
@@ -30,7 +30,7 @@ function LiveClassSection({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-text-secondary">{emptyText}</p>
+        <p className="text-[15px] font-semibold text-text-secondary">{emptyText}</p>
       )}
     </Card>
   )

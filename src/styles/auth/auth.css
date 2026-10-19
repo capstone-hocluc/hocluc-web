@@ -1,3 +1,17 @@
+/* Same typeface as the landing page (Nunito is declared in landing-page.css). */
+.hl-auth-page {
+  font-family: 'Nunito', 'Segoe UI', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.hl-auth-dialog-overlay {
+  isolation: isolate;
+  background-color: color-mix(in srgb, var(--color-brand-soft-bg) 86%, transparent);
+  backdrop-filter: blur(5px);
+}
+.hl-auth-page input,
+.hl-auth-page button {
+  font-family: inherit;
+}
 
 .hl-auth-heading {
   text-align: center;
@@ -24,7 +38,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1.5px solid #dfe6f7;
+  border: 1.5px solid var(--color-border-primary);
   border-radius: 14px;
   background: var(--color-surface);
   color: var(--color-text-emphasis);
@@ -58,10 +72,9 @@
   opacity: 0.6;
 }
 .hl-google-mark {
-  font-family: Arial, sans-serif;
-  font-size: 20px;
-  font-weight: 900;
-  color: #4285f4;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
 }
 .hl-auth-divider {
   display: flex;
@@ -76,7 +89,7 @@
 .hl-auth-divider span {
   height: 1px;
   flex: 1;
-  background: #dfe6f7;
+  background: var(--color-border-primary);
 }
 .hl-auth-label {
   display: flex;
@@ -102,7 +115,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border: 1.5px solid #dfe6f7;
+  border: 1.5px solid var(--color-border-primary);
   border-radius: 13px;
   background: var(--color-surface);
   color: #8791ae;
@@ -279,9 +292,9 @@
   align-items: center;
   gap: 8px;
   padding: 24px 18px;
-  border: 1px solid #d9e4ff;
+  border: 1px solid var(--color-border-primary);
   border-radius: 16px;
-  background: linear-gradient(135deg, #f0faff, var(--color-surface));
+  background: linear-gradient(135deg, var(--color-surface-hover), var(--color-surface));
   color: var(--color-text-emphasis);
   text-align: center;
 }
@@ -298,7 +311,7 @@
   overflow-wrap: anywhere;
 }
 .hl-auth-resend {
-  border: 1px solid #d9e4ff;
+  border: 1px solid var(--color-border-primary);
   border-radius: 12px;
   padding: 11px 14px;
   background: var(--color-surface);
@@ -311,7 +324,7 @@
 .hl-auth-resend:disabled {
   cursor: wait;
   color: #98a2bc;
-  background: #f7fcfe;
+  background: var(--color-surface-hover);
 }
 .hl-auth-recovery-actions {
   display: flex;

@@ -1,13 +1,11 @@
-# Subject visual refinement
+# Subject and hero visuals
 
-Created with the built-in image_gen tool and integrated into index.html and hocluc-standalone.html.
+## Hero scene
 
-Prompt set:
-- Star: preserve golden rounded five-point identity, change to reading an open coral-red storybook. Expressive eyes, cheeks, two hands and feet, soft cel shadows and highlights matching the owl. Transparent square cutout, no text or background.
-- Robot: preserve teal head/body, navy digital face and golden antenna. Observe a small laboratory flask with a magnifying glass. Clear articulated hands, cyan chest status panel, restrained 2.5D shading matching the owl. Transparent square cutout, no waving or UI background.
+The hero uses one transparent AI illustration, `hero-mai-nam-study.png`, based on the established Mai and Nam characters. It shows a shared paper-and-notebook study scene. It is a brand illustration, not a screenshot of the product or a photograph of actual HocLuc students. There is no hero image carousel.
 
-Assets: assets/star-reading-v2.png and assets/robot-science-v2.png. Sources retained in Codex generated_images.
+## Subject illustrations
 
-UI: Lucide icons for reading, language, calculation, analysis and science. Consistent separated label/character layout, full silhouettes, short readable captions. Hover animations for star and robot honor prefers-reduced-motion.
+The four non-math subject-card illustrations stay as they were; the owl appears only on the “Toán & Tư duy định lượng” card. Course thumbnails cycle evenly through the seven avatar shapes. The shape paths are adapted from MathTutor's `bot-avatars` package under the MIT license; see `bot-avatars-LICENSE.txt`.
 
-Verification: desktop and 320/390/768px responsive widths, no horizontal overflow; all five subject icon references resolve; both images embedded in standalone HTML; Tiếng Việt detail dialog still contains its three modules.
+Mai and Nam retain their established character details in the hero and journey illustration. `index.html` is the landing source; regenerate `hocluc-standalone.html` with `build-standalone.ps1` after changes.

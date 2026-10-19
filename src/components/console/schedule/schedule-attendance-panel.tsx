@@ -1,3 +1,4 @@
+import SelectField from '../select-field'
 import { useEffect, useState } from 'react'
 import { Check } from '../icons'
 import { getScheduleAttendances, saveScheduleAttendances } from '../../../services/attendanceService'
@@ -19,9 +20,12 @@ const statuses: Array<{ value: AttendanceStatus; label: string }> = [
 export default function ScheduleAttendancePanel({
   scheduleId,
   onStateChange,
+  embedded = false,
 }: {
   scheduleId: string
   onStateChange?: (state: { dirty: boolean; busy: boolean }) => void
+  /** Inside a titled DetailSection: no heading or divider of its own. */
+  embedded?: boolean
 }) {
   const resource = useScheduleResource(
     'schedule-attendance:' + scheduleId,
@@ -66,8 +70,8 @@ export default function ScheduleAttendancePanel({
   }
 
   return (
-    <section className="flex flex-col gap-3 border-t border-card-border pt-4">
-      <h3 className="text-sm font-medium text-text-primary">Điểm danh</h3>
+    <section className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 border-t border-card-border pt-4'}>
+      {!embedded && <h3 className="text-sm font-medium text-text-primary">Điểm danh</h3>}
       <Notice tone="warning">Kiểm tra trạng thái từng học viên trước khi lưu. Danh sách chưa phân biệt “Chưa điểm danh” với “Vắng”.</Notice>
       {error && <Notice tone="danger">{error}</Notice>}
       {notice && <Notice tone="info">{notice}</Notice>}
@@ -117,17 +121,16 @@ function AttendanceRow({
         <span className="block truncate text-sm font-medium text-text-primary">{record.studentName}</span>
         <span className="block truncate text-xs text-text-tertiary">{record.studentEmail}</span>
       </span>
-      <select
+      <SelectField
         name="attendanceStatus"
         autoComplete="off"
-        aria-label={'Điểm danh ' + record.studentName}
+        ariaLabel={'Điểm danh ' + record.studentName}
         value={value}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value as AttendanceStatus)}
-        className={`${fieldControlClass} sm:w-40`}
-      >
-        {statuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-      </select>
+        onChange={(nextValue) => onChange(nextValue as AttendanceStatus)}
+        triggerClassName={`${fieldControlClass} sm:w-40`}
+        options={statuses.map((status) => ({ id: String(status.value), label: status.label }))}
+      />
     </label>
   )
 }

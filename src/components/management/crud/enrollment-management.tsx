@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
-import SelectField from '../../console/select-field'
+import { FilterGroup, FilterSelect, FilterToolbar } from '../../console/filter-toolbar'
 import Status from '../../console/status'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Plus, RefreshCw } from '../../console/icons'
+import { CalendarClock, CheckCircle2, Plus } from '../../console/icons'
+import { IconAction, RowActions } from '../../console/icon-action'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourses } from '../../../services/courseAdminService'
@@ -121,26 +122,15 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
         id: 'actions',
         header: 'Thao tác',
         enableSorting: false,
+        meta: { className: 'w-32 text-right' },
         cell: ({ row }) =>
           readOnly ? (
             <span className="text-text-tertiary">{EMPTY}</span>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                appearance="outline"
-                onClick={() => setEditing({ kind: 'status', row: row.original })}
-              >
-                Trạng thái
-              </Button>
-              <Button
-                size="sm"
-                appearance="ghost"
-                onClick={() => setEditing({ kind: 'expiry', row: row.original })}
-              >
-                Hạn dùng
-              </Button>
-            </div>
+            <RowActions>
+              <IconAction label="Trạng thái" icon={CheckCircle2} onClick={() => setEditing({ kind: 'status', row: row.original })} />
+              <IconAction label="Hạn dùng" icon={CalendarClock} onClick={() => setEditing({ kind: 'expiry', row: row.original })} />
+            </RowActions>
           ),
       },
     ],
@@ -157,14 +147,6 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
           Quyền học của học viên, kèm nguồn ghi danh và hạn truy cập.
         </p>
         <div className="flex gap-2">
-          <Button
-            appearance="outline"
-            onClick={resource.reload}
-            disabled={resource.status === 'loading'}
-          >
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
           {!readOnly && (
             <Button onClick={() => setEnrolling(true)}>
               <Plus size={16} />
@@ -174,60 +156,62 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
         </div>
       </div>
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        <div className="flex flex-wrap gap-3 px-5 py-4">
-          <SelectField
-            ariaLabel="Học viên lọc"
-            value={query.studentId ?? 'ALL'}
-            onChange={(value) => setFilter('studentId', value === 'ALL' ? undefined : value)}
-            disabled={students.status !== 'ready'}
-            options={[
-              { id: 'ALL', label: 'Tất cả học viên' },
-              ...(students.data?.content ?? []).map((student) => ({
-                id: student.id,
-                label: student.displayName || `${student.firstName} ${student.lastName}`.trim(),
-              })),
-            ]}
-          />
-          <SelectField
-            ariaLabel="Khóa học lọc"
-            value={query.courseId ?? 'ALL'}
-            onChange={(value) => setFilter('courseId', value === 'ALL' ? undefined : value)}
-            disabled={courses.status !== 'ready'}
-            options={[
-              { id: 'ALL', label: 'Tất cả khóa học' },
-              ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
-            ]}
-          />
-          <SelectField
-            ariaLabel="Trạng thái ghi danh lọc"
-            value={query.status ?? 'ALL'}
-            onChange={(value) =>
-              setFilter('status', value === 'ALL' ? undefined : (value as EnrollmentAdmin['status']))
-            }
-            options={[
-              { id: 'ALL', label: 'Tất cả trạng thái' },
-              ...Object.entries(ENROLLMENT_STATUS_LABELS).map(([id, label]) => ({ id, label })),
-            ]}
-          />
-          <SelectField
-            ariaLabel="Nguồn ghi danh lọc"
-            value={query.type ?? 'ALL'}
-            onChange={(value) =>
-              setFilter('type', value === 'ALL' ? undefined : (value as EnrollmentType))
-            }
-            options={[
-              { id: 'ALL', label: 'Tất cả nguồn' },
-              ...ENROLLMENT_TYPES.map((id) => ({ id, label: ENROLLMENT_TYPE_LABELS[id] })),
-            ]}
-          />
-          <SelectField
-            ariaLabel="Hạn dùng lọc"
-            value={query.expiringInDays === undefined ? 'ALL' : String(query.expiringInDays)}
-            onChange={(value) => setFilter('expiringInDays', value === 'ALL' ? undefined : Number(value))}
-            options={EXPIRY_WINDOWS}
-          />
-        </div>
-        <ScheduleResourceState
+        <FilterToolbar className="justify-start">
+          <FilterGroup>
+            <FilterSelect
+              ariaLabel="Học viên lọc"
+              value={query.studentId ?? 'ALL'}
+              onChange={(value) => setFilter('studentId', value === 'ALL' ? undefined : value)}
+              disabled={students.status !== 'ready'}
+              options={[
+                { id: 'ALL', label: 'Tất cả học viên' },
+                ...(students.data?.content ?? []).map((student) => ({
+                  id: student.id,
+                  label: student.displayName || `${student.firstName} ${student.lastName}`.trim(),
+                })),
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Khóa học lọc"
+              value={query.courseId ?? 'ALL'}
+              onChange={(value) => setFilter('courseId', value === 'ALL' ? undefined : value)}
+              disabled={courses.status !== 'ready'}
+              options={[
+                { id: 'ALL', label: 'Tất cả khóa học' },
+                ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Trạng thái ghi danh lọc"
+              value={query.status ?? 'ALL'}
+              onChange={(value) =>
+                setFilter('status', value === 'ALL' ? undefined : (value as EnrollmentAdmin['status']))
+              }
+              options={[
+                { id: 'ALL', label: 'Tất cả trạng thái' },
+                ...Object.entries(ENROLLMENT_STATUS_LABELS).map(([id, label]) => ({ id, label })),
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Nguồn ghi danh lọc"
+              value={query.type ?? 'ALL'}
+              onChange={(value) =>
+                setFilter('type', value === 'ALL' ? undefined : (value as EnrollmentType))
+              }
+              options={[
+                { id: 'ALL', label: 'Tất cả nguồn' },
+                ...ENROLLMENT_TYPES.map((id) => ({ id, label: ENROLLMENT_TYPE_LABELS[id] })),
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Hạn dùng lọc"
+              value={query.expiringInDays === undefined ? 'ALL' : String(query.expiringInDays)}
+              onChange={(value) => setFilter('expiringInDays', value === 'ALL' ? undefined : Number(value))}
+              options={EXPIRY_WINDOWS}
+            />
+          </FilterGroup>
+        </FilterToolbar>
+        <ScheduleResourceState skeleton="table" inset
           status={resource.status}
           errorMessage={resource.errorMessage}
           onRetry={resource.reload}

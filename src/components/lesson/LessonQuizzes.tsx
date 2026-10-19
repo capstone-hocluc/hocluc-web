@@ -12,9 +12,9 @@ function LessonQuizzes({ quizzes, onOpenQuiz }: LessonQuizzesProps) {
   if (quizzes.length === 0) return null
 
   return (
-    <Card as="section" padding="none" className="px-5 py-[18px]">
+    <Card as="section" padding="none" radius="xl" className="p-6 max-[640px]:p-4">
       <CardTitle className="mb-3.5">Bài kiểm tra</CardTitle>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5">
         {quizzes.map((quiz) => (
           <QuizRow
             key={quiz.id}

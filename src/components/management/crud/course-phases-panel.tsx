@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import Panel from '../../console/panel'
 import Button from '../../console/button'
+import { IconAction } from '../../console/icon-action'
 import ConsoleDialog from '../../console/dialog'
 import Field, { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import Notice from '../../console/notice'
-import { ArrowUp, ArrowDown, Plus } from '../../console/icons'
+import { ArrowUp, ArrowDown, Pencil, Plus, Trash2 } from '../../console/icons'
 import type { CourseAdmin, CourseAdminPhase } from '../../../services/courseAdminService'
 import { movedIds, type CourseMutation, type CourseRemoval } from './course-labels'
 
@@ -44,21 +45,18 @@ export default function CoursePhasesPanel({
       title="Giai đoạn"
       action={
         !readOnly && (
-          <Button
-            size="sm"
-            appearance="outline"
-            onClick={() => setEditor({ phase: null })}
+          <IconAction
+            label="Thêm giai đoạn"
+            icon={Plus}
             disabled={busy}
-          >
-            <Plus size={14} />
-            Thêm
-          </Button>
+            onClick={() => setEditor({ phase: null })}
+          />
         )
       }
     >
       {!course.phases.length ? (
         <p className="text-sm text-text-tertiary">
-          Chưa có giai đoạn. Có thể gắn SECTION không theo giai đoạn.
+          Chưa có giai đoạn. Có thể thêm phần học mà không gắn giai đoạn.
         </p>
       ) : (
         <ol className="divide-y divide-card-border">
@@ -109,23 +107,19 @@ export default function CoursePhasesPanel({
                   >
                     <ArrowDown size={16} />
                   </Button>
-                  <Button
-                    size="sm"
-                    appearance="outline"
+                  <IconAction
+                    label={`Sửa giai đoạn ${phase.name}`}
+                    icon={Pencil}
                     disabled={busy}
                     onClick={() => setEditor({ phase })}
-                  >
-                    Sửa
-                  </Button>
-                  <Button
-                    size="sm"
-                    appearance="ghost"
+                  />
+                  <IconAction
+                    label={`Xóa giai đoạn ${phase.name}`}
+                    icon={Trash2}
                     variant="danger"
                     disabled={busy}
                     onClick={() => remove(`phases/${phase.id}`, phase.name)}
-                  >
-                    Xóa
-                  </Button>
+                  />
                 </div>
               )}
             </li>

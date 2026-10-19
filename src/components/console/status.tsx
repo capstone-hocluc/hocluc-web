@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react'
+import { cn } from '../../lib/cn'
 import { Badge } from '../tailgrids/core/badge'
 
 // Management-area status pill: NextAdmin badge behind the same tone prop as ui/Status.
@@ -16,7 +17,12 @@ type StatusProps = Omit<ComponentProps<'span'>, 'color'> & { tone?: StatusTone }
 
 function Status({ tone = 'neutral', className, children, ...props }: StatusProps) {
   return (
-    <Badge {...props} color={TONE_COLOR[tone]} size="md" className={className}>
+    <Badge
+      {...props}
+      color={TONE_COLOR[tone]}
+      size="md"
+      className={cn('whitespace-nowrap', className)}
+    >
       {children}
     </Badge>
   )

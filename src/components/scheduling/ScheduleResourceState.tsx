@@ -70,8 +70,12 @@ export default function ScheduleResourceState({
   }
   if (empty) {
     return (
-      <div className="rounded-2xl border border-dashed border-border-primary bg-surface px-5 py-10 text-center" role="status" aria-live="polite">
-        <p className="text-sm font-semibold text-text-heading">{emptyMessage}</p>
+      <div
+        className="rounded-2xl border border-dashed border-line-brand bg-surface px-5 py-12 text-center"
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-base font-semibold text-text-heading">{emptyMessage}</p>
       </div>
     )
   }

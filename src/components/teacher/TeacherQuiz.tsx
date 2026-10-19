@@ -1,4 +1,6 @@
+import SelectField from '../console/select-field'
 import { useRef, useState } from 'react'
+import { matchesSearch } from '../../lib/search'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -159,13 +161,12 @@ function TeacherQuiz({ course, onBack, onAction, startCreating = false }: Teache
 
   const quizItems = (quizzes.data ?? []).filter((quiz) => {
     if (quiz.type === 'EXAM' || quiz.type === 'PLACEMENT') return false
-    const term = search.trim().toLocaleLowerCase('vi')
-    const matchesSearch = !term || `${quiz.title} ${quiz.courseTitle ?? ''} ${quiz.lessonTitle ?? ''}`.toLocaleLowerCase('vi').includes(term)
+    const matchesQuery = matchesSearch(search, quiz.title, quiz.courseTitle, quiz.lessonTitle)
     const matchesStatus = statusFilter === 'Tất cả' ||
       (statusFilter === 'Bản nháp' && quiz.status === 'DRAFT') ||
       (statusFilter === 'Đã xuất bản' && quiz.status === 'PUBLISHED') ||
       (statusFilter === 'Đã lưu trữ' && quiz.status === 'ARCHIVED')
-    return matchesSearch && matchesStatus
+    return matchesQuery && matchesStatus
   })
   const hasActiveFilters = Boolean(search.trim()) || statusFilter !== 'Tất cả'
 
@@ -727,16 +728,27 @@ function TeacherQuizEditorForm({
                     </label>
                     <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                       Dạng đáp án
-                      <select className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal md:max-w-64" value={question.questionType} disabled={questionsLocked || busy} onChange={(event) => {
-                        const questionType = event.target.value as TeacherQuestionType
-                        const options = questionType === 'SINGLE_CHOICE'
-                          ? question.options.map((option, index) => ({ ...option, correct: option.correct && question.options.findIndex((item) => item.correct) === index }))
-                          : question.options
-                        updateQuestion(question.clientId, { questionType, options })
-                      }}>
-                        <option value="SINGLE_CHOICE">Chọn một đáp án</option>
-                        <option value="MULTIPLE_CHOICE">Chọn nhiều đáp án</option>
-                      </select>
+                      <SelectField
+                        ariaLabel="Dạng đáp án"
+                        triggerClassName="min-h-11 rounded-xl border border-card-border bg-card-background px-3 text-sm font-normal md:max-w-64"
+                        value={question.questionType}
+                        disabled={questionsLocked || busy}
+                        onChange={(nextValue) => {
+                          const questionType = nextValue as TeacherQuestionType
+                          const options =
+                            questionType === 'SINGLE_CHOICE'
+                              ? question.options.map((option, index) => ({
+                                  ...option,
+                                  correct: option.correct && question.options.findIndex((item) => item.correct) === index,
+                                }))
+                              : question.options
+                          updateQuestion(question.clientId, { questionType, options })
+                        }}
+                        options={[
+                          { id: 'SINGLE_CHOICE', label: 'Chọn một đáp án' },
+                          { id: 'MULTIPLE_CHOICE', label: 'Chọn nhiều đáp án' },
+                        ]}
+                      />
                     </label>
                     <div className="flex flex-col gap-2">
                       {question.options.map((option, optionIndex) => (

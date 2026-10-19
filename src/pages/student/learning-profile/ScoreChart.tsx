@@ -30,8 +30,8 @@ interface ScoreChartProps {
   className?: string
 }
 
-const axisLabel = 'fill-text-faint text-[11px] font-extrabold'
-const chartLabel = 'fill-text-secondary text-[12px] font-extrabold'
+const axisLabel = 'fill-text-muted text-xs font-bold'
+const chartLabel = 'fill-text-body text-[13px] font-bold'
 const lineClass =
   'fill-none stroke-primary [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:4]'
 const pointClass = 'fill-surface stroke-primary [stroke-width:3]'
@@ -91,7 +91,7 @@ function ScoreChart({
       <div className="flex items-start justify-between gap-3.5 max-[760px]:flex-col">
         <ProfileHeading title={title} subtitle={subtitle} className="mb-2" />
         {filterLabel && (
-          <span className="inline-flex min-h-[30px] flex-none items-center rounded-full border border-line-blue bg-surface px-[11px] text-[12px] font-black text-text-secondary">
+          <span className="inline-flex min-h-8 flex-none items-center rounded-full border border-line bg-surface px-3 text-[13px] font-semibold text-text-body">
             {filterLabel}
           </span>
         )}
@@ -199,7 +199,7 @@ function ScoreChart({
                 x={Math.min(chartWidth - 72, latestCoordinates[0] + 10)}
                 y={latestCoordinates[1] - 34}
                 textAnchor="middle"
-                className="fill-primary text-[12px] font-black"
+                className="fill-primary-text text-[13px] font-bold"
               >
                 {latest.score} điểm
               </text>
@@ -207,7 +207,7 @@ function ScoreChart({
                 x={Math.min(chartWidth - 72, latestCoordinates[0] + 10)}
                 y={latestCoordinates[1] - 18}
                 textAnchor="middle"
-                className="fill-text-faint text-[11px] font-black"
+                className="fill-text-muted text-xs font-bold"
               >
                 {latest.label}
               </text>
@@ -215,7 +215,7 @@ function ScoreChart({
           )}
         </svg>
       </div>
-      <div className="mt-1 flex items-center justify-center gap-[18px] text-[12px] font-extrabold text-text-secondary">
+      <div className="mt-1 flex items-center justify-center gap-[18px] text-[13px] font-bold text-text-body">
         {series?.length ? (
           chartSeries.map((entry) => (
             <span key={entry.key} className={legendItem}>

@@ -67,7 +67,7 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
       />
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         <div className="flex min-w-0 flex-col gap-5">
-          <ScheduleResourceState
+          <ScheduleResourceState skeleton="cards"
             status={status}
             errorMessage={errorMessage}
             onRetry={reload}

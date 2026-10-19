@@ -15,7 +15,7 @@ interface CourseOverviewProps {
 
 function MetaChip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-line-blue bg-surface-tint px-2.5 py-2 text-xs font-semibold text-text-dim [&>svg]:text-primary">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-bold text-text-body [&>svg]:text-primary">
       {icon}
       {children}
     </span>
@@ -40,28 +40,32 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
   const targetLessonId = study.continueLessonId || fallbackLesson?.id
 
   return (
-    <header className="rounded-[18px] border border-line-card bg-surface-sky bg-[linear-gradient(rgba(224,233,250,0.62)_1px,transparent_1px),linear-gradient(90deg,rgba(224,233,250,0.62)_1px,transparent_1px)] bg-[length:28px_28px] p-4 shadow-card">
+    <header className="rounded-2xl border border-line-card bg-surface-brand p-6 shadow-card max-[640px]:p-4">
       <Button
         appearance="ghost"
         size="sm"
-        className="h-auto gap-[7px] p-0 text-[13px] font-black hover:bg-transparent hover:underline"
+        className="h-auto gap-2 p-0 text-sm font-semibold text-primary-text hover:bg-transparent hover:underline"
         onClick={onBack}
       >
         <ArrowLeft size={17} />
         Khóa học của tôi
       </Button>
 
-      <div className="mt-3.5 grid grid-cols-[minmax(0,1fr)_300px] items-center gap-5 max-[820px]:grid-cols-1">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_320px] items-center gap-6 max-[820px]:grid-cols-1">
         <div className="min-w-0">
           {trackLabel && (
-            <StatusBadge tone="primary" size="sm" className="px-2.5 py-[5px] font-black uppercase">
+            <StatusBadge
+              tone="primary"
+              size="sm"
+              className="bg-surface px-3 py-1 text-xs uppercase"
+            >
               {trackLabel}
             </StatusBadge>
           )}
-          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(22px,2.4vw,27px)] leading-[1.16] font-extrabold text-text-heading">
+          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(24px,2.6vw,32px)] leading-[1.16] font-bold tracking-[-0.5px] text-text-heading">
             {study.title}
           </h1>
-          <div className="mt-3.5 flex flex-wrap gap-[9px]">
+          <div className="mt-4 flex flex-wrap gap-2.5">
             {(startLabel || endLabel) && (
               <MetaChip icon={<CalendarDays size={16} />}>
                 {startLabel}
@@ -72,23 +76,21 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-[9px] rounded-2xl border border-line-blue bg-primary-soft p-3.5">
-          <span className="text-[13px] font-bold text-text-heading">Tiến độ khóa học</span>
+        <div className="flex flex-col gap-3 rounded-xl border border-line-card bg-surface p-5 shadow-card-soft">
+          <span className="text-sm font-semibold text-text-heading">Tiến độ khóa học</span>
           <div className="flex items-center justify-between gap-3">
-            <small className="text-xs font-medium text-text-secondary">
+            <small className="text-sm font-semibold text-text-secondary">
               {completed}/{total} bài học
             </small>
-            <strong className="text-[30px] leading-none font-black text-primary">{progress}%</strong>
+            <strong className="text-4xl leading-none font-bold text-primary-text">
+              {progress}%
+            </strong>
           </div>
           <Progress value={progress} aria-label="Tiến độ khóa học" />
           {targetLessonId && (
-            <Button
-              size="lg"
-              className="shadow-[0_12px_20px_rgba(28, 176, 246,0.14)]"
-              onClick={() => onOpenLesson(targetLessonId)}
-            >
+            <Button size="lg" onClick={() => onOpenLesson(targetLessonId)}>
               {hasContinueTarget ? 'Tiếp tục học' : 'Bắt đầu học'}
-              <Play size={15} />
+              <Play size={18} />
             </Button>
           )}
         </div>

@@ -26,7 +26,7 @@ function OverallCompetencySummary() {
   const scorePercent = Math.round((profile.currentScore / profile.maxScore) * 100)
 
   return (
-    <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--color-line-blue)] bg-surface p-[18px] max-[1181px]:items-start">
+    <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-2xl border border-line-card bg-surface p-5 shadow-card-soft max-[1181px]:items-start">
       <ProfileHeading
         title="Tổng quan năng lực"
         subtitle="Điểm ĐGNL hiện tại"
@@ -37,12 +37,12 @@ function OverallCompetencySummary() {
         className="grid size-[148px] place-items-center content-center rounded-full bg-[radial-gradient(circle_at_center,var(--color-surface)_0_58%,transparent_59%),conic-gradient(var(--color-primary)_var(--hl-profile-score),var(--color-line)_0)] shadow-[inset_0_0_0_1px_var(--color-line)] max-[1181px]:self-center"
         style={{ '--hl-profile-score': `${scorePercent}%` } as CSSProperties}
       >
-        <strong className="text-[42px] leading-none font-black text-primary max-[760px]:text-[36px]">
+        <strong className="text-[42px] leading-none font-bold text-primary-text max-[760px]:text-[36px]">
           {profile.currentScore}
         </strong>
-        <span className="text-[13px] font-black text-text-body">/ {profile.maxScore}</span>
+        <span className="text-sm font-bold text-text-body">/ {profile.maxScore}</span>
       </div>
-      <p className="text-center text-[12px] font-black text-text-secondary max-[1181px]:self-center">
+      <p className="text-center text-[13px] font-semibold text-text-body max-[1181px]:self-center">
         {scorePercent}% tổng thang điểm
       </p>
     </div>
@@ -55,24 +55,26 @@ function ComponentCard({ component, trend = component.trend, trendLabel }) {
   return (
     <ProfileCard
       as="article"
-      className="flex h-full flex-col gap-3 rounded-[14px] bg-surface p-4 shadow-none"
+      className="flex h-full flex-col gap-3 rounded-xl bg-surface p-4 shadow-card-soft"
     >
       <div className="flex items-center gap-2.5">
         <IconTile tone={component.accent}>
           <Icon size={18} />
         </IconTile>
-        <strong className="text-[14px] leading-[1.25] font-black text-text-dark">
+        <strong className="text-[15px] leading-[1.25] font-bold text-text-heading">
           {component.name}
         </strong>
       </div>
       <div className="flex items-baseline gap-[5px]">
-        <b className="text-[31px] leading-none font-black text-text-heading">{component.score}</b>
-        <small className="text-[12px] font-extrabold text-text-faint">/ {component.maxScore}</small>
+        <b className="text-[32px] leading-none font-bold tracking-[-0.5px] text-text-heading">
+          {component.score}
+        </b>
+        <small className="text-[13px] font-bold text-text-muted">/ {component.maxScore}</small>
       </div>
       <ProfileProgress value={component.score} max={component.maxScore} />
-      <div className="flex items-center justify-between gap-3 text-[12px] font-extrabold text-text-secondary">
+      <div className="flex items-center justify-between gap-3 text-[13px] font-bold text-text-body">
         <span>Độ chính xác</span>
-        <strong className="text-primary">{component.accuracy}%</strong>
+        <strong className="text-primary-text">{component.accuracy}%</strong>
       </div>
       <TrendBadge value={trend} label={trendLabel} />
       {component.skills && (
@@ -80,10 +82,10 @@ function ComponentCard({ component, trend = component.trend, trendLabel }) {
           {component.skills.map((skill) => (
             <p
               key={skill.name}
-              className="flex items-center justify-between gap-3 text-[12px] leading-[1.4] font-extrabold text-text-secondary"
+              className="flex items-center justify-between gap-3 text-[13px] leading-[1.4] font-bold text-text-body"
             >
               <span>{skill.name}</span>
-              <b className="text-primary">{skill.accuracy}%</b>
+              <b className="text-primary-text">{skill.accuracy}%</b>
             </p>
           ))}
         </div>
@@ -130,7 +132,7 @@ function UnifiedCompetencySection() {
   return (
     <ProfileCard
       as="section"
-      className="relative grid grid-cols-[minmax(210px,0.24fr)_minmax(0,0.76fr)] items-stretch gap-[22px] overflow-hidden bg-transparent bg-[linear-gradient(rgba(28, 176, 246,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(28, 176, 246,0.045)_1px,transparent_1px),linear-gradient(135deg,rgba(248,251,255,0.98),rgba(255,255,255,0.92))] bg-[length:26px_26px,26px_26px,auto] p-5 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_12%_18%,rgba(49,168,255,0.08),transparent_28%),radial-gradient(circle_at_86%_8%,rgba(28, 176, 246,0.07),transparent_24%)] before:content-[''] max-[1181px]:grid-cols-1 [&>*]:relative [&>*]:z-1"
+      className="grid grid-cols-[minmax(210px,0.24fr)_minmax(0,0.76fr)] items-stretch gap-6 overflow-hidden bg-surface-brand p-5 max-[1181px]:grid-cols-1"
     >
       <OverallCompetencySummary />
       <ComponentSection
@@ -142,7 +144,12 @@ function UnifiedCompetencySection() {
 }
 
 const legendBox = 'size-3 rounded-[4px]'
-const heatLevels = ['bg-[var(--color-lock-soft)]', 'bg-[var(--color-primary-soft)]', 'bg-[var(--color-brand-soft)]', 'bg-primary']
+const heatLevels = [
+  'bg-[var(--color-lock-soft)]',
+  'bg-[var(--color-primary-soft)]',
+  'bg-[var(--color-brand-soft)]',
+  'bg-primary',
+]
 
 function ActivityHeatmap({ data }) {
   return (
@@ -151,21 +158,26 @@ function ActivityHeatmap({ data }) {
         title="Tần suất học tập"
         subtitle="Duy trì thói quen học tập để đạt kết quả tốt nhất"
       />
-      <div className="flex flex-wrap gap-[13px] text-[12px] font-extrabold text-text-secondary">
-        {['bg-[var(--color-line)]', 'bg-[var(--color-primary-soft)]', 'bg-[var(--color-brand-soft)]', 'bg-primary'].map((color, index) => (
+      <div className="flex flex-wrap gap-[13px] text-[13px] font-bold text-text-body">
+        {[
+          'bg-[var(--color-line)]',
+          'bg-[var(--color-primary-soft)]',
+          'bg-[var(--color-brand-soft)]',
+          'bg-primary',
+        ].map((color, index) => (
           <span key={color} className="inline-flex items-center gap-[7px]">
             <i className={cn(legendBox, color)} />{' '}
             {['Không có hoạt động', '<15 phút', '15-60 phút', '>60 phút'][index]}
           </span>
         ))}
       </div>
-      <div className="mt-5 mb-2.5 ml-12 grid grid-cols-4 text-[12px] font-extrabold text-text-secondary max-[760px]:ml-[45px]">
+      <div className="mt-5 mb-2.5 ml-12 grid grid-cols-4 text-[13px] font-bold text-text-body max-[760px]:ml-[45px]">
         {data.months.map((month) => (
           <span key={month}>{month}</span>
         ))}
       </div>
       <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-2 overflow-hidden">
-        <div className="grid grid-rows-[repeat(7,22px)] gap-[5px] text-[11px] font-extrabold text-text-secondary">
+        <div className="grid grid-rows-[repeat(7,22px)] gap-[5px] text-xs font-bold text-text-body">
           {data.days.map((day) => (
             <span key={day}>{day}</span>
           ))}
@@ -198,15 +210,11 @@ function AchievementCard({ onAction }) {
   return (
     <ProfileCard as="article" className="p-[18px]">
       <div className="mb-[13px] flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start">
-        <strong className="inline-flex items-center gap-2 text-[15px] font-black text-text-dark">
+        <strong className="inline-flex items-center gap-2 text-[17px] font-bold text-text-heading">
           <Award size={18} />
           Thành tựu gần đây
         </strong>
-        <Button
-          appearance="ghost"
-          className="h-auto rounded-full border-0 bg-[var(--color-surface-brand)] px-2.5 py-[7px] text-[11px] font-black hover:bg-[var(--color-surface-brand)]"
-          onClick={onAction}
-        >
+        <Button appearance="ghost" size="sm" className="bg-surface-brand" onClick={onAction}>
           Xem tất cả
         </Button>
       </div>
@@ -219,8 +227,8 @@ function AchievementCard({ onAction }) {
             <IconTile tone={achievementTone[item.tone] ?? item.tone} size="lg">
               <Award size={15} />
             </IconTile>
-            <p className="text-[12px] leading-[1.45] font-black text-text-emphasis">{item.title}</p>
-            <time className="text-[11px] font-black text-text-faint">{item.date}</time>
+            <p className="text-sm leading-[1.45] font-semibold text-text-heading">{item.title}</p>
+            <time className="text-xs font-bold text-text-muted">{item.date}</time>
           </div>
         ))}
       </div>
@@ -228,34 +236,35 @@ function AchievementCard({ onAction }) {
   )
 }
 
-const historyStrong = 'text-[13px] font-black text-text-heading'
-const historySpan = 'text-[12px] font-extrabold text-text-secondary'
+const historyStrong = 'text-sm font-bold text-text-heading'
+const historySpan = 'text-[13px] font-bold text-text-body'
 
 // Rendered inside a history item, so it takes that item's span/strong styling.
 function AnalysisResult({ analysis }) {
   return (
     <div className="flex flex-col gap-2.5">
       <span className={historySpan}>Phân tích dựa trên kết quả làm đề gần đây</span>
-      <p className="text-[12px] leading-[1.55] font-[750] text-text-emphasis">{analysis.summary}</p>
+      <p className="text-sm leading-[1.55] font-bold text-text-body">{analysis.summary}</p>
       <div className="grid grid-cols-1 gap-2.5">
         {[
-          { title: 'Điểm mạnh', items: analysis.strengths, box: 'border-[var(--color-line-practice)] bg-[var(--color-practice-soft)]' },
+          {
+            title: 'Điểm mạnh',
+            items: analysis.strengths,
+            box: 'border-[var(--color-line-practice)] bg-[var(--color-practice-soft)]',
+          },
           {
             title: 'Cần cải thiện',
             items: analysis.improvements,
             box: 'border-[var(--color-live-line)] bg-[var(--color-live-tint)]',
           },
         ].map((group) => (
-          <div key={group.title} className={cn('rounded-[13px] border px-3 py-[11px]', group.box)}>
+          <div key={group.title} className={cn('rounded-xl border px-3.5 py-3', group.box)}>
             <strong className={cn('inline-flex items-center gap-[7px]', historyStrong)}>
               {group.title}
             </strong>
             <ul className="mt-[9px] flex flex-col gap-1.5">
               {group.items.map((item) => (
-                <li
-                  key={item}
-                  className="text-[12px] leading-[1.4] font-extrabold text-text-heading-muted"
-                >
+                <li key={item} className="text-sm leading-[1.4] font-bold text-text-heading">
                   {item}
                 </li>
               ))}
@@ -267,7 +276,7 @@ function AnalysisResult({ analysis }) {
   )
 }
 
-const detailBox = 'rounded-[14px] border border-line-shell bg-[var(--color-surface-sky)] p-3.5'
+const detailBox = 'rounded-xl border border-line-card bg-surface-brand p-4'
 
 function AiInsightDetailModal({ insight, analysis, isOpen, onClose }) {
   if (!insight || !analysis) return null
@@ -275,16 +284,16 @@ function AiInsightDetailModal({ insight, analysis, isOpen, onClose }) {
   return (
     <ScrollableModal title={insight.detailTitle} isOpen={isOpen} onClose={onClose} maxWidth={720}>
       <div>
-        <p className="mb-4 text-[13px] leading-[1.65] font-[750] text-text-heading-muted">
+        <p className="mb-4 text-[15px] leading-[1.65] font-bold text-text-body">
           {analysis.summary}
         </p>
         <div className="flex flex-col gap-3">
           {insight.items.map((item) => (
             <article key={item} className={detailBox}>
-              <strong className="block text-[14px] leading-[1.35] font-black text-text-heading">
+              <strong className="block text-[15px] leading-[1.35] font-bold text-text-heading">
                 {item}
               </strong>
-              <span className="mt-[5px] block text-[12px] leading-[1.55] font-[750] text-text-secondary">
+              <span className="mt-1 block text-[13px] leading-[1.55] font-bold text-text-body">
                 {insight.description}
               </span>
             </article>
@@ -312,8 +321,7 @@ function AiInsightCard({ type, title, items, onDetail }) {
   )
 }
 
-const bannerButton =
-  'h-auto min-h-10 rounded-lg border-0 px-3.5 text-[14px] font-medium whitespace-nowrap hover:bg-primary-dark disabled:cursor-progress disabled:opacity-[0.72] max-[760px]:w-full'
+const bannerButton = 'whitespace-nowrap disabled:cursor-progress max-[760px]:w-full'
 
 function AiLearningAssistant({ analysis, isAnalyzing, onAnalyze, onOpenHistory }) {
   const [detailType, setDetailType] = useState(null)
@@ -338,16 +346,15 @@ function AiLearningAssistant({ analysis, isAnalyzing, onAnalyze, onOpenHistory }
     <div
       className={cn(
         'flex min-w-0 flex-col gap-3 border border-transparent',
-        activeAnalysis &&
-          'rounded-[20px] border-[var(--color-line)] bg-surface p-2.5 shadow-[0_12px_26px_rgba(17,24,58,0.045)]'
+        activeAnalysis && 'rounded-2xl border-line-card bg-surface p-2.5 shadow-card'
       )}
     >
-      <section className="relative min-h-[82px] min-w-0 rounded-[18px] border border-[var(--color-line-brand)] bg-linear-to-b from-[var(--color-primary-bright)] to-primary p-2.5 shadow-[0_14px_26px_rgba(28, 176, 246,0.16)] max-[760px]:min-h-0 max-[760px]:p-3.5">
-        <div className="relative z-2 -mr-0.5 grid min-w-0 grid-cols-[minmax(126px,auto)_minmax(0,1fr)] items-center gap-2.5 rounded-[17px] border border-white/72 bg-surface p-2 shadow-[0_14px_28px_rgba(12,37,118,0.16)] max-[760px]:mr-0 max-[760px]:grid-cols-1 max-[760px]:p-3">
+      <section className="relative min-h-[82px] min-w-0 rounded-2xl border border-primary bg-primary p-2.5 shadow-none max-[760px]:min-h-0 max-[760px]:p-3.5">
+        <div className="relative z-2 -mr-0.5 grid min-w-0 grid-cols-[minmax(126px,auto)_minmax(0,1fr)] items-center gap-2.5 rounded-xl bg-surface p-2.5 max-[760px]:mr-0 max-[760px]:grid-cols-1 max-[760px]:p-3">
           <Button className={bannerButton} onClick={onAnalyze} disabled={isAnalyzing}>
             {isAnalyzing ? 'Đang phân tích...' : analysis ? 'Cập nhật phân tích' : 'Phân tích ngay'}
           </Button>
-          <p className="text-[12px] leading-[1.45] font-medium text-text-emphasis">
+          <p className="text-sm leading-[1.45] font-bold text-text-heading">
             Phân tích kết quả làm đề của bạn để tìm ra điểm mạnh và nội dung cần cải thiện.
           </p>
         </div>
@@ -368,7 +375,7 @@ function AiLearningAssistant({ analysis, isAnalyzing, onAnalyze, onOpenHistory }
             onDetail={() => setDetailType('improvement')}
           />
 
-          <TextButton className="self-start text-primary" onClick={onOpenHistory}>
+          <TextButton className="self-start" onClick={onOpenHistory}>
             Xem lại phân tích cũ
           </TextButton>
         </div>
@@ -396,20 +403,17 @@ function AiAnalysisHistoryModal({ isOpen, onClose }) {
           return (
             <article
               key={item.id}
-              className="rounded-2xl border border-line-shell bg-[var(--color-surface-sky)] p-3.5"
+              className="rounded-xl border border-line-card bg-surface-brand p-4"
             >
               <div className="mb-2 flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-1">
                 <strong className={historyStrong}>{item.createdAt}</strong>
                 <span className={historySpan}>{item.basedOn}</span>
               </div>
-              <p className="mb-2.5 text-[12px] leading-[1.55] font-[750] text-text-heading-muted">
+              <p className="mb-2.5 text-sm leading-[1.55] font-bold text-text-body">
                 {item.summary}
               </p>
               {expanded && <AnalysisResult analysis={item} />}
-              <TextButton
-                className="mt-2.5 text-primary"
-                onClick={() => setExpandedId(expanded ? '' : item.id)}
-              >
+              <TextButton className="mt-2.5" onClick={() => setExpandedId(expanded ? '' : item.id)}>
                 {expanded ? 'Thu gọn' : 'Xem chi tiết'}
               </TextButton>
             </article>
@@ -428,20 +432,20 @@ function AchievementHistoryModal({ isOpen, onClose }) {
         {learningProfilePage.achievements.map((item) => (
           <article
             key={item.id}
-            className="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-line-shell bg-[var(--color-surface-sky)] p-3.5 max-[760px]:grid-cols-[42px_minmax(0,1fr)] max-[760px]:items-start"
+            className="grid grid-cols-[42px_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-line-card bg-surface-brand p-4 max-[760px]:grid-cols-[42px_minmax(0,1fr)] max-[760px]:items-start"
           >
             <IconTile tone={achievementTone[item.tone] ?? item.tone} size="xl">
               <Award size={17} />
             </IconTile>
             <div>
-              <strong className="block text-[13px] leading-[1.35] font-black text-text-heading">
+              <strong className="block text-[15px] leading-[1.35] font-bold text-text-heading">
                 {item.title}
               </strong>
-              <p className="mt-1 text-[12px] leading-[1.45] font-[750] text-text-secondary">
+              <p className="mt-1 text-sm leading-[1.45] font-bold text-text-body">
                 {item.description}
               </p>
             </div>
-            <time className="text-[12px] font-black text-text-faint max-[760px]:col-start-2">
+            <time className="text-[13px] font-bold text-text-muted max-[760px]:col-start-2">
               {item.date}
             </time>
           </article>

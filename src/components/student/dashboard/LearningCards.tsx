@@ -3,7 +3,7 @@ import { ArrowRight, Star } from '../../console/icons'
 import Button from '../../ui/Button'
 import { ctaButtonClass } from './cta'
 
-const panel = 'mt-4 rounded-2xl border border-line-card p-[18px]'
+const panel = 'mt-4 rounded-xl border border-line-card bg-surface p-5 shadow-card'
 
 interface RecentLessonCardProps {
   badge: ReactNode
@@ -14,7 +14,7 @@ interface RecentLessonCardProps {
   onAction: () => void
 }
 
-// "Bài học gần nhất": lesson number badge, title/meta and a green text action.
+// "Bài học gần nhất": lesson number tile, title/meta and a green action.
 export function RecentLessonCard({
   badge,
   title,
@@ -24,21 +24,21 @@ export function RecentLessonCard({
 }: RecentLessonCardProps) {
   return (
     <article
-      className={`${panel} grid grid-cols-[70px_minmax(0,1fr)_auto] items-center gap-[18px] bg-white/92 max-[760px]:grid-cols-1`}
+      className={`${panel} grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-5 max-[760px]:grid-cols-1`}
     >
-      <div className="grid h-[72px] w-16 place-content-center place-items-center rounded-[20px] border-4 border-success text-center font-black text-success">
-        <strong className="text-[26px] leading-none">{badge}</strong>
-        <span className="mt-[3px] rounded-md bg-success px-1.5 py-[3px] text-[9px] text-surface uppercase">
+      <div className="grid h-[76px] w-[72px] place-content-center place-items-center rounded-2xl bg-practice-soft text-center font-bold text-practice">
+        <strong className="text-[28px] leading-none">{badge}</strong>
+        <span className="mt-1 rounded-md bg-practice px-1.5 py-0.5 text-xs text-surface uppercase">
           Bài học
         </span>
       </div>
       <div>
-        <strong className="block text-base font-extrabold text-text-heading">{title}</strong>
-        <p className="mt-2 flex items-center gap-2 text-[13px] text-text-body">{meta}</p>
+        <strong className="block text-lg leading-[1.3] font-bold text-text-heading">{title}</strong>
+        <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-text-body">{meta}</p>
       </div>
       <Button
-        appearance="ghost"
-        className="h-auto gap-1.5 border-0 p-0 text-xs leading-normal font-extrabold text-practice hover:bg-transparent max-[760px]:w-full [&>svg]:size-[18px]"
+        variant="primary"
+        className="h-10 gap-1.5 px-4 text-sm max-[760px]:w-full [&>svg]:size-[18px]"
         onClick={onAction}
       >
         {actionLabel} <ArrowRight size={18} />
@@ -64,8 +64,8 @@ interface StudyPlanCardProps {
 // "Kế hoạch ôn thi": short description with a call-to-action.
 export function StudyPlanCard({ text, actionLabel, onAction }: StudyPlanCardProps) {
   return (
-    <div className={`${panel} bg-white/72`}>
-      <p className="mb-3.5 max-w-[760px] text-sm leading-[1.55] text-text-secondary">{text}</p>
+    <div className={`${panel} bg-surface-brand`}>
+      <p className="mb-4 max-w-[760px] text-[15px] leading-[1.6] text-text-body">{text}</p>
       <Button className={ctaButtonClass} onClick={onAction}>
         {actionLabel} <ArrowRight size={17} />
       </Button>

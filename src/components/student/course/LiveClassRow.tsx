@@ -23,19 +23,14 @@ function LiveClassRow({ liveClass }: LiveClassRowProps) {
         (canJoin || hasRecording) && (
           <>
             {canJoin && (
-              <Button asChild size="sm" className="h-8 px-3 text-[12.5px] font-semibold">
+              <Button asChild size="sm">
                 <a href={liveClass.meetingUrl as string} target="_blank" rel="noreferrer">
                   Tham gia
                 </a>
               </Button>
             )}
             {hasRecording && (
-              <Button
-                asChild
-                size="sm"
-                appearance="outline"
-                className="h-8 px-3 text-[12.5px] font-semibold"
-              >
+              <Button asChild size="sm" appearance="outline">
                 <a href={liveClass.recordingUrl as string} target="_blank" rel="noreferrer">
                   Xem bản ghi
                 </a>

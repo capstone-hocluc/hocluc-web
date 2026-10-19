@@ -384,3 +384,40 @@ export async function markTeacherQuestionsReviewed(quizId: string, questionIds: 
     body: { questionIds },
   })
 }
+
+export interface TeacherAttemptReviewOption {
+  optionId: string
+  optionText: string
+  correct: boolean
+  sequence: number
+}
+
+export interface TeacherAttemptReviewQuestion {
+  questionId: string
+  sequence: number
+  questionText: string
+  imageUrl: string | null
+  categoryName: string | null
+  explanation: string | null
+  options: TeacherAttemptReviewOption[]
+  selectedOptionId: string | null
+  answered: boolean
+  correct: boolean
+}
+
+export interface TeacherAttemptReview {
+  attemptId: string
+  quizId: string
+  quizTitle: string
+  totalQuestions: number
+  correctCount: number
+  overallPercentage: number
+  questions: TeacherAttemptReviewQuestion[]
+}
+
+export function getTeacherAttemptReview(attemptId: string): Promise<TeacherAttemptReview> {
+  return requireData(
+    `/api/v1/teacher/attempts/${encodeURIComponent(attemptId)}`,
+    'Không thể tải chi tiết bài làm.'
+  )
+}

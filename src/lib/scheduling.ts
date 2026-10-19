@@ -169,3 +169,26 @@ export function filterScheduleItemsToInstantRange(
     return Number.isFinite(instant) && instant >= start && instant < end
   })
 }
+
+/**
+ * Items that already hold the teacher in the given window. The backend only checks overlaps
+ * inside one scheduling table, so a one-off schedule can still collide with a recurring
+ * session; this looks across both among the items already loaded (one course, one week).
+ */
+export function findTeacherOverlaps(
+  items: ScheduleCalendarItem[],
+  teacherId: string,
+  startTime: string,
+  endTime: string,
+  ignore?: { kind: ScheduleCalendarItem['kind']; sourceId: string }
+) {
+  const start = Date.parse(startTime)
+  const end = Date.parse(endTime)
+  return items.filter((entry) => {
+    if (ignore && entry.kind === ignore.kind && entry.sourceId === ignore.sourceId) return false
+    if (entry.item.status === 'CANCELLED') return false
+    const holder = entry.kind === 'classSession' ? entry.item.teacherId : entry.kind === 'schedule' ? entry.item.instructorId : ''
+    if (holder !== teacherId) return false
+    return Date.parse(itemStart(entry)) < end && Date.parse(itemEnd(entry)) > start
+  })
+}

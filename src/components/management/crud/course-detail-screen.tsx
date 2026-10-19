@@ -1,48 +1,167 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
 import Panel from '../../console/panel'
 import Notice from '../../console/notice'
 import Status from '../../console/status'
 import ConfirmDialog from '../../console/confirm-dialog'
-import { ArrowLeft, RefreshCw } from '../../console/icons'
+import DetailHeader from '../../console/detail/detail-header'
+import {
+  ConsoleTabs,
+  ConsoleTabsContent,
+  ConsoleTabsList,
+  ConsoleTabsTrigger,
+} from '../../console/tabs'
+import { ArrowLeft, Pencil, Send } from '../../console/icons'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
-import { getAdminCourse, mutateCourse } from '../../../services/courseAdminService'
+import { useCurrentUser } from '../../../hooks/useCurrentUser'
+import { ApiError } from '../../../lib/api'
+import {
+  getAdminCourse,
+  mutateCourse,
+  rejectCourseReview,
+  type CourseAdmin,
+} from '../../../services/courseAdminService'
+import { getCategories } from '../../../services/categoryService'
+import { getContentSections } from '../../../services/contentSectionService'
+import type { ChapterAdmin } from '../../../services/chapterAdminService'
 import CoursePhasesPanel from './course-phases-panel'
 import CourseSectionsPanel from './course-sections-panel'
 import CourseInstructorsPanel from './course-instructors-panel'
 import CourseContentPanel from './course-content-panel'
-import { COURSE_STATUS_LABELS, type CourseMutation } from './course-labels'
+import ContentSectionsPanel from './content-sections-panel'
+import CourseEditorDialog from './course-editor-dialog'
+import CourseRejectDialog from './course-reject-dialog'
+import CourseStepper from './course-stepper'
+import { courseSteps, firstBlocker, type CourseStep, type CourseStepTab } from './course-steps'
+import {
+  COURSE_STATUS_LABELS,
+  COURSE_STATUS_TONES,
+  COURSE_TYPE_LABELS,
+  REVIEW_STATE_LABELS,
+  REVIEW_STATE_TONES,
+  type CourseMutation,
+} from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
+import { ACTION_COPY, runReviewAction, type ReviewAction } from './course-review-actions'
+
+const dateTime = (value: string | null) =>
+  value
+    ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(
+        new Date(value)
+      )
+    : ''
+
+function courseStatusLine(
+  course: CourseAdmin,
+  { waiting, readOnly, hint }: { waiting: boolean; readOnly: boolean; hint?: CourseStep }
+): { tone: 'info' | 'warning' | 'neutral'; body: ReactNode } | null {
+  if (course.status === 'PUBLISHED') {
+    return readOnly
+      ? null
+      : {
+          tone: 'neutral',
+          body: 'Khóa đang bán. Muốn chỉnh sửa nội dung, hãy lưu trữ khóa trước rồi gửi duyệt lại.',
+        }
+  }
+  if (waiting) {
+    return {
+      tone: 'info',
+      body: `Chờ duyệt${course.reviewRequestedByName ? ` — gửi bởi ${course.reviewRequestedByName}` : ''}${
+        course.reviewRequestedAt ? ` lúc ${dateTime(course.reviewRequestedAt)}` : ''
+      }.`,
+    }
+  }
+  if (course.reviewState === 'REJECTED') {
+    return {
+      tone: 'warning',
+      body: (
+        <div className="flex flex-col gap-1">
+          <strong>
+            Khóa bị trả lại
+            {course.reviewedByName ? ` bởi ${course.reviewedByName}` : ''}
+            {course.reviewedAt ? ` lúc ${dateTime(course.reviewedAt)}` : ''}
+          </strong>
+          {course.reviewNote && <span className="whitespace-pre-line">{course.reviewNote}</span>}
+          <span>Sửa theo góp ý rồi gửi duyệt lại.</span>
+        </div>
+      ),
+    }
+  }
+  if (hint?.note) {
+    return {
+      tone: 'neutral',
+      body: (
+        <>
+          <strong className="font-medium text-text-primary">Tiếp theo: {hint.title}.</strong>{' '}
+          {hint.note}
+        </>
+      ),
+    }
+  }
+  return null
+}
 
 export default function CourseDetailScreen({
   id,
   readOnly,
   onBack,
+  initialTab = 'overview',
 }: {
   id: string
   readOnly: boolean
   onBack: () => void
+  initialTab?: CourseStepTab
 }) {
+  const { profile } = useCurrentUser()
   const resource = useScheduleResource(`course-detail:${id}`, () => getAdminCourse(id))
+  const sectionsResource = useScheduleResource(`content-sections:${id}`, () =>
+    getContentSections(id)
+  )
+  const categories = useScheduleResource('course-categories', getCategories)
+  const [tab, setTab] = useState<CourseStepTab | 'instructors'>(initialTab)
+  const [chapters, setChapters] = useState<ChapterAdmin[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [removing, setRemoving] = useState<{ resource: string; label: string } | null>(null)
-  const mutate: CourseMutation = async (target, method, body) => {
+  const [action, setAction] = useState<ReviewAction | null>(null)
+  const [rejecting, setRejecting] = useState(false)
+  const [editing, setEditing] = useState(false)
+
+  const course = resource.data
+  const onChapters = useCallback((items: ChapterAdmin[]) => setChapters(items), [])
+  const reloadContent = useCallback(() => sectionsResource.reload(), [sectionsResource])
+  // Backend field when present (it knows per-subject reviewers); otherwise the roles that always review.
+  const canReview =
+    course?.canReview ?? (profile?.role === 'ADMINISTRATOR' || profile?.role === 'MANAGER')
+
+  const steps = useMemo(
+    () => (course ? courseSteps(course, chapters, canReview) : []),
+    [course, chapters, canReview]
+  )
+  const blocker = firstBlocker(steps)
+
+  // Runs one request; a stale copy (409) or an unknown outcome reloads so the next click is on fresh data.
+  async function run<T>(request: () => Promise<T>, success: string) {
     if (busy) return false
     setBusy(true)
     setError('')
     setNotice('')
     try {
-      await mutateCourse(id, target, method, body)
-      setNotice('Đã lưu thay đổi.')
+      await request()
+      setNotice(success)
       resource.reload()
       return true
     } catch (err) {
       setError(crudError(err))
-      if (unknownMutation(err)) {
-        setNotice('Chưa rõ kết quả thao tác. Đã yêu cầu tải lại để kiểm tra.')
+      if (unknownMutation(err) || (err instanceof ApiError && err.status === 409)) {
+        setNotice(
+          unknownMutation(err)
+            ? 'Chưa rõ kết quả thao tác. Đã yêu cầu tải lại để kiểm tra.'
+            : 'Khóa vừa được người khác thay đổi. Đã tải lại, hãy kiểm tra rồi thử lại.'
+        )
         resource.reload()
       }
       return false
@@ -50,11 +169,89 @@ export default function CourseDetailScreen({
       setBusy(false)
     }
   }
+
+  const mutate: CourseMutation = (target, method, body) =>
+    run(() => mutateCourse(id, target, method, body), 'Đã lưu thay đổi.')
   const remove = (target: string, label: string) => {
     setError('')
     setRemoving({ resource: target, label })
   }
-  const course = resource.data
+
+  // Content edits move the course's version, so a review step always starts from the latest copy.
+  async function confirmAction(current: ReviewAction) {
+    if (await run(() => runReviewAction(current, id), ACTION_COPY[current].done)) setAction(null)
+  }
+
+  const canAct = !readOnly || canReview
+  const goTo = (target: CourseStepTab) => setTab(target)
+  const isMain = course?.courseType === 'MAIN'
+  const waiting = course?.reviewState === 'PENDING'
+
+  const hint = canAct && !waiting ? steps.find((step) => step.state === 'current') : undefined
+  // One line under the steps: what is happening now, or what to do next.
+  const statusLine = course
+    ? courseStatusLine(course, { waiting: !!waiting, readOnly, hint })
+    : null
+
+  function primaryActions(current: CourseAdmin) {
+    if (!canAct) return null
+    // Reviewers act on review state even where the console is view-only for course content.
+    if (current.status === 'PUBLISHED') {
+      return (
+        <>
+          <Button appearance="outline" disabled={busy} onClick={() => setAction('archive')}>
+            Lưu trữ
+          </Button>
+        </>
+      )
+    }
+    // Staff waiting on a review has nothing to do; the status chip says so.
+    if (waiting && !canReview) return null
+    if (waiting) {
+      return (
+        <>
+          <Button
+            appearance="outline"
+            variant="danger"
+            disabled={busy}
+            onClick={() => setRejecting(true)}
+          >
+            Trả lại
+          </Button>
+          <Button
+            disabled={busy || !!blocker}
+            aria-describedby="course-action-reason"
+            onClick={() => setAction('approve')}
+          >
+            Duyệt và bán
+          </Button>
+        </>
+      )
+    }
+    return (
+      <>
+        {canReview ? (
+          <Button
+            disabled={busy || !!blocker}
+            aria-describedby="course-action-reason"
+            onClick={() => setAction('sell')}
+          >
+            Bán khóa
+          </Button>
+        ) : (
+          <Button
+            disabled={busy || !!blocker}
+            aria-describedby="course-action-reason"
+            onClick={() => setAction('submit')}
+          >
+            <Send size={16} />
+            Gửi duyệt
+          </Button>
+        )}
+      </>
+    )
+  }
+
   return (
     <section className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -62,110 +259,243 @@ export default function CourseDetailScreen({
           <ArrowLeft size={16} />
           Danh sách khóa
         </Button>
-        <Button
-          appearance="outline"
-          onClick={resource.reload}
-          disabled={busy || resource.status === 'loading'}
-        >
-          <RefreshCw size={16} />
-          Làm mới
-        </Button>
       </div>
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>
         </Notice>
       )}
-      {error && (
+      {error && !action && !rejecting && !removing && (
         <Notice tone="danger">
           <span role="alert">{error}</span>
         </Notice>
       )}
       <ScheduleResourceState
+        skeleton="detail"
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
       >
         {course && (
           <>
-            <Panel
-              title={<span className="break-words">{course.title}</span>}
-              action={
-                <Status
-                  tone={
-                    course.status === 'PUBLISHED'
-                      ? 'success'
-                      : course.status === 'DRAFT'
-                        ? 'warning'
-                        : 'neutral'
-                  }
+            <Panel className="overflow-hidden">
+              <DetailHeader
+                title={course.title}
+                subtitle={[
+                  COURSE_TYPE_LABELS[course.courseType],
+                  course.categoryName ?? 'Chưa phân loại',
+                  course.paid
+                    ? `${new Intl.NumberFormat('vi-VN').format(course.price ?? 0)} đ`
+                    : 'Miễn phí',
+                ].join(' · ')}
+                actions={
+                  <>
+                    {course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' ? (
+                      <Status tone={REVIEW_STATE_TONES[course.reviewState]}>
+                        {REVIEW_STATE_LABELS[course.reviewState]}
+                      </Status>
+                    ) : (
+                      <Status tone={COURSE_STATUS_TONES[course.status]}>
+                        {COURSE_STATUS_LABELS[course.status]}
+                      </Status>
+                    )}
+                    {primaryActions(course)}
+                  </>
+                }
+              />
+              {canAct && (
+                <div className="mt-5 border-t border-card-border pt-3">
+                  <CourseStepper steps={steps} onGo={goTo} />
+                </div>
+              )}
+              {statusLine && (
+                <div
+                  id={hint ? 'course-action-reason' : undefined}
+                  className={cn(
+                    '-mx-5 -mb-5 mt-4 border-t px-5 py-3 text-sm',
+                    statusLine.tone === 'warning'
+                      ? 'border-transparent bg-badge-warning-background text-badge-warning-text'
+                      : statusLine.tone === 'info'
+                        ? 'border-transparent bg-badge-blue-background text-badge-blue-text'
+                        : 'border-card-border bg-background-gray-secondary/50 text-text-secondary'
+                  )}
                 >
-                  {COURSE_STATUS_LABELS[course.status]}
-                </Status>
-              }
-            >
-              <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
-                <div>
-                  <dt className="text-text-tertiary">Loại khóa</dt>
-                  <dd className="mt-1 font-medium text-text-primary">{course.courseType}</dd>
+                  {statusLine.body}
                 </div>
-                <div>
-                  <dt className="text-text-tertiary">Danh mục</dt>
-                  <dd className="mt-1 font-medium text-text-primary">
-                    {course.categoryName ?? 'Chưa phân loại'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Học phí</dt>
-                  <dd className="mt-1 font-medium text-text-primary">
-                    {course.paid
-                      ? new Intl.NumberFormat('vi-VN').format(course.price ?? 0) + ' đ'
-                      : 'Miễn phí'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Slug</dt>
-                  <dd className="mt-1 break-words font-medium text-text-primary">{course.slug}</dd>
-                </div>
-              </dl>
-              {course.shortIntroduction && (
-                <p className="mt-4 max-w-prose text-sm text-text-tertiary">
-                  {course.shortIntroduction}
-                </p>
               )}
             </Panel>
-            {course.courseType === 'MAIN' && (
-              <>
-                <CoursePhasesPanel
+
+            <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
+              <ConsoleTabsList aria-label="Nội dung khóa học">
+                <ConsoleTabsTrigger value="overview">Tổng quan</ConsoleTabsTrigger>
+                <ConsoleTabsTrigger value="content">Nội dung</ConsoleTabsTrigger>
+                {isMain && <ConsoleTabsTrigger value="gifts">Khóa tặng kèm</ConsoleTabsTrigger>}
+                <ConsoleTabsTrigger value="instructors">Giảng viên</ConsoleTabsTrigger>
+              </ConsoleTabsList>
+
+              <ConsoleTabsContent value="overview">
+                <Panel
+                  title="Thông tin khóa"
+                  action={
+                    readOnly ? undefined : (
+                      <Button
+                        appearance="outline"
+                        onClick={() => setEditing(true)}
+                        disabled={busy || !categories.data}
+                      >
+                        <Pencil size={16} />
+                        Sửa thông tin
+                      </Button>
+                    )
+                  }
+                >
+                  <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                      <dt className="text-text-tertiary">Loại khóa</dt>
+                      <dd className="mt-1 font-medium text-text-primary">
+                        {COURSE_TYPE_LABELS[course.courseType]}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-text-tertiary">Môn học</dt>
+                      <dd className="mt-1 font-medium text-text-primary">
+                        {course.categoryName ?? 'Chưa phân loại'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-text-tertiary">Học phí</dt>
+                      <dd className="mt-1 font-medium text-text-primary">
+                        {course.paid
+                          ? new Intl.NumberFormat('vi-VN').format(course.price ?? 0) + ' đ'
+                          : 'Miễn phí'}
+                      </dd>
+                    </div>
+                  </dl>
+                  {course.shortIntroduction && (
+                    <p className="mt-4 max-w-prose text-sm text-text-tertiary">
+                      {course.shortIntroduction}
+                    </p>
+                  )}
+                </Panel>
+              </ConsoleTabsContent>
+
+              <ConsoleTabsContent value="content">
+                {isMain && (
+                  <>
+                    <CoursePhasesPanel
+                      course={course}
+                      readOnly={readOnly}
+                      busy={busy}
+                      mutate={mutate}
+                      remove={remove}
+                      error={error}
+                    />
+                    <ScheduleResourceState
+                      status={sectionsResource.status}
+                      errorMessage={sectionsResource.errorMessage}
+                      onRetry={sectionsResource.reload}
+                    >
+                      <ContentSectionsPanel
+                        courseId={course.id}
+                        sections={sectionsResource.data ?? []}
+                        phases={course.phases}
+                        readOnly={readOnly}
+                        onChanged={() => {
+                          reloadContent()
+                          resource.reload()
+                        }}
+                      />
+                    </ScheduleResourceState>
+                  </>
+                )}
+                <CourseContentPanel
+                  courseId={course.id}
+                  readOnly={readOnly}
+                  title="Chương và bài học"
+                  sections={sectionsResource.data ?? []}
+                  onChapters={onChapters}
+                  onChange={reloadContent}
+                />
+              </ConsoleTabsContent>
+
+              {isMain && (
+                <ConsoleTabsContent value="gifts">
+                  <CourseSectionsPanel
+                    course={course}
+                    readOnly={readOnly}
+                    busy={busy}
+                    mutate={mutate}
+                    remove={remove}
+                  />
+                </ConsoleTabsContent>
+              )}
+
+              <ConsoleTabsContent value="instructors">
+                <CourseInstructorsPanel
                   course={course}
                   readOnly={readOnly}
                   busy={busy}
                   mutate={mutate}
                   remove={remove}
-                  error={error}
                 />
-                <CourseSectionsPanel
-                  course={course}
-                  readOnly={readOnly}
-                  busy={busy}
-                  mutate={mutate}
-                  remove={remove}
-                />
-              </>
-            )}
-            {course.courseType === 'SECTION' && (
-              <CourseContentPanel courseId={course.id} readOnly={readOnly} title="Chương và bài học" />
-            )}
-            <CourseInstructorsPanel
-              course={course}
-              readOnly={readOnly}
-              busy={busy}
-              mutate={mutate}
-              remove={remove}
-            />
+              </ConsoleTabsContent>
+            </ConsoleTabs>
           </>
         )}
       </ScheduleResourceState>
+
+      {editing && course && categories.data && (
+        <CourseEditorDialog
+          course={course}
+          categories={categories.data}
+          onClose={() => {
+            setEditing(false)
+            resource.reload()
+          }}
+          onSaved={() => {
+            setEditing(false)
+            setNotice('Đã lưu khóa học.')
+            resource.reload()
+          }}
+        />
+      )}
+      {action && course && (
+        <ConfirmDialog
+          title={ACTION_COPY[action].title}
+          description={
+            <>
+              {course.title}. {ACTION_COPY[action].body}
+              {error && (
+                <span role="alert" className="mt-2 block text-danger">
+                  {error}
+                </span>
+              )}
+            </>
+          }
+          cancelLabel="Hủy"
+          confirmLabel={ACTION_COPY[action].confirm}
+          busy={busy}
+          onCancel={() => setAction(null)}
+          onConfirm={() => void confirmAction(action)}
+        />
+      )}
+      {rejecting && course && (
+        <CourseRejectDialog
+          courseTitle={course.title}
+          busy={busy}
+          error={error}
+          onCancel={() => setRejecting(false)}
+          onSubmit={async (note) => {
+            if (
+              await run(
+                async () => rejectCourseReview(await getAdminCourse(id), note),
+                'Đã trả lại khóa kèm lý do.'
+              )
+            )
+              setRejecting(false)
+          }}
+        />
+      )}
       {removing && (
         <ConfirmDialog
           title="Gỡ khỏi khóa học?"

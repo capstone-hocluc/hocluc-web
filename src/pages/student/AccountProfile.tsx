@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BarChart3, KeyRound, User } from '../../components/console/icons'
 import MascotState from '../../components/common/MascotState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
+import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
 import Card from '../../components/ui/Card'
 import Skeleton from '../../components/ui/Skeleton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -43,7 +44,7 @@ function AccountProfile() {
             onAction={() => void loadCurrentUser().catch(() => {})}
           />
         ) : (
-          <Skeleton className="h-[420px] rounded-[22px]" />
+          <Skeleton className="h-[420px] rounded-2xl" />
         )}
       </StudentPageContainer>
     )
@@ -51,17 +52,22 @@ function AccountProfile() {
 
   return (
     <StudentPageContainer>
+      <StudentPageHeader
+        title="Tài khoản của tôi"
+        description="Quản lý thông tin cá nhân, mục tiêu học tập và bảo mật tài khoản."
+      />
       <div className="grid grid-cols-[240px_minmax(0,1fr)] items-start gap-6 max-[900px]:grid-cols-1">
         <Card
           as="nav"
+          variant="elevated"
           padding="none"
           radius="xl"
-          className="flex flex-col gap-4 p-3.5 max-[900px]:flex-row max-[900px]:flex-wrap"
+          className="flex flex-col gap-4 p-4 max-[900px]:flex-row max-[900px]:flex-wrap"
           aria-label="Cài đặt tài khoản"
         >
           {navGroups.map((group) => (
             <div className="flex flex-col gap-1" key={group.label}>
-              <span className="px-2.5 text-[11px] font-extrabold tracking-[0.06em] text-text-muted uppercase">
+              <span className="px-3 text-xs font-semibold tracking-[0.08em] text-text-muted uppercase">
                 {group.label}
               </span>
               {group.items.map((item) => {
@@ -74,13 +80,13 @@ function AccountProfile() {
                     aria-current={active ? 'page' : undefined}
                     onClick={() => setActiveSection(item.key)}
                     className={cn(
-                      'flex h-10 cursor-pointer items-center gap-2.5 rounded-xl px-2.5 text-[13.5px] font-bold transition-colors',
+                      'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border px-3 text-[15px] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
                       active
-                        ? 'bg-primary-soft text-primary'
-                        : 'text-text-body hover:bg-surface-soft hover:text-primary'
+                        ? 'border-transparent bg-surface-brand text-primary-text'
+                        : 'border-transparent text-text-body hover:bg-surface-brand hover:text-primary-text'
                     )}
                   >
-                    <Icon size={17} />
+                    <Icon size={19} />
                     <span>{item.label}</span>
                   </button>
                 )

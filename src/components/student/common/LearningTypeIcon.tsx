@@ -9,8 +9,8 @@ import { cn } from '../../../lib/cn'
 const tile = cva('grid shrink-0 place-items-center', {
   variants: {
     type: {
-      video: 'bg-primary-soft text-primary',
-      document: 'bg-primary-soft text-primary',
+      video: 'bg-primary-soft text-primary-text',
+      document: 'bg-primary-soft text-primary-text',
       practice: 'bg-practice-soft text-practice',
       assessment: 'bg-assess-soft text-assess',
       live: 'bg-live-soft text-live',
@@ -20,7 +20,7 @@ const tile = cva('grid shrink-0 place-items-center', {
       false: '',
     },
     size: {
-      md: 'size-8 rounded-[11px]',
+      md: 'size-9 rounded-xl',
     },
   },
   defaultVariants: { locked: false, size: 'md' },
@@ -46,7 +46,7 @@ function LearningTypeIcon({ type, locked = false, className }: LearningTypeIconP
   const Icon = icons[type]
   return (
     <span className={cn(tile({ type, locked }), className)}>
-      <Icon size={17} />
+      <Icon size={18} />
     </span>
   )
 }

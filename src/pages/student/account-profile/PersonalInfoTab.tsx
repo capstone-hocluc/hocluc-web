@@ -135,11 +135,11 @@ function PersonalInfoTab() {
             src={avatarPreview || profile?.avatarUrl}
             alt={displayName}
             fallback={getUserInitials(profile)}
-            className="size-[76px] border border-line-blue text-xl"
+            className="size-20 border border-line-brand text-xl"
           />
           <button
             type="button"
-            className="absolute -right-0.5 -bottom-0.5 grid size-7 cursor-pointer place-items-center rounded-full border-2 border-surface bg-primary text-surface disabled:cursor-not-allowed disabled:opacity-60"
+            className="absolute -right-1 -bottom-1 grid size-8 cursor-pointer place-items-center rounded-full border border-surface bg-primary text-white disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => fileInputRef.current?.click()}
             disabled={avatarUploading}
             aria-label="Đổi ảnh đại diện"
@@ -159,8 +159,8 @@ function PersonalInfoTab() {
           />
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <strong className="truncate text-base text-text-heading">{displayName}</strong>
-          <span className="text-[13px] text-text-secondary">JPG hoặc PNG, tối đa 2 MB</span>
+          <strong className="truncate text-lg font-bold text-text-heading">{displayName}</strong>
+          <span className="text-sm text-text-body">JPG hoặc PNG, tối đa 2 MB</span>
         </div>
       </div>
 
@@ -173,7 +173,7 @@ function PersonalInfoTab() {
         <Field full label="Email" helper="Email dùng để đăng nhập và không thể thay đổi.">
           <span className="relative block">
             <Input value={profile?.email || ''} readOnly disabled className="pr-24" />
-            <span className="absolute top-1/2 right-2.5 inline-flex -translate-y-1/2 items-center gap-1 rounded-full bg-badge-neutral-bg px-2 py-0.5 text-[11px] font-bold text-badge-neutral-text">
+            <span className="absolute top-1/2 right-2.5 inline-flex -translate-y-1/2 items-center gap-1 rounded-full bg-badge-neutral-bg px-2 py-0.5 text-xs font-semibold text-badge-neutral-text">
               <Lock size={11} />
               Cố định
             </span>

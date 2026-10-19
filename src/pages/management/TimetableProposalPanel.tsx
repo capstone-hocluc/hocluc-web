@@ -1,3 +1,4 @@
+import SelectField from '../../components/console/select-field'
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../../lib/api'
 import { SCHEDULING_TIMEZONE, localDateLabel, localToday } from '../../lib/scheduling'
@@ -280,21 +281,23 @@ export default function TimetableProposalPanel({
           </label>
           <label className="text-sm font-medium text-text-primary">
             Hình thức
-            <select
+            <SelectField
+              ariaLabel="Hình thức"
               name="preferredMode"
               value={preferredMode}
-              onChange={(event) => {
-                setPreferredMode(event.target.value as DeliveryMode)
+              onChange={(nextValue) => {
+                setPreferredMode(nextValue as DeliveryMode)
                 clearResult()
               }}
-              className={fieldClass + ' mt-1 w-full'}
+              triggerClassName={fieldClass + ' mt-1 w-full'}
               disabled={controlsDisabled}
-            >
-              <option value="PHYSICAL">Trực tiếp</option>
-              <option value="ONLINE">Trực tuyến</option>
-              <option value="HYBRID">Kết hợp</option>
-              <option value="OFFLINE">Ngoại tuyến</option>
-            </select>
+              options={[
+                { id: 'PHYSICAL', label: 'Trực tiếp' },
+                { id: 'ONLINE', label: 'Trực tuyến' },
+                { id: 'HYBRID', label: 'Kết hợp' },
+                { id: 'OFFLINE', label: 'Ngoại tuyến' },
+              ]}
+            />
           </label>
         </div>
 

@@ -43,3 +43,6 @@ docs/master-data/
 # Local tools and caches
 .codegraph/
 .pi/
+
+playwright-report/
+test-results/

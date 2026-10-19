@@ -1,30 +1,43 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
+import PageHeading from '../../console/page-heading'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
-import SelectField from '../../console/select-field'
+import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Plus, RefreshCw, Search } from '../../console/icons'
-import { Input } from '../../tailgrids/core/input'
+import { ConsoleTabs, ConsoleTabsList, ConsoleTabsTrigger, ConsoleTabsContent } from '../../console/tabs'
+import { Plus } from '../../console/icons'
 import { Pagination } from '../../tailgrids/core/pagination'
+import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getCategories } from '../../../services/categoryService'
 import {
-  changeCourseStatus,
   deleteAdminCourse,
+  getAdminCourse,
   getAdminCourses,
+  rejectCourseReview,
   type CourseAdmin,
   type CourseQuery,
-  type CourseStatus,
 } from '../../../services/courseAdminService'
 import { crudError, unknownMutation } from './crud-errors'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseDetailScreen from './course-detail-screen'
+import CourseRejectDialog from './course-reject-dialog'
+import CourseRowActions, { type CourseRowHandlers } from './course-row-actions'
+import { ACTION_COPY, runReviewAction, type ReviewAction } from './course-review-actions'
 
-import { COURSE_STATUS_LABELS } from './course-labels'
+import {
+  COURSE_STATUS_LABELS,
+  COURSE_TYPE_LABELS,
+  courseDisplayStatus,
+  REVIEW_STATE_LABELS,
+} from './course-labels'
+// Backend field when present (it knows per-subject reviewers); otherwise the roles that always review.
+const canReviewCourse = (course: CourseAdmin, role?: string) =>
+  course.canReview ?? (role === 'ADMINISTRATOR' || role === 'MANAGER')
 const price = (course: CourseAdmin) =>
   !course.paid
     ? 'Miễn phí'
@@ -34,15 +47,34 @@ const price = (course: CourseAdmin) =>
         maximumFractionDigits: 0,
       }).format(course.price ?? 0)
 
-export default function CourseManagement({ readOnly = false }: { readOnly?: boolean }) {
+export default function CourseManagement({
+  readOnly = false,
+  title = 'Khóa học',
+}: {
+  readOnly?: boolean
+  title?: string
+}) {
   const [query, setQuery] = useState<CourseQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
+  useEffect(() => {
+    const nextQuery = search.trim()
+    if (nextQuery === (query.query ?? '')) return
+
+    const timer = window.setTimeout(() => {
+      setQuery((old) => ({ ...old, query: nextQuery || undefined, page: 0 }))
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [search, query.query])
   const [editor, setEditor] = useState<{ course: CourseAdmin | null } | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [confirmation, setConfirmation] = useState<{
-    course: CourseAdmin
-    status?: CourseStatus
-  } | null>(null)
+  const [openOnContent, setOpenOnContent] = useState(false)
+  const [deleting, setDeleting] = useState<CourseAdmin | null>(null)
+  const [reviewing, setReviewing] = useState<{ course: CourseAdmin; action: ReviewAction } | null>(
+    null
+  )
+  const [rejecting, setRejecting] = useState<CourseAdmin | null>(null)
+  const { profile } = useCurrentUser()
+  const role = profile?.role
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -50,127 +82,148 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
     getAdminCourses(query)
   )
   const categories = useScheduleResource('course-categories', getCategories)
+  const pending = useScheduleResource('admin-courses-pending', () =>
+    getAdminCourses({ reviewState: 'PENDING', page: 0, size: 1 })
+  )
+  const openDetail = (id: string) => {
+    setOpenOnContent(false)
+    setSelectedId(id)
+  }
+  const clearError = () => setError('')
+  const rowHandlers = useMemo<CourseRowHandlers>(
+    () => ({
+      onContent: (course) => {
+        setOpenOnContent(true)
+        setSelectedId(course.id)
+      },
+      onEdit: (course) => setEditor({ course }),
+      onReview: (course, action) => {
+        clearError()
+        setReviewing({ course, action })
+      },
+      onReject: (course) => {
+        clearError()
+        setRejecting(course)
+      },
+      onDelete: (course) => {
+        clearError()
+        setDeleting(course)
+      },
+    }),
+    []
+  )
   const columns = useMemo<ColumnDef<CourseAdmin>[]>(
     () => [
       {
         accessorKey: 'title',
         header: 'Khóa học',
         enableSorting: false,
+        meta: { className: 'w-[34%]' },
         cell: ({ row }) => (
-          <div className="min-w-52 max-w-80">
-            <strong className="block truncate font-medium">{row.original.title}</strong>
-            <span className="mt-1 block truncate text-xs text-text-tertiary">
-              {row.original.slug}
-            </span>
-          </div>
+          <button
+            type="button"
+            className="block max-w-80 truncate text-left font-medium hover:text-primary focus-visible:underline"
+            title={row.original.title}
+            onClick={() => openDetail(row.original.id)}
+          >
+            {row.original.title}
+          </button>
         ),
       },
-      { accessorKey: 'courseType', header: 'Loại', enableSorting: false },
+      {
+        accessorKey: 'courseType',
+        header: 'Loại',
+        enableSorting: false,
+        meta: { className: 'w-28' },
+        cell: ({ row }) => COURSE_TYPE_LABELS[row.original.courseType],
+      },
       {
         accessorKey: 'categoryName',
-        header: 'Danh mục',
+        header: 'Môn học',
         enableSorting: false,
+        meta: { className: 'w-44' },
         cell: ({ row }) => row.original.categoryName ?? 'Chưa phân loại',
       },
       {
         id: 'price',
         header: 'Học phí',
+        meta: { className: 'w-36 text-right' },
         cell: ({ row }) => <span className="whitespace-nowrap">{price(row.original)}</span>,
       },
       {
         id: 'status',
         header: 'Trạng thái',
+        meta: { className: 'w-32' },
         cell: ({ row }) => (
-          <Status
-            tone={
-              row.original.status === 'PUBLISHED'
-                ? 'success'
-                : row.original.status === 'DRAFT'
-                  ? 'warning'
-                  : 'neutral'
-            }
-          >
-            {COURSE_STATUS_LABELS[row.original.status]}
+          <Status tone={courseDisplayStatus(row.original).tone}>
+            {courseDisplayStatus(row.original).label}
           </Status>
         ),
       },
       {
         id: 'actions',
         header: 'Thao tác',
+        meta: { className: 'w-64 text-right' },
         cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              appearance="outline"
-              onClick={() => setSelectedId(row.original.id)}
-              disabled={busy}
-            >
-              Chi tiết
-            </Button>
-            {!readOnly && (
-              <>
-                <Button
-                  size="sm"
-                  appearance="ghost"
-                  onClick={() => setEditor({ course: row.original })}
-                  disabled={busy}
-                >
-                  Sửa
-                </Button>
-                <Button
-                  size="sm"
-                  appearance="ghost"
-                  onClick={() => {
-                    setError('')
-                    setConfirmation({
-                      course: row.original,
-                      status: row.original.status === 'PUBLISHED' ? 'ARCHIVED' : 'PUBLISHED',
-                    })
-                  }}
-                  disabled={busy}
-                >
-                  {row.original.status === 'PUBLISHED' ? 'Lưu trữ' : 'Xuất bản'}
-                </Button>
-                {row.original.status === 'DRAFT' && (
-                  <Button
-                    size="sm"
-                    appearance="ghost"
-                    variant="danger"
-                    onClick={() => {
-                      setError('')
-                      setConfirmation({ course: row.original })
-                    }}
-                    disabled={busy}
-                  >
-                    Xóa
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
+          <CourseRowActions
+            course={row.original}
+            canReview={canReviewCourse(row.original, role)}
+            readOnly={readOnly}
+            busy={busy}
+            handlers={rowHandlers}
+          />
         ),
       },
     ],
-    [readOnly, busy]
+    [readOnly, busy, role, rowHandlers]
   )
-  const setFilter = (key: 'type' | 'status' | 'categoryId', value: string) =>
+  // One status filter over the two backend fields (status, reviewState).
+  const statusFilter =
+    query.reviewState ?? (query.status === 'DRAFT' ? 'DRAFT' : (query.status ?? 'ALL'))
+  const setStatusFilter = (value: string) =>
+    setQuery((old) => ({
+      ...old,
+      status:
+        value === 'PUBLISHED' || value === 'ARCHIVED'
+          ? value
+          : value === 'DRAFT'
+            ? 'DRAFT'
+            : undefined,
+      reviewState:
+        value === 'PENDING' || value === 'REJECTED'
+          ? value
+          : value === 'DRAFT'
+            ? 'NONE'
+            : undefined,
+      page: 0,
+    }))
+  const setFilter = (key: 'type' | 'categoryId', value: string) =>
     setQuery((old) => ({ ...old, [key]: value === 'ALL' ? undefined : value, page: 0 }))
-  async function confirm() {
-    if (!confirmation || busy) return
+  const selectedSubject = query.categoryId ?? 'ALL'
+  const subjectTabs = [
+    { id: 'ALL', label: 'Tất cả môn học' },
+    ...(categories.data ?? []).map((category) => ({ id: category.id, label: category.name })),
+  ]
+  // Runs one change on a course and refreshes the list; false means the dialog should stay open.
+  async function perform(work: () => Promise<unknown>, done: string): Promise<boolean> {
+    if (busy) return false
     setBusy(true)
     setError('')
     try {
-      if (confirmation.status) await changeCourseStatus(confirmation.course, confirmation.status)
-      else await deleteAdminCourse(confirmation.course.id)
-      setNotice(confirmation.status ? 'Đã cập nhật trạng thái khóa.' : 'Đã xóa khóa nháp.')
-      setConfirmation(null)
+      await work()
+      setNotice(done)
       resource.reload()
+      pending.reload()
+      return true
     } catch (err) {
       setError(crudError(err))
       if (unknownMutation(err)) {
-        setConfirmation(null)
+        setDeleting(null)
+        setReviewing(null)
+        setRejecting(null)
         resource.reload()
       }
+      return false
     } finally {
       setBusy(false)
     }
@@ -180,36 +233,118 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       <CourseDetailScreen
         id={selectedId}
         readOnly={readOnly}
+        initialTab={openOnContent ? 'content' : 'overview'}
         onBack={() => {
           setSelectedId(null)
           resource.reload()
+          pending.reload()
         }}
       />
     )
-  return (
-    <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">Khóa trọn bộ và khóa nhỏ, ở mọi trạng thái.</p>
-        <div className="flex gap-2">
-          <Button
-            appearance="outline"
-            onClick={resource.reload}
-            disabled={busy || resource.status === 'loading'}
-          >
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
-          {!readOnly && (
-            <Button
-              onClick={() => setEditor({ course: null })}
-              disabled={busy || categories.status !== 'ready' || resource.status !== 'ready'}
-            >
-              <Plus size={16} />
-              Tạo khóa học
-            </Button>
+  const courseList = (
+    <>
+      <FilterToolbar>
+        <form
+          className="w-full sm:max-w-sm sm:min-w-40 sm:flex-1"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setQuery((old) => ({ ...old, query: search.trim() || undefined, page: 0 }))
+          }}
+        >
+          <SearchInput
+            ariaLabel="Tìm khóa học"
+            placeholder="Tìm tên khóa học"
+            maxLength={200}
+            value={search}
+            onChange={setSearch}
+            className="sm:max-w-none"
+          />
+        </form>
+        <FilterGroup>
+          <FilterSelect
+            className="sm:w-40"
+            ariaLabel="Loại khóa lọc"
+            value={query.type ?? 'ALL'}
+            onChange={(value) => setFilter('type', value)}
+            options={[
+              { id: 'ALL', label: 'Tất cả loại' },
+              { id: 'MAIN', label: COURSE_TYPE_LABELS.MAIN },
+              { id: 'SECTION', label: COURSE_TYPE_LABELS.SECTION },
+            ]}
+          />
+          <FilterSelect
+            className="sm:w-40"
+            ariaLabel="Trạng thái khóa lọc"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { id: 'ALL', label: 'Tất cả trạng thái' },
+              { id: 'DRAFT', label: COURSE_STATUS_LABELS.DRAFT },
+              { id: 'PENDING', label: REVIEW_STATE_LABELS.PENDING },
+              { id: 'REJECTED', label: REVIEW_STATE_LABELS.REJECTED },
+              { id: 'PUBLISHED', label: COURSE_STATUS_LABELS.PUBLISHED },
+              { id: 'ARCHIVED', label: COURSE_STATUS_LABELS.ARCHIVED },
+            ]}
+          />
+        </FilterGroup>
+      </FilterToolbar>
+      <ScheduleResourceState
+        skeleton="table"
+        inset
+        status={resource.status}
+        errorMessage={resource.errorMessage}
+        onRetry={resource.reload}
+      >
+        <DataTable
+          columns={columns}
+          data={resource.data?.content ?? []}
+          getRowKey={(course) => course.id}
+          onRowClick={(course) => openDetail(course.id)}
+          emptyMessage="Chưa có khóa học phù hợp."
+        />
+        <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
+          <p className="text-sm text-text-tertiary">
+            {resource.data?.totalElements ?? 0} khóa học
+          </p>
+          {(resource.data?.totalPages ?? 0) > 1 && (
+            <Pagination
+              currentPage={(query.page ?? 0) + 1}
+              totalPages={resource.data?.totalPages ?? 1}
+              onPageChange={(page) => setQuery((old) => ({ ...old, page: page - 1 }))}
+              sideLayout="icon"
+            />
           )}
         </div>
-      </div>
+      </ScheduleResourceState>
+    </>
+  )
+  return (
+    <section className="flex flex-col gap-5">
+      <PageHeading
+        title={title}
+        subtitle="Soạn khóa, gửi duyệt và theo dõi trạng thái bán. Bấm vào một khóa để xem chi tiết."
+        readOnly={readOnly}
+        action={
+          <>
+            <Button
+              appearance={statusFilter === 'PENDING' ? 'fill' : 'outline'}
+              aria-pressed={statusFilter === 'PENDING'}
+              onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+            >
+              Chờ duyệt{pending.data ? ` (${pending.data.totalElements})` : ''}
+            </Button>
+            {!readOnly && (
+              <Button
+                onClick={() => setEditor({ course: null })}
+                disabled={busy || categories.status !== 'ready' || resource.status !== 'ready'}
+              >
+                <Plus size={16} />
+                Tạo khóa học
+              </Button>
+            )}
+          </>
+        }
+      />
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>
@@ -222,89 +357,36 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
       )}
       {categories.status === 'error' && (
         <Notice tone="warning">
-          Không tải được danh mục.{' '}
+          Không tải được môn học.{' '}
           <Button appearance="outline" size="sm" onClick={categories.reload}>
             Thử lại
           </Button>
         </Notice>
       )}
-      <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        <div className="flex flex-wrap gap-3 px-5 py-4">
-          <form
-            className="flex w-full gap-2 sm:w-auto sm:flex-1"
-            onSubmit={(e) => {
-              e.preventDefault()
-              setQuery((old) => ({ ...old, query: search.trim(), page: 0 }))
-            }}
-          >
-            <Input
-              aria-label="Tìm khóa học"
-              placeholder="Tên hoặc slug..."
-              maxLength={200}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="min-w-0 flex-1"
-            />
-            <Button type="submit" appearance="outline" aria-label="Tìm kiếm">
-              <Search size={16} />
-            </Button>
-          </form>
-          <SelectField
-            ariaLabel="Loại khóa lọc"
-            value={query.type ?? 'ALL'}
-            onChange={(v) => setFilter('type', v)}
-            options={[
-              { id: 'ALL', label: 'Tất cả loại' },
-              { id: 'MAIN', label: 'MAIN · Trọn bộ' },
-              { id: 'SECTION', label: 'SECTION · Khóa nhỏ' },
-            ]}
-          />
-          <SelectField
-            ariaLabel="Trạng thái khóa lọc"
-            value={query.status ?? 'ALL'}
-            onChange={(v) => setFilter('status', v)}
-            options={[
-              { id: 'ALL', label: 'Tất cả trạng thái' },
-              ...Object.entries(COURSE_STATUS_LABELS).map(([id, label]) => ({ id, label })),
-            ]}
-          />
-          <SelectField
-            ariaLabel="Danh mục lọc"
-            value={query.categoryId ?? 'ALL'}
-            onChange={(v) => setFilter('categoryId', v)}
-            disabled={categories.status !== 'ready'}
-            options={[
-              { id: 'ALL', label: 'Tất cả danh mục' },
-              ...(categories.data ?? []).map((c) => ({ id: c.id, label: c.name })),
-            ]}
-          />
-        </div>
-        <ScheduleResourceState
-          status={resource.status}
-          errorMessage={resource.errorMessage}
-          onRetry={resource.reload}
-        >
-          <DataTable
-            columns={columns}
-            data={resource.data?.content ?? []}
-            getRowKey={(c) => c.id}
-            emptyMessage="Chưa có khóa học phù hợp."
-          />
-          <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
-            <p className="text-sm text-text-tertiary">
-              {resource.data?.totalElements ?? 0} khóa học
-            </p>
-            {(resource.data?.totalPages ?? 0) > 1 && (
-              <Pagination
-                currentPage={(query.page ?? 0) + 1}
-                totalPages={resource.data?.totalPages ?? 1}
-                onPageChange={(p) => setQuery((old) => ({ ...old, page: p - 1 }))}
-                sideLayout="icon"
-              />
-            )}
-          </div>
-        </ScheduleResourceState>
-      </section>
+      <ConsoleTabs
+        className="flex flex-col"
+        value={selectedSubject}
+        onValueChange={(value) => setFilter('categoryId', value)}
+      >
+        <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+          <ConsoleTabsList aria-label="Lọc khóa học theo môn học" className="px-4">
+            {subjectTabs.map((subject) => (
+              <ConsoleTabsTrigger key={subject.id} value={subject.id}>
+                {subject.label}
+              </ConsoleTabsTrigger>
+            ))}
+          </ConsoleTabsList>
+          {subjectTabs.map((subject) => (
+            <ConsoleTabsContent
+              key={subject.id}
+              value={subject.id}
+              className="gap-0 pt-0"
+            >
+              {selectedSubject === subject.id ? courseList : null}
+            </ConsoleTabsContent>
+          ))}
+        </section>
+      </ConsoleTabs>
       {editor && categories.data && (
         <CourseEditorDialog
           key={editor.course?.id ?? 'new'}
@@ -321,23 +403,12 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
           }}
         />
       )}
-      {confirmation && (
+      {deleting && (
         <ConfirmDialog
-          title={
-            confirmation.status === 'PUBLISHED'
-              ? 'Xuất bản khóa học?'
-              : confirmation.status === 'ARCHIVED'
-                ? 'Lưu trữ khóa học?'
-                : 'Xóa khóa nháp?'
-          }
+          title="Xóa khóa nháp?"
           description={
             <>
-              {confirmation.course.title}.{' '}
-              {confirmation.status === 'ARCHIVED'
-                ? 'Ẩn khỏi danh sách mở bán; giữ lịch sử và quyền học đã cấp.'
-                : confirmation.status === 'PUBLISHED'
-                  ? 'Chỉ xuất bản khi nội dung và các SECTION đã sẵn sàng.'
-                  : 'Không thể khôi phục; backend sẽ chặn nếu còn tham chiếu.'}
+              {deleting.title}. Không thể khôi phục; backend sẽ chặn nếu còn tham chiếu.
               {error && (
                 <span role="alert" className="mt-2 block text-danger">
                   {error}
@@ -346,11 +417,54 @@ export default function CourseManagement({ readOnly = false }: { readOnly?: bool
             </>
           }
           cancelLabel="Hủy"
-          confirmLabel={confirmation.status ? 'Xác nhận' : 'Xóa khóa'}
-          variant={confirmation.status ? 'primary' : 'danger'}
+          confirmLabel="Xóa khóa"
+          variant="danger"
           busy={busy}
-          onCancel={() => setConfirmation(null)}
-          onConfirm={() => void confirm()}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() =>
+            void perform(() => deleteAdminCourse(deleting.id), 'Đã xóa khóa nháp.').then(
+              (ok) => ok && setDeleting(null)
+            )
+          }
+        />
+      )}
+      {reviewing && (
+        <ConfirmDialog
+          title={ACTION_COPY[reviewing.action].title}
+          description={
+            <>
+              {reviewing.course.title}. {ACTION_COPY[reviewing.action].body}
+              {error && (
+                <span role="alert" className="mt-2 block text-danger">
+                  {error}
+                </span>
+              )}
+            </>
+          }
+          cancelLabel="Hủy"
+          confirmLabel={ACTION_COPY[reviewing.action].confirm}
+          busy={busy}
+          onCancel={() => setReviewing(null)}
+          onConfirm={() =>
+            void perform(
+              () => runReviewAction(reviewing.action, reviewing.course.id),
+              ACTION_COPY[reviewing.action].done
+            ).then((ok) => ok && setReviewing(null))
+          }
+        />
+      )}
+      {rejecting && (
+        <CourseRejectDialog
+          courseTitle={rejecting.title}
+          busy={busy}
+          error={error}
+          onCancel={() => setRejecting(null)}
+          onSubmit={(note) =>
+            void perform(
+              async () => rejectCourseReview(await getAdminCourse(rejecting.id), note),
+              'Đã trả lại khóa kèm lý do.'
+            ).then((ok) => ok && setRejecting(null))
+          }
         />
       )}
     </section>

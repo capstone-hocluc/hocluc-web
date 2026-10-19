@@ -2,6 +2,9 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
 import { studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
+import StudentChatPage from './StudentChatPage'
+import ChatFeatureGate from '../../components/chat-feature-gate'
+import MascotState from '../../components/common/MascotState'
 import StudentDashboard from './StudentDashboard'
 import MyCourses from './MyCourses'
 import CourseDetail from './CourseDetail'
@@ -55,8 +58,19 @@ function StudentRoutes({
             }
           />
         )
+      case 'chat':
+        return <ChatFeatureGate><StudentChatPage conversationId={route.conversationId} onSelectConversation={(id) => navigate(studentRoutes.chat(id))} /></ChatFeatureGate>
       case 'schedule':
         return <StudentSchedulePage />
+      // Listed in the sidebar, not built yet.
+      case 'roadmap':
+      case 'tutor':
+        return (
+          <MascotState
+            title={route.name === 'roadmap' ? 'Lộ trình của tôi đang phát triển' : 'Gia sư AI đang phát triển'}
+            message="Tính năng này đã có trong kế hoạch và sẽ sớm ra mắt."
+          />
+        )
       case 'learning-profile':
         return <LearningProfile onEditProfile={() => navigate(studentRoutes.profile())} />
       case 'profile':

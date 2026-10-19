@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { AlertCircle, CheckCircle2, Circle, Eye, EyeOff, LockKeyhole } from '../../../components/console/icons'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Circle,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+} from '../../../components/console/icons'
 import {
   AccountForm,
   AccountPanel,
@@ -47,7 +54,7 @@ function PasswordInput({
       {onToggleVisible && (
         <button
           type="button"
-          className="absolute top-1/2 right-2.5 grid -translate-y-1/2 cursor-pointer place-items-center text-text-muted hover:text-primary"
+          className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-lg text-text-muted hover:text-primary-text"
           onClick={onToggleVisible}
           aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
         >
@@ -155,14 +162,16 @@ function SecurityTab() {
             />
           </Field>
 
-          <div className="col-span-full rounded-xl bg-surface-soft p-3.5">
-            <strong className="text-[13px] text-text-heading">Mật khẩu cần đáp ứng</strong>
+          <div className="col-span-full rounded-xl border border-line-card bg-surface-brand p-4">
+            <strong className="text-[15px] font-bold text-text-heading">
+              Mật khẩu cần đáp ứng
+            </strong>
             <ul className="mt-2 grid gap-1.5">
               {requirements.map((rule) => (
                 <li
                   key={rule.key}
                   className={cn(
-                    'flex items-center gap-2 text-[13px]',
+                    'flex items-center gap-2 text-sm font-semibold',
                     rule.met ? 'text-badge-success-text' : 'text-text-muted'
                   )}
                 >

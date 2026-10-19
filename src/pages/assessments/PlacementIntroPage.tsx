@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { Clock, ListChecks } from '../../components/console/icons'
+import AssessmentFacts from '../../components/assessment/AssessmentFacts'
 import QuizAttemptHistory from '../../components/assessment/QuizAttemptHistory'
 import BackLink from '../../components/student/common/BackLink'
 import ResourceState from '../../components/student/common/ResourceState'
@@ -58,7 +60,7 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
-        loading={<Skeleton className="h-[260px] rounded-2xl" />}
+        loading={<Skeleton className="h-[260px] rounded-xl" />}
         error={{ title: 'Không thể tải bài kiểm tra đầu vào.' }}
       />
 
@@ -68,30 +70,50 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
 
           <Card
             as="section"
+            variant="panel"
             padding="none"
-            radius="lg"
-            className="flex flex-col items-start border-border-subtle p-[22px]"
+            radius="xl"
+            className="flex flex-col items-start gap-4 p-7 max-[640px]:p-5"
           >
             <StatusBadge
               tone="assessment"
               size="sm"
-              className="mb-2.5 px-3 py-1 text-[11.5px] font-extrabold tracking-[0.04em] uppercase"
+              className="px-3 py-1 text-xs font-semibold tracking-[0.04em] uppercase"
             >
               Kiểm tra đầu vào
             </StatusBadge>
-            <h1 className="mb-2.5 text-xl font-bold text-text-heading">{data.test.title}</h1>
+            <h1 className="text-2xl leading-tight font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
+              {data.test.title}
+            </h1>
             {data.test.description && (
-              <p className="mb-4 text-sm text-text-secondary">{data.test.description}</p>
+              <p className="text-base leading-[1.6] text-text-body">{data.test.description}</p>
             )}
 
-            <div className="mb-3.5 flex flex-wrap gap-x-[18px] gap-y-2.5 text-[13px] text-text-faint">
-              <span>{data.test.questions.length} câu hỏi</span>
-              {data.test.durationMinutes > 0 && <span>{data.test.durationMinutes} phút</span>}
-            </div>
+            <AssessmentFacts
+              facts={[
+                {
+                  icon: ListChecks,
+                  label: 'Số câu hỏi',
+                  value: `${data.test.questions.length} câu`,
+                  tone: 'primary',
+                },
+                ...(data.test.durationMinutes > 0
+                  ? [
+                      {
+                        icon: Clock,
+                        label: 'Thời gian',
+                        value: `${data.test.durationMinutes} phút`,
+                        tone: 'assessment' as const,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
 
             <Button
               shape="pill"
-              className="h-[46px] px-[26px] text-sm font-extrabold"
+              size="lg"
+              className="px-8 text-base font-semibold max-[640px]:w-full"
               onClick={handleStart}
               disabled={starting}
             >

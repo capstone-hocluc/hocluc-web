@@ -71,6 +71,16 @@ function LoadingState() {
   )
 }
 
+// A rejected session is the same as no session: drop it and go to login instead of stranding the visitor.
+function SessionExpired({ onLogin, onReset }: { onLogin: () => void; onReset: () => void }) {
+  useEffect(() => {
+    onReset()
+    onLogin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return <LoadingState />
+}
+
 function ManagementRouteGuard({
   allowedRoles,
   onLogin,
@@ -96,21 +106,7 @@ function ManagementRouteGuard({
   }, [loadCurrentUser, onLogin, status])
 
   if (!getAccessToken()) return <LoadingState />
-  if (status === 'error') {
-    return (
-      <AccessState
-        title="Không thể xác thực phiên đăng nhập"
-        description="Phiên làm việc không còn hợp lệ hoặc máy chủ chưa phản hồi. Vui lòng đăng nhập lại."
-        actionLabel="Đăng nhập lại"
-        onAction={() => {
-          clearTokens()
-          clearCurrentUser()
-          onLogin()
-        }}
-        danger
-      />
-    )
-  }
+  if (status === 'error') return <SessionExpired onLogin={onLogin} onReset={() => { clearTokens(); clearCurrentUser() }} />
 
   if (status === 'idle' || status === 'loading' || !profile) return <LoadingState />
 

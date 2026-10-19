@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { matchesSearch } from '../../lib/search'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import {
   ArrowDown,
@@ -510,17 +511,15 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
   }
 
   const allExams = (quizzes.data ?? []).filter((quiz) => quiz.type === 'EXAM')
-  const term = search.trim().toLocaleLowerCase('vi')
   const examItems = allExams.filter((exam) => {
-    const matchesSearch = !term ||
-      (exam.title + ' ' + (exam.courseTitle ?? '')).toLocaleLowerCase('vi').includes(term)
+    const matchesQuery = matchesSearch(search, exam.title, exam.courseTitle)
     const matchesStatus = statusFilter === 'Tất cả' ||
       (statusFilter === 'Bản nháp' && exam.status === 'DRAFT') ||
       (statusFilter === 'Đã xuất bản' && exam.status === 'PUBLISHED') ||
       (statusFilter === 'Đã lưu trữ' && exam.status === 'ARCHIVED')
-    return matchesSearch && matchesStatus
+    return matchesQuery && matchesStatus
   })
-  const hasActiveFilters = Boolean(term) || statusFilter !== 'Tất cả'
+  const hasActiveFilters = Boolean(search.trim()) || statusFilter !== 'Tất cả'
 
   return (
     <section className="flex flex-col gap-5">

@@ -1,5 +1,13 @@
 import { useState } from 'react'
-import { CheckCircle2, Lock } from '../../components/console/icons'
+import {
+  CheckCircle2,
+  Clock,
+  ListChecks,
+  Lock,
+  RotateCcw,
+  Target,
+} from '../../components/console/icons'
+import AssessmentFacts from '../../components/assessment/AssessmentFacts'
 import QuizAttemptHistory from '../../components/assessment/QuizAttemptHistory'
 import BackLink from '../../components/student/common/BackLink'
 import ResourceState from '../../components/student/common/ResourceState'
@@ -56,7 +64,7 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
-        loading={<Skeleton className="h-[260px] rounded-2xl" />}
+        loading={<Skeleton className="h-[260px] rounded-xl" />}
         forbidden={{ title: getAssessmentLockMessage(null) }}
         notFound={{ title: 'Không tìm thấy bài kiểm tra.' }}
         error={{ title: 'Không thể tải bài kiểm tra.' }}
@@ -68,39 +76,65 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
 
           <Card
             as="section"
+            variant="panel"
             padding="none"
-            radius="lg"
-            className="flex flex-col items-start border-border-subtle p-[22px]"
+            radius="xl"
+            className="flex flex-col items-start gap-4 p-7 max-[640px]:p-5"
           >
             <StatusBadge
               tone={getQuizKind(quiz.type) === 'assessment' ? 'assessment' : 'practice'}
               size="sm"
-              className="mb-2.5 px-3 py-1 text-[11.5px] font-extrabold tracking-[0.04em] uppercase"
+              className="px-3 py-1 text-xs font-semibold tracking-[0.04em] uppercase"
             >
               {prettifyEnum(quiz.type)}
             </StatusBadge>
-            <h1 className="mb-2.5 text-xl font-bold text-text-heading">{quiz.title}</h1>
+            <h1 className="text-2xl leading-tight font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
+              {quiz.title}
+            </h1>
             {quiz.description && (
-              <p className="mb-4 text-sm text-text-secondary">{quiz.description}</p>
+              <p className="text-base leading-[1.6] text-text-body">{quiz.description}</p>
             )}
 
-            <div className="mb-3.5 flex flex-wrap gap-x-[18px] gap-y-2.5 text-[13px] text-text-faint">
-              <span>{quiz.questionCount} câu hỏi</span>
-              {quiz.durationMinutes > 0 && <span>{quiz.durationMinutes} phút</span>}
-              {quiz.passingPercentage != null && (
-                <span>Điểm đạt: {quiz.passingPercentage}%</span>
-              )}
-              <span>
-                Lượt làm: {quiz.attemptsUsed}/{quiz.maxAttempts}
-              </span>
-            </div>
+            <AssessmentFacts
+              facts={[
+                {
+                  icon: ListChecks,
+                  label: 'Số câu hỏi',
+                  value: `${quiz.questionCount} câu`,
+                  tone: 'primary',
+                },
+                ...(quiz.durationMinutes > 0
+                  ? [
+                      {
+                        icon: Clock,
+                        label: 'Thời gian',
+                        value: `${quiz.durationMinutes} phút`,
+                        tone: 'assessment' as const,
+                      },
+                    ]
+                  : []),
+                ...(quiz.passingPercentage != null
+                  ? [
+                      {
+                        icon: Target,
+                        label: 'Điểm đạt',
+                        value: `${quiz.passingPercentage}%`,
+                        tone: 'practice' as const,
+                      },
+                    ]
+                  : []),
+                {
+                  icon: RotateCcw,
+                  label: 'Lượt làm',
+                  value: `${quiz.attemptsUsed}/${quiz.maxAttempts}`,
+                  tone: 'live',
+                },
+              ]}
+            />
 
             {quiz.passed && (
-              <StatusBadge
-                tone="success"
-                className="mb-3.5 gap-1.5 px-3 py-1.5 text-[12.5px] font-bold"
-              >
-                <CheckCircle2 size={14} />
+              <StatusBadge tone="success" className="gap-1.5 px-3.5 py-1.5 text-sm font-bold">
+                <CheckCircle2 size={16} />
                 Đã đạt
                 {quiz.bestPercentage != null && ` · Kết quả tốt nhất ${quiz.bestPercentage}%`}
               </StatusBadge>
@@ -114,7 +148,8 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
             ) : quiz.inProgressAttemptId ? (
               <Button
                 shape="pill"
-                className="h-[46px] px-[26px] text-sm font-extrabold"
+                size="lg"
+                className="px-8 text-base font-semibold max-[640px]:w-full"
                 onClick={handleContinue}
               >
                 Tiếp tục làm bài
@@ -122,7 +157,8 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
             ) : (
               <Button
                 shape="pill"
-                className="h-[46px] px-[26px] text-sm font-extrabold"
+                size="lg"
+                className="px-8 text-base font-semibold max-[640px]:w-full"
                 onClick={handleStart}
                 disabled={starting}
               >

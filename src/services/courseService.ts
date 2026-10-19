@@ -89,6 +89,18 @@ export interface CoursePhase {
   sections: CourseSection[]
 }
 
+/** A SECTION course given with a MAIN course; it is studied as a course of its own. */
+export interface GiftCourse {
+  courseId: string
+  title: string
+  description?: string
+  categoryId?: string
+  categoryName?: string
+  chapterCount: number
+  lessonCount: number
+  progressPercentage?: number | null
+}
+
 export interface CourseDetail {
   id: string
   title: string
@@ -113,6 +125,7 @@ export interface CourseDetail {
   quizCount?: number
   totalDurationSeconds?: number
   phases?: CoursePhase[]
+  gifts?: GiftCourse[]
 }
 
 // Public course detail. Same opportunistic-auth rationale as getMainCourses -

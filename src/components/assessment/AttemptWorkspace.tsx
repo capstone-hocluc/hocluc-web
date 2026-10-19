@@ -3,7 +3,9 @@ import type { QuizQuestion } from '../../services/assessmentService'
 import type { AttemptSession } from '../../hooks/useAttemptSession'
 import BackLink from '../student/common/BackLink'
 import Button from '../ui/Button'
+import Card from '../ui/Card'
 import Notice from '../ui/Notice'
+import Progress from '../ui/Progress'
 import QuestionNavigator from './QuestionNavigator'
 import QuizQuestionCard from './QuizQuestionCard'
 import QuizTimer from './QuizTimer'
@@ -38,7 +40,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
           <Button
             shape="pill"
             size="sm"
-            className="h-auto px-4 py-2 text-[12.5px] font-extrabold"
+            className="h-auto px-4 py-2 text-sm font-semibold"
             onClick={onViewResult}
           >
             Xem kết quả
@@ -63,7 +65,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
             <Button
               appearance="outline"
               shape="pill"
-              className="h-11 border-[1.5px] px-5 text-[13.5px] font-bold text-text-heading"
+              className="h-12 border px-6 text-[15px] font-semibold text-text-heading"
               disabled={currentIndex === 0}
               onClick={() => setCurrentIndex((current) => Math.max(0, current - 1))}
             >
@@ -74,7 +76,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
             {isLast ? (
               <Button
                 shape="pill"
-                className="h-11 px-5 text-[13.5px] font-bold"
+                className="h-12 px-6 text-[15px] font-semibold"
                 disabled={inputsDisabled}
                 onClick={() => session.setShowSubmitDialog(true)}
               >
@@ -83,7 +85,7 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
             ) : (
               <Button
                 shape="pill"
-                className="h-11 px-5 text-[13.5px] font-bold"
+                className="h-12 px-6 text-[15px] font-semibold"
                 onClick={() =>
                   setCurrentIndex((current) => Math.min(questions.length - 1, current + 1))
                 }
@@ -95,34 +97,67 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
           </div>
         </div>
 
-        <aside className="flex flex-col gap-3.5 min-[860px]:sticky min-[860px]:top-28">
+        {/* Below 860px the aside dissolves into the grid so the single timer can stick to the top
+            (order-first) while the navigator card falls under the question. */}
+        <aside className="flex flex-col gap-4 min-[860px]:sticky min-[860px]:top-24 max-[859px]:contents">
           {session.isActive && (
-            <QuizTimer deadlineAt={attempt.deadlineAt} onExpire={session.handleExpire} />
+            <QuizTimer
+              deadlineAt={attempt.deadlineAt}
+              onExpire={session.handleExpire}
+              className="max-[859px]:sticky max-[859px]:top-[84px] max-[859px]:z-20 max-[859px]:order-first"
+            />
           )}
 
-          <div className="text-center text-[12.5px] font-semibold text-text-faint">
-            Đã trả lời {session.answeredCount}/{questions.length} câu
-          </div>
+          <Card variant="panel" padding="none" radius="xl" className="flex flex-col gap-4 p-5">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <h2 className="text-base font-bold text-text-heading">Tiến độ làm bài</h2>
+                <span className="text-sm font-semibold text-primary-text">
+                  {session.answeredCount}/{questions.length}
+                </span>
+              </div>
+              <Progress
+                value={questions.length ? (session.answeredCount / questions.length) * 100 : 0}
+                size="md"
+              />
+              <p className="text-sm font-semibold text-text-secondary">
+                Đã trả lời {session.answeredCount}/{questions.length} câu
+              </p>
+            </div>
 
-          <QuestionNavigator
-            questions={questions}
-            currentQuestionId={currentQuestion.id}
-            answeredQuestionIds={new Set(Object.keys(selectedAnswers))}
-            disabled={submitting}
-            onSelect={(questionId) => {
-              const index = questions.findIndex((question) => question.id === questionId)
-              if (index >= 0) setCurrentIndex(index)
-            }}
-          />
+            <QuestionNavigator
+              questions={questions}
+              currentQuestionId={currentQuestion.id}
+              answeredQuestionIds={new Set(Object.keys(selectedAnswers))}
+              disabled={submitting}
+              onSelect={(questionId) => {
+                const index = questions.findIndex((question) => question.id === questionId)
+                if (index >= 0) setCurrentIndex(index)
+              }}
+            />
 
-          <Button
-            variant="danger"
-            className="h-11 rounded-xl text-[13.5px] font-extrabold"
-            disabled={inputsDisabled}
-            onClick={() => session.setShowSubmitDialog(true)}
-          >
-            Nộp bài
-          </Button>
+            <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-bold text-text-secondary">
+              <li className="flex items-center gap-1.5">
+                <span className="size-3 rounded-[4px] bg-primary" /> Đang làm
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="size-3 rounded-[4px] border border-line-brand bg-surface-brand" />{' '}
+                Đã trả lời
+              </li>
+              <li className="flex items-center gap-1.5">
+                <span className="size-3 rounded-[4px] border border-line bg-surface" /> Chưa làm
+              </li>
+            </ul>
+
+            <Button
+              variant="danger"
+              className="h-12 w-full rounded-xl text-[15px] font-semibold"
+              disabled={inputsDisabled}
+              onClick={() => session.setShowSubmitDialog(true)}
+            >
+              Nộp bài
+            </Button>
+          </Card>
         </aside>
       </div>
 

@@ -13,7 +13,10 @@ const enc = encodeURIComponent
 export const studentRoutes = {
   dashboard: () => '/student/dashboard',
   schedule: () => '/student/schedule',
+  chat: (id?: string) => id ? `/student/chat/${enc(id)}` : '/student/chat',
   learningProfile: () => '/student/learning-profile',
+  roadmap: () => '/student/roadmap',
+  tutor: () => '/student/tutor',
   profile: (section?: 'student') =>
     section ? `/student/profile?section=${enc(section)}` : '/student/profile',
   courses: () => '/student/courses',
@@ -38,7 +41,10 @@ export const studentRoutes = {
 export type StudentRoute =
   | { name: 'dashboard' }
   | { name: 'schedule' }
+  | { name: 'chat'; conversationId?: string }
   | { name: 'learning-profile' }
+  | { name: 'roadmap' }
+  | { name: 'tutor' }
   | { name: 'profile' }
   | { name: 'courses' }
   | { name: 'course-detail'; courseId: string }
@@ -85,10 +91,18 @@ export function parseStudentRoute(path: string): StudentRoute | null {
   switch (area) {
     case 'dashboard':
       return rest.length === 0 ? { name: 'dashboard' } : null
+    case 'chat':
+      if (rest.length === 0) return { name: 'chat' }
+      return rest.length === 1 && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(a)
+        ? { name: 'chat', conversationId: a } : null
     case 'schedule':
       return rest.length === 0 ? { name: 'schedule' } : null
     case 'learning-profile':
       return rest.length === 0 ? { name: 'learning-profile' } : null
+    case 'roadmap':
+      return rest.length === 0 ? { name: 'roadmap' } : null
+    case 'tutor':
+      return rest.length === 0 ? { name: 'tutor' } : null
     case 'profile':
       return rest.length === 0 ? { name: 'profile' } : null
     case 'courses': {

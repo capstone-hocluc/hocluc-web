@@ -8,11 +8,17 @@ export interface ChapterAdmin {
   sequence: number
   published: boolean
   updatedAt: string
+  sectionId: string | null
+  sectionTitle: string | null
 }
 export interface SaveChapterRequest {
   title: string
   description: string | null
   expectedUpdatedAt?: string
+  /** A content section of the same course. Left out on an update, the chapter stays where it is. */
+  sectionId?: string
+  /** True takes the chapter out of its section. */
+  clearSection?: boolean
 }
 const path = (courseId: string, chapterId?: string) =>
   `/api/v1/courses/${encodeURIComponent(courseId)}/chapters${chapterId ? `/${encodeURIComponent(chapterId)}` : ''}`

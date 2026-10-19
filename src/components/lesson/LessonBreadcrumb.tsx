@@ -10,16 +10,16 @@ interface LessonBreadcrumbProps {
 function LessonBreadcrumb({ lesson, onBack }: LessonBreadcrumbProps) {
   return (
     <nav
-      className="flex flex-wrap items-center gap-1.5 text-[13px] text-text-secondary"
+      className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-text-secondary"
       aria-label="Breadcrumb"
     >
       <Button
         appearance="ghost"
         size="sm"
-        className="h-auto gap-1.5 p-0 text-[13px] font-medium text-text-secondary hover:bg-transparent hover:text-primary"
+        className="h-auto gap-1.5 p-0 text-sm font-semibold text-primary-text hover:bg-transparent"
         onClick={onBack}
       >
-        <ArrowLeft size={15} />
+        <ArrowLeft size={16} />
         Khóa học
       </Button>
       {lesson.sectionCourseTitle && (
@@ -35,7 +35,7 @@ function LessonBreadcrumb({ lesson, onBack }: LessonBreadcrumbProps) {
         </>
       )}
       <ChevronRight size={13} />
-      <span className="max-w-[260px] truncate font-bold text-text-heading">{lesson.title}</span>
+      <span className="max-w-[260px] truncate font-semibold text-text-heading">{lesson.title}</span>
     </nav>
   )
 }

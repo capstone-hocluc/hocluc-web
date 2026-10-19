@@ -6,7 +6,8 @@ import SearchSelectField from '../../console/search-select-field'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Plus, RefreshCw } from '../../console/icons'
+import { Eye, Pencil, Plus, Trash2 } from '../../console/icons'
+import { IconAction, RowActions } from '../../console/icon-action'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourses } from '../../../services/courseAdminService'
 import {
@@ -91,41 +92,26 @@ export default function StudyGroupManagement({ readOnly = false }: { readOnly?: 
         id: 'actions',
         header: 'Thao tác',
         enableSorting: false,
+        meta: { className: 'w-40 text-right' },
         cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              appearance="outline"
-              disabled={busy}
-              onClick={() => setSelectedGroupId(row.original.id)}
-            >
-              Chi tiết
-            </Button>
+          <RowActions>
+            <IconAction label="Chi tiết" icon={Eye} disabled={busy} onClick={() => setSelectedGroupId(row.original.id)} />
             {!readOnly && (
               <>
-                <Button
-                  size="sm"
-                  appearance="ghost"
-                  disabled={busy}
-                  onClick={() => setEditor({ group: row.original })}
-                >
-                  Sửa
-                </Button>
-                <Button
-                  size="sm"
-                  appearance="ghost"
+                <IconAction label="Sửa" icon={Pencil} disabled={busy} onClick={() => setEditor({ group: row.original })} />
+                <IconAction
+                  label="Xóa"
+                  icon={Trash2}
                   variant="danger"
                   disabled={busy}
                   onClick={() => {
                     setError('')
                     setDeleting(row.original)
                   }}
-                >
-                  Xóa
-                </Button>
+                />
               </>
             )}
-          </div>
+          </RowActions>
         ),
       },
     ],
@@ -171,10 +157,6 @@ export default function StudyGroupManagement({ readOnly = false }: { readOnly?: 
               )
             }
           />
-          <Button appearance="outline" onClick={groups.reload} disabled={busy}>
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
         </div>
         {!readOnly && (
           <Button onClick={() => setEditor({ group: null })} disabled={busy || !courseId}>
@@ -199,7 +181,7 @@ export default function StudyGroupManagement({ readOnly = false }: { readOnly?: 
         <Notice tone="warning">Chọn khóa trọn bộ (MAIN) để quản lý nhóm.</Notice>
       ) : (
         <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-          <ScheduleResourceState
+          <ScheduleResourceState skeleton="table" inset
             status={groups.status}
             errorMessage={groups.errorMessage}
             onRetry={groups.reload}

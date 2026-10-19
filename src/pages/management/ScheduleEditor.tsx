@@ -117,6 +117,12 @@ export default function ScheduleEditor({
       <ConsoleSheet open onClose={requestClose} closeDisabled={busy} title={initial ? 'Chỉnh sửa lịch học' : 'Tạo lịch học'}>
         <form className="flex flex-col gap-4" onSubmit={submit} onChange={updateFieldDraft}>
           {courseName && <Notice tone="info">Khóa: {courseName}</Notice>}
+          {initial?.deliveryMode === 'ONLINE' && (
+            <Notice tone="warning">
+              Lịch trực tuyến đã gắn phòng Zoom. Sửa giờ hoặc giáo viên ở đây không cập nhật phòng Zoom và lớp
+              trực tuyến đã tạo; hãy kiểm tra lại link họp sau khi lưu.
+            </Notice>
+          )}
           {errorMessage && <Notice tone="danger">{errorMessage}</Notice>}
           {validationMessage && <p className="text-sm text-badge-error-text" role="alert">{validationMessage}</p>}
           <Field label="Tên buổi học">
@@ -167,12 +173,19 @@ export default function ScheduleEditor({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Hình thức">
-              <select name="deliveryMode" disabled={busy} defaultValue={initial?.deliveryMode ?? 'PHYSICAL'} className={fieldControlClass}>
-                <option value="PHYSICAL">Trực tiếp</option>
-                <option value="ONLINE">Trực tuyến</option>
-                <option value="HYBRID">Kết hợp</option>
-                <option value="OFFLINE">Ngoại tuyến</option>
-              </select>
+              <SelectField
+                ariaLabel="Hình thức"
+                name="deliveryMode"
+                disabled={busy}
+                defaultValue={initial?.deliveryMode ?? 'PHYSICAL'}
+                triggerClassName={fieldControlClass}
+                options={[
+                  { id: 'PHYSICAL', label: 'Trực tiếp' },
+                  { id: 'ONLINE', label: 'Trực tuyến' },
+                  { id: 'HYBRID', label: 'Kết hợp' },
+                  { id: 'OFFLINE', label: 'Ngoại tuyến' },
+                ]}
+              />
             </Field>
             <Field label="Phòng / địa điểm">
               <input name="location" autoComplete="off" disabled={busy} defaultValue={initial?.location ?? ''} className={fieldControlClass} />

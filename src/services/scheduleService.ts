@@ -12,14 +12,6 @@ export function getCourseSchedules(courseId: string): Promise<ScheduleResponse[]
   )
 }
 
-export function getSchedule(scheduleId: string): Promise<ScheduleResponse> {
-  return requestSchedulingData<ScheduleResponse>(
-    API + '/schedules/' + encodeURIComponent(scheduleId),
-    { auth: true },
-    'Không thể tải thông tin lịch học.'
-  )
-}
-
 export function createSchedule(courseId: string, payload: CreateScheduleRequest): Promise<ScheduleResponse> {
   return requestSchedulingData<ScheduleResponse>(
     API + '/courses/' + encodeURIComponent(courseId) + '/schedules',

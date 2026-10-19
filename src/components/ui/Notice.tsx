@@ -4,13 +4,13 @@ import { cn } from '../../lib/cn'
 
 // Inline banner: a short message (+ optional action) on a tinted background.
 const notice = cva(
-  'flex flex-wrap items-center gap-2.5 rounded-xl px-4 py-3 text-[13.5px] font-semibold',
+  'flex flex-wrap items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-bold',
   {
     variants: {
       tone: {
-        danger: 'bg-badge-danger-bg text-danger',
-        warning: 'bg-badge-warning-bg text-warning',
-        info: 'bg-badge-info-bg text-badge-info-text',
+        danger: 'border-danger-line bg-badge-danger-bg text-badge-danger-text',
+        warning: 'border-live-line bg-badge-warning-bg text-badge-warning-text',
+        info: 'border-line-brand bg-badge-info-bg text-badge-info-text',
       },
     },
     defaultVariants: { tone: 'info' },

@@ -4,11 +4,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Eye,
-  Filter,
   LoaderCircle,
   MoreHorizontal,
   Plus,
-  Search,
   Trash2,
 } from '../console/icons'
 import {
@@ -30,11 +28,11 @@ import {
 import { grantedRoles } from '../../lib/role-home'
 import Button from '../console/button'
 import DataTable from '../console/data-table'
-import SelectField from '../console/select-field'
+import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../console/filter-toolbar'
 import Status from '../console/status'
+import RoleBadge from '../console/role-badge'
 import ConfirmDialog from '../console/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
-import { Input } from '../tailgrids/core/input'
 import { Pagination } from '../tailgrids/core/pagination'
 import UserCreateDialog from './user-create-dialog'
 import UserDetailDialog from './user-detail-dialog'
@@ -49,7 +47,7 @@ import {
 
 const PAGE_SIZE = 10
 
-const ROLE_OPTIONS = USER_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))
+const ROLE_OPTIONS = USER_ROLES.filter((role) => role !== 'STUDENT').map((role) => ({ id: role, label: ROLE_LABELS[role] }))
 const STATUS_OPTIONS = USER_STATUSES.map((status) => ({ id: status, label: STATUS_LABELS[status] }))
 const ROLE_FILTER_OPTIONS = [{ id: 'ALL', label: 'Tất cả vai trò' }, ...ROLE_OPTIONS]
 const STATUS_FILTER_OPTIONS = [{ id: 'ALL', label: 'Tất cả trạng thái' }, ...STATUS_OPTIONS]
@@ -58,25 +56,20 @@ function emptyPage(): UserListPage {
   return { content: [], pageNumber: 0, pageSize: PAGE_SIZE, totalElements: 0, totalPages: 0, last: true }
 }
 
-const normalize = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[đĐ]/g, 'd')
-    .toLocaleLowerCase('vi-VN')
-    .trim()
-
 interface UserManagementProps {
+  /** Students are the platform's customers and personnel run it, so each has its own list. */
+  audience: 'staff' | 'students'
   readOnly?: boolean
   canCreateUsers?: boolean
 }
 
-function UserManagement({ readOnly = false, canCreateUsers = false }: UserManagementProps) {
+function UserManagement({ audience, readOnly = false, canCreateUsers = false }: UserManagementProps) {
+  const students = audience === 'students'
+  const noun = students ? 'học viên' : 'tài khoản'
   const [page, setPage] = useState(0)
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<UserStatus | 'ALL'>('ALL')
   const [query, setQuery] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
   const [pageData, setPageData] = useState<UserListPage>(emptyPage)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -94,44 +87,39 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   useEffect(() => {
     let ignore = false
 
-    // The request lifecycle starts when the server-side filters or page change.
+    // The request lifecycle starts when the server-side filters, search, or page change.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     setError('')
 
-    getUsers({
-      page,
-      size: PAGE_SIZE,
-      role: roleFilter === 'ALL' ? undefined : roleFilter,
-      status: statusFilter === 'ALL' ? undefined : statusFilter,
-      sort: 'createdAt,desc',
-    })
-      .then((nextPage) => {
-        if (!ignore) setPageData(nextPage)
+    const timer = window.setTimeout(() => {
+      getUsers({
+        page,
+        size: PAGE_SIZE,
+        role: students ? 'STUDENT' : roleFilter === 'ALL' ? undefined : roleFilter,
+        excludeRole: students ? undefined : 'STUDENT',
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+        query: query.trim() || undefined,
+        sort: 'createdAt,desc',
       })
-      .catch((requestError: unknown) => {
-        if (!ignore) setError(getErrorMessage(requestError))
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false)
-      })
+        .then((nextPage) => {
+          if (!ignore) setPageData(nextPage)
+        })
+        .catch((requestError: unknown) => {
+          if (!ignore) setError(getErrorMessage(requestError))
+        })
+        .finally(() => {
+          if (!ignore) setLoading(false)
+        })
+    }, query.trim() ? 250 : 0)
 
     return () => {
       ignore = true
+      window.clearTimeout(timer)
     }
-  }, [page, reloadKey, roleFilter, statusFilter])
+  }, [page, query, reloadKey, roleFilter, statusFilter, students])
 
-  const visibleUsers = useMemo(() => {
-    const needle = normalize(query)
-    if (!needle) return pageData.content
-    return pageData.content.filter((user) =>
-      normalize(
-        [user.email, user.displayName, user.firstName, user.lastName, ...grantedRoles(user).map((role) => ROLE_LABELS[role])]
-          .filter(Boolean)
-          .join(' ')
-      ).includes(needle)
-    )
-  }, [pageData.content, query])
+  const visibleUsers = pageData.content
 
   const updateUserInPage = useCallback((userId: string, updated: UserProfile) => {
     setPageData((current) => ({
@@ -235,7 +223,8 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
   }, [deletingUser])
 
   const columns = useMemo<ColumnDef<UserSummary>[]>(
-    () => [
+    () =>
+      ([
       {
         id: 'name',
         header: 'Tên',
@@ -248,15 +237,15 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
         accessorKey: 'email',
         cell: ({ row }) => <span className="text-text-secondary">{row.original.email}</span>,
       },
-      {
+      !students && {
         id: 'role',
         header: 'Vai trò',
         accessorFn: (user) => ROLE_LABELS[user.role],
         cell: ({ row }) => {
           const roles = grantedRoles(row.original)
           return (
-            <span className="whitespace-nowrap text-text-secondary">
-              {ROLE_LABELS[row.original.role]}
+            <span className="inline-flex items-center whitespace-nowrap">
+              <RoleBadge role={row.original.role} />
               {roles.length > 1 && <span className="ml-1.5 text-xs text-text-tertiary">+{roles.length - 1}</span>}
             </span>
           )
@@ -268,9 +257,15 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
         accessorFn: (user) => STATUS_LABELS[user.status],
         cell: ({ row }) => <Status tone={getStatusTone(row.original.status)}>{STATUS_LABELS[row.original.status]}</Status>,
       },
+      students && {
+        id: 'lastLoginAt',
+        header: 'Đăng nhập gần nhất',
+        accessorFn: (user) => user.lastLoginAt ?? undefined,
+        cell: ({ row }) => <span className="whitespace-nowrap text-text-secondary">{formatDate(row.original.lastLoginAt)}</span>,
+      },
       {
         id: 'createdAt',
-        header: 'Ngày tạo',
+        header: students ? 'Ngày tham gia' : 'Ngày tạo',
         accessorFn: (user) => user.createdAt ?? undefined,
         cell: ({ row }) => <span className="whitespace-nowrap text-text-secondary">{formatDate(row.original.createdAt)}</span>,
       },
@@ -319,8 +314,8 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
           </div>
         ),
       },
-    ],
-    [deleteUserLoading, openUserDetail, readOnly, runUserUpdate, updatingUserId]
+    ] as (ColumnDef<UserSummary> | false)[]).filter((column): column is ColumnDef<UserSummary> => Boolean(column)),
+    [deleteUserLoading, openUserDetail, readOnly, runUserUpdate, students, updatingUserId]
   )
 
   return (
@@ -328,43 +323,29 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
       className="overflow-hidden rounded-xl border border-card-border bg-card-background"
       aria-busy={loading}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <div className="relative w-full sm:w-80">
-          <Search size={16} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-icon-tertiary" />
-          <Input
-            aria-label="Tìm theo tên hoặc email"
-            placeholder="Tìm theo tên hoặc email..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="h-9 w-full py-0 pl-10 text-sm"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" appearance="outline" aria-expanded={showFilters} onClick={() => setShowFilters((open) => !open)}>
-            <Filter size={16} />
-            Lọc
-          </Button>
-          {canCreateUsers && !readOnly && (
-            <Button size="sm" onClick={() => setCreateUserOpen(true)}>
-              <Plus size={16} />
-              Thêm tài khoản
-            </Button>
+      <FilterToolbar>
+        <SearchInput
+          ariaLabel="Tìm theo tên hoặc email"
+          placeholder="Tìm theo tên hoặc email..."
+          value={query}
+          onChange={(value) => {
+            setQuery(value)
+            setPage(0)
+          }}
+        />
+        <FilterGroup>
+          {!students && (
+            <FilterSelect
+              ariaLabel="Lọc theo vai trò"
+              options={ROLE_FILTER_OPTIONS}
+              value={roleFilter}
+              onChange={(value) => {
+                setRoleFilter(value as UserRole | 'ALL')
+                setPage(0)
+              }}
+            />
           )}
-        </div>
-      </div>
-
-      {showFilters && (
-        <div className="flex flex-wrap items-center gap-3 px-5 pb-4">
-          <SelectField
-            ariaLabel="Lọc theo vai trò"
-            options={ROLE_FILTER_OPTIONS}
-            value={roleFilter}
-            onChange={(value) => {
-              setRoleFilter(value as UserRole | 'ALL')
-              setPage(0)
-            }}
-          />
-          <SelectField
+          <FilterSelect
             ariaLabel="Lọc theo trạng thái"
             options={STATUS_FILTER_OPTIONS}
             value={statusFilter}
@@ -373,31 +354,41 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               setPage(0)
             }}
           />
-        </div>
-      )}
+          {canCreateUsers && !readOnly && (
+            <Button size="sm" onClick={() => setCreateUserOpen(true)}>
+              <Plus size={16} />
+              {students ? 'Thêm học viên' : 'Thêm nhân sự'}
+            </Button>
+          )}
+        </FilterGroup>
+      </FilterToolbar>
 
-      {feedback && (
-        <div
-          className="mx-5 mt-4 flex items-center gap-2 rounded-lg bg-badge-success-bg px-3 py-2 text-sm text-badge-success-text"
-          role="status"
-        >
-          <CheckCircle2 size={16} />
-          {feedback}
-        </div>
-      )}
+      {(feedback || error) && (
+        <div className="flex flex-col gap-2 px-5 py-4">
+          {feedback && (
+            <div
+              className="flex items-center gap-2 rounded-lg bg-badge-success-bg px-3 py-2 text-sm text-badge-success-text"
+              role="status"
+            >
+              <CheckCircle2 size={16} />
+              {feedback}
+            </div>
+          )}
 
-      {error && (
-        <div
-          className="mx-5 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-badge-danger-bg px-3 py-2 text-sm text-badge-danger-text"
-          role="alert"
-        >
-          <span className="flex items-center gap-2">
-            <AlertCircle size={16} />
-            {error}
-          </span>
-          <Button variant="danger" appearance="ghost" size="sm" onClick={() => setReloadKey((current) => current + 1)}>
-            Thử lại
-          </Button>
+          {error && (
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-badge-danger-bg px-3 py-2 text-sm text-badge-danger-text"
+              role="alert"
+            >
+              <span className="flex items-center gap-2">
+                <AlertCircle size={16} />
+                {error}
+              </span>
+              <Button variant="danger" appearance="ghost" size="sm" onClick={() => setReloadKey((current) => current + 1)}>
+                Thử lại
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -413,13 +404,13 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
               Đang tải...
             </span>
           ) : (
-            'Không có tài khoản phù hợp.'
+            `Không có ${noun} phù hợp.`
           )
         }
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border px-5 py-3">
-        <span className="text-sm text-text-tertiary">{pageData.totalElements} tài khoản</span>
+        <span className="text-sm text-text-tertiary">{pageData.totalElements} {noun}</span>
         {pageData.totalPages > 1 && (
           <div className="ml-auto w-auto">
             <Pagination
@@ -435,10 +426,11 @@ function UserManagement({ readOnly = false, canCreateUsers = false }: UserManage
 
       <UserCreateDialog
         open={createUserOpen}
+        accountType={students ? 'STUDENT' : 'PERSONNEL'}
         onClose={() => setCreateUserOpen(false)}
         onCreated={() => {
           setCreateUserOpen(false)
-          setFeedback('Đã tạo tài khoản.')
+          setFeedback(students ? 'Đã tạo tài khoản học viên.' : 'Đã tạo tài khoản nhân sự.')
           setReloadKey((current) => current + 1)
         }}
       />

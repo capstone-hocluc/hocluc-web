@@ -27,7 +27,7 @@ Friendly, encouraging, and clear. The experience should make serious preparation
 - Show a clear next step for learners.
 - Connect each subject with practical ways to learn and practice.
 - Make progress feel approachable and achievable.
-- Use the student and owl imagery to support learning, not compete with it.
+- Use student illustrations and the Math & Quantitative Reasoning owl to support learning, not compete with it.
 
 ## Accessibility & Inclusion
 

@@ -19,31 +19,29 @@ import { useLearningProfileData } from './learningProfileContext'
 import { componentColors, practiceFilters, practiceOverviewIcons, practiceStatIcons } from './icons'
 import ScoreChart from './ScoreChart'
 
-const detailBox = 'rounded-[14px] border border-line-shell bg-[var(--color-surface-sky)] p-3.5'
+const detailBox = 'rounded-xl border border-line-card bg-surface-brand p-4'
 
 function PracticeAiDetailModal({ analysis, isOpen, onClose }) {
   return (
     <ScrollableModal title="Phân tích luyện đề" isOpen={isOpen} onClose={onClose} maxWidth={720}>
       <div>
-        <span className="block text-[12px] font-black text-text-secondary">{analysis.basedOn}</span>
-        <p className="mt-[7px] mb-4 text-[13px] leading-[1.65] font-[750] text-text-heading-muted">
+        <span className="block text-[13px] font-semibold text-text-body">{analysis.basedOn}</span>
+        <p className="mt-2 mb-4 text-[15px] leading-[1.65] font-bold text-text-body">
           {analysis.summary}
         </p>
         <div className="flex flex-col gap-3">
           {analysis.recommendations.map((item) => (
             <article key={item.title} className={detailBox}>
               <div className="flex items-center justify-between gap-3 max-[760px]:items-start">
-                <strong className="text-[14px] font-black text-text-heading">{item.title}</strong>
-                <b className="text-[12px] font-black whitespace-nowrap text-primary">
+                <strong className="text-[15px] font-bold text-text-heading">{item.title}</strong>
+                <b className="text-[13px] font-bold whitespace-nowrap text-primary-text">
                   {item.accuracy}% chính xác
                 </b>
               </div>
-              <p className="my-2 text-[12px] leading-[1.55] font-[750] text-text-heading-muted">
+              <p className="my-2 text-sm leading-[1.55] font-bold text-text-body">
                 {item.explanation}
               </p>
-              <small className="text-[12px] font-black text-warning">
-                Ưu tiên: {item.priority}
-              </small>
+              <small className="text-[13px] font-bold text-warning">Ưu tiên: {item.priority}</small>
             </article>
           ))}
         </div>
@@ -64,15 +62,13 @@ function PracticeAiHistoryModal({ analysis, isOpen, onClose }) {
         {analysis.history.map((item) => (
           <article
             key={item.id}
-            className="rounded-2xl border border-line-shell bg-[var(--color-surface-sky)] p-3.5"
+            className="rounded-xl border border-line-card bg-surface-brand p-4"
           >
             <div className="mb-2 flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-1">
-              <strong className="text-[13px] font-black text-text-heading">{item.createdAt}</strong>
-              <span className="text-[12px] font-extrabold text-text-secondary">{item.basedOn}</span>
+              <strong className="text-sm font-bold text-text-heading">{item.createdAt}</strong>
+              <span className="text-[13px] font-bold text-text-body">{item.basedOn}</span>
             </div>
-            <p className="text-[12px] leading-[1.55] font-[750] text-text-heading-muted">
-              {item.summary}
-            </p>
+            <p className="text-sm leading-[1.55] font-bold text-text-body">{item.summary}</p>
           </article>
         ))}
       </div>
@@ -87,9 +83,9 @@ function formatFeedbackDate(date) {
   return day && month && year ? `${day}/${month}/${year}` : date
 }
 
-const metaLine = 'mt-[3px] block text-[12px] font-extrabold text-text-secondary'
-const detailSection = 'rounded-2xl border border-line-shell bg-surface p-3.5'
-const detailTitle = 'mb-2.5 text-[14px] font-black text-text-heading'
+const metaLine = 'mt-[3px] block text-[13px] font-bold text-text-body'
+const detailSection = 'rounded-xl border border-line-card bg-surface p-4'
+const detailTitle = 'mb-2.5 text-[15px] font-bold text-text-heading'
 
 function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
   if (!feedback) return null
@@ -102,9 +98,9 @@ function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
       maxWidth={760}
     >
       <div className="flex flex-col gap-3.5">
-        <div className="flex items-center gap-3 rounded-2xl border border-line-shell bg-[var(--color-surface-sky)] p-3.5 max-[760px]:items-start">
+        <div className="flex items-center gap-3 rounded-xl border border-line-card bg-surface-brand p-4 max-[760px]:items-start">
           <span
-            className="grid size-11 flex-none place-items-center overflow-hidden rounded-[14px] bg-primary-soft text-primary"
+            className="grid size-11 flex-none place-items-center overflow-hidden rounded-xl bg-primary-soft text-primary-text"
             aria-hidden="true"
           >
             {feedback.teacher.avatar ? (
@@ -114,7 +110,7 @@ function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
             )}
           </span>
           <div>
-            <strong className="block text-[14px] font-black text-text-heading">
+            <strong className="block text-[15px] font-bold text-text-heading">
               {feedback.teacher.name}
             </strong>
             <span className={metaLine}>
@@ -143,9 +139,7 @@ function TeacherFeedbackDetailModal({ feedback, isOpen, onClose }) {
 
         <section className={detailSection}>
           <h3 className={detailTitle}>Lời khuyên</h3>
-          <p className="text-[13px] leading-[1.6] font-[750] text-text-heading-muted">
-            {feedback.comment}
-          </p>
+          <p className="text-[15px] leading-[1.6] font-bold text-text-body">{feedback.comment}</p>
         </section>
       </div>
     </ScrollableModal>
@@ -168,12 +162,12 @@ function TeacherFeedbackPanel({
 
   if (!feedbackList.length) {
     return (
-      <div className="grid min-h-36 place-items-center content-center gap-2 rounded-2xl border border-dashed border-[var(--color-line-brand)] bg-[var(--color-surface-sky)] p-5 text-center [&>svg]:text-primary">
+      <div className="grid min-h-36 place-items-center content-center gap-2 rounded-2xl border border-dashed border-line-brand bg-surface-brand p-5 text-center [&>svg]:text-primary-text">
         <GraduationCap size={28} />
-        <strong className="text-[14px] font-black text-text-heading">
+        <strong className="text-base font-bold text-text-heading">
           Chưa có nhận xét từ giáo viên
         </strong>
-        <p className="max-w-[460px] text-[12px] leading-[1.55] font-[750] text-text-secondary">
+        <p className="max-w-[460px] text-sm leading-[1.55] font-bold text-text-body">
           Nhận xét từ giáo viên hoặc mentor sẽ xuất hiện tại đây sau khi họ đánh giá quá trình học
           tập của bạn.
         </p>
@@ -184,11 +178,11 @@ function TeacherFeedbackPanel({
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3 max-[760px]:flex-col max-[760px]:items-stretch">
-        <span className="text-[12px] font-[850] text-text-secondary">Lọc theo ngày</span>
+        <span className="text-[13px] font-semibold text-text-body">Lọc theo ngày</span>
         <DropdownField
           ariaLabel="Lọc nhận xét theo ngày"
           className="w-auto"
-          triggerClassName="min-h-[34px] rounded-[10px] border-line-blue bg-surface px-3 text-[12px] font-[850] text-text-emphasis outline-0"
+          triggerClassName="min-h-10 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-text-heading outline-0"
           options={[
             { id: 'all', label: 'Tất cả nhận xét' },
             ...feedbackDates.map((date) => ({ id: date, label: formatFeedbackDate(date) })),
@@ -207,22 +201,22 @@ function TeacherFeedbackPanel({
           <button
             key={item.id}
             type="button"
-            className="grid min-h-[92px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_18px] items-start gap-3 rounded-2xl border border-[var(--color-line-brand)] bg-[var(--color-surface-sky)] p-[13px] text-left transition hover:-translate-y-px hover:border-line-brand hover:bg-[var(--color-primary-soft)] max-[760px]:grid-cols-[minmax(0,1fr)] [&>svg]:mt-1 [&>svg]:text-[var(--color-lock)] max-[760px]:[&>svg]:hidden"
+            className="grid min-h-[92px] w-full cursor-pointer grid-cols-[minmax(0,1fr)_18px] items-start gap-3 rounded-xl border border-line-brand bg-surface-brand p-3.5 text-left transition  hover:border-primary hover:bg-primary-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-[760px]:grid-cols-[minmax(0,1fr)] [&>svg]:mt-1 [&>svg]:text-[var(--color-lock)] max-[760px]:[&>svg]:hidden"
             onClick={() => onOpenDetail(item)}
           >
             <div>
               <div className="flex items-center justify-between gap-2.5 max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-[3px]">
-                <strong className="text-[13px] font-[850] text-text-heading">
+                <strong className="text-[15px] font-semibold text-text-heading">
                   {item.teacher.name}
                 </strong>
-                <time className="text-[12px] font-[650] text-text-secondary">
+                <time className="text-[13px] font-semibold text-text-body">
                   {formatFeedbackDate(item.createdAt)}
                 </time>
               </div>
-              <span className="text-[12px] font-[650] text-text-secondary">
+              <span className="text-[13px] font-semibold text-text-body">
                 {item.teacher.role} · {item.teacher.subject}
               </span>
-              <p className="mt-[7px] line-clamp-2 text-[12px] leading-[1.45] font-medium text-text-heading-muted">
+              <p className="mt-2 line-clamp-2 text-sm leading-[1.45] text-text-body">
                 {item.comment}
               </p>
             </div>
@@ -281,7 +275,7 @@ function PracticeAiRecommendations({ onAction }) {
         />
         {activeSource === 'ai' && (
           <Button
-            className="h-auto min-h-[38px] flex-none rounded-lg border-0 px-4 text-[14px] font-medium whitespace-nowrap hover:bg-primary-dark disabled:cursor-progress disabled:opacity-[0.72] max-[760px]:w-full"
+            className="flex-none whitespace-nowrap disabled:cursor-progress max-[760px]:w-full"
             onClick={runPracticeAnalysis}
             disabled={isAnalyzing}
           >
@@ -297,7 +291,7 @@ function PracticeAiRecommendations({ onAction }) {
       {activeSource === 'ai' ? (
         <>
           {!activeAnalysis && (
-            <p className="mt-3.5 mb-0.5 text-center text-[12px] leading-[1.55] font-[650] text-[var(--color-lock)]">
+            <p className="mt-3.5 mb-0.5 text-center text-sm leading-[1.55] font-semibold text-text-muted">
               Hiện tại chưa có nội dung phân tích.
             </p>
           )}
@@ -331,7 +325,7 @@ function PracticeAiRecommendations({ onAction }) {
                       key: item.title,
                       text: item.title,
                       extra: (
-                        <small className="ml-auto text-[12px] font-black whitespace-nowrap text-warning">
+                        <small className="ml-auto text-[13px] font-bold whitespace-nowrap text-warning">
                           {item.accuracy}%
                         </small>
                       ),
@@ -340,7 +334,7 @@ function PracticeAiRecommendations({ onAction }) {
                 </InsightCard>
               </div>
 
-              <TextButton className="mt-3 text-primary" onClick={() => setHistoryOpen(true)}>
+              <TextButton className="mt-3" onClick={() => setHistoryOpen(true)}>
                 Xem lại phân tích cũ
               </TextButton>
             </>
@@ -459,7 +453,7 @@ function PracticeTab({ onAction, panelId, labelledBy }) {
               {learningProfilePage.components.map((component) => (
                 <label
                   key={component.key}
-                  className="inline-flex min-h-[34px] cursor-pointer items-center gap-2 rounded-full border border-[var(--color-line)] bg-surface px-3 text-[12px] font-black text-text-emphasis"
+                  className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm font-semibold text-text-heading"
                 >
                   <input
                     type="checkbox"

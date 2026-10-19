@@ -1,0 +1,60 @@
+/* Shared identity for the public landing and learner authentication. */
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/landing-v2/assets/fonts/be-vietnam-pro-400.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/landing-v2/assets/fonts/be-vietnam-pro-600.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Be Vietnam Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/landing-v2/assets/fonts/be-vietnam-pro-700.ttf') format('truetype');
+}
+:where(.landing-page, .hl-brand-auth, .hl-purchase) {
+  --paper: #fff;
+  --soft: #f6f9ff;
+  --blue-soft: #edf5ff;
+  --line: #d8e5f4;
+  --ink: #0b2348;
+  --muted: #526984;
+  --blue: #1e88ff;
+  --blue-hover: #096ddd;
+  --blue-text: #0b3a82;
+  --action: #0b3a82;
+  --action-hover: #082e68;
+  --on-action: #fff;
+
+  --good: oklch(36% 0.08 165);
+  --good-bg: oklch(96% 0.025 165);
+  --error: oklch(44% 0.16 26);
+  --error-bg: oklch(97% 0.018 26);
+  --font: 'Manrope', 'Be Vietnam Pro', sans-serif;
+  --small: 0.8125rem;
+  --body: 1rem;
+  --lead: 1.125rem;
+  --title: 1.25rem;
+  --heading: clamp(1.75rem, 2.7vw, 2.5rem);
+  --hero: clamp(2rem, 3.5vw, 3rem);
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s6: 24px;
+  --s8: 32px;
+  --s12: 48px;
+  --s16: 64px;
+  --s24: 96px;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --ease: cubic-bezier(0.25, 1, 0.5, 1);
+}

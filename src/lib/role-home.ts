@@ -11,11 +11,11 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 const ROLE_HOME: Record<UserRole, string> = {
   STUDENT: '/student/dashboard',
-  MENTOR: '/mentor/dashboard',
-  TEACHER: '/teacher/dashboard',
-  STAFF: '/staff/dashboard',
-  MANAGER: '/manager/dashboard',
-  ADMINISTRATOR: '/admin/dashboard',
+  MENTOR: '/console/mentor/dashboard',
+  TEACHER: '/console/teacher/dashboard',
+  STAFF: '/console/staff/dashboard',
+  MANAGER: '/console/manager/dashboard',
+  ADMINISTRATOR: '/console/admin/dashboard',
 }
 
 export function roleHome(role: UserRole) {

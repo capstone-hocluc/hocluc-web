@@ -195,7 +195,7 @@ function StudentInfoTab() {
             <Field label="Điểm cần cải thiện">
               <Input value={studentProfile?.selfReportedWeakCategoryName || ''} readOnly disabled />
             </Field>
-            <p className="col-span-full text-xs text-text-muted">
+            <p className="col-span-full text-[13px] text-text-muted">
               Điểm mạnh/điểm cần cải thiện hiện chưa thể chỉnh sửa tại đây - dữ liệu được giữ nguyên
               khi lưu.
             </p>

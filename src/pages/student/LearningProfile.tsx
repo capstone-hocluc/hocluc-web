@@ -24,8 +24,7 @@ interface LearningProfileProps {
   onEditProfile: () => void
 }
 
-const pageClass =
-  'px-[18px] pt-2.5 pb-11 text-text-heading max-[760px]:px-0 max-[760px]:pt-2 max-[760px]:pb-8'
+const pageClass = 'pb-8 text-text-heading'
 
 // The original Learning Profile UI. Data: API overlay (student profile, placement
 // result + attempts, course progress, lessons completed) over the prototype data
@@ -49,7 +48,7 @@ function LearningProfile({ onEditProfile }: LearningProfileProps) {
         onRetry={reload}
         loading={
           <StudentPageContainer width="wide" className={pageClass}>
-            <Skeleton className="h-[560px] rounded-[28px]" />
+            <Skeleton className="h-[560px] rounded-2xl" />
           </StudentPageContainer>
         }
         error={{ title: 'Không thể tải hồ sơ năng lực' }}
@@ -123,7 +122,8 @@ function LearningProfileContent({
         />
         <Button
           appearance="outline"
-          className="h-auto min-h-[38px] rounded-xl border-line-blue px-3.5 text-[12px] font-black text-text-body shadow-[0_10px_22px_rgba(17,24,58,0.04)] hover:bg-surface [&>svg]:size-4 [&>svg]:text-primary"
+          size="sm"
+          className="[&>svg]:text-primary-text"
           onClick={() => showMessage('Tính năng lọc theo thời gian đang được phát triển.')}
         >
           <CalendarDays size={16} />

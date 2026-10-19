@@ -17,27 +17,29 @@ type CreateUserForm = Required<Pick<CreateUserRequest, 'email' | 'password' | 'f
   roles: UserRole[]
 }
 
-const EMPTY_FORM: CreateUserForm = {
+type AccountType = 'STUDENT' | 'PERSONNEL'
+
+const emptyForm = (type: AccountType): CreateUserForm => ({
   email: '',
   password: '',
   firstName: '',
   lastName: '',
   displayName: '',
   phone: '',
-  role: 'STUDENT',
-  roles: ['STUDENT'],
-}
-
-const ACCOUNT_TYPES = [{ id: 'STUDENT', label: 'Học sinh' }, { id: 'PERSONNEL', label: 'Nhân sự' }]
+  role: type === 'STUDENT' ? 'STUDENT' : 'STAFF',
+  roles: type === 'STUDENT' ? ['STUDENT'] : ['STAFF'],
+})
 
 interface UserCreateDialogProps {
   open: boolean
+  /** The list the dialog is opened from: student and personnel accounts are managed apart. */
+  accountType: AccountType
   onClose: () => void
   onCreated: () => void
 }
 
-function UserCreateDialog({ open, onClose, onCreated }: UserCreateDialogProps) {
-  const [form, setForm] = useState<CreateUserForm>(EMPTY_FORM)
+function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateDialogProps) {
+  const [form, setForm] = useState<CreateUserForm>(() => emptyForm(accountType))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -46,7 +48,7 @@ function UserCreateDialog({ open, onClose, onCreated }: UserCreateDialogProps) {
 
   const close = () => {
     if (loading) return
-    setForm(EMPTY_FORM)
+    setForm(emptyForm(accountType))
     setError('')
     onClose()
   }
@@ -66,7 +68,7 @@ function UserCreateDialog({ open, onClose, onCreated }: UserCreateDialogProps) {
         displayName: form.displayName.trim() || undefined,
         phone: form.phone.trim() || undefined,
       })
-      setForm(EMPTY_FORM)
+      setForm(emptyForm(accountType))
       onCreated()
     } catch (requestError: unknown) {
       setError(getErrorMessage(requestError))
@@ -123,14 +125,6 @@ function UserCreateDialog({ open, onClose, onCreated }: UserCreateDialogProps) {
           </TextField>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-input-label-text-color">Loại tài khoản</span>
-          <SelectField ariaLabel="Loại tài khoản" options={ACCOUNT_TYPES}
-            value={form.role === 'STUDENT' ? 'STUDENT' : 'PERSONNEL'} disabled={loading}
-            onChange={(value) => setForm((current) => ({ ...current,
-              role: value === 'STUDENT' ? 'STUDENT' : 'STAFF',
-              roles: value === 'STUDENT' ? ['STUDENT'] : ['STAFF'] }))} />
-        </div>
         {form.role === 'STUDENT' ? (
           <p className="text-sm text-text-tertiary">Học sinh chỉ có vai trò Học viên.</p>
         ) : (

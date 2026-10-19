@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, NotebookPen } from '../console/icons'
-import AuthShell from './AuthShell'
+import BrandAuthShell from './BrandAuthShell'
+import DevQuickLogin from './DevQuickLogin'
 import GoogleSignInButton from './GoogleSignInButton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
@@ -18,7 +19,11 @@ import {
   resetPassword,
 } from '../../services/authService'
 
-const DEFAULT_ALLOWED_ROLES: readonly UserRole[] = ['STUDENT', 'MENTOR']
+// Tạm thời, chỉ chạy local: đăng nhập nhanh bằng tài khoản dev. Không hiện ở bản production.
+const DEV_LEARNERS = [{ label: 'Học viên', email: 'student@gmail.com' }] as const
+const DEV_PASSWORD = '123456'
+
+const DEFAULT_ALLOWED_ROLES: readonly UserRole[] = ['STUDENT']
 
 function AuthPage({
   mode: initialMode = 'login',
@@ -298,7 +303,9 @@ function AuthPage({
       backToLogin()
     } catch (error) {
       const fieldErrors = error?.errors && typeof error.errors === 'object' ? error.errors : {}
-      const hasFieldErrors = Boolean(fieldErrors.otp || fieldErrors.newPassword || fieldErrors.password)
+      const hasFieldErrors = Boolean(
+        fieldErrors.otp || fieldErrors.newPassword || fieldErrors.password
+      )
       setRecoveryErrors({
         otp: fieldErrors.otp || (!hasFieldErrors ? getErrorMessage(error) : '') || '',
         password: fieldErrors.newPassword || fieldErrors.password || '',
@@ -372,14 +379,15 @@ function AuthPage({
     }
   }
 
-  const submitLogin = async () => {
+  const submitLogin = async (credentials?: { email: string; password: string }) => {
     if (loginLoading) return
-    const email = authEmail.trim()
+    const email = (credentials?.email ?? authEmail).trim()
+    const password = credentials?.password ?? authPassword
     const nextErrors: Record<string, string> = {}
 
     if (!email) nextErrors.email = 'Vui lòng nhập email.'
     else if (!isValidEmail(email)) nextErrors.email = 'Email không hợp lệ.'
-    if (!authPassword) nextErrors.password = 'Vui lòng nhập mật khẩu.'
+    if (!password) nextErrors.password = 'Vui lòng nhập mật khẩu.'
 
     setLoginErrors(nextErrors)
     setLoginError('')
@@ -387,7 +395,7 @@ function AuthPage({
 
     setLoginLoading(true)
     try {
-      await loginAccount({ email, password: authPassword })
+      await loginAccount({ email, password, audience: 'LEARNER' })
       const profile = await loadCurrentUser()
       if (!allowedRoles.includes(profile.role)) {
         clearTokens()
@@ -399,8 +407,7 @@ function AuthPage({
       const fieldErrors = error?.errors && typeof error.errors === 'object' ? error.errors : {}
       setLoginErrors(fieldErrors)
       setLoginError(
-        getErrorMessage(error) ||
-          'Đăng nhập không thành công. Vui lòng kiểm tra email và mật khẩu.'
+        getErrorMessage(error) || 'Đăng nhập không thành công. Vui lòng kiểm tra email và mật khẩu.'
       )
     } finally {
       setLoginLoading(false)
@@ -694,7 +701,9 @@ function AuthPage({
           onClick={handleVerificationResend}
           disabled={verificationLoading || verificationCountdown > 0}
           title={
-            verificationCountdown > 0 ? `Có thể gửi lại sau ${verificationCountdownLabel}` : undefined
+            verificationCountdown > 0
+              ? `Có thể gửi lại sau ${verificationCountdownLabel}`
+              : undefined
           }
         >
           {verificationLoading
@@ -728,241 +737,295 @@ function AuthPage({
   )
 
   return (
-    <AuthShell
-      variant="dialog"
+    <BrandAuthShell
       onBack={onBack}
       className={`${isEmailVerification ? 'is-verification' : ''} ${isRecovery ? 'is-recovery' : ''}`}
     >
-            {isEmailVerification ? (
-              renderEmailVerification()
-            ) : isRecovery ? (
-              renderRecoveryStep()
-            ) : (
-              <>
-                <div className="hl-auth-heading">
-                  <h1>{isSignup ? 'Tạo tài khoản' : 'Chào mừng trở lại'}</h1>
-                </div>
-                <GoogleSignInButton
-                  isSignup={isSignup}
-                  disabled={googleLoading}
-                  onCredential={handleGoogleCredential}
+      {isEmailVerification ? (
+        renderEmailVerification()
+      ) : isRecovery ? (
+        renderRecoveryStep()
+      ) : (
+        <>
+          <div className="hl-auth-heading">
+            <h1>{isSignup ? 'Tạo tài khoản' : 'Chào mừng trở lại'}</h1>
+            <p>
+              {isSignup
+                ? 'Bắt đầu hành trình học tập cùng Học Lực.'
+                : 'Đăng nhập để tiếp tục hành trình học tập của bạn.'}
+            </p>
+          </div>
+          <form
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (isSignup) void submitRegister()
+              else void submitLogin()
+            }}
+            aria-busy={isSignup ? registerLoading : loginLoading}
+          >
+            {isSignup && (
+              <div className="hl-auth-name-row">
+                <label className="hl-auth-label">
+                  Họ
+                  <span className={`hl-auth-input ${registerErrors.lastName ? 'has-error' : ''}`}>
+                    <NotebookPen size={19} />
+                    <input
+                      type="text"
+                      placeholder="Nguyễn"
+                      value={signupForm.lastName}
+                      onChange={(event) => updateSignup('lastName', event.target.value)}
+                      autoComplete="family-name"
+                    />
+                  </span>
+                  {registerErrors.lastName && (
+                    <small className="hl-auth-error">{registerErrors.lastName}</small>
+                  )}
+                </label>
+                <label className="hl-auth-label">
+                  Tên
+                  <span className={`hl-auth-input ${registerErrors.firstName ? 'has-error' : ''}`}>
+                    <NotebookPen size={19} />
+                    <input
+                      type="text"
+                      placeholder="An"
+                      value={signupForm.firstName}
+                      onChange={(event) => updateSignup('firstName', event.target.value)}
+                      autoComplete="given-name"
+                    />
+                  </span>
+                  {registerErrors.firstName && (
+                    <small className="hl-auth-error">{registerErrors.firstName}</small>
+                  )}
+                </label>
+              </div>
+            )}
+            <label className="hl-auth-label">
+              Email
+              <span
+                className={`hl-auth-input ${
+                  isSignup
+                    ? registerErrors.email
+                      ? 'has-error'
+                      : ''
+                    : loginErrors.email
+                      ? 'has-error'
+                      : ''
+                }`}
+              >
+                <Mail size={19} />
+                <input
+                  type="email"
+                  data-auth-field="email"
+                  placeholder="ban@example.com"
+                  aria-invalid={Boolean(isSignup ? registerErrors.email : loginErrors.email)}
+                  aria-describedby={
+                    (isSignup ? registerErrors.email : loginErrors.email)
+                      ? 'learner-email-error'
+                      : undefined
+                  }
+                  value={authEmail}
+                  onChange={(event) => {
+                    setAuthEmail(event.target.value)
+                    setLoginError('')
+                    setLoginErrors((current) => ({ ...current, email: '' }))
+                    setRegisterErrors((current) => ({ ...current, email: '', general: '' }))
+                    setRegisterSuccess('')
+                  }}
+                  autoComplete="email"
                 />
-                <div className="hl-auth-divider">
-                  <span />
-                  HOẶC
-                  <span />
-                </div>
-                {isSignup && (
-                  <div className="hl-auth-name-row">
-                    <label className="hl-auth-label">
-                      Họ
-                      <span className={`hl-auth-input ${registerErrors.lastName ? 'has-error' : ''}`}>
-                        <NotebookPen size={19} />
-                        <input
-                          type="text"
-                          placeholder="Nguyễn"
-                          value={signupForm.lastName}
-                          onChange={(event) => updateSignup('lastName', event.target.value)}
-                          autoComplete="family-name"
-                        />
-                      </span>
-                      {registerErrors.lastName && (
-                        <small className="hl-auth-error">{registerErrors.lastName}</small>
-                      )}
-                    </label>
-                    <label className="hl-auth-label">
-                      Tên
-                      <span className={`hl-auth-input ${registerErrors.firstName ? 'has-error' : ''}`}>
-                        <NotebookPen size={19} />
-                        <input
-                          type="text"
-                          placeholder="An"
-                          value={signupForm.firstName}
-                          onChange={(event) => updateSignup('firstName', event.target.value)}
-                          autoComplete="given-name"
-                        />
-                      </span>
-                      {registerErrors.firstName && (
-                        <small className="hl-auth-error">{registerErrors.firstName}</small>
-                      )}
-                    </label>
-                  </div>
+              </span>
+              {isSignup && registerErrors.email && (
+                <small className="hl-auth-error" id="learner-email-error">
+                  {registerErrors.email}
+                </small>
+              )}
+              {!isSignup && loginErrors.email && (
+                <small className="hl-auth-error" id="learner-email-error">
+                  {loginErrors.email}
+                </small>
+              )}
+            </label>
+            {isSignup && (
+              <label className="hl-auth-label">
+                Số điện thoại
+                <span className={`hl-auth-input ${registerErrors.phone ? 'has-error' : ''}`}>
+                  <NotebookPen size={19} />
+                  <input
+                    type="tel"
+                    placeholder="0901234567"
+                    value={signupForm.phone}
+                    onChange={(event) => updateSignup('phone', event.target.value)}
+                    autoComplete="tel"
+                  />
+                </span>
+                {registerErrors.phone && (
+                  <small className="hl-auth-error">{registerErrors.phone}</small>
                 )}
-                <label className="hl-auth-label">
-                  Email
-                  <span
-                    className={`hl-auth-input ${
-                      isSignup
-                        ? registerErrors.email
-                          ? 'has-error'
-                          : ''
-                        : loginErrors.email
-                          ? 'has-error'
-                          : ''
-                    }`}
-                  >
-                    <Mail size={19} />
-                    <input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={authEmail}
-                      onChange={(event) => {
-                        setAuthEmail(event.target.value)
-                        setLoginError('')
-                        setLoginErrors((current) => ({ ...current, email: '' }))
-                        setRegisterErrors((current) => ({ ...current, email: '', general: '' }))
-                        setRegisterSuccess('')
-                      }}
-                      autoComplete="email"
-                    />
-                  </span>
-                  {isSignup && registerErrors.email && (
-                    <small className="hl-auth-error">{registerErrors.email}</small>
-                  )}
-                  {!isSignup && loginErrors.email && (
-                    <small className="hl-auth-error">{loginErrors.email}</small>
-                  )}
-                </label>
-                {isSignup && (
-                  <label className="hl-auth-label">
-                    Số điện thoại
-                    <span className={`hl-auth-input ${registerErrors.phone ? 'has-error' : ''}`}>
-                      <NotebookPen size={19} />
-                      <input
-                        type="tel"
-                        placeholder="0901234567"
-                        value={signupForm.phone}
-                        onChange={(event) => updateSignup('phone', event.target.value)}
-                        autoComplete="tel"
-                      />
-                    </span>
-                    {registerErrors.phone && (
-                      <small className="hl-auth-error">{registerErrors.phone}</small>
-                    )}
-                  </label>
-                )}
-                <label className="hl-auth-label">
-                  Mật khẩu
-                  <span
-                    className={`hl-auth-input ${
-                      isSignup
-                        ? registerErrors.password
-                          ? 'has-error'
-                          : ''
-                        : loginErrors.password
-                          ? 'has-error'
-                          : ''
-                    }`}
-                  >
-                    <LockKeyhole size={19} />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Nhập mật khẩu"
-                      value={authPassword}
-                      onChange={(event) => {
-                        setAuthPassword(event.target.value)
-                        setLoginError('')
-                        setLoginErrors((current) => ({ ...current, password: '' }))
-                        setRegisterErrors((current) => ({
-                          ...current,
-                          password: '',
-                          confirmPassword: '',
-                          general: '',
-                        }))
-                        setRegisterSuccess('')
-                      }}
-                      autoComplete={isSignup ? 'new-password' : 'current-password'}
-                    />
-                    <button
-                      type="button"
-                      className="hl-auth-eye"
-                      onClick={() => setShowPassword((value) => !value)}
-                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    >
-                      {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
-                    </button>
-                  </span>
-                  {isSignup && registerErrors.password && (
-                    <small className="hl-auth-error">{registerErrors.password}</small>
-                  )}
-                  {!isSignup && loginErrors.password && (
-                    <small className="hl-auth-error">{loginErrors.password}</small>
-                  )}
-                  {isSignup && !registerErrors.password && passwordHelper.text && (
-                    <small
-                      className={`hl-auth-password-note ${
-                        passwordHelper.isError ? 'is-error' : ''
-                      }`}
-                    >
-                      {passwordHelper.text}
-                    </small>
-                  )}
-                </label>
-                {isSignup && (
-                  <label className="hl-auth-label">
-                    Xác nhận mật khẩu
-                    <span
-                      className={`hl-auth-input ${registerErrors.confirmPassword ? 'has-error' : ''}`}
-                    >
-                      <LockKeyhole size={19} />
-                      <input
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        placeholder="Nhập lại mật khẩu"
-                        value={signupForm.confirmPassword}
-                        onChange={(event) => updateSignup('confirmPassword', event.target.value)}
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        className="hl-auth-eye"
-                        onClick={() => setShowConfirmPassword((value) => !value)}
-                        aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                      >
-                        {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
-                      </button>
-                    </span>
-                    {registerErrors.confirmPassword && (
-                      <small className="hl-auth-error">{registerErrors.confirmPassword}</small>
-                    )}
-                  </label>
-                )}
-                {!isSignup && loginError && <small className="hl-auth-error">{loginError}</small>}
-                {isSignup && registerSuccess && (
-                  <div className="hl-auth-success" role="status">
-                    {registerSuccess}
-                  </div>
-                )}
-                {isSignup && registerErrors.general && (
-                  <small className="hl-auth-error">{registerErrors.general}</small>
-                )}
-                {!isSignup && (
-                  <button type="button" className="hl-auth-forgot" onClick={openRecovery}>
-                    Quên mật khẩu?
-                  </button>
-                )}
+              </label>
+            )}
+            <label className="hl-auth-label">
+              Mật khẩu
+              <span
+                className={`hl-auth-input ${
+                  isSignup
+                    ? registerErrors.password
+                      ? 'has-error'
+                      : ''
+                    : loginErrors.password
+                      ? 'has-error'
+                      : ''
+                }`}
+              >
+                <LockKeyhole size={19} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  data-auth-field="password"
+                  placeholder="Nhập mật khẩu"
+                  aria-invalid={Boolean(isSignup ? registerErrors.password : loginErrors.password)}
+                  aria-describedby={
+                    (isSignup ? registerErrors.password : loginErrors.password)
+                      ? 'learner-password-error'
+                      : undefined
+                  }
+                  value={authPassword}
+                  onChange={(event) => {
+                    setAuthPassword(event.target.value)
+                    setLoginError('')
+                    setLoginErrors((current) => ({ ...current, password: '' }))
+                    setRegisterErrors((current) => ({
+                      ...current,
+                      password: '',
+                      confirmPassword: '',
+                      general: '',
+                    }))
+                    setRegisterSuccess('')
+                  }}
+                  autoComplete={isSignup ? 'new-password' : 'current-password'}
+                />
                 <button
                   type="button"
-                  className="hl-auth-submit"
-                  disabled={isSignup ? registerLoading : loginLoading}
-                  onClick={isSignup ? submitRegister : submitLogin}
+                  className="hl-auth-eye"
+                  data-auth-field="password"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
-                  {isSignup
-                    ? registerLoading
-                      ? 'Đang đăng ký...'
-                      : 'Đăng ký ngay'
-                    : loginLoading
-                      ? 'Đang đăng nhập...'
-                      : 'Đăng nhập'}
+                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                 </button>
-                <p className="hl-auth-switch">
-                  {isSignup ? 'Bạn đã có tài khoản?' : 'Chưa có tài khoản?'}{' '}
-                  <button type="button" onClick={() => switchMode(isSignup ? 'login' : 'signup')}>
-                    {isSignup ? 'Đăng nhập' : 'Đăng ký'}
+              </span>
+              {isSignup && registerErrors.password && (
+                <small className="hl-auth-error" id="learner-password-error">
+                  {registerErrors.password}
+                </small>
+              )}
+              {!isSignup && loginErrors.password && (
+                <small className="hl-auth-error" id="learner-password-error">
+                  {loginErrors.password}
+                </small>
+              )}
+              {isSignup && !registerErrors.password && passwordHelper.text && (
+                <small
+                  className={`hl-auth-password-note ${passwordHelper.isError ? 'is-error' : ''}`}
+                >
+                  {passwordHelper.text}
+                </small>
+              )}
+            </label>
+            {isSignup && (
+              <label className="hl-auth-label">
+                Xác nhận mật khẩu
+                <span
+                  className={`hl-auth-input ${registerErrors.confirmPassword ? 'has-error' : ''}`}
+                >
+                  <LockKeyhole size={19} />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Nhập lại mật khẩu"
+                    value={signupForm.confirmPassword}
+                    onChange={(event) => updateSignup('confirmPassword', event.target.value)}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    className="hl-auth-eye"
+                    onClick={() => setShowConfirmPassword((value) => !value)}
+                    aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    {showConfirmPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                   </button>
-                </p>
-              </>
+                </span>
+                {registerErrors.confirmPassword && (
+                  <small className="hl-auth-error">{registerErrors.confirmPassword}</small>
+                )}
+              </label>
             )}
-    </AuthShell>
+            {!isSignup && loginError && (
+              <small className="hl-auth-error" role="alert">
+                {loginError}
+              </small>
+            )}
+            {isSignup && registerSuccess && (
+              <div className="hl-auth-success" role="status">
+                {registerSuccess}
+              </div>
+            )}
+            {isSignup && registerErrors.general && (
+              <small className="hl-auth-error">{registerErrors.general}</small>
+            )}
+            {!isSignup && (
+              <button type="button" className="hl-auth-forgot" onClick={openRecovery}>
+                Quên mật khẩu?
+              </button>
+            )}
+            <button
+              type="submit"
+              className="hl-auth-submit"
+              disabled={isSignup ? registerLoading : loginLoading}
+            >
+              {isSignup
+                ? registerLoading
+                  ? 'Đang đăng ký...'
+                  : 'Đăng ký ngay'
+                : loginLoading
+                  ? 'Đang đăng nhập...'
+                  : 'Đăng nhập'}
+            </button>
+          </form>
+          <div className="hl-auth-divider" aria-hidden="true">
+            <span />
+            hoặc
+            <span />
+          </div>
+          <GoogleSignInButton
+            isSignup={isSignup}
+            disabled={googleLoading || loginLoading || registerLoading}
+            onCredential={handleGoogleCredential}
+          />
+          <p className="hl-auth-switch">
+            {isSignup ? 'Bạn đã có tài khoản?' : 'Chưa có tài khoản?'}{' '}
+            <button type="button" onClick={() => switchMode(isSignup ? 'login' : 'signup')}>
+              {isSignup ? 'Đăng nhập' : 'Đăng ký'}
+            </button>
+          </p>
+          {!isSignup && (
+            <p className="hl-auth-switch hl-auth-staff">
+              Dành cho nhân sự: <a href="/console/login">Đăng nhập quản lý</a>
+            </p>
+          )}
+          {import.meta.env.DEV && !isSignup && (
+            <DevQuickLogin
+              accounts={DEV_LEARNERS}
+              disabled={loginLoading}
+              onSelect={(account) => {
+                setAuthEmail(account.email)
+                setAuthPassword(DEV_PASSWORD)
+                void submitLogin({ email: account.email, password: DEV_PASSWORD })
+              }}
+            />
+          )}
+        </>
+      )}
+    </BrandAuthShell>
   )
 }
 

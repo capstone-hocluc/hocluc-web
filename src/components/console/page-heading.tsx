@@ -1,25 +1,25 @@
 import type { ReactNode } from 'react'
 import { Breadcrumbs } from '../tailgrids/core/breadcrumbs'
+import { Eye } from './icons'
 
-// NextAdmin page header: 28/32 title on the left, optional action plus "Home > page" breadcrumb on the right.
+// Page header in the CRM dashboard's style: breadcrumb, a bold 26/30px title, a readable description and the page
+// actions on the right.
 interface PageHeadingProps {
   title: string
   subtitle?: ReactNode
   /** Page-level control (for example a reload button); the caller supplies its own Button. */
   action?: ReactNode
+  /** Marks a page the role can look at but not change. */
+  readOnly?: boolean
 }
 
-function PageHeading({ title, subtitle, action }: PageHeadingProps) {
-  // Role areas live under /<area>/..., so "Home" is the area root.
-  const homeHref = `/${window.location.pathname.split('/')[1] ?? ''}`
+function PageHeading({ title, subtitle, action, readOnly = false }: PageHeadingProps) {
+  // Staff areas live under /console/<area>/..., so "Home" is the area root.
+  const [, first, second] = window.location.pathname.split('/')
+  const homeHref = first === 'console' ? `/console/${second ?? ''}` : `/${first ?? ''}`
   return (
-    <div className="flex flex-col-reverse items-start justify-between gap-3 sm:flex-row sm:items-center">
-      <div>
-        <h1 className="text-[28px] leading-8 font-medium text-text-primary">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-text-tertiary">{subtitle}</p>}
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {action}
+    <header className="flex flex-col items-start justify-between gap-4 pb-1 sm:flex-row sm:items-end">
+      <div className="flex min-w-0 flex-col gap-2">
         <Breadcrumbs
           dividerType="chevron"
           items={[
@@ -27,8 +27,21 @@ function PageHeading({ title, subtitle, action }: PageHeadingProps) {
             { href: '#', label: title },
           ]}
         />
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-[26px] leading-8 font-semibold tracking-[-0.5px] text-balance text-text-primary sm:text-[30px]">
+            {title}
+          </h1>
+          {readOnly && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-background-gray-secondary px-2.5 py-1 text-xs font-medium text-text-secondary">
+              <Eye size={14} aria-hidden />
+              Chế độ xem
+            </span>
+          )}
+        </div>
+        {subtitle && <p className="max-w-2xl text-sm leading-6 text-text-secondary">{subtitle}</p>}
       </div>
-    </div>
+      {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
+    </header>
   )
 }
 

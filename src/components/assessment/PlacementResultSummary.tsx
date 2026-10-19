@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TrendingDown, TrendingUp } from '../console/icons'
+import { Award, CheckCircle2, Clock, TrendingDown, TrendingUp, XCircle } from '../console/icons'
 import type { PlacementResult } from '../../services/assessmentService'
 import { formatDuration, prettifyEnum } from '../../lib/courseFormat'
 import { cn } from '../../lib/cn'
@@ -9,6 +9,39 @@ import ResultSummaryCard from './ResultSummaryCard'
 
 interface PlacementResultSummaryProps {
   result: PlacementResult
+}
+
+const statTone = {
+  primary: 'bg-primary-soft text-primary-text',
+  success: 'bg-badge-success-bg text-badge-success-text',
+  danger: 'bg-badge-danger-bg text-badge-danger-text',
+  assessment: 'bg-assess-soft text-assess',
+} as const
+
+function StatTile({
+  tone,
+  icon,
+  label,
+  value,
+}: {
+  tone: keyof typeof statTone
+  icon: ReactNode
+  label: string
+  value: ReactNode
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-line-card bg-surface px-3.5 py-3 shadow-card-soft">
+      <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl', statTone[tone])}>
+        {icon}
+      </span>
+      <div className="flex min-w-0 flex-col">
+        <span className="text-xs font-bold text-text-secondary">{label}</span>
+        <strong className="truncate text-xl leading-tight font-bold text-text-heading">
+          {value}
+        </strong>
+      </div>
+    </div>
+  )
 }
 
 function Highlight({
@@ -25,16 +58,16 @@ function Highlight({
   return (
     <div
       className={cn(
-        'flex flex-[1_1_200px] items-center gap-2.5 rounded-xl px-3.5 py-3',
+        'flex flex-[1_1_220px] items-center gap-3 rounded-xl border px-4 py-3.5',
         tone === 'strong'
-          ? 'bg-badge-success-bg text-badge-success-text'
-          : 'bg-badge-warning-bg text-badge-warning-text'
+          ? 'border-line-practice bg-practice-soft text-practice'
+          : 'border-live-line bg-live-soft text-live'
       )}
     >
-      {icon}
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[11.5px] font-bold">{label}</span>
-        <strong className="text-[13.5px] text-text-heading">{value}</strong>
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface">{icon}</span>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-xs font-semibold tracking-[0.04em] uppercase">{label}</span>
+        <strong className="text-base text-text-heading">{value}</strong>
       </div>
     </div>
   )
@@ -50,25 +83,33 @@ function PlacementResultSummary({ result }: PlacementResultSummaryProps) {
         totalQuestions={result.totalQuestions}
         percentage={result.overallPercentage}
       >
-        <div className="mt-4 flex flex-wrap gap-5 border-t border-border-subtle pt-4">
-          {[
-            ['Điểm số', result.score],
-            ['Câu sai', result.wrongCount],
-            ['Thời gian làm bài', formatDuration(result.timeSpentSeconds)],
-          ].map(([label, value]) => (
-            <div className="flex flex-col gap-1" key={label}>
-              <span className="text-xs text-text-faint">{label}</span>
-              <strong className="text-lg text-text-heading">{value}</strong>
-            </div>
-          ))}
+        <div className="mt-6 grid grid-cols-3 gap-3 max-[640px]:grid-cols-1">
+          <StatTile
+            tone="primary"
+            icon={<Award size={20} />}
+            label="Điểm số"
+            value={result.score}
+          />
+          <StatTile
+            tone="danger"
+            icon={<XCircle size={20} />}
+            label="Câu sai"
+            value={result.wrongCount}
+          />
+          <StatTile
+            tone="assessment"
+            icon={<Clock size={20} />}
+            label="Thời gian làm bài"
+            value={formatDuration(result.timeSpentSeconds)}
+          />
         </div>
 
         {(result.strongCategoryName || result.weakCategoryName) && (
-          <div className="mt-4 flex flex-wrap gap-3">
+          <div className="mt-3 flex flex-wrap gap-3">
             {result.strongCategoryName && (
               <Highlight
                 tone="strong"
-                icon={<TrendingUp size={16} />}
+                icon={<TrendingUp size={20} />}
                 label="Thế mạnh"
                 value={result.strongCategoryName}
               />
@@ -76,7 +117,7 @@ function PlacementResultSummary({ result }: PlacementResultSummaryProps) {
             {result.weakCategoryName && (
               <Highlight
                 tone="weak"
-                icon={<TrendingDown size={16} />}
+                icon={<TrendingDown size={20} />}
                 label="Cần cải thiện"
                 value={result.weakCategoryName}
               />
@@ -86,17 +127,29 @@ function PlacementResultSummary({ result }: PlacementResultSummaryProps) {
       </ResultSummaryCard>
 
       {result.categories.length > 0 && (
-        <Card as="section" padding="none" radius="lg" className="border-border-subtle p-[22px]">
-          <CardTitle className="mb-3.5 text-base">Chi tiết theo chủ đề</CardTitle>
-          <div className="flex flex-col gap-4">
+        <Card
+          as="section"
+          variant="panel"
+          padding="none"
+          radius="xl"
+          className="p-6 max-[640px]:p-5"
+        >
+          <CardTitle className="mb-4 text-xl">Chi tiết theo chủ đề</CardTitle>
+          <div className="flex flex-col gap-3">
             {result.categories.map((category) => (
-              <div className="flex flex-col gap-1.5" key={category.categoryId}>
-                <div className="flex items-center justify-between text-[13.5px] font-bold text-text-heading">
-                  <span>{category.categoryName}</span>
-                  <strong>{category.percentage}%</strong>
+              <div
+                className="flex flex-col gap-2 rounded-xl border border-line-card bg-surface-sky px-4 py-3.5"
+                key={category.categoryId}
+              >
+                <div className="flex items-center justify-between gap-3 text-base font-semibold text-text-heading">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <CheckCircle2 size={16} className="shrink-0 text-primary-text" />
+                    <span className="min-w-0">{category.categoryName}</span>
+                  </span>
+                  <strong className="text-primary-text">{category.percentage}%</strong>
                 </div>
                 <Progress value={category.percentage} aria-label={category.categoryName} />
-                <span className="text-xs text-text-faint">
+                <span className="text-sm text-text-secondary">
                   {category.correctCount}/{category.totalCount} câu đúng · {category.score} điểm
                 </span>
               </div>

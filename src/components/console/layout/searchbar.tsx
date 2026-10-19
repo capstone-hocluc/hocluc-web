@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '../../tailgrids/core/input-group';
 import { SearchIcon } from './header-icons';
 import type { NavSection } from './nav-types';
+import { matchesSearch } from '../../../lib/search';
 
 interface SearchBarProps {
   sections: NavSection[];
@@ -11,13 +12,13 @@ interface SearchBarProps {
 
 const KBD = 'rounded border border-card-border bg-card-background px-1.5 py-0.5 font-mono text-[10px] shadow-xs';
 
-// NextAdmin command palette (Ctrl/Cmd+K), searching the role's own pages.
+// NextAdmin command palette (Ctrl+K), searching the role's own pages.
 export default function SearchBar({ sections, onSelect }: SearchBarProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      if (event.ctrlKey && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         setOpen((prev) => !prev);
       }
@@ -55,11 +56,6 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
               className="pointer-events-none cursor-pointer pl-2 text-sm select-none"
               readOnly
             />
-            <InputGroupAddon align="inline-end">
-              <div className="rounded-md border border-card-border bg-background-gray-primary/50 px-2 py-0.75 text-xs text-text-tertiary">
-                <span className="font-medium">⌘</span> K
-              </div>
-            </InputGroupAddon>
           </InputGroup>
         </button>
       </div>
@@ -67,6 +63,7 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
       <Command.Dialog
         open={open}
         onOpenChange={setOpen}
+        filter={(value, search) => (matchesSearch(search, value) ? 1 : 0)}
         label="Tìm kiếm"
         overlayClassName="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs transition-opacity duration-200"
         contentClassName="fixed top-1/2 left-1/2 z-50 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-card-border bg-card-background text-text-primary shadow-2xl overflow-hidden outline-none max-sm:max-w-[calc(100%-2rem)]"

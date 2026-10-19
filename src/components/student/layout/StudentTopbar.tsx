@@ -12,6 +12,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/Popover'
 import type { UserProfile } from '../../../services/userService'
 import { getUserDisplayName, getUserInitials } from '../../../lib/userDisplay'
+import { ROLE_LABELS } from '../../../lib/role-home'
 import { cn } from '../../../lib/cn'
 
 interface StudentTopbarProps {
@@ -22,6 +23,9 @@ interface StudentTopbarProps {
   streak?: number
   notificationCount?: number
   onToggleSidebar?: () => void
+  sidebarCollapsed?: boolean
+  onOpenNavigation?: () => void
+  mobileNavigationOpen?: boolean
   onNavigateHome?: () => void
   onNavigateLearningProfile?: () => void
   onNavigateProfile?: () => void
@@ -31,7 +35,7 @@ interface StudentTopbarProps {
 }
 
 const iconButton =
-  'relative grid size-12 flex-none cursor-pointer place-items-center rounded-[15px] bg-surface text-primary shadow-[0_10px_22px_rgba(17,24,58,0.04)] max-[760px]:size-11'
+  'relative grid size-11 flex-none cursor-pointer place-items-center rounded-xl border border-line bg-surface text-text-body transition-colors hover:border-line-brand hover:bg-surface-hover active:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2'
 
 function StudentTopbar({
   profile,
@@ -39,6 +43,9 @@ function StudentTopbar({
   streak = 0,
   notificationCount = 0,
   onToggleSidebar,
+  sidebarCollapsed = false,
+  onOpenNavigation,
+  mobileNavigationOpen = false,
   onNavigateHome,
   onNavigateLearningProfile,
   onNavigateProfile,
@@ -47,12 +54,23 @@ function StudentTopbar({
   onNotify,
 }: StudentTopbarProps) {
   return (
-    <header className="sticky top-0 z-60 col-span-full row-start-1 flex min-h-16 items-center justify-between gap-[18px] border-b border-line-shell bg-surface/95 px-7 py-3 shadow-[0_10px_28px_rgba(17,24,58,0.05)] backdrop-blur-md backdrop-saturate-[180%] max-[760px]:flex-wrap max-[760px]:gap-2.5 max-[760px]:px-3.5 max-[760px]:py-2.5">
+    <header className="student-topbar sticky top-0 z-50 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-4 border-b border-line-shell bg-surface px-6 py-3 max-[760px]:gap-2 max-[760px]:px-4 max-[560px]:flex-wrap">
       <div className="flex min-w-0 flex-none items-center gap-3 max-[760px]:flex-[1_0_auto]">
         <button
           type="button"
-          className={iconButton}
-          aria-label="Thu gọn thanh điều hướng"
+          className={cn(iconButton, 'hidden max-[760px]:grid')}
+          aria-label="Mở menu học tập"
+          aria-expanded={mobileNavigationOpen}
+          onClick={onOpenNavigation}
+        >
+          <Menu size={20} />
+        </button>
+        <button
+          type="button"
+          className={cn(iconButton, 'max-[1180px]:hidden')}
+          aria-label={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+          aria-expanded={!sidebarCollapsed}
+          aria-controls="student-navigation"
           onClick={onToggleSidebar}
         >
           <Menu size={20} />
@@ -61,38 +79,35 @@ function StudentTopbar({
           type="button"
           aria-label="HocLuc.com"
           onClick={onNavigateHome}
-          className="cursor-pointer p-0 max-[560px]:[&>span>span]:hidden! max-[560px]:[&_img]:mt-0! max-[560px]:[&_img]:size-[42px]!"
+          className="flex min-h-11 cursor-pointer items-center p-0"
         >
-          <Logo size={46} />
+          <Logo wordmarkSize={24} />
         </button>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-3.5 max-[760px]:w-full max-[760px]:flex-[1_1_100%] max-[760px]:gap-2">
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-3 max-[760px]:gap-2">
         <button
           type="button"
           aria-label={`Chuỗi ${streak} ngày`}
           onClick={() => onNotify?.(`Bạn đang giữ chuỗi học tập ${streak} ngày.`)}
-          className="inline-flex h-[42px] cursor-pointer items-center gap-2 rounded-full bg-streak-soft px-[18px] text-streak max-[760px]:size-11 max-[760px]:justify-center max-[760px]:p-0"
+          className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3 text-streak transition-colors hover:bg-streak-soft focus-visible:outline-2 focus-visible:outline-offset-2 max-[560px]:hidden"
         >
           <Flame size={17} />
-          <strong className="text-sm whitespace-nowrap max-[760px]:hidden">Khám phá streak</strong>
+          <strong className="text-sm font-semibold whitespace-nowrap">{streak} ngày học</strong>
         </button>
 
-        <RoleSwitcher className="h-[42px] rounded-full max-[760px]:h-11" />
+        <RoleSwitcher className="h-11 rounded-xl" />
 
         <Popover>
           <PopoverTrigger asChild>
             <button
               type="button"
               aria-label="Thông báo"
-              className={cn(
-                iconButton,
-                'size-[42px] rounded-full bg-surface-sky text-text-heading shadow-none max-[760px]:size-11'
-              )}
+              className={cn(iconButton, 'text-text-heading')}
             >
               <Bell size={18} />
               {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-[3px] grid h-5 min-w-5 place-items-center rounded-full border-2 border-surface bg-danger px-[5px] text-[10px] leading-none font-black text-surface">
+                <span className="absolute -top-1 -right-[3px] grid h-5 min-w-5 place-items-center rounded-full border border-surface bg-danger px-[5px] text-[10px] leading-none font-bold text-surface">
                   {notificationCount}
                 </span>
               )}
@@ -111,7 +126,7 @@ function StudentTopbar({
             <button
               type="button"
               aria-label="Mở menu hồ sơ"
-              className={cn(iconButton, 'overflow-hidden border border-line-blue p-0')}
+              className={cn(iconButton, 'overflow-hidden rounded-full p-0')}
             >
               {profileLoading ? (
                 <Skeleton className="size-full rounded-none" />
@@ -125,7 +140,25 @@ function StudentTopbar({
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent>
+          <DropdownMenuContent className="w-[250px]">
+            {profile && (
+              <div className="flex items-center gap-3 border-b border-line-blue px-[11px] pt-1 pb-3">
+                <Avatar
+                  src={profile.avatarUrl}
+                  alt=""
+                  fallback={getUserInitials(profile) || <User size={18} />}
+                />
+                <span className="flex min-w-0 flex-col">
+                  <strong className="truncate text-[13px] text-text-heading">
+                    {getUserDisplayName(profile)}
+                  </strong>
+                  <span className="truncate text-xs text-text-muted">{profile.email}</span>
+                  <span className="mt-1.5 self-start rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-bold text-primary-text">
+                    {ROLE_LABELS[profile.role]}
+                  </span>
+                </span>
+              </div>
+            )}
             <DropdownMenuItem onSelect={() => onNavigateProfile?.()}>
               <UserRound size={16} />
               Hồ sơ cá nhân
@@ -140,6 +173,7 @@ function StudentTopbar({
               <Settings size={16} />
               Cài đặt
             </DropdownMenuItem>
+            <div role="separator" className="my-1 h-px bg-line-blue" />
             <DropdownMenuItem disabled={logoutLoading} onSelect={() => onLogout?.()}>
               <LogOut size={16} />
               {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}

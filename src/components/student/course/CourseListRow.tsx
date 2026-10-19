@@ -10,9 +10,9 @@ interface CourseListRowProps {
 // Divider-separated row for lists inside a Card (live classes, recordings).
 function CourseListRow({ title, meta, actions }: CourseListRowProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-line-soft py-3 first:border-t-0">
+    <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-line py-3.5 first:border-t-0">
       <div className="flex min-w-0 flex-col gap-1">
-        <strong className="text-sm font-medium text-text-heading">{title}</strong>
+        <strong className="text-base font-semibold text-text-heading">{title}</strong>
         {meta}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}

@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { LessonLabelsResponse } from '../types/lessonLabels'
 
 export type LessonContentType =
   | 'TEXT'
@@ -36,6 +37,8 @@ export interface LessonAdmin {
   instructorContent: string | null
   instructorNotes: string | null
   updatedAt: string
+  /** Included on the authoring detail GET; lists and mutations may omit it or return null. */
+  labels?: LessonLabelsResponse | null
 }
 
 export interface SaveLessonRequest {
@@ -61,6 +64,10 @@ const data = <T>(response: { data?: T }): T => {
 
 export async function getAdminLessons(chapterId: string): Promise<LessonAdmin[]> {
   return data(await request<LessonAdmin[]>(path(chapterId), { auth: true }))
+}
+
+export async function getAdminLesson(chapterId: string, lessonId: string): Promise<LessonAdmin> {
+  return data(await request<LessonAdmin>(path(chapterId, lessonId), { auth: true }))
 }
 
 export async function saveAdminLesson(

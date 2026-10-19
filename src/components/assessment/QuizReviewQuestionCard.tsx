@@ -17,15 +17,20 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
 
   return (
     <Card
+      variant="panel"
       padding="none"
+      radius="xl"
       className={cn(
-        'border-[1.5px] p-[18px]',
+        'p-6 max-[640px]:p-4',
         verdict === 'correct' && 'border-success',
-        verdict === 'incorrect' && 'border-danger'
+        verdict === 'incorrect' && 'border-danger-line'
       )}
     >
-      <div className="mb-2.5 flex flex-wrap items-center gap-2.5">
-        <span className="text-[13px] font-extrabold text-text-heading">Câu {index + 1}</span>
+      <div className="mb-3 flex flex-wrap items-center gap-2.5">
+        <span className="grid size-9 place-items-center rounded-xl bg-assess-soft text-base font-bold text-assess">
+          {index + 1}
+        </span>
+        <span className="text-base font-semibold text-text-heading">Câu {index + 1}</span>
         {question.categoryName && (
           <StatusBadge tone="primary" size="sm" className="font-bold">
             {question.categoryName}
@@ -34,47 +39,67 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
         <StatusBadge
           tone={verdict === 'correct' ? 'success' : verdict === 'incorrect' ? 'danger' : 'neutral'}
           size="sm"
-          className="ml-auto px-2.5 py-[3px] text-[11.5px] font-extrabold"
+          className="ml-auto px-3 py-1 text-xs font-semibold"
         >
-          {verdict === 'correct' && <CheckCircle2 size={13} />}
-          {verdict === 'incorrect' && <XCircle size={13} />}
+          {verdict === 'correct' && <CheckCircle2 size={14} />}
+          {verdict === 'incorrect' && <XCircle size={14} />}
           {verdict === 'correct' ? 'Đúng' : verdict === 'incorrect' ? 'Sai' : 'Chưa trả lời'}
         </StatusBadge>
       </div>
 
       {question.imageUrl && (
-        <img className="mb-2.5 max-w-full rounded-[10px]" src={question.imageUrl} alt="" />
+        <img
+          className="mb-3 max-w-full rounded-xl border border-line-card"
+          src={question.imageUrl}
+          alt=""
+        />
       )}
 
-      <p className="mb-3 text-[14.5px] text-text-heading">{question.questionText}</p>
+      <p className="mb-4 text-base leading-[1.6] font-bold text-text-heading">
+        {question.questionText}
+      </p>
 
-      <div className="flex flex-col gap-2">
-        {bySequence(question.options).map((option) => {
+      <div className="flex flex-col gap-2.5">
+        {bySequence(question.options).map((option, optionIndex) => {
           const isSelected = option.optionId === question.selectedOptionId
+          const isWrongPick = isSelected && !option.correct
           return (
             <div
               key={option.optionId}
               className={cn(
-                'flex items-center justify-between rounded-[10px] border px-3.5 py-2.5 text-[13.5px]',
+                'flex min-h-12 items-center gap-3 rounded-xl border px-4 py-2.5 text-[15px]',
                 option.correct
                   ? 'border-success bg-badge-success-bg font-semibold text-badge-success-text'
-                  : isSelected
-                    ? 'border-danger bg-badge-danger-bg font-semibold text-badge-danger-text'
-                    : 'border-border-subtle text-text-body'
+                  : isWrongPick
+                    ? 'border-danger-line bg-badge-danger-bg font-semibold text-badge-danger-text'
+                    : 'border-line bg-surface font-semibold text-text-body'
               )}
             >
-              <span>{option.optionText}</span>
-              {option.correct && <CheckCircle2 size={14} />}
-              {isSelected && !option.correct && <XCircle size={14} />}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'grid size-8 shrink-0 place-items-center rounded-lg text-sm font-bold',
+                  option.correct
+                    ? 'bg-success text-white'
+                    : isWrongPick
+                      ? 'bg-danger text-white'
+                      : 'bg-surface-sky text-text-body'
+                )}
+              >
+                {String.fromCharCode(65 + optionIndex)}
+              </span>
+              <span className="min-w-0 flex-1">{option.optionText}</span>
+              {option.correct && <CheckCircle2 size={18} className="shrink-0" />}
+              {isWrongPick && <XCircle size={18} className="shrink-0" />}
             </div>
           )
         })}
       </div>
 
       {question.explanation && (
-        <div className="mt-3 border-t border-dashed border-border-subtle pt-3 text-[13px]">
-          <strong className="mb-1 block text-text-heading">Giải thích</strong>
-          <p className="leading-[1.6] text-text-secondary">{question.explanation}</p>
+        <div className="mt-4 rounded-xl border border-line-brand bg-surface-brand px-4 py-3.5 text-[15px]">
+          <strong className="mb-1 block font-bold text-text-heading">Giải thích</strong>
+          <p className="leading-[1.6] text-text-body">{question.explanation}</p>
         </div>
       )}
     </Card>

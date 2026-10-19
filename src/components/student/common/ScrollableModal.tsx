@@ -25,16 +25,16 @@ function ScrollableModal({
         <Dialog.Overlay className="fixed inset-0 z-120 grid place-items-center bg-[rgba(10,16,35,0.44)] p-6 backdrop-blur-[8px] max-[760px]:p-4">
           <Dialog.Content
             aria-describedby={undefined}
-            className="flex max-h-[78vh] w-full flex-col overflow-hidden rounded-[22px] border border-[rgba(223,230,247,0.96)] bg-white/98 shadow-[0_30px_80px_rgba(9,16,36,0.28)] outline-none max-[760px]:max-h-[80vh] max-[760px]:rounded-[18px]"
+            className="flex max-h-[78vh] w-full flex-col overflow-hidden rounded-2xl border border-line-card bg-surface shadow-xl outline-none max-[760px]:max-h-[80vh] max-[760px]:rounded-2xl"
             style={{ maxWidth: Math.min(maxWidth, 680) }}
           >
             <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-[18px] max-[760px]:px-4">
-              <Dialog.Title className="text-[18px] leading-[1.25] font-black text-text-heading">
+              <Dialog.Title className="text-[22px] leading-[1.25] font-bold tracking-[-0.3px] text-text-heading">
                 {title}
               </Dialog.Title>
               <Dialog.Close
                 aria-label="Đóng"
-                className="grid size-9 cursor-pointer place-items-center rounded-xl border border-line-blue bg-surface text-primary"
+                className="grid size-10 cursor-pointer place-items-center rounded-xl border border-line bg-surface text-primary-text transition  active:shadow-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
               >
                 <X size={18} />
               </Dialog.Close>

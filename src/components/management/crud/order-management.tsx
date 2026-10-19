@@ -2,11 +2,12 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
-import SelectField from '../../console/select-field'
+import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { RefreshCw, Search } from '../../console/icons'
+import { Eye } from '../../console/icons'
+import { IconAction, RowActions } from '../../console/icon-action'
 import { Input } from '../../tailgrids/core/input'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
@@ -19,6 +20,7 @@ import {
 } from '../../../services/orderAdminService'
 import { EMPTY, formatDateTime, formatVnd } from './crud-format'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_TONES } from './order-labels'
+
 import OrderDetailScreen from './order-detail-screen'
 
 const LIST_KEY = 'admin-orders'
@@ -111,14 +113,11 @@ export default function OrderManagement({
         id: 'actions',
         header: 'Thao tác',
         enableSorting: false,
+        meta: { className: 'w-28 text-right' },
         cell: ({ row }) => (
-          <Button
-            size="sm"
-            appearance="outline"
-            onClick={() => setSelectedId(row.original.id)}
-          >
-            Chi tiết
-          </Button>
+          <RowActions>
+            <IconAction label="Chi tiết" icon={Eye} onClick={() => setSelectedId(row.original.id)} />
+          </RowActions>
         ),
       },
     ],
@@ -144,95 +143,84 @@ export default function OrderManagement({
         <p className="text-sm text-text-tertiary">
           Đơn của học viên, kèm mọi lần thanh toán và dấu vết xử lý.
         </p>
-        <Button
-          appearance="outline"
-          onClick={resource.reload}
-          disabled={resource.status === 'loading'}
-        >
-          <RefreshCw size={16} />
-          Làm mới
-        </Button>
       </div>
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        <div className="flex flex-wrap items-end gap-3 px-5 py-4">
+        <FilterToolbar>
           <form
-            className="flex w-full gap-2 sm:w-auto sm:flex-1"
+            className="w-full sm:max-w-md"
             onSubmit={(event) => {
               event.preventDefault()
               setQuery((old) => ({ ...old, reference: search.trim() || undefined, page: 0 }))
             }}
           >
-            <Input
-              aria-label="Tìm mã đơn hoặc mã thanh toán"
-              placeholder="Mã đơn hoặc mã thanh toán..."
+            <SearchInput
+              ariaLabel="Tìm mã đơn hoặc mã thanh toán"
+              placeholder="Mã đơn hoặc mã thanh toán... (Enter để tìm)"
               maxLength={50}
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="min-w-0 flex-1"
+              onChange={setSearch}
+              className="sm:max-w-none"
             />
-            <Button type="submit" appearance="outline" aria-label="Tìm kiếm">
-              <Search size={16} />
-            </Button>
           </form>
-          <SelectField
-            ariaLabel="Trạng thái đơn lọc"
-            value={query.status ?? 'ALL'}
-            onChange={(value) =>
-              setQuery((old) => ({
-                ...old,
-                status: value === 'ALL' ? undefined : (value as OrderAdmin['status']),
-                page: 0,
-              }))
-            }
-            options={[
-              { id: 'ALL', label: 'Tất cả trạng thái' },
-              ...ORDER_STATUSES.map((id) => ({ id, label: ORDER_STATUS_LABELS[id] })),
-            ]}
-          />
-          <SelectField
-            ariaLabel="Khóa học lọc"
-            value={query.courseId ?? 'ALL'}
-            onChange={(value) =>
-              setQuery((old) => ({ ...old, courseId: value === 'ALL' ? undefined : value, page: 0 }))
-            }
-            disabled={courses.status !== 'ready'}
-            options={[
-              { id: 'ALL', label: 'Tất cả khóa học' },
-              ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
-            ]}
-          />
-          <label className="flex flex-col gap-1 text-xs font-medium text-text-tertiary">
-            Từ ngày
+          <FilterGroup>
+            <FilterSelect
+              ariaLabel="Trạng thái đơn lọc"
+              value={query.status ?? 'ALL'}
+              onChange={(value) =>
+                setQuery((old) => ({
+                  ...old,
+                  status: value === 'ALL' ? undefined : (value as OrderAdmin['status']),
+                  page: 0,
+                }))
+              }
+              options={[
+                { id: 'ALL', label: 'Tất cả trạng thái' },
+                ...ORDER_STATUSES.map((id) => ({ id, label: ORDER_STATUS_LABELS[id] })),
+              ]}
+            />
+            <FilterSelect
+              ariaLabel="Khóa học lọc"
+              value={query.courseId ?? 'ALL'}
+              onChange={(value) =>
+                setQuery((old) => ({ ...old, courseId: value === 'ALL' ? undefined : value, page: 0 }))
+              }
+              disabled={courses.status !== 'ready'}
+              options={[
+                { id: 'ALL', label: 'Tất cả khóa học' },
+                ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
+              ]}
+            />
             <Input
               type="date"
               aria-label="Từ ngày tạo"
+              title="Từ ngày"
               value={query.from ?? ''}
+              className="h-9 w-40 py-0 text-sm"
               onChange={(event) =>
                 setQuery((old) => ({ ...old, from: event.target.value || undefined, page: 0 }))
               }
             />
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-text-tertiary">
-            Đến ngày
             <Input
               type="date"
               aria-label="Đến ngày tạo"
+              title="Đến ngày"
               value={query.to ?? ''}
+              className="h-9 w-40 py-0 text-sm"
               onChange={(event) =>
                 setQuery((old) => ({ ...old, to: event.target.value || undefined, page: 0 }))
               }
             />
-          </label>
-        </div>
+          </FilterGroup>
+        </FilterToolbar>
         {courses.status === 'error' && (
-          <Notice tone="warning" className="mx-5 mb-4">
+          <Notice tone="warning" className="mx-4 my-3">
             Không tải được danh sách khóa để lọc.{' '}
             <Button appearance="outline" size="sm" onClick={courses.reload}>
               Thử lại
             </Button>
           </Notice>
         )}
-        <ScheduleResourceState
+        <ScheduleResourceState skeleton="table" inset
           status={resource.status}
           errorMessage={resource.errorMessage}
           onRetry={resource.reload}

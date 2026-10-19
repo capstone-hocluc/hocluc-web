@@ -31,7 +31,9 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
   if (!getAccessToken()) {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-        <p className="text-sm text-text-muted" role="status">Đang chuyển đến đăng nhập...</p>
+        <p className="text-[15px] font-semibold text-text-body" role="status">
+          Đang chuyển đến đăng nhập...
+        </p>
       </main>
     )
   }
@@ -39,10 +41,14 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
   if (status === 'error') {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-        <section className="w-full max-w-[460px] rounded-2xl border border-border-subtle bg-surface p-8 text-center">
+        <section className="w-full max-w-[460px] rounded-2xl border border-line-card bg-surface p-8 text-center shadow-card">
           <ShieldAlert size={24} className="mx-auto text-danger" aria-hidden="true" />
-          <h1 className="mt-4 text-xl font-semibold text-text-heading">Không thể xác thực phiên đăng nhập</h1>
-          <p className="mt-2 text-sm leading-6 text-text-muted">Đăng nhập lại để xác nhận quyền truy cập khu vực học viên.</p>
+          <h1 className="mt-4 text-[22px] font-bold text-text-heading">
+            Không thể xác thực phiên đăng nhập
+          </h1>
+          <p className="mt-2 text-[15px] leading-6 text-text-body">
+            Đăng nhập lại để xác nhận quyền truy cập khu vực học viên.
+          </p>
           <Button
             variant="danger"
             className="mt-5"
@@ -62,7 +68,10 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
   if (status === 'idle' || status === 'loading' || !profile) {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-        <span className="inline-flex items-center gap-2 text-sm text-text-muted" role="status">
+        <span
+          className="inline-flex items-center gap-2 text-[15px] font-semibold text-text-body"
+          role="status"
+        >
           <LoaderCircle size={18} className="animate-spin text-primary" aria-hidden="true" />
           Đang xác thực quyền học viên...
         </span>
@@ -74,10 +83,14 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
   if (effectiveRole !== 'STUDENT') {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-        <section className="w-full max-w-[460px] rounded-2xl border border-border-subtle bg-surface p-8 text-center">
+        <section className="w-full max-w-[460px] rounded-2xl border border-line-card bg-surface p-8 text-center shadow-card">
           <ShieldAlert size={24} className="mx-auto text-danger" aria-hidden="true" />
-          <h1 className="mt-4 text-xl font-semibold text-text-heading">Trang này dành cho học viên</h1>
-          <p className="mt-2 text-sm leading-6 text-text-muted">Tài khoản hiện tại không có quyền mở lịch học viên.</p>
+          <h1 className="mt-4 text-[22px] font-bold text-text-heading">
+            Trang này dành cho học viên
+          </h1>
+          <p className="mt-2 text-[15px] leading-6 text-text-body">
+            Tài khoản hiện tại không có quyền mở lịch học viên.
+          </p>
           <Button
             variant="primary"
             className="mt-5"

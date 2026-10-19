@@ -1,20 +1,33 @@
+import SelectField from '../../console/select-field'
 import { useState, type FormEvent } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
 import Field, { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import Notice from '../../console/notice'
 import { saveAdminChapter, type ChapterAdmin } from '../../../services/chapterAdminService'
+import type { ContentSection } from '../../../services/contentSectionService'
 import { getFieldErrors } from '../../../lib/errors'
 import { crudError, unknownMutation } from './crud-errors'
 
 interface Props {
   courseId: string
   chapter: ChapterAdmin | null
+  /** The course's content sections; the choice is hidden when it has none. */
+  sections?: ContentSection[]
+  /** Section a new chapter starts in (the group whose "Thêm chương" was pressed). */
+  defaultSectionId?: string | null
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ChapterEditorDialog({ courseId, chapter, onClose, onSaved }: Props) {
+export default function ChapterEditorDialog({
+  courseId,
+  chapter,
+  sections = [],
+  defaultSectionId = null,
+  onClose,
+  onSaved,
+}: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -27,9 +40,18 @@ export default function ChapterEditorDialog({ courseId, chapter, onClose, onSave
     setError('')
     setFieldErrors({})
     try {
+      const sectionId = String(data.get('sectionId') ?? '')
       await saveAdminChapter(courseId, chapter, {
         title: String(data.get('title') ?? '').trim(),
         description: String(data.get('description') ?? '').trim() || null,
+        // Only a course with sections shows the choice; without it the chapter is left where it is.
+        ...(sections.length
+          ? sectionId
+            ? { sectionId }
+            : chapter?.sectionId
+              ? { clearSection: true }
+              : {}
+          : {}),
       })
       onSaved()
     } catch (err) {
@@ -80,6 +102,23 @@ export default function ChapterEditorDialog({ courseId, chapter, onClose, onSave
             aria-invalid={!!fieldErrors.title}
           />
         </Field>
+        {sections.length > 0 && (
+          <Field label="Phần học" hint="Nhóm chương theo phần để học viên dễ theo dõi lộ trình.">
+            <SelectField
+              ariaLabel="Phần học"
+              name="sectionId"
+              defaultValue={chapter ? (chapter.sectionId ?? '') : (defaultSectionId ?? '')}
+              triggerClassName={fieldControlClass}
+              options={[
+                { id: '', label: 'Chưa xếp vào phần nào' },
+                ...sections.map((section) => ({
+                  id: String(section.id),
+                  label: section.phaseName ? `${section.phaseName} · ${section.title}` : section.title,
+                })),
+              ]}
+            />
+          </Field>
+        )}
         <Field label="Mô tả">
           <textarea
             name="description"

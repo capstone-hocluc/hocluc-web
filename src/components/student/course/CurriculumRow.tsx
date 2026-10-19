@@ -32,32 +32,40 @@ function CurriculumRow({
   onClick,
 }: CurriculumRowProps) {
   const className = cn(
-    'flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-[13px] border bg-surface-tint p-2.5 text-left transition-colors',
-    current ? 'border-line-brand bg-surface-brand' : 'border-line',
-    locked ? 'cursor-default' : 'cursor-pointer hover:border-line-brand hover:bg-surface-brand'
+    'flex w-full flex-wrap items-center gap-x-3.5 gap-y-2 rounded-xl border p-3 text-left transition duration-150 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
+    current
+      ? 'border-transparent bg-surface-brand'
+      : locked
+        ? 'border-line bg-surface-soft'
+        : 'border-line bg-surface',
+    locked ? 'cursor-default' : 'cursor-pointer hover:border-primary-bright hover:bg-surface-brand '
   )
 
   const content = (
     <>
       {icon}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[11px] font-bold text-text-secondary">{kind}</span>
+        <span className="text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase">
+          {kind}
+        </span>
         <span
           className={cn(
-            'flex flex-wrap items-center gap-1.5 text-[13.5px] leading-[1.35] font-extrabold',
+            'flex flex-wrap items-center gap-1.5 text-[15px] leading-[1.35] font-semibold',
             locked ? 'text-text-secondary' : 'text-text-heading'
           )}
         >
           {title}
         </span>
-        {meta && <span className="text-[11.5px] font-medium text-text-secondary">{meta}</span>}
+        {meta && <span className="text-[13px] font-semibold text-text-secondary">{meta}</span>}
       </span>
-      <span className="flex shrink-0 items-center gap-3 text-[11.5px] font-semibold text-text-secondary max-[640px]:basis-full max-[640px]:justify-between max-[640px]:pl-11">
+      <span className="flex shrink-0 items-center gap-3 text-[13px] font-bold text-text-secondary [&>span]:whitespace-nowrap max-[640px]:basis-full max-[640px]:justify-between max-[640px]:pl-[52px]">
         {side}
-        {!locked && <ChevronRight size={16} className="text-lock/70" />}
+        {!locked && <ChevronRight size={18} className="text-lock/70" />}
       </span>
       {locked && lockNote && (
-        <span className="basis-full pl-11 text-[11.5px] text-text-secondary">{lockNote}</span>
+        <span className="basis-full pl-[52px] text-[13px] font-semibold text-text-secondary">
+          {lockNote}
+        </span>
       )}
     </>
   )

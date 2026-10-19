@@ -1,42 +1,134 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Plus, RefreshCw } from '../../console/icons'
+import PageHeading from '../../console/page-heading'
+import { Pencil, Plus, Trash2, XCircle } from '../../console/icons'
+import { IconAction, RowActions } from '../../console/icon-action'
 import Button from '../../console/button'
+import SelectField from '../../console/select-field'
 import ListCard from '../../console/list-card'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import CategoryEditorDialog from './category-editor-dialog'
-import { getCategories, deleteCategory, type Category } from '../../../services/categoryService'
+import {
+  getCategories,
+  deleteCategory,
+  saveCategory,
+  type Category,
+} from '../../../services/categoryService'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { crudError, unknownMutation } from './crud-errors'
+
+// A category cannot move under itself or its own descendants. The backend still enforces cycles and depth.
+function blockedParents(category: Category, rows: Category[]) {
+  const blocked = new Set([category.id])
+  for (let i = 0; i < rows.length; i++) {
+    for (const item of rows) if (item.parentId && blocked.has(item.parentId)) blocked.add(item.id)
+  }
+  return blocked
+}
 
 export default function CategoryManagement({ readOnly = false }: { readOnly?: boolean }) {
   const resource = useScheduleResource('management-categories', getCategories)
   const [editor, setEditor] = useState<{ category: Category | null } | null>(null)
   const [deleting, setDeleting] = useState<Category | null>(null)
   const [busy, setBusy] = useState(false)
+  // The select can report one choice twice before `busy` re-renders; this blocks the duplicate request.
+  const moving = useRef(false)
+  const [quickEditId, setQuickEditId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const rows = useMemo(() => resource.data ?? [], [resource.data])
+  const changeParent = useCallback(
+    async (category: Category, value: string) => {
+      const parentId = value === 'NONE' ? null : value
+      if (moving.current || busy || parentId === category.parentId) return
+      moving.current = true
+      setBusy(true)
+      setError('')
+      setNotice('')
+      try {
+        await saveCategory(category.id, {
+          name: category.name,
+          description: category.description,
+          imageUrl: category.imageUrl,
+          parentId,
+          active: category.active,
+          sortOrder: category.sortOrder,
+          expectedUpdatedAt: category.updatedAt,
+        })
+        setNotice(`Đã đổi môn học cha của "${category.name}".`)
+        setQuickEditId(null)
+        resource.reload()
+      } catch (err) {
+        setError(crudError(err))
+        if (unknownMutation(err)) resource.reload()
+      } finally {
+        moving.current = false
+        setBusy(false)
+      }
+    },
+    [busy, resource]
+  )
   const names = useMemo(() => new Map(rows.map((row) => [row.id, row.name])), [rows])
   const columns = useMemo<ColumnDef<Category>[]>(
     () => [
       {
         accessorKey: 'name',
-        header: 'Danh mục',
+        header: 'Môn học',
         cell: ({ row }) => (
           <div className="min-w-40">
             <strong className="font-medium">{row.original.name}</strong>
-            <p className="mt-1 text-xs text-text-tertiary">{row.original.slug}</p>
           </div>
         ),
       },
       {
         id: 'parent',
-        header: 'Danh mục cha',
-        accessorFn: (c) => (c.parentId ? (names.get(c.parentId) ?? '—') : '—'),
+        header: 'Môn học cha',
+        accessorFn: (c) => (c.parentId ? (names.get(c.parentId) ?? '—') : 'Không có'),
+        cell: ({ row }) => {
+          const category = row.original
+          const parentName = category.parentId ? (names.get(category.parentId) ?? '—') : 'Không có'
+          if (readOnly) return parentName
+          if (quickEditId !== category.id) {
+            return (
+              <div className="flex items-center gap-1">
+                <span>{parentName}</span>
+                <IconAction
+                  label={`Sửa nhanh môn học cha của ${category.name}`}
+                  icon={Pencil}
+                  disabled={busy}
+                  onClick={() => setQuickEditId(category.id)}
+                />
+              </div>
+            )
+          }
+          const blocked = blockedParents(category, rows)
+          return (
+            <div className="flex items-center gap-1">
+              <SelectField
+                ariaLabel={`Môn học cha của ${category.name}`}
+                value={category.parentId ?? 'NONE'}
+                disabled={busy}
+                onChange={(value) => void changeParent(category, value)}
+                className="min-w-48"
+                options={[
+                  { id: 'NONE', label: 'Không có' },
+                  ...rows
+                    .filter((c) => !blocked.has(c.id))
+                    .map((c) => ({ id: c.id, label: c.name })),
+                ]}
+              />
+              <IconAction
+                label="Hủy sửa nhanh"
+                icon={XCircle}
+                disabled={busy}
+                onClick={() => setQuickEditId(null)}
+              />
+            </div>
+          )
+        },
       },
       { accessorKey: 'sortOrder', header: 'Thứ tự' },
       {
@@ -53,35 +145,32 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
             {
               id: 'actions',
               header: 'Thao tác',
+              meta: { className: 'w-32 text-right' },
               cell: ({ row }: { row: { original: Category } }) => (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    appearance="outline"
+                <RowActions>
+                  <IconAction
+                    label="Sửa"
+                    icon={Pencil}
                     disabled={busy}
                     onClick={() => setEditor({ category: row.original })}
-                  >
-                    Sửa
-                  </Button>
-                  <Button
-                    size="sm"
-                    appearance="ghost"
+                  />
+                  <IconAction
+                    label="Xóa"
+                    icon={Trash2}
                     variant="danger"
                     disabled={busy}
                     onClick={() => {
                       setError('')
                       setDeleting(row.original)
                     }}
-                  >
-                    Xóa
-                  </Button>
-                </div>
+                  />
+                </RowActions>
               ),
             },
           ]
         : []),
     ],
-    [readOnly, names, busy]
+    [readOnly, names, busy, rows, changeParent, quickEditId]
   )
   async function remove() {
     if (!deleting || busy) return
@@ -90,7 +179,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
     try {
       await deleteCategory(deleting.id)
       setDeleting(null)
-      setNotice('Đã xóa danh mục.')
+      setNotice('Đã xóa môn học.')
       resource.reload()
     } catch (err) {
       setError(crudError(err))
@@ -104,28 +193,22 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
   }
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">Danh mục dùng chung cho khóa học và nội dung.</p>
-        <div className="flex gap-2">
-          <Button
-            appearance="outline"
-            onClick={resource.reload}
-            disabled={busy || resource.status === 'loading'}
-          >
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
-          {!readOnly && (
+      <PageHeading
+        title="Môn học"
+        subtitle="Môn học dùng chung cho khóa học và nội dung."
+        readOnly={readOnly}
+        action={
+          !readOnly && (
             <Button
               onClick={() => setEditor({ category: null })}
               disabled={busy || resource.status !== 'ready'}
             >
               <Plus size={16} />
-              Tạo danh mục
+              Tạo môn học
             </Button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>
@@ -137,6 +220,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
         </Notice>
       )}
       <ScheduleResourceState
+        skeleton="table"
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
@@ -145,11 +229,11 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           data={rows}
           columns={columns}
           getRowKey={(c) => c.id}
-          searchPlaceholder="Tìm danh mục..."
-          searchText={(c) => `${c.name} ${c.slug}`}
-          emptyMessage="Chưa có danh mục. Tạo danh mục đầu tiên để phân loại nội dung."
+          searchPlaceholder="Tìm môn học..."
+          searchText={(c) => c.name}
+          emptyMessage="Chưa có môn học. Tạo môn học đầu tiên để phân loại nội dung."
           filter={{
-            ariaLabel: 'Trạng thái danh mục',
+            ariaLabel: 'Trạng thái môn học',
             allLabel: 'Tất cả trạng thái',
             options: ['Đang dùng', 'Ngừng dùng'],
             get: (c) => (c.active ? 'Đang dùng' : 'Ngừng dùng'),
@@ -167,17 +251,17 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           }}
           onSaved={() => {
             setEditor(null)
-            setNotice('Đã lưu danh mục.')
+            setNotice('Đã lưu môn học.')
             resource.reload()
           }}
         />
       )}
       {deleting && (
         <ConfirmDialog
-          title="Xóa danh mục?"
+          title="Xóa môn học?"
           description={
             <>
-              {deleting.name}. Chỉ xóa khi không còn danh mục con hoặc dữ liệu tham chiếu.
+              {deleting.name}. Chỉ xóa khi không còn môn học con hoặc dữ liệu tham chiếu.
               {error && (
                 <span className="mt-2 block text-danger" role="alert">
                   {error}
@@ -186,7 +270,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
             </>
           }
           cancelLabel="Hủy"
-          confirmLabel="Xóa danh mục"
+          confirmLabel="Xóa môn học"
           variant="danger"
           busy={busy}
           onCancel={() => setDeleting(null)}

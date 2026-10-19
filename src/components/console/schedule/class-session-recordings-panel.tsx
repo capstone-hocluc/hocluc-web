@@ -1,3 +1,4 @@
+import SelectField from '../select-field'
 import { useEffect, useState, type FormEvent } from 'react'
 import { ExternalLink, Pencil, PlayCircle, RefreshCw, Trash2 } from '../icons'
 import {
@@ -31,9 +32,12 @@ const providerOptions: Array<{ id: MeetingProvider; label: string }> = [
 export default function ClassSessionRecordingsPanel({
   session,
   role,
+  embedded = false,
 }: {
   session: ClassSessionResponse
   role: ActorRole
+  /** Inside a titled DetailSection: no heading or divider of its own. */
+  embedded?: boolean
 }) {
   const resource = useScheduleResource(
     role === 'STUDENT' ? null : 'class-session-recordings:' + session.id,
@@ -138,7 +142,7 @@ export default function ClassSessionRecordingsPanel({
     try {
       await deleteClassSessionRecording(session.id, removing.id)
       setRemoving(null)
-      setNotice('Đã xoá bản ghi khỏi buổi học.')
+      setNotice('Đã xóa bản ghi khỏi buổi học.')
       resource.reload()
     } catch (reason) {
       setError(getErrorMessage(reason))
@@ -148,9 +152,9 @@ export default function ClassSessionRecordingsPanel({
   }
 
   return (
-    <section className="flex flex-col gap-3 border-t border-card-border pt-4">
+    <section className={embedded ? 'flex flex-col gap-3' : 'flex flex-col gap-3 border-t border-card-border pt-4'}>
       <div className="flex items-center gap-2">
-        <h3 className="text-sm font-medium text-text-primary">Bản ghi</h3>
+        {!embedded && <h3 className="text-sm font-medium text-text-primary">Bản ghi</h3>}
         <Button size="sm" appearance="ghost" className="ml-auto" disabled={busy} onClick={resource.reload}>
           <RefreshCw size={14} />
           Làm mới link
@@ -184,11 +188,16 @@ export default function ClassSessionRecordingsPanel({
             <input name="title" autoComplete="off" value={title} onChange={(event) => setTitle(event.target.value)} disabled={busy} required className={fieldControlClass} />
           </Field>
           <Field label="Nền tảng">
-            <select name="provider" autoComplete="off" value={provider} onChange={(event) => setProvider(event.target.value as MeetingProvider)} disabled={busy} className={fieldControlClass}>
-              {providerOptions.map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </select>
+            <SelectField
+              ariaLabel="Nền tảng"
+              name="provider"
+              autoComplete="off"
+              value={provider}
+              onChange={(nextValue) => setProvider(nextValue as MeetingProvider)}
+              disabled={busy}
+              triggerClassName={fieldControlClass}
+              options={providerOptions.map((option) => ({ id: String(option.id), label: option.label }))}
+            />
           </Field>
           <div className="sm:col-span-2">
             <Field label="URL video">
@@ -229,17 +238,15 @@ export default function ClassSessionRecordingsPanel({
               />
             </Field>
             <Field label="Nền tảng">
-              <select
+              <SelectField
+                ariaLabel="Nền tảng"
                 name="editProvider"
                 disabled={busy}
                 value={editProvider}
-                onChange={(event) => setEditProvider(event.target.value as MeetingProvider)}
-                className={fieldControlClass}
-              >
-                {providerOptions.map((option) => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
+                onChange={(nextValue) => setEditProvider(nextValue as MeetingProvider)}
+                triggerClassName={fieldControlClass}
+                options={providerOptions.map((option) => ({ id: String(option.id), label: option.label }))}
+              />
             </Field>
             <Field label="URL video">
               <input
@@ -262,10 +269,10 @@ export default function ClassSessionRecordingsPanel({
       )}
       {removing && (
         <ConfirmDialog
-          title="Xoá bản ghi?"
+          title="Xóa bản ghi?"
           description={<>Bản ghi “{removing.title}” sẽ bị gỡ khỏi buổi học.</>}
           cancelLabel="Giữ lại"
-          confirmLabel="Xoá bản ghi"
+          confirmLabel="Xóa bản ghi"
           variant="danger"
           busy={busy}
           onCancel={() => setRemoving(null)}
@@ -322,7 +329,7 @@ function RecordingRow({
         {onDelete && (
           <Button size="sm" variant="danger" appearance="outline" disabled={disabled} onClick={onDelete}>
             <Trash2 size={13} />
-            Xoá
+            Xóa
           </Button>
         )}
       </div>

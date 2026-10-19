@@ -5,9 +5,14 @@ import DataTable from '../../console/data-table'
 import Notice from '../../console/notice'
 import Panel from '../../console/panel'
 import Status from '../../console/status'
-import ConfirmDialog from '../../console/confirm-dialog'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { ArrowLeft, RefreshCw } from '../../console/icons'
+import DateTime from '../../console/detail/date-time'
+import DangerZone from '../../console/detail/danger-zone'
+import DetailHeader from '../../console/detail/detail-header'
+import DetailSection from '../../console/detail/detail-section'
+import KeyFacts from '../../console/detail/key-facts'
+import SystemInfo, { SystemRow } from '../../console/detail/system-info'
+import { ArrowLeft } from '../../console/icons'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import {
   cancelAdminOrder,
@@ -36,7 +41,6 @@ export default function OrderDetailScreen({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [cancelling, setCancelling] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
   const itemColumns = useMemo<ColumnDef<OrderItem>[]>(
@@ -116,21 +120,23 @@ export default function OrderDetailScreen({
     []
   )
 
-  async function cancel() {
-    if (busy) return
+  /** Resolves to whether the confirmation should close: false keeps it open with the error shown. */
+  async function cancel(): Promise<boolean> {
+    if (busy) return false
     setBusy(true)
     setError('')
     try {
       await cancelAdminOrder(id)
       setNotice('Đã hủy đơn hàng.')
-      setCancelling(false)
       resource.reload()
+      return true
     } catch (err) {
       setError(crudError(err))
       if (unknownMutation(err)) {
-        setCancelling(false)
         resource.reload()
+        return true
       }
+      return false
     } finally {
       setBusy(false)
     }
@@ -140,47 +146,16 @@ export default function OrderDetailScreen({
   const canClose = !readOnly && !!order && canCancelOrder(order.status)
   const canSettle = canConfirm && !!order && canConfirmOrder(order.status)
 
+  // The channel that actually settled the order; before payment, the latest attempt.
+  const settled = order?.payments.find((payment) => payment.status === 'SUCCESS') ?? order?.payments.at(-1)
+
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
         <Button appearance="ghost" onClick={onBack} disabled={busy}>
           <ArrowLeft size={16} />
           Danh sách đơn
         </Button>
-        <div className="flex gap-2">
-          <Button
-            appearance="outline"
-            onClick={resource.reload}
-            disabled={busy || resource.status === 'loading'}
-          >
-            <RefreshCw size={16} />
-            Làm mới
-          </Button>
-          {canClose && (
-            <Button
-              variant="danger"
-              appearance="outline"
-              onClick={() => {
-                setError('')
-                setCancelling(true)
-              }}
-              disabled={busy}
-            >
-              Hủy đơn
-            </Button>
-          )}
-          {canSettle && (
-            <Button
-              onClick={() => {
-                setError('')
-                setConfirming(true)
-              }}
-              disabled={busy}
-            >
-              Xác nhận thanh toán
-            </Button>
-          )}
-        </div>
       </div>
       {notice && (
         <Notice tone="info">
@@ -192,136 +167,138 @@ export default function OrderDetailScreen({
           <span role="alert">{error}</span>
         </Notice>
       )}
-      <ScheduleResourceState
+      <ScheduleResourceState skeleton="detail"
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
       >
         {order && (
-          <>
-            <Panel
-              title={<span className="break-words">{order.orderCode}</span>}
-              action={
-                <Status tone={ORDER_STATUS_TONES[order.status]}>
-                  {ORDER_STATUS_LABELS[order.status]}
-                </Status>
-              }
-            >
-              <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
-                <div>
-                  <dt className="text-text-tertiary">Học viên</dt>
-                  <dd className="mt-1 font-medium text-text-primary">
-                    {order.studentName ?? order.studentEmail}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Email</dt>
-                  <dd className="mt-1 break-words font-medium text-text-primary">
-                    {order.studentEmail}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Tổng tiền</dt>
-                  <dd className="mt-1 font-medium text-text-primary">{formatVnd(order.totalAmount)}</dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Mã thanh toán</dt>
-                  <dd className="mt-1 break-words font-medium text-text-primary">
-                    {order.paymentCode ?? EMPTY}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Tạo lúc</dt>
-                  <dd className="mt-1 font-medium text-text-primary">{formatDateTime(order.createdAt)}</dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Hạn thanh toán</dt>
-                  <dd className="mt-1 font-medium text-text-primary">{formatDateTime(order.expiresAt)}</dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Thanh toán lúc</dt>
-                  <dd className="mt-1 font-medium text-text-primary">{formatDateTime(order.paidAt)}</dd>
-                </div>
-                <div>
-                  <dt className="text-text-tertiary">Số lần tạo QR</dt>
-                  <dd className="mt-1 font-medium text-text-primary">{order.paymentAttempts}</dd>
-                </div>
-              </dl>
-            </Panel>
-
-            <Panel title="Khóa học trong đơn">
-              <DataTable
-                columns={itemColumns}
-                data={order.items}
-                getRowKey={(item) => item.courseId}
-                emptyMessage="Đơn không còn dòng nào."
+          <Panel>
+            <div className="flex flex-col gap-5">
+              <DetailHeader
+                title={order.orderCode}
+                chips={
+                  <Status tone={ORDER_STATUS_TONES[order.status]}>
+                    {ORDER_STATUS_LABELS[order.status]}
+                  </Status>
+                }
+                actions={
+                  canSettle ? (
+                    <Button
+                      onClick={() => {
+                        setError('')
+                        setConfirming(true)
+                      }}
+                      disabled={busy}
+                    >
+                      Xác nhận thanh toán
+                    </Button>
+                  ) : undefined
+                }
               />
-            </Panel>
 
-            <Panel title="Lịch sử thanh toán">
-              <DataTable
-                columns={paymentColumns}
-                data={order.payments}
-                getRowKey={(payment) => payment.id}
-                emptyMessage="Chưa có giao dịch nào được ghi nhận."
+              <KeyFacts
+                facts={[
+                  {
+                    label: 'Học viên',
+                    required: true,
+                    value: (
+                      <>
+                        {order.studentName ?? order.studentEmail}
+                        {order.studentName && (
+                          <span className="block text-xs font-normal break-words text-text-tertiary">
+                            {order.studentEmail}
+                          </span>
+                        )}
+                      </>
+                    ),
+                  },
+                  { label: 'Tổng tiền', required: true, value: formatVnd(order.totalAmount) },
+                  { label: 'Phương thức', value: settled && PAYMENT_PROVIDER_LABELS[settled.provider] },
+                  { label: 'Mã thanh toán', value: order.paymentCode },
+                  { label: 'Tạo lúc', value: <DateTime value={order.createdAt} /> },
+                  order.paidAt
+                    ? { label: 'Thanh toán lúc', value: <DateTime value={order.paidAt} /> }
+                    : {
+                        label: 'Hạn thanh toán',
+                        value: order.status === 'PENDING' && <DateTime value={order.expiresAt} />,
+                      },
+                ]}
               />
-            </Panel>
 
-            {(order.confirmedAt || order.cancelledAt || order.confirmReason) && (
-              <Panel title="Dấu vết xử lý">
-                <dl className="grid gap-4 text-sm sm:grid-cols-2">
-                  {order.confirmedAt && (
-                    <>
-                      <div>
-                        <dt className="text-text-tertiary">Xác nhận thủ công</dt>
-                        <dd className="mt-1 font-medium text-text-primary">
-                          {order.confirmedByEmail ?? EMPTY} · {formatDateTime(order.confirmedAt)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="text-text-tertiary">Lý do</dt>
-                        <dd className="mt-1 font-medium text-text-primary">
-                          {order.confirmReason ?? EMPTY}
-                        </dd>
-                      </div>
-                    </>
-                  )}
-                  {order.cancelledAt && (
-                    <div>
-                      <dt className="text-text-tertiary">Hủy bởi</dt>
-                      <dd className="mt-1 font-medium text-text-primary">
-                        {order.cancelledByEmail ?? EMPTY} · {formatDateTime(order.cancelledAt)}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </Panel>
-            )}
-          </>
+              <DetailSection title="Khóa học trong đơn">
+                <DataTable
+                  columns={itemColumns}
+                  data={order.items}
+                  getRowKey={(item) => item.courseId}
+                  emptyMessage="Đơn không còn dòng nào."
+                />
+              </DetailSection>
+
+              <DetailSection title="Lịch sử thanh toán">
+                <DataTable
+                  columns={paymentColumns}
+                  data={order.payments}
+                  getRowKey={(payment) => payment.id}
+                  emptyMessage="Chưa có giao dịch nào được ghi nhận."
+                />
+              </DetailSection>
+
+              <SystemInfo id={order.id}>
+                <SystemRow label="Số lần tạo QR">{order.paymentAttempts}</SystemRow>
+                {order.paidAt && order.expiresAt && (
+                  <SystemRow label="Hạn thanh toán">
+                    <DateTime value={order.expiresAt} />
+                  </SystemRow>
+                )}
+                {order.confirmedAt && (
+                  <>
+                    <SystemRow label="Xác nhận thủ công">
+                      {order.confirmedByEmail ?? EMPTY} · {formatDateTime(order.confirmedAt)}
+                    </SystemRow>
+                    <SystemRow label="Lý do">{order.confirmReason ?? EMPTY}</SystemRow>
+                  </>
+                )}
+                {order.cancelledAt && (
+                  <SystemRow label="Hủy bởi">
+                    {order.cancelledByEmail ?? EMPTY} · {formatDateTime(order.cancelledAt)}
+                  </SystemRow>
+                )}
+              </SystemInfo>
+
+              {canClose && (
+                <DangerZone
+                  actions={[
+                    {
+                      id: 'cancel-order',
+                      label: 'Hủy đơn',
+                      hint: 'Đóng đơn chưa thanh toán. Học viên không thể thanh toán lại.',
+                      busy,
+                      onOpen: () => setError(''),
+                      confirm: {
+                        title: 'Hủy đơn hàng?',
+                        description: (
+                          <>
+                            Đơn sẽ đóng vĩnh viễn và học viên không thể thanh toán lại. Chỉ áp dụng cho đơn chưa thanh toán.
+                            {error && (
+                              <span role="alert" className="mt-2 block text-danger">
+                                {error}
+                              </span>
+                            )}
+                          </>
+                        ),
+                        confirmLabel: 'Hủy đơn',
+                        cancelLabel: 'Giữ đơn',
+                      },
+                      onConfirm: cancel,
+                    },
+                  ]}
+                />
+              )}
+            </div>
+          </Panel>
         )}
       </ScheduleResourceState>
-
-      {cancelling && (
-        <ConfirmDialog
-          title="Hủy đơn hàng?"
-          description={
-            <>
-              Đơn sẽ đóng vĩnh viễn và học viên không thể thanh toán lại. Chỉ áp dụng cho đơn chưa thanh toán.
-              {error && (
-                <span role="alert" className="mt-2 block text-danger">
-                  {error}
-                </span>
-              )}
-            </>
-          }
-          cancelLabel="Giữ đơn"
-          confirmLabel="Hủy đơn"
-          variant="danger"
-          busy={busy}
-          onCancel={() => setCancelling(false)}
-          onConfirm={() => void cancel()}
-        />
-      )}
 
       {confirming && order && (
         <ConfirmPaymentDialog

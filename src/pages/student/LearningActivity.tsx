@@ -57,17 +57,17 @@ function VideoScreen({ activity, onAction }) {
         title={activity.title}
         meta={getActivityMeta(activity).join(' · ')}
       />
-      <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] gap-3.5 max-[760px]:grid-cols-1">
+      <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)] gap-5 max-[760px]:grid-cols-1">
         <ActivityCard>
-          <div className="grid aspect-video place-items-center gap-2 rounded-2xl bg-linear-to-br from-badge-info-bg to-surface-soft text-primary">
-            <Play size={40} />
-            <span className="text-[13px] font-bold">Video bài học</span>
+          <div className="grid aspect-video place-items-center gap-2 rounded-xl bg-primary-soft text-primary">
+            <Play size={44} />
+            <span className="text-base font-semibold">Video bài học</span>
           </div>
-          <p className="mt-2.5 text-[12px] font-medium text-text-secondary">{activity.duration}</p>
+          <p className="mt-3 text-sm font-semibold text-text-secondary">{activity.duration}</p>
         </ActivityCard>
         <ActivityCard>
           <ActivityCardTitle>Mục tiêu bài học</ActivityCardTitle>
-          <ul className="grid gap-2 pl-[18px] text-[13px] leading-[1.5] font-medium text-text-dim">
+          <ul className="grid gap-2.5 pl-5 text-[15px] leading-[1.5] font-semibold text-text-body">
             <li>Xác định được ý chính của nội dung học.</li>
             <li>Nhận diện thông tin quan trọng trong câu hỏi ĐGNL.</li>
             <li>Áp dụng kiến thức vào bài luyện tập tiếp theo.</li>
@@ -275,7 +275,7 @@ function ReviewMode({ activity, label, questions, attempt, onBackResult }) {
               <ReviewQuestionCard key={question.id} question={question} attempt={attempt} />
             ))}
             {visibleQuestions.length === 0 && (
-              <ActivityCard className="text-center text-[13px] text-text-secondary">
+              <ActivityCard className="text-center text-[15px] font-semibold text-text-secondary">
                 Không có câu hỏi phù hợp với bộ lọc này.
               </ActivityCard>
             )}
@@ -326,8 +326,8 @@ function ReviewMode({ activity, label, questions, attempt, onBackResult }) {
 // Questions on the left, sticky tracker on the right (stacked on mobile).
 function TestLayout({ main, aside }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-3.5 max-[760px]:grid-cols-1">
-      <main className="grid gap-3">{main}</main>
+    <div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-5 max-[760px]:grid-cols-1">
+      <main className="grid gap-4">{main}</main>
       {aside}
     </div>
   )
@@ -510,7 +510,7 @@ function LearningActions({ primaryLabel, onAction }) {
   return (
     <LessonActions>
       <ActivityButton block onClick={() => onAction('Điều hướng bài trước đang được phát triển.')}>
-        <ArrowLeft size={15} />
+        <ArrowLeft size={16} />
         Bài trước
       </ActivityButton>
       <ActivityButton
@@ -518,7 +518,7 @@ function LearningActions({ primaryLabel, onAction }) {
         block
         onClick={() => onAction('Tiến độ đã được cập nhật mô phỏng.')}
       >
-        <CheckCircle2 size={15} />
+        <CheckCircle2 size={16} />
         {primaryLabel}
       </ActivityButton>
       <ActivityButton
@@ -526,7 +526,7 @@ function LearningActions({ primaryLabel, onAction }) {
         onClick={() => onAction('Điều hướng bài tiếp theo đang được phát triển.')}
       >
         Bài tiếp theo
-        <ArrowRight size={15} />
+        <ArrowRight size={16} />
       </ActivityButton>
     </LessonActions>
   )

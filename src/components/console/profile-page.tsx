@@ -213,7 +213,7 @@ function ProfilePage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-[28px] leading-8 font-medium text-text-primary">Hồ sơ cá nhân</h1>
+      <h1 className="text-[26px] leading-8 font-semibold tracking-[-0.5px] text-text-primary sm:text-[30px]">Hồ sơ cá nhân</h1>
       <div className="flex max-w-full flex-col gap-y-6 rounded-xl border-[0.5px] border-card-border bg-card-background p-0 md:flex-row lg:min-h-150">
         <nav className="flex w-full shrink-0 flex-col gap-2 self-stretch border-card-border px-3 py-6 lg:max-w-84.5 lg:border-r">
           {TABS.map(({ id, title, description, icon: Icon }) => (

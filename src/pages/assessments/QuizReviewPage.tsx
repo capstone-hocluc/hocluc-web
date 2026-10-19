@@ -4,7 +4,6 @@ import QuizReviewQuestionCard from '../../components/assessment/QuizReviewQuesti
 import BackLink from '../../components/student/common/BackLink'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
-import Card, { CardTitle } from '../../components/ui/Card'
 import Skeleton from '../../components/ui/Skeleton'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getAttemptReview, getQuiz } from '../../services/assessmentService'
@@ -41,8 +40,8 @@ function QuizReviewPage({ attemptId, onBackToQuiz }: QuizReviewPageProps) {
         onRetry={reload}
         loading={
           <>
-            <Skeleton className="h-40 rounded-2xl" />
-            <Skeleton className="h-80 rounded-2xl" />
+            <Skeleton className="h-40 rounded-xl" />
+            <Skeleton className="h-80 rounded-xl" />
           </>
         }
         forbidden={{ title: 'Bạn chưa có quyền xem kết quả bài kiểm tra này.' }}
@@ -57,9 +56,11 @@ function QuizReviewPage({ attemptId, onBackToQuiz }: QuizReviewPageProps) {
           <QuizResultSummary review={review} />
 
           {showAnswers && (
-            <Card as="section" padding="none" radius="lg" className="border-border-subtle p-[22px]">
-              <CardTitle className="mb-3.5 text-base">Chi tiết bài làm</CardTitle>
-              <div className="flex flex-col gap-3.5">
+            <section className="flex flex-col gap-4">
+              <h2 className="text-xl font-bold tracking-[-0.2px] text-text-heading">
+                Chi tiết bài làm
+              </h2>
+              <div className="flex flex-col gap-4">
                 {bySequence(review.questions).map((question, index) => (
                   <QuizReviewQuestionCard
                     key={question.questionId}
@@ -68,7 +69,7 @@ function QuizReviewPage({ attemptId, onBackToQuiz }: QuizReviewPageProps) {
                   />
                 ))}
               </div>
-            </Card>
+            </section>
           )}
         </>
       )}

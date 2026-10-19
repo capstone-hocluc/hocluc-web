@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react'
 import { cn } from '../../lib/cn'
+import { matchesSearch } from '../../lib/search'
 
 export interface DropdownOption {
   id: string
@@ -61,15 +62,6 @@ interface ActiveOptionState {
 
 const DEFAULT_PLACEHOLDER = 'Chọn giá trị'
 
-function normalizeSearchValue(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[đĐ]/g, 'd')
-    .toLocaleLowerCase('vi-VN')
-    .trim()
-}
-
 export function DropdownField({
   options,
   value,
@@ -115,12 +107,7 @@ export function DropdownField({
   const visibleOptions = useMemo(() => {
     if (!isSearchable || !filterOptions) return options
 
-    const normalizedQuery = normalizeSearchValue(deferredQuery)
-    if (!normalizedQuery) return options
-
-    return options.filter((option) =>
-      normalizeSearchValue(`${option.label} ${option.searchText ?? ''}`).includes(normalizedQuery),
-    )
+    return options.filter((option) => matchesSearch(deferredQuery, option.label, option.searchText))
   }, [deferredQuery, filterOptions, isSearchable, options])
 
   const selectedValue = value ?? null

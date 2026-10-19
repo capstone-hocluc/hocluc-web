@@ -9,7 +9,7 @@ import { cn } from '../../lib/cn'
 // Tailwind utility classes only - no index.css rule, mirrors the reference
 // CRM's Badge (tailgrids/core/badge.tsx).
 const badge = cva(
-  'inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full font-medium',
+  'inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full font-semibold',
   {
     variants: {
       tone: {
@@ -19,15 +19,15 @@ const badge = cva(
         info: 'bg-badge-info-bg text-badge-info-text',
         neutral: 'bg-badge-neutral-bg text-badge-neutral-text',
         // Student learning semantics (see tokens.css)
-        primary: 'bg-primary-soft text-primary',
+        primary: 'bg-primary-soft text-primary-text',
         practice: 'bg-practice-soft text-practice',
         assessment: 'bg-assess-soft text-assess',
         live: 'bg-live-soft text-live',
         locked: 'bg-lock-soft text-lock',
       },
       size: {
-        md: 'px-2.5 py-1 text-sm',
-        sm: 'px-2 py-0.5 text-[11px]',
+        md: 'px-3 py-1 text-[13px]',
+        sm: 'px-2.5 py-0.5 text-[11px]',
       },
     },
     defaultVariants: {

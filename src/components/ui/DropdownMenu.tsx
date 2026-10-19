@@ -19,7 +19,7 @@ function DropdownMenuContent({
         sideOffset={sideOffset}
         align={align}
         className={cn(
-          'z-70 flex w-[210px] flex-col gap-1 rounded-2xl border border-line-blue bg-surface p-2 shadow-[0_22px_44px_rgba(17,24,58,0.14)]',
+          'z-70 flex w-[210px] flex-col gap-1 rounded-xl border border-line-blue bg-surface p-2 shadow-card-hover',
           className
         )}
         {...props}
@@ -35,7 +35,7 @@ function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        'flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-[11px] px-[11px] text-left text-[13px] font-extrabold text-text-emphasis outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-[#f0faff] data-[highlighted]:text-primary',
+        'flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 text-left text-sm font-semibold text-text-emphasis outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-hover data-[highlighted]:text-primary-text',
         className
       )}
       {...props}
