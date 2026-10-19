@@ -121,9 +121,10 @@ html[data-learner] .dropdown-field-trigger {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-learner] *,
-  html[data-learner] *::before,
-  html[data-learner] *::after {
+  /* Keep this fallback below component rules that disable motion entirely. */
+  :where(html[data-learner]) *,
+  :where(html[data-learner]) *::before,
+  :where(html[data-learner]) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

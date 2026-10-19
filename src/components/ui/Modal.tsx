@@ -38,7 +38,7 @@ function Modal({
               'relative grid w-full gap-3 rounded-2xl border border-border-primary bg-surface-elevated p-6 text-text-heading shadow-[0_28px_70px_rgba(10,16,35,0.25)]',
               '[&_h2]:m-0 [&_h2]:text-xl [&>p]:-mt-1.5 [&>p]:mb-1 [&>p]:text-[13px] [&>p]:text-text-muted',
               '[&_label]:grid [&_label]:gap-1.5 [&_label]:text-[13px] [&_label]:font-semibold [&_label]:text-text-heading-soft',
-              '[&_input]:h-[42px] [&_input]:rounded-[9px] [&_input]:border [&_input]:border-border-primary [&_input]:bg-surface-input [&_input]:px-[11px] [&_input]:text-sm [&_input]:text-text-strong [&_input]:outline-0 [&_input]:focus:border-primary [&_input]:focus:ring-[3px] [&_input]:focus:ring-primary/10',
+              '[&_input]:h-[42px] [&_input]:rounded-[9px] [&_input]:border [&_input]:border-border-primary [&_input]:bg-surface-input [&_input]:px-[11px] [&_input]:text-sm [&_input]:text-text-strong [&_input]:outline-0 [&_input]:focus:border-focus-ring [&_input]:focus:ring-[3px] [&_input]:focus:ring-primary/10',
               '[&_[data-dropdown-trigger]]:h-[42px] [&_[data-dropdown-trigger]]:rounded-[9px] [&_[data-dropdown-trigger]]:border [&_[data-dropdown-trigger]]:border-border-primary [&_[data-dropdown-trigger]]:bg-surface-input [&_[data-dropdown-trigger]]:px-[11px] [&_[data-dropdown-trigger]]:text-sm [&_[data-dropdown-trigger]]:text-text-strong',
               className
             )}

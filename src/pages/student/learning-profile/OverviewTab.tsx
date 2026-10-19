@@ -37,7 +37,7 @@ function OverallCompetencySummary() {
         className="grid size-[148px] place-items-center content-center rounded-full bg-[radial-gradient(circle_at_center,var(--color-surface)_0_58%,transparent_59%),conic-gradient(var(--color-primary)_var(--hl-profile-score),var(--color-line)_0)] shadow-[inset_0_0_0_1px_var(--color-line)] max-[1181px]:self-center"
         style={{ '--hl-profile-score': `${scorePercent}%` } as CSSProperties}
       >
-        <strong className="text-[42px] leading-none font-bold text-primary max-[760px]:text-[36px]">
+        <strong className="text-[42px] leading-none font-bold text-primary-text max-[760px]:text-[36px]">
           {profile.currentScore}
         </strong>
         <span className="text-sm font-bold text-text-body">/ {profile.maxScore}</span>

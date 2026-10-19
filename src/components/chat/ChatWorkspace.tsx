@@ -128,8 +128,9 @@ export default function ChatWorkspace({
     setPendingSend(null)
   }, [chat.detail, chat.detailLoading])
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (createdId && !newRequest) {
+      // Clear the queued selection after the request dialog's navigation guard unmounts.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCreatedId(null)
       onSelectConversation(createdId)
     }

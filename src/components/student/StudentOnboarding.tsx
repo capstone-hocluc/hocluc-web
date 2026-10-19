@@ -37,7 +37,7 @@ const majors = [
 const highlights = ['3 phút hoàn thành', 'Cá nhân hóa ngay từ đầu', 'Có thể cập nhật sau']
 
 const textInput =
-  'border-line bg-surface text-[15px] font-semibold text-text-heading outline-0 focus:border-primary focus:ring-3 focus:ring-focus-ring/15'
+  'border-line bg-surface text-[15px] font-semibold text-text-heading outline-0 focus:border-focus-ring focus:ring-3 focus:ring-focus-ring/15'
 
 function StudentOnboarding({ onBack }) {
   const [form, setForm] = useState({
@@ -184,7 +184,7 @@ function StudentOnboarding({ onBack }) {
               <OnboardingField className="col-span-full self-start rounded-2xl border border-line-card bg-surface p-5 shadow-card-soft">
                 <FieldLabel icon={TrendingUp}>Điểm ĐGNL mục tiêu</FieldLabel>
                 <div className="mt-px mb-2.5 flex items-baseline gap-[7px]">
-                  <strong className="text-4xl leading-none font-bold text-primary">
+                  <strong className="text-4xl leading-none font-bold text-primary-text">
                     {form.score}
                   </strong>
                   <span className="text-[13px] font-bold text-text-body">/ 1200 điểm</span>
@@ -200,7 +200,7 @@ function StudentOnboarding({ onBack }) {
                 />
                 <div className="mt-2.5 flex items-center gap-[7px] text-[13px] font-bold text-text-body">
                   <input
-                    className="w-24 rounded-xl border border-line bg-surface px-2.5 py-2 text-[15px] font-bold text-text-heading outline-0 focus:border-primary focus:ring-3 focus:ring-focus-ring/15"
+                    className="w-24 rounded-xl border border-line bg-surface px-2.5 py-2 text-[15px] font-bold text-text-heading outline-0 focus:border-focus-ring focus:ring-3 focus:ring-focus-ring/15"
                     type="number"
                     min="0"
                     max="1200"
