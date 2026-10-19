@@ -18,12 +18,15 @@
       const parsedSize = Number(this.getAttribute('size') || 21)
       const size = Number.isFinite(parsedSize) ? Math.max(16, Math.min(parsedSize, 40)) : 21
       const light = this.hasAttribute('light')
+      // V2 viewBox: 317 × 419. Keep the mark slightly taller than the wordmark.
+      const markHeight = size * 1.3
+      const markWidth = markHeight * 317 / 419
       const root = this.shadowRoot || this.attachShadow({ mode: 'open' })
       root.innerHTML = `
         <style>
           :host { display: inline-flex; vertical-align: middle; }
           .logo { display: inline-flex; align-items: center; gap: ${Math.round(size * 0.22)}px; }
-          .mark { display: block; width: ${Math.round(size * 0.9)}px; height: ${Math.round(size * 1.15)}px; object-fit: contain; flex: none; }
+          .mark { display: block; width: ${markWidth}px; height: ${markHeight}px; object-fit: contain; flex: none; }
           :host([mark-only]) .wordmark { display: none; }
           .wordmark {
             color: ${light ? '#fff' : 'var(--logo-color, #0B3A82)'};
@@ -42,8 +45,8 @@
           }
         </style>
         <span class="logo" part="logo">
-          <img class="mark" src="/hocluc-mark.svg" alt="" />
-          <span class="wordmark" part="wordmark"><span>HocLuc</span><span class="dot" part="domain">.com</span></span>
+          <img class="mark" src="/hocluc-mark${light ? '-white' : ''}.svg" alt="" />
+          <span class="wordmark" part="wordmark"><span>Hocluc</span><span class="dot" part="domain">.com</span></span>
         </span>
       `
     }
