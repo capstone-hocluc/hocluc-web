@@ -72,7 +72,7 @@ Giữ 5 nhóm ngang hàng trên desktop để người học thấy toàn bộ l
 | Logic & Phân tích số liệu | Nam đọc bảng và biểu đồ | Tìm quy luật, kết nối dữ kiện, phân tích số liệu |
 | Suy luận Khoa học | Robot cùng dụng cụ thí nghiệm | Đọc dữ liệu, phân tích thí nghiệm, kiểm chứng giả thuyết |
 
-Ưu tiên tài sản có sẵn như star-reading, mai-english, owl-teacher, nam-analysis, robot-science; cần kiểm tra trực quan và chuẩn hóa cả bộ trước khi chọn. Không mặc định rằng các file đã cùng phong cách hoặc đủ nhẹ. Nên xuất WebP đúng kích thước, đặt width/height, lazy-load ảnh dưới màn hình đầu. Mục tiêu ngân sách đề xuất: tối đa khoảng 80 KB/ảnh, tùy chất lượng thực tế.
+Ưu tiên tài sản có sẵn như star-reading, mai-english, nam-analysis, robot-science; cần kiểm tra trực quan và chuẩn hóa cả bộ trước khi chọn. Riêng card “Toán & Tư duy định lượng” trong “Bạn muốn bắt đầu từ đâu?” giữ nguyên `owl-teacher-teaching-card.webp`, công thức và chú thích; đây là vị trí duy nhất dùng cú. Không mặc định rằng các file đã cùng phong cách hoặc đủ nhẹ. Nên xuất WebP đúng kích thước, đặt width/height, lazy-load ảnh dưới màn hình đầu. Mục tiêu ngân sách đề xuất: tối đa khoảng 80 KB/ảnh, tùy chất lượng thực tế.
 
 ### Tương tác
 
