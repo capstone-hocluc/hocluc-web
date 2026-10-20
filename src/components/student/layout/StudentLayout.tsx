@@ -65,9 +65,8 @@ function StudentLayout({
       </a>
       <StudentTopbar
         profile={profile}
-        // MOCK: backend has no streak / notification endpoint yet.
+        // Streak remains a mock until the backend provides it.
         streak={dashboardSummary.currentStreak}
-        notificationCount={dashboardSummary.notificationCount}
         profileLoading={status === 'loading' || (status === 'idle' && Boolean(getAccessToken()))}
         onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
         sidebarCollapsed={sidebarCollapsed}

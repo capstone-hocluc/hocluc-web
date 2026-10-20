@@ -4,6 +4,7 @@ import Logo from '../../common/Logo';
 import { MenuIcon } from './header-icons';
 import { ThreeDots } from './sidebar-icons';
 import { NotificationsButton } from './notifications';
+import NotificationProvider from '../../notifications/NotificationProvider';
 import SearchBar from './searchbar';
 import ThemeToggle from './theme-toggle';
 import { UserProfileButton } from './user-profile';
@@ -33,7 +34,7 @@ export default function Header({
   );
 
   return (
-    <>
+    <NotificationProvider>
       <header className="sticky top-0 z-40 w-full border-b-[0.5px] border-card-border bg-card-surface-area px-2 py-4 lg:px-5">
         <div className="flex items-center xl:hidden">
           <div className="flex flex-1 justify-start">
@@ -90,6 +91,6 @@ export default function Header({
           </div>
         </div>
       </div>
-    </>
+    </NotificationProvider>
   );
 }

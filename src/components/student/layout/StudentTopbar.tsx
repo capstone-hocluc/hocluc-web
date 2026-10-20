@@ -1,4 +1,4 @@
-import { Bell, Flame, LogOut, Menu, Settings, User, UserRound } from '../../console/icons'
+import { Flame, LogOut, Menu, Settings, User, UserRound } from '../../console/icons'
 import Logo from '../../common/Logo'
 import Avatar from '../../ui/Avatar'
 import RoleSwitcher from '../../ui/RoleSwitcher'
@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../ui/DropdownMenu'
-import { Popover, PopoverContent, PopoverTrigger } from '../../ui/Popover'
+import NotificationBell from '../../notifications/NotificationBell'
 import type { UserProfile } from '../../../services/userService'
 import { getUserDisplayName, getUserInitials } from '../../../lib/userDisplay'
 import { ROLE_LABELS } from '../../../lib/role-home'
@@ -21,7 +21,6 @@ interface StudentTopbarProps {
   profileLoading?: boolean
   /** Consecutive learning days (mock until the backend has a streak endpoint). */
   streak?: number
-  notificationCount?: number
   onToggleSidebar?: () => void
   sidebarCollapsed?: boolean
   onOpenNavigation?: () => void
@@ -41,7 +40,6 @@ function StudentTopbar({
   profile,
   profileLoading = false,
   streak = 0,
-  notificationCount = 0,
   onToggleSidebar,
   sidebarCollapsed = false,
   onOpenNavigation,
@@ -98,28 +96,7 @@ function StudentTopbar({
 
         <RoleSwitcher className="h-11 rounded-xl" />
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label="Thông báo"
-              className={cn(iconButton, 'text-text-heading')}
-            >
-              <Bell size={18} />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-[3px] grid h-5 min-w-5 place-items-center rounded-full border border-surface bg-danger px-[5px] text-[10px] leading-none font-bold text-surface">
-                  {notificationCount}
-                </span>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent>
-            <strong className="block text-sm text-text-heading">Thông báo</strong>
-            <p className="mt-[7px] text-[13px] leading-normal text-text-body">
-              Chưa có thông báo mới.
-            </p>
-          </PopoverContent>
-        </Popover>
+        <NotificationBell variant="student" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
