@@ -148,7 +148,10 @@ export async function logout() {
       await request('/api/v1/auth/logout', {
         auth: true,
         method: 'POST',
-        body: { refreshToken: storedRefreshToken } satisfies LogoutRequest,
+        // request() serializes again after a silent refresh rotates the session.
+        body: {
+          get refreshToken() { return getRefreshToken() ?? storedRefreshToken },
+        } satisfies LogoutRequest,
       })
     }
   } finally {
