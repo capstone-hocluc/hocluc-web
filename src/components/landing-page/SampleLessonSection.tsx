@@ -3,6 +3,7 @@ import type { Ref } from 'react'
 import { sampleLesson, type SampleQuestion } from '../../data/landing-content'
 import Icon from './Icon'
 import AuthLink from './AuthLink'
+import { studentRoutes } from '../../lib/studentRoutes'
 
 export interface SampleLessonHandle {
   /** Moves focus to the first answer, or to the action button once the question is checked. */
@@ -195,7 +196,7 @@ function SampleLessonSection({ questions, ref }: SampleLessonSectionProps) {
             <a className="btn btn-primary" href="#khoa-hoc">
               Xem khóa học <Icon name="arrow-right" />
             </a>
-            <AuthLink className="text-link">Làm đánh giá miễn phí</AuthLink>
+            <AuthLink destination={studentRoutes.placement()} className="text-link">Làm đánh giá miễn phí</AuthLink>
           </div>
         )}
       </div>

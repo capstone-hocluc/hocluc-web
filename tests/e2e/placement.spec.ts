@@ -4,6 +4,60 @@ import type { TeacherQuizRecord } from '../../src/services/teacherQuizService'
 
 const createdId = '50000000-0000-0000-0000-000000000004'
 
+test('landing free assessment resumes placement after login, retry and auth mode changes', async ({ page }) => {
+  const state = await installQuizFixture(page, 'STUDENT')
+  state.quizzes[0] = seedPlacement(state.quizzes[0], createdId, 'Đầu vào từ landing', '2026-10-20T00:00:00Z')
+  await page.addInitScript(() => localStorage.clear())
+  await page.route('**/api/v1/courses/main', route => route.fulfill({ json: { success: true, data: [] } }))
+  let rejectLogin = true
+  await page.route('**/api/v1/auth/login', route => route.fulfill({ status: rejectLogin ? 401 : 200,
+    json: rejectLogin ? { success: false, message: 'Thông tin đăng nhập không đúng.' }
+      : { success: true, data: { accessToken: quizToken('STUDENT'), refreshToken: 'fixture-refresh' } } }))
+  await page.goto('/')
+  const cta = page.locator('.hero-buttons').getByRole('link', { name: 'Làm đánh giá miễn phí' })
+  await expect(cta).toHaveAttribute('href', '/student/assessments/placement')
+  await cta.click()
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fstudent%2Fassessments%2Fplacement$/)
+  await page.reload()
+  await page.getByRole('button', { name: 'Đăng ký', exact: true }).click()
+  await expect(page).toHaveURL(/\/signup\?returnTo=%2Fstudent%2Fassessments%2Fplacement$/)
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('textbox', { name: 'Email', exact: true }).fill('student@example.invalid')
+  await dialog.getByPlaceholder('Nhập mật khẩu', { exact: true }).fill('fixture-password')
+  await dialog.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Thông tin đăng nhập không đúng.')
+  await expect(page).toHaveURL(/returnTo=%2Fstudent%2Fassessments%2Fplacement$/)
+  rejectLogin = false
+  await dialog.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+  await expect(page).toHaveURL('/student/assessments/placement')
+  await expect(page.getByRole('heading', { name: 'Đầu vào từ landing', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true })).toBeVisible()
+  expect(state.pageErrors).toEqual([]); expect(state.unmatched).toEqual([])
+})
+
+test('signed-in Student enters placement directly from the landing assessment action', async ({ page }) => {
+  const state = await installQuizFixture(page, 'STUDENT')
+  state.quizzes[0] = seedPlacement(state.quizzes[0], createdId, 'Đầu vào từ landing', '2026-10-20T00:00:00Z')
+  await page.route('**/api/v1/courses/main', route => route.fulfill({ json: { success: true, data: [] } }))
+  await page.goto('/')
+  await page.locator('.hero-buttons').getByRole('link', { name: 'Làm đánh giá miễn phí' }).click()
+  await expect(page).toHaveURL('/student/assessments/placement')
+  await expect(page.getByRole('heading', { name: 'Đầu vào từ landing', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  expect(state.pageErrors).toEqual([]); expect(state.unmatched).toEqual([])
+})
+
+test('landing assessment action does not grant Student access to active Staff', async ({ page }) => {
+  const state = await installQuizFixture(page, 'STAFF')
+  await page.route('**/api/v1/courses/main', route => route.fulfill({ json: { success: true, data: [] } }))
+  await page.goto('/')
+  await page.locator('.hero-buttons').getByRole('link', { name: 'Làm đánh giá miễn phí' }).click()
+  await expect(page.getByRole('heading', { name: 'Trang này dành cho học viên', exact: true })).toBeVisible()
+  expect(state.requests.some(request => request.path.startsWith('/api/v1/assessments/'))).toBe(false)
+  expect(state.pageErrors).toEqual([]); expect(state.unmatched).toEqual([])
+})
+
 for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINISTRATOR', 'admin']] as const) {
   test(`${role}: assessment tabs share one sidebar entry and preserve filters and URLs`, async ({ page }, testInfo) => {
     test.setTimeout(60_000)
@@ -41,7 +95,7 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     expect(await page.getByRole('tablist', { name: 'Loại bài kiểm tra' }).evaluate(list => {
       const bounds = list.getBoundingClientRect()
-      return [...list.querySelectorAll('[role="tab"]')].every(tab => {
+      return Array.from(list.querySelectorAll('[role="tab"]')).every(tab => {
         const rect = tab.getBoundingClientRect()
         return rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1
       })

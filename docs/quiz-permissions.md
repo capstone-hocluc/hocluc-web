@@ -42,6 +42,8 @@ Không tạo bản sao màn theo role. Hai editor cũ được chuyển từ `co
 
 ## Các lớp kiểm tra FE
 
+CTA **Làm đánh giá miễn phí** ở hero và sau bài học mẫu trỏ đến `/student/assessments/placement`. Khách được chuyển sang `/login?returnTo=%2Fstudent%2Fassessments%2Fplacement`; đăng nhập Student thành công quay lại trang đầu vào. Đích đến được giữ khi chuyển màn đăng nhập/đăng ký/xác minh và khi phiên hết hạn ngay tại trang đầu vào. Student đã đăng nhập vào thẳng; role khác vẫn bị StudentRouteGuard chặn. `auth-return-to.ts` chỉ cho phép đích placement cụ thể và các đích mua hàng đã có, không nhận URL bên ngoài. Điều hướng chỉ mở trang giới thiệu, không tự tạo attempt.
+
 1. `QUIZ_READ`/`QUIZ_WRITE` trong bảng permission có sẵn; không mở COURSE_WRITE/TAXONOMY_WRITE cho Manager vì thay đổi quiz.
 2. Menu và route cùng ánh xạ ở console; Teacher editor URL bị chặn trước khi mount/fetch editor.
 3. `useQuizAccess` chỉ nhận active role khớp token và profile hiện tại, không kế thừa quyền từ mảng granted roles. Boundary remount theo identity/role/route để bỏ draft và selection cũ.

@@ -27,7 +27,7 @@ import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePref
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
 import PurchaseGuard from './components/purchase/PurchaseGuard'
-import { safePurchaseReturnTo } from './lib/purchaseSession'
+import { loginPathFor, safeAuthReturnTo } from './lib/auth-return-to'
 
 const APP_HISTORY_INDEX = '__hoclucNavigationIndex'
 
@@ -165,7 +165,7 @@ function App() {
 
   const navigateAuth = (mode) => {
     runWithUnsavedActionGuard(() => {
-      const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+      const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
       pushHistoryEntry({}, `/${mode}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode(mode)
       setCurrentPath(`/${mode}`)
@@ -197,7 +197,8 @@ function App() {
   const goToEmailVerification = (email = '') => {
     runWithUnsavedActionGuard(() => {
       setPendingVerificationEmail(email)
-      pushHistoryEntry({}, '/verify-email')
+      const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+      pushHistoryEntry({}, `/verify-email${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode('verify-email')
       setCurrentPath('/verify-email')
     })
@@ -268,7 +269,7 @@ function App() {
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
-    const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+    const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
     navigateTo(profile.role === 'STUDENT' && returnTo ? returnTo : roleHome(profile.role))
   }
 
@@ -495,7 +496,7 @@ function App() {
   const studentRoute = parseStudentRoute(currentPath)
   if (studentRoute)
     return (
-      <StudentRouteGuard onLogin={() => navigateTo('/login')} onGoToRole={navigateTo}>
+      <StudentRouteGuard onLogin={() => navigateTo(loginPathFor(currentPath))} onGoToRole={navigateTo}>
         <StudentRoutes
           route={studentRoute}
           currentPath={currentPath}

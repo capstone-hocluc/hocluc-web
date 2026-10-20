@@ -1,5 +1,6 @@
 import { CONSOLE_LOGIN_PATH, isConsolePath } from './console-routes'
 import { purchaseLoginPath, safePurchaseReturnTo } from './purchaseSession'
+import { loginPathFor } from './auth-return-to'
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
@@ -260,7 +261,7 @@ function getSessionLoginPath() {
   const pathname = window.location.pathname.replace(/\/$/, '') || '/'
   if (isConsolePath(pathname)) return CONSOLE_LOGIN_PATH
   if (safePurchaseReturnTo(pathname + window.location.search)) return purchaseLoginPath()
-  return '/login'
+  return loginPathFor(pathname)
 }
 
 function handleSessionExpired() {
