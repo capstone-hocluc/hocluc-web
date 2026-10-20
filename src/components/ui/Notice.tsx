@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn'
 
 // Inline banner: a short message (+ optional action) on a tinted background.
 const notice = cva(
-  'flex flex-wrap items-center gap-2.5 rounded-2xl border-2 px-4 py-3 text-sm font-bold',
+  'flex flex-wrap items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-bold',
   {
     variants: {
       tone: {

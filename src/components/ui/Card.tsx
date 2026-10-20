@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn'
 
 // The white bordered surface used across Student screens. `live` is the
 // amber-tinted variant for live-class content.
-const card = cva('min-w-0 border-[1.5px]', {
+const card = cva('min-w-0 border', {
   variants: {
     variant: {
       default: 'border-line bg-surface',
@@ -18,9 +18,9 @@ const card = cva('min-w-0 border-[1.5px]', {
       lg: 'p-5',
     },
     radius: {
-      md: 'rounded-2xl',
-      lg: 'rounded-[20px]',
-      xl: 'rounded-3xl',
+      md: 'rounded-xl',
+      lg: 'rounded-2xl',
+      xl: 'rounded-2xl',
     },
   },
   defaultVariants: { variant: 'default', padding: 'md', radius: 'md' },
@@ -43,7 +43,7 @@ export function CardEyebrow({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       className={cn(
-        'mb-1.5 block text-xs font-extrabold tracking-[0.08em] text-text-secondary uppercase',
+        'mb-1.5 block text-xs font-semibold tracking-[0.08em] text-text-secondary uppercase',
         className
       )}
       {...props}
@@ -53,6 +53,12 @@ export function CardEyebrow({ className, ...props }: ComponentProps<'span'>) {
 
 export function CardTitle({ className, ...props }: ComponentProps<'h2'>) {
   return (
-    <h2 className={cn('mb-2 text-[17px] font-extrabold tracking-[-0.2px] text-text-heading', className)} {...props} />
+    <h2
+      className={cn(
+        'mb-2 text-[17px] font-semibold tracking-[-0.2px] text-text-heading',
+        className
+      )}
+      {...props}
+    />
   )
 }

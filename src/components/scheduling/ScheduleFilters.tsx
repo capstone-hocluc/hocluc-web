@@ -23,7 +23,7 @@ export default function ScheduleFilters({
   onViewChange,
 }: Props) {
   return (
-    <div className="flex flex-col gap-3 rounded-3xl border-[1.5px] border-line-card bg-surface p-3 shadow-card-soft sm:flex-row sm:items-center sm:p-4">
+    <div className="flex flex-col gap-3 rounded-2xl border border-line-card bg-surface p-3 shadow-card-soft sm:flex-row sm:items-center sm:p-4">
       <SearchInput
         aria-label="Tìm lịch theo tên buổi hoặc lớp"
         name="scheduleQuery"
@@ -45,7 +45,7 @@ export default function ScheduleFilters({
         />
       </label>
       <div
-        className="flex gap-1 rounded-2xl border-2 border-line bg-surface p-1"
+        className="flex gap-1 rounded-xl border border-line bg-surface p-1"
         role="group"
         aria-label="Cách xem lịch"
       >

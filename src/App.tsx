@@ -26,6 +26,8 @@ import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRo
 import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
+import PurchaseGuard from './components/purchase/PurchaseGuard'
+import { safePurchaseReturnTo } from './lib/purchaseSession'
 
 const APP_HISTORY_INDEX = '__hoclucNavigationIndex'
 
@@ -55,7 +57,7 @@ function App() {
       return 'management-login'
     }
     const path = stripConsolePrefix(rawPath)
-    const quizRoute = path.match(/^\/(admin|staff|manager|teacher|mentor)\/(quizzes|mock-exams)(?:\/(new|[0-9a-f-]+)(?:\/(edit))?)?$/i)
+    const quizRoute = path.match(/^\/(admin|staff|manager|teacher|mentor)\/(quizzes|mock-exams|placements)(?:\/(new|[0-9a-f-]+)(?:\/(edit))?)?$/i)
     if (quizRoute) {
       const [, area, screen, target, edit] = quizRoute
       const page = !target ? screen : target === 'new' ? `${screen}-new` : `${screen}-${edit ? 'edit' : 'view'}-${target}`
@@ -163,7 +165,8 @@ function App() {
 
   const navigateAuth = (mode) => {
     runWithUnsavedActionGuard(() => {
-      pushHistoryEntry({}, `/${mode}`)
+      const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+      pushHistoryEntry({}, `/${mode}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode(mode)
       setCurrentPath(`/${mode}`)
     })
@@ -239,7 +242,7 @@ function App() {
         dashboard: '/mentor/dashboard',
       },
     } as const
-    const path = paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${page}`
+    const path = toConsolePath(paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${page}`)
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`${scope}-${page}`)
@@ -256,7 +259,7 @@ function App() {
       availability: '/teacher/availability',
       'mock-exams': '/teacher/mock-exams',
     }
-    const path = page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page] ?? `/teacher/${page}`
+    const path = toConsolePath(page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page] ?? `/teacher/${page}`)
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`teacher-${page}`)
@@ -265,7 +268,8 @@ function App() {
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
-    navigateTo(roleHome(profile.role))
+    const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+    navigateTo(profile.role === 'STUDENT' && returnTo ? returnTo : roleHome(profile.role))
   }
 
   const managementLoginPath = () => {
@@ -512,8 +516,9 @@ function App() {
         onGoToCart={() => navigateTo('/cart')}
       />
     )
+  const purchase = (content) => <PurchaseGuard onNavigate={navigateTo}>{content}</PurchaseGuard>
   if (orderPaymentOrderId)
-    return (
+    return purchase(
       <PaymentInstructionsPage
         key={orderPaymentOrderId}
         orderId={orderPaymentOrderId}
@@ -522,7 +527,7 @@ function App() {
       />
     )
   if (orderDetailId)
-    return (
+    return purchase(
       <OrderDetailPage
         key={orderDetailId}
         orderId={orderDetailId}
@@ -537,14 +542,14 @@ function App() {
   if (authMode === 'courses')
     return <CourseCatalogPage />
   if (authMode === 'cart')
-    return (
+    return purchase(
       <CartPage
         onBrowseCourses={() => navigateTo('/courses')}
         onGoToCheckout={() => navigateTo('/checkout')}
       />
     )
   if (authMode === 'checkout')
-    return (
+    return purchase(
       <CheckoutPage
         onOrderCreated={(paymentData) =>
           navigateTo(`/orders/${paymentData.order.id}/payment`, paymentData)
@@ -553,14 +558,14 @@ function App() {
       />
     )
   if (authMode === 'orders')
-    return (
+    return purchase(
       <MyOrdersPage
         onOpenOrder={(orderId) => navigateTo(`/orders/${orderId}`)}
         onBrowseCourses={() => navigateTo('/courses')}
       />
     )
   if (authMode === 'payment-result')
-    return (
+    return purchase(
       <PaymentResultPage
         onGoToMyCourses={() => navigateTo(studentRoutes.courses())}
         onOpenOrder={(orderId) => navigateTo(`/orders/${orderId}`)}

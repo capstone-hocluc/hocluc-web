@@ -16,10 +16,10 @@ interface QuizQuestionCardProps {
   onSelectOption: (optionId: string) => void
 }
 
-// Answer rows: chunky ledge tiles with a lettered badge. The built-in radio dot of RadioGroupItem
+// Answer rows: outlined options with a lettered badge. The built-in radio dot of RadioGroupItem
 // is hidden; the checked state is carried by the blue tile and the filled letter badge.
 const optionClass =
-  'min-h-14 gap-3.5 rounded-2xl border-2 border-line px-4 py-3 text-base font-bold text-text-heading [&>span:first-child]:hidden hover:-translate-y-px hover:border-[#84d8ff] hover:bg-surface-brand data-[state=checked]:border-primary data-[state=checked]:bg-surface-brand data-[state=checked]:font-extrabold focus-visible:outline-3 focus-visible:outline-[#174fbd]'
+  'min-h-14 gap-3.5 rounded-xl border border-line px-4 py-3 text-base font-bold text-text-heading [&>span:first-child]:hidden  hover:border-primary-bright hover:bg-surface-brand data-[state=checked]:border-primary data-[state=checked]:bg-surface-brand data-[state=checked]:font-semibold focus-visible:outline-3 focus-visible:outline-focus-ring'
 
 function QuizQuestionCard({
   question,
@@ -53,10 +53,14 @@ function QuizQuestionCard({
       </div>
 
       {question.imageUrl && (
-        <img className="mb-4 max-w-full rounded-2xl border-[1.5px] border-line-card" src={question.imageUrl} alt="" />
+        <img
+          className="mb-4 max-w-full rounded-xl border border-line-card"
+          src={question.imageUrl}
+          alt=""
+        />
       )}
 
-      <p className="mb-6 text-lg leading-[1.6] font-extrabold text-text-heading max-[640px]:text-[17px]">
+      <p className="mb-6 text-lg leading-[1.6] font-semibold text-text-heading max-[640px]:text-[17px]">
         {question.questionText}
       </p>
 
@@ -71,7 +75,7 @@ function QuizQuestionCard({
             <RadioGroupItem key={option.id} value={option.id} className={optionClass}>
               <span
                 aria-hidden="true"
-                className="grid size-9 shrink-0 place-items-center rounded-xl border-2 border-line bg-surface-sky text-[15px] font-black text-text-body group-data-[state=checked]:border-transparent group-data-[state=checked]:bg-primary group-data-[state=checked]:text-white"
+                className="grid size-9 shrink-0 place-items-center rounded-xl border border-line bg-surface-sky text-[15px] font-bold text-text-body group-data-[state=checked]:border-transparent group-data-[state=checked]:bg-primary group-data-[state=checked]:text-white"
               >
                 {String.fromCharCode(65 + optionIndex)}
               </span>

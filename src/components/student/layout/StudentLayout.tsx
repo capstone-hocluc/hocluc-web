@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import StudentSidebar from './StudentSidebar'
 import StudentTopbar from './StudentTopbar'
 import { useCurrentUser, useHydrateCurrentUser } from '../../../hooks/useCurrentUser'
@@ -33,6 +33,15 @@ function StudentLayout({
   children,
 }: StudentLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 760px)')
+    const onChange = () => {
+      if (!query.matches) setMobileNavigationOpen(false)
+    }
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
   const { message, show: notify } = useTransientMessage()
   // The one place that restores the signed-in user after F5; the topbar only reads it.
   useHydrateCurrentUser()
@@ -43,11 +52,17 @@ function StudentLayout({
   return (
     <div
       className={cn(
-        'grid min-h-screen grid-rows-[72px_minmax(0,1fr)] bg-app-bg text-text-heading transition-[grid-template-columns] duration-250',
-        sidebarCollapsed ? 'grid-cols-[88px_minmax(0,1fr)]' : 'grid-cols-[272px_minmax(0,1fr)]',
-        'max-[1180px]:grid-cols-[88px_minmax(0,1fr)] max-[760px]:block'
+        'dashboard-layout student-layout grid min-h-screen grid-rows-[72px_minmax(0,1fr)] bg-app-bg text-text-heading transition-[grid-template-columns] duration-250',
+        sidebarCollapsed ? 'grid-cols-[80px_minmax(0,1fr)]' : 'grid-cols-[248px_minmax(0,1fr)]',
+        'max-[1180px]:grid-cols-[80px_minmax(0,1fr)] max-[760px]:block'
       )}
     >
+      <a
+        href="#student-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-4 focus:z-90 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-3 focus:text-white"
+      >
+        Đến nội dung học tập
+      </a>
       <StudentTopbar
         profile={profile}
         // MOCK: backend has no streak / notification endpoint yet.
@@ -55,6 +70,9 @@ function StudentLayout({
         notificationCount={dashboardSummary.notificationCount}
         profileLoading={status === 'loading' || (status === 'idle' && Boolean(getAccessToken()))}
         onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
+        sidebarCollapsed={sidebarCollapsed}
+        onOpenNavigation={() => setMobileNavigationOpen(true)}
+        mobileNavigationOpen={mobileNavigationOpen}
         onNavigateHome={() => onNavigate(studentRoutes.dashboard())}
         onNavigateLearningProfile={() => onNavigate(studentRoutes.learningProfile())}
         onNavigateProfile={() => onNavigate(studentRoutes.profile())}
@@ -66,8 +84,14 @@ function StudentLayout({
         activeKey={getStudentNavKeyForPath(currentPath)}
         onNavigate={onNavigate}
         collapsed={sidebarCollapsed}
+        mobileOpen={mobileNavigationOpen}
+        onCloseMobile={() => setMobileNavigationOpen(false)}
       />
-      <main className="col-start-2 row-start-2 min-w-0 px-8 pt-8 pb-12 max-[760px]:px-4 max-[760px]:pt-5 max-[760px]:pb-8">
+      <main
+        id="student-content"
+        tabIndex={-1}
+        className="col-start-2 row-start-2 min-w-0 px-8 pt-8 pb-12 max-[760px]:px-4 max-[760px]:pt-6 max-[760px]:pb-8"
+      >
         {children}
       </main>
       <StudentToast message={message} />

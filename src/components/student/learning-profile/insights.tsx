@@ -22,7 +22,7 @@ export function InsightList({ tone, dense = false, items }: InsightListProps) {
         <li
           key={item.key}
           className={cn(
-            'flex items-start gap-[9px] font-extrabold text-text-emphasis',
+            'flex items-start gap-[9px] font-semibold text-text-emphasis',
             dense ? 'text-sm leading-normal' : 'text-[15px] leading-normal'
           )}
         >
@@ -41,7 +41,7 @@ export function InsightList({ tone, dense = false, items }: InsightListProps) {
   )
 }
 
-const card = cva('flex flex-col rounded-3xl p-4 shadow-none', {
+const card = cva('flex flex-col rounded-2xl p-4 shadow-none', {
   variants: {
     tone: {
       strength: 'border-line-practice bg-practice-soft',
@@ -74,7 +74,7 @@ export function InsightCard({ tone, size, title, onDetail, children }: InsightCa
       <div className="mb-2.5 flex flex-none items-start justify-between gap-2.5 max-[760px]:flex-col">
         <strong
           className={cn(
-            'inline-flex items-center font-black',
+            'inline-flex items-center font-bold',
             large
               ? 'gap-[9px] text-[17px] leading-[1.25] text-text-heading'
               : 'gap-2 text-[17px] leading-[1.25] text-text-heading'
@@ -97,7 +97,7 @@ export function InsightCard({ tone, size, title, onDetail, children }: InsightCa
           <button
             type="button"
             className={cn(
-              'inline-flex cursor-pointer items-center p-0 font-extrabold text-primary-text',
+              'inline-flex cursor-pointer items-center p-0 font-semibold text-primary-text',
               large ? 'min-h-8 gap-1.5 text-[13px]' : 'min-h-8 gap-[5px] text-xs'
             )}
             onClick={onDetail}

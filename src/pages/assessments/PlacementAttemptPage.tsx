@@ -34,8 +34,8 @@ function PlacementAttemptPage({ attemptId, onExit, onSubmitted }: PlacementAttem
         onRetry={reload}
         loading={
           <>
-            <Skeleton className="h-80 rounded-2xl" />
-            <Skeleton className="h-[220px] rounded-2xl" />
+            <Skeleton className="h-80 rounded-xl" />
+            <Skeleton className="h-[220px] rounded-xl" />
           </>
         }
         notFound={{ title: 'Không tìm thấy bài làm.', actionLabel: 'Quay lại', onAction: onExit }}

@@ -30,11 +30,11 @@ function ResultSummaryCard({
         <div
           className="grid size-[132px] shrink-0 place-items-center rounded-full"
           style={{
-            background: `conic-gradient(var(--color-primary, #1cb0f6) ${clamped * 3.6}deg, #e3f1f9 0)`,
+            background: `conic-gradient(var(--color-primary) ${clamped * 3.6}deg, var(--color-line-soft) 0)`,
           }}
         >
           <div className="grid size-[104px] place-items-center rounded-full bg-surface">
-            <span className="text-[32px] leading-none font-black text-text-heading">
+            <span className="text-[32px] leading-none font-bold text-text-heading">
               {percentage}
               <span className="text-lg text-primary-text">%</span>
             </span>
@@ -42,14 +42,18 @@ function ResultSummaryCard({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <StatusBadge tone="assessment" size="sm" className="self-start px-3 py-1 text-xs font-extrabold tracking-[0.04em] uppercase">
+          <StatusBadge
+            tone="assessment"
+            size="sm"
+            className="self-start px-3 py-1 text-xs font-semibold tracking-[0.04em] uppercase"
+          >
             {eyebrow}
           </StatusBadge>
-          <h1 className="text-2xl leading-tight font-black tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
+          <h1 className="text-2xl leading-tight font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
             {title}
           </h1>
           <p className="text-base text-text-body">
-            <strong className="text-xl font-black text-text-heading">
+            <strong className="text-xl font-bold text-text-heading">
               {correctCount}/{totalQuestions}
             </strong>{' '}
             câu đúng

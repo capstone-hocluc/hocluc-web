@@ -1,3 +1,4 @@
+import SelectField from '../console/select-field'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { startDialogOptions, type CourseModule, type Domain } from '../../data/landing-content'
@@ -49,39 +50,37 @@ function StartDialog({ open, domains, onClose, onViewDomain }: StartDialogProps)
         <form className="start-form" id="start-form" onSubmit={handleSubmit}>
           <div className="field">
             <label htmlFor="start-domain">Bạn muốn bắt đầu với nhóm nào?</label>
-            <select
+            <SelectField
+              ariaLabel="Bạn muốn bắt đầu với nhóm nào?"
               id="start-domain"
               name="domain"
               value={domainId}
-              onChange={(event) => {
-                setDomainId(event.target.value)
+              onChange={(nextValue) => {
+                setDomainId(nextValue)
                 setRecommended(null)
               }}
-            >
-              {startDialogOptions.domains.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={startDialogOptions.domains.map((option) => ({
+                id: String(option.value),
+                label: option.label,
+              }))}
+            />
           </div>
           <div className="field">
             <label htmlFor="start-level">Mục tiêu hiện tại của bạn là gì?</label>
-            <select
+            <SelectField
+              ariaLabel="Mục tiêu hiện tại của bạn là gì?"
               id="start-level"
               name="level"
               value={level}
-              onChange={(event) => {
-                setLevel(event.target.value as Level)
+              onChange={(nextValue) => {
+                setLevel(nextValue as Level)
                 setRecommended(null)
               }}
-            >
-              {startDialogOptions.levels.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={startDialogOptions.levels.map((option) => ({
+                id: String(option.value),
+                label: option.label,
+              }))}
+            />
           </div>
           <button type="submit" className="btn btn-primary">
             Xem gợi ý học tập

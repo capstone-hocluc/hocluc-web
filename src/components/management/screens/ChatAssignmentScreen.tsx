@@ -1,3 +1,4 @@
+import SelectField from '../../console/select-field'
 import { useEffect, useRef, useState } from 'react'
 import { AUTH_TOKENS_EVENT, ApiError, getAccessToken, type ApiResponse } from '../../../lib/api'
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
@@ -198,8 +199,26 @@ export default function ChatAssignmentScreen({ role, conversationId, onSelectCon
         <div className="space-y-3">
           <Field label="Tìm yêu cầu"><input className={fieldControlClass} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tiêu đề hoặc học sinh" /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Trạng thái"><select className={fieldControlClass} value={status} onChange={(event) => setStatus(event.target.value as ChatStatus | '')}><option value="">Tất cả</option>{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-            <Field label="Môn học"><select className={fieldControlClass} value={subject} onChange={(event) => setSubject(event.target.value)}><option value="">Tất cả</option>{subjects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
+            <Field label="Trạng thái"><SelectField
+              ariaLabel="Trạng thái"
+              triggerClassName={fieldControlClass}
+              value={status}
+              onChange={(nextValue) => setStatus(nextValue as ChatStatus | '')}
+              options={[
+                { id: '', label: 'Tất cả' },
+                ...Object.entries(statuses).map(([value, label]) => ({ id: String(value), label })),
+              ]}
+            /></Field>
+            <Field label="Môn học"><SelectField
+              ariaLabel="Môn học"
+              triggerClassName={fieldControlClass}
+              value={subject}
+              onChange={(nextValue) => setSubject(nextValue)}
+              options={[
+                { id: '', label: 'Tất cả' },
+                ...subjects.map((item) => ({ id: String(item.id), label: item.name })),
+              ]}
+            /></Field>
           </div>
         </div>
         {listError && <Notice tone="danger" className="mt-4">{listError}<Button size="sm" appearance="ghost" onClick={() => setRefresh((value) => value + 1)}>Thử lại</Button></Notice>}
@@ -233,7 +252,18 @@ export default function ChatAssignmentScreen({ role, conversationId, onSelectCon
       <div className="space-y-4">
         {assignmentError && <Notice tone="danger">{assignmentError}</Notice>}
         <Field label="Tìm Mentor"><input className={fieldControlClass} value={mentorSearch} disabled={assigning} onChange={(event) => setMentorSearch(event.target.value)} placeholder="Tên Mentor" /></Field>
-        <Field label="Mentor phụ trách"><select className={fieldControlClass} value={mentorId} required disabled={assigning} onChange={(event) => setMentorId(event.target.value)}><option value="">Chọn Mentor</option>{mentors.map((mentor) => <option key={mentor.id} value={mentor.id}>{mentor.displayName}</option>)}</select></Field>
+        <Field label="Mentor phụ trách"><SelectField
+          ariaLabel="Mentor phụ trách"
+          triggerClassName={fieldControlClass}
+          value={mentorId}
+          required
+          disabled={assigning}
+          onChange={(nextValue) => setMentorId(nextValue)}
+          options={[
+            { id: '', label: 'Chọn Mentor' },
+            ...mentors.map((mentor) => ({ id: String(mentor.id), label: mentor.displayName })),
+          ]}
+        /></Field>
         {mentorLoading && <p role="status" className="text-sm text-text-tertiary">Đang tải Mentor…</p>}
         {!mentorLoading && mentors.length === 0 && <p className="text-sm text-text-tertiary">Chưa tìm thấy Mentor.</p>}
         {mentorCursor && <Button size="sm" appearance="outline" disabled={mentorLoading || assigning} onClick={() => void loadMoreMentors()}>Tải thêm Mentor</Button>}

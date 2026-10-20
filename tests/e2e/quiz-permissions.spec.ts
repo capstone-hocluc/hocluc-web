@@ -294,8 +294,13 @@ test('late save after role switch is discarded and sends no follow-up question w
     localStorage.setItem('hocluc.accessToken', token)
     window.dispatchEvent(new Event('hocluc:tokens-changed'))
   }, quizToken('TEACHER'))
-  await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toBeVisible()
+  // Profile invalidation now lets the outer management guard block the old role's URL.
+  await expect(page.getByRole('heading', { name: 'Chuyển vai trò để tiếp tục', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toHaveCount(0)
+  const lateResponse = page.waitForResponse(response => response.request().method() === 'PUT'
+    && new URL(response.url()).pathname === `/api/v1/teacher/quizzes/${QUIZ_IDS.quiz}`)
   release()
+  await (await lateResponse).finished()
   await page.goto('/console/teacher/quizzes')
   await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
   expect(writes(state)).toHaveLength(1)
@@ -479,7 +484,7 @@ test('exam drag reorders questions within the existing section and persists on s
   await dragQuestionCard(page, page.getByRole('button', { name: /Sắp xếp câu 2 trong phần 1:/ }), cards.first())
   await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).first()).toHaveValue('Câu thi thứ hai')
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Bài thi thử', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
   expect(writes(state).find(request => request.path.endsWith('/questions/order'))?.body.questionIds).toEqual(['60000000-0000-0000-0000-000000000009', QUIZ_IDS.question])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })

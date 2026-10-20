@@ -26,13 +26,8 @@ function LessonNavBar({
   onComplete,
 }: LessonNavBarProps) {
   return (
-    <div className="grid h-[68px] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b-[1.5px] border-line-card bg-surface px-5 max-[760px]:h-auto max-[760px]:min-h-14 max-[760px]:grid-cols-[1fr_auto] max-[760px]:gap-2 max-[760px]:px-3 max-[760px]:py-2">
-      <Button
-        appearance="outline"
-        size="sm"
-        className={navButton}
-        onClick={onOpenDrawer}
-      >
+    <div className="grid h-[68px] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-line-card bg-surface px-5 max-[760px]:h-auto max-[760px]:min-h-14 max-[760px]:grid-cols-[1fr_auto] max-[760px]:gap-2 max-[760px]:px-3 max-[760px]:py-2">
+      <Button appearance="outline" size="sm" className={navButton} onClick={onOpenDrawer}>
         <ClipboardList />
         Danh sách<span className="max-[420px]:hidden"> bài học</span>
       </Button>
@@ -40,7 +35,7 @@ function LessonNavBar({
       <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-sm leading-normal font-semibold text-text-secondary max-[760px]:order-3 max-[760px]:col-span-full">
         <button
           type="button"
-          className="cursor-pointer font-extrabold whitespace-nowrap text-primary-text hover:underline"
+          className="cursor-pointer font-semibold whitespace-nowrap text-primary-text hover:underline"
           onClick={onCourses}
         >
           Khóa học của tôi
@@ -52,7 +47,7 @@ function LessonNavBar({
         <ChevronRight size={15} className="shrink-0" />
         <span className="truncate">{context.chapterTitle}</span>
         <ChevronRight size={15} className="shrink-0" />
-        <strong className="truncate font-extrabold text-text-heading">
+        <strong className="truncate font-semibold text-text-heading">
           {context.activity.title}
         </strong>
       </div>

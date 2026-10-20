@@ -37,15 +37,19 @@ function QuizRow({ quiz, lockMessage, onOpenQuiz }: QuizRowProps) {
       side={
         <>
           {(quiz.bestPercentage ?? 0) > 0 && (
-            <span className="font-extrabold text-practice">{quiz.bestPercentage}%</span>
+            <span className="font-semibold text-practice">{quiz.bestPercentage}%</span>
           )}
           <span>
             {quiz.attemptsUsed}/{quiz.maxAttempts} lượt
           </span>
           {quiz.locked ? (
-            <LearningStatus status="locked" className={statusText}>Chưa mở</LearningStatus>
+            <LearningStatus status="locked" className={statusText}>
+              Chưa mở
+            </LearningStatus>
           ) : quiz.passed ? (
-            <LearningStatus status="completed" className={statusText}>Đã đạt</LearningStatus>
+            <LearningStatus status="completed" className={statusText}>
+              Đã đạt
+            </LearningStatus>
           ) : (
             <LearningStatus status="action" className={statusText}>
               {quiz.inProgressAttemptId ? 'Tiếp tục làm bài' : 'Làm bài'}

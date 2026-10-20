@@ -37,7 +37,7 @@ const majors = [
 const highlights = ['3 phút hoàn thành', 'Cá nhân hóa ngay từ đầu', 'Có thể cập nhật sau']
 
 const textInput =
-  'border-line bg-surface text-[15px] font-semibold text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28,176,246,0.15)]'
+  'border-line bg-surface text-[15px] font-semibold text-text-heading outline-0 focus:border-focus-ring focus:ring-3 focus:ring-focus-ring/15'
 
 function StudentOnboarding({ onBack }) {
   const [form, setForm] = useState({
@@ -89,12 +89,7 @@ function StudentOnboarding({ onBack }) {
   return (
     <main className="relative min-h-screen bg-app-bg px-6 pt-6 pb-[58px] text-text-heading max-[701px]:px-3.5 max-[701px]:pt-4 max-[701px]:pb-7">
       <header className="relative z-1 mx-auto mb-6 flex w-[min(1180px,100%)] items-center justify-between max-[701px]:mb-[18px]">
-        <Button
-          appearance="outline"
-          size="icon"
-          onClick={onBack}
-          aria-label="Quay lại"
-        >
+        <Button appearance="outline" size="icon" onClick={onBack} aria-label="Quay lại">
           <ArrowLeft size={18} />
         </Button>
         <span className="absolute left-1/2 flex -translate-x-1/2 items-center">
@@ -112,10 +107,10 @@ function StudentOnboarding({ onBack }) {
         <div className="relative z-1 grid grid-cols-[minmax(0,1.4fr)_minmax(290px,0.78fr)] gap-6 max-[701px]:grid-cols-1 max-[701px]:gap-[18px]">
           <div className="min-w-0">
             <div className="mb-[22px] max-w-[720px] max-[701px]:mb-[18px]">
-              <span className="text-xs font-black tracking-[0.1em] text-primary-text">
+              <span className="text-xs font-bold tracking-[0.1em] text-primary-text">
                 BƯỚC 1 / 1 · HỒ SƠ HỌC TẬP
               </span>
-              <h1 className="my-2.5 max-w-[12ch] text-[length:clamp(29px,3.2vw,42px)] leading-[1.1] font-black tracking-[-0.9px] max-[701px]:max-w-none max-[701px]:text-[length:clamp(26px,8vw,34px)]">
+              <h1 className="my-2.5 max-w-[12ch] text-[length:clamp(29px,3.2vw,42px)] leading-[1.1] font-bold tracking-[-0.9px] max-[701px]:max-w-none max-[701px]:text-[length:clamp(26px,8vw,34px)]">
                 Cùng thiết lập mục tiêu học tập của bạn
               </h1>
               <p className="max-w-[60ch] text-base leading-[1.7] text-text-body">
@@ -129,22 +124,22 @@ function StudentOnboarding({ onBack }) {
                 {highlights.map((item) => (
                   <span
                     key={item}
-                    className="inline-flex min-h-9 items-center rounded-full border-[1.5px] border-line-brand bg-surface-brand px-3.5 text-[13px] font-extrabold text-primary-text max-[701px]:min-h-8"
+                    className="inline-flex min-h-9 items-center rounded-full border border-line-brand bg-surface-brand px-3.5 text-[13px] font-semibold text-primary-text max-[701px]:min-h-8"
                   >
                     {item}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="mb-6 flex items-center gap-[13px] rounded-2xl border-[1.5px] border-line-brand bg-surface-brand px-[18px] py-4 shadow-[0_4px_0_#b9e3f7] max-[701px]:items-start">
-              <span className="grid size-11 place-items-center rounded-2xl bg-primary text-white shadow-[0_3px_0_#0797d6]">
+            <div className="mb-6 flex items-center gap-[13px] rounded-xl border border-line-brand bg-surface-brand px-[18px] py-4 shadow-none max-[701px]:items-start">
+              <span className="grid size-11 place-items-center rounded-xl bg-primary text-white shadow-none">
                 <GraduationCap size={22} />
               </span>
               <div className="flex flex-1 flex-col gap-1">
-                <small className="text-xs font-extrabold tracking-[0.08em] text-text-body uppercase">
+                <small className="text-xs font-semibold tracking-[0.08em] text-text-body uppercase">
                   Kỳ thi đang ôn luyện
                 </small>
-                <strong className="text-base leading-[1.4] font-black text-text-heading">
+                <strong className="text-base leading-[1.4] font-bold text-text-heading">
                   Đánh giá năng lực ĐHQG TP.HCM
                 </strong>
               </div>
@@ -174,10 +169,10 @@ function StudentOnboarding({ onBack }) {
                   error={otherMajor ? '' : errors.major}
                 />
                 {otherMajor && (
-                  <label className="mt-2.5 flex flex-col gap-[7px] text-sm font-extrabold text-text-heading">
+                  <label className="mt-2.5 flex flex-col gap-[7px] text-sm font-semibold text-text-heading">
                     <span>Tên ngành học của bạn</span>
                     <input
-                      className={`h-12 rounded-xl border-2 px-3.5 placeholder:font-normal placeholder:text-text-subtle ${textInput}`}
+                      className={`h-12 rounded-xl border px-3.5 placeholder:font-normal placeholder:text-text-subtle ${textInput}`}
                       value={form.major}
                       placeholder="Nhập tên ngành học"
                       onChange={(event) => update('major', event.target.value)}
@@ -186,10 +181,12 @@ function StudentOnboarding({ onBack }) {
                   </label>
                 )}
               </div>
-              <OnboardingField className="col-span-full self-start rounded-3xl border-[1.5px] border-line-card bg-surface p-5 shadow-card-soft">
+              <OnboardingField className="col-span-full self-start rounded-2xl border border-line-card bg-surface p-5 shadow-card-soft">
                 <FieldLabel icon={TrendingUp}>Điểm ĐGNL mục tiêu</FieldLabel>
                 <div className="mt-px mb-2.5 flex items-baseline gap-[7px]">
-                  <strong className="text-4xl leading-none font-black text-primary">{form.score}</strong>
+                  <strong className="text-4xl leading-none font-bold text-primary-text">
+                    {form.score}
+                  </strong>
                   <span className="text-[13px] font-bold text-text-body">/ 1200 điểm</span>
                 </div>
                 <input
@@ -203,7 +200,7 @@ function StudentOnboarding({ onBack }) {
                 />
                 <div className="mt-2.5 flex items-center gap-[7px] text-[13px] font-bold text-text-body">
                   <input
-                    className="w-24 rounded-xl border-2 border-line bg-surface px-2.5 py-2 text-[15px] font-bold text-text-heading outline-0 focus:border-primary focus:shadow-[0_0_0_4px_rgba(28,176,246,0.15)]"
+                    className="w-24 rounded-xl border border-line bg-surface px-2.5 py-2 text-[15px] font-bold text-text-heading outline-0 focus:border-focus-ring focus:ring-3 focus:ring-focus-ring/15"
                     type="number"
                     min="0"
                     max="1200"

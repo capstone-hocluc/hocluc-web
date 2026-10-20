@@ -24,7 +24,7 @@ export function PageNav({ page, totalPages, onPrevious, onNext }: PageNavProps) 
         <ChevronLeft size={16} />
         Trang trước
       </ActivityButton>
-      <span className="text-sm font-extrabold text-text-secondary max-[760px]:text-center">
+      <span className="text-sm font-semibold text-text-secondary max-[760px]:text-center">
         Trang {page}/{totalPages}
       </span>
       <ActivityButton
@@ -55,7 +55,7 @@ export function FilterPills({ items, active, onChange }: FilterPillsProps) {
           key={item.key}
           type="button"
           className={cn(
-            'min-h-10 cursor-pointer rounded-full border-2 border-line bg-surface px-4 text-sm font-extrabold text-text-body transition-colors hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+            'min-h-10 cursor-pointer rounded-full border border-line bg-surface px-4 text-sm font-semibold text-text-body transition-colors hover:bg-surface-brand focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
             active === item.key && 'border-primary bg-primary-soft text-primary-text'
           )}
           onClick={() => onChange(item.key)}
@@ -78,8 +78,8 @@ export function SubmitConfirmModal({ onContinue, onSubmit }: SubmitConfirmModalP
     <AlertDialog.Root open onOpenChange={(open) => !open && onContinue()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 z-80 grid place-items-center bg-[rgba(9,17,41,0.45)] p-5">
-          <AlertDialog.Content className="w-[min(430px,100%)] rounded-3xl border-[1.5px] border-line-card bg-surface p-6 shadow-[0_24px_70px_rgba(9,17,41,0.22)]">
-            <AlertDialog.Title className="text-xl font-black text-text-heading">
+          <AlertDialog.Content className="w-[min(430px,100%)] rounded-2xl border border-line-card bg-surface p-6 shadow-[0_24px_70px_rgba(9,17,41,0.22)]">
+            <AlertDialog.Title className="text-xl font-bold text-text-heading">
               Xác nhận nộp bài
             </AlertDialog.Title>
             <AlertDialog.Description className="mt-2 text-base leading-[1.5] text-text-body">

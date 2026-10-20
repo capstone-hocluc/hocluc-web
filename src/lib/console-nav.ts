@@ -59,6 +59,8 @@ export interface ConsoleNavItem {
   writePermission?: Permission
   /** Limits a page to the roles that have a screen for it, on top of the permission check. */
   roles?: UserRole[]
+  /** Reached through tabs on another page; keeps its own route permission. */
+  tabOf?: string
   badgeKey?: NavBadgeKey
   featureFlag?: FeatureFlag
   /** Not built yet: opens the "Đang phát triển" state, and stays out of the menu while `unfinishedPages` is off. */
@@ -175,6 +177,16 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     writePermission: 'QUIZ_WRITE',
   },
   {
+    page: 'placements',
+    tabOf: 'quizzes',
+    label: 'Đánh giá đầu vào',
+    icon: ClipboardCheck,
+    group: 'content',
+    permission: 'QUIZ_WRITE',
+    writePermission: 'QUIZ_WRITE',
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
+  },
+  {
     page: 'question-review',
     label: 'Duyệt câu hỏi',
     labels: { TEACHER: 'Câu hỏi cần kiểm tra' },
@@ -187,6 +199,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   // Shared quiz screens follow BE quiz rights, independently of course/taxonomy writes.
   {
     page: 'mock-exams',
+    tabOf: 'quizzes',
     label: 'Bài thi thử',
     icon: ClipboardCheck,
     group: 'content',
@@ -367,6 +380,7 @@ export interface ConsoleNavGroup {
 export function buildNav(role: UserRole): ConsoleNavGroup[] {
   const visible = CONSOLE_NAV.filter(
     (item) =>
+      !item.tabOf &&
       allows(role, item) &&
       (!item.featureFlag || isFeatureEnabled(item.featureFlag)) &&
       (!item.soon || isFeatureEnabled('unfinishedPages'))

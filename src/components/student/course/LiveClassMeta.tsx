@@ -34,7 +34,7 @@ function LiveClassMeta({ liveClass, className }: LiveClassMetaProps) {
           {prettifyEnum(liveClass.provider)}
         </span>
       )}
-      <span className="font-extrabold text-live">{prettifyEnum(liveClass.status)}</span>
+      <span className="font-semibold text-live">{prettifyEnum(liveClass.status)}</span>
     </div>
   )
 }

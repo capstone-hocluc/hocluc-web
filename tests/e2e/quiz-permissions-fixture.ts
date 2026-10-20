@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import type { UserRole } from '../../src/services/userService'
-import type { TeacherQuizRecord, TeacherQuizQuestion, TeacherQuizType } from '../../src/services/teacherQuizService'
+import type { TeacherQuizRecord, TeacherQuizQuestion, TeacherQuizType, TeacherQuizSection } from '../../src/services/teacherQuizService'
 
 export const QUIZ_IDS = {
   user: '40000000-0000-0000-0000-000000000001',
@@ -42,11 +42,14 @@ const question = (): TeacherQuizQuestion => ({
 export async function installQuizFixture(page: Page, role: UserRole) {
   const state = {
     role, deniedQuiz: '', denyNextWrite: false, denyNextOrder: false, nextQuestion: 2,
+    denyWriteStatus: 403, denyWriteMessage: 'Không có quyền ghi quiz.',
     requests: [] as Array<{ method: string; path: string; query: string; body: Record<string, unknown>; role: string }>,
     unmatched: [] as string[], pageErrors: [] as string[],
     quizzes: [record(QUIZ_IDS.quiz, 'Quiz được giao', 'QUICK'), record(QUIZ_IDS.exam, 'Đề thi được giao', 'EXAM'),
       record(QUIZ_IDS.otherQuiz, 'Quiz ngoài phân công', 'QUICK', QUIZ_IDS.otherCourse)],
     questions: [question()],
+    sections: [] as TeacherQuizSection[],
+    activeStudentQuizId: QUIZ_IDS.quiz,
     writeGate: null as Promise<void> | null,
     studentStatus: 'IN_PROGRESS', studentOption: '', studentLockReason: null as string | null,
   }
@@ -69,18 +72,31 @@ export async function installQuizFixture(page: Page, role: UserRole) {
     const answer = (data: unknown, status = 200, message = 'OK') => route.fulfill({ status, contentType: 'application/json',
       body: JSON.stringify({ success: status < 400, status, data, message }) })
     if (path === '/api/v1/users/profiles') return answer({ id: QUIZ_IDS.user, role: activeRole,
-      roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER'], displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
+      roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER', 'STUDENT'], displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
       email: 'quiz@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
     if (path === '/api/v1/auth/switch-role') {
       state.role = body.role as UserRole
       return answer({ accessToken: quizToken(state.role), refreshToken: 'fixture-refresh' })
     }
     if (activeRole === 'STUDENT' && path.startsWith('/api/v1/assessments/')) {
+      const placement = state.quizzes.filter(q => q.type === 'PLACEMENT' && q.status === 'PUBLISHED')
+        .sort((a,b) => Date.parse(b.createdAt!) - Date.parse(a.createdAt!))[0]
+      if (path === '/api/v1/assessments/placement') return placement ? answer({ ...placement,
+        questions: state.questions.map(q => ({ ...q, options: q.options.map(o => ({ ...o, optionText: o.text })) })) }) : answer(null, 404, 'No placement quiz has been published yet.')
+      if (path === '/api/v1/assessments/placement/attempts/me') return answer(state.studentStatus === 'GRADED' ? [{ attemptId: QUIZ_IDS.attempt, status: 'GRADED', attemptNumber: 1, percentage: 100, startedAt: stamp, submittedAt: stamp }] : [])
+      if (path === '/api/v1/assessments/results/me') return answer({ id: 'result-fixture', totalQuestions: state.questions.length, correctCount: state.questions.length,
+        wrongCount: 0, score: state.questions.length, overallPercentage: 100, timeSpentSeconds: 60, level: 'ADVANCED',
+        categories: state.questions.some(q => q.categoryId) ? [{ categoryId: 'category-1', categoryName: 'Toán', correctCount: 1, wrongCount: 0, totalCount: 1, score: 1, percentage: 100 }] : [],
+        weakCategoryName: null, strongCategoryName: null })
       if (path.endsWith('/answers')) { state.studentOption = body.selectedOptionId as string; return answer(null) }
       if (path.endsWith('/submit')) { state.studentStatus = 'GRADED'; return answer({ attemptId: QUIZ_IDS.attempt, percentage: 100 }) }
-      if (path.endsWith('/review')) return answer({ attemptId: QUIZ_IDS.attempt, quizId: QUIZ_IDS.quiz, quizTitle: 'Quiz Student', totalQuestions: 1, correctCount: 1, overallPercentage: 100, questions: [] })
-      if (path.endsWith('/attempts') && method === 'POST') return answer({ attemptId: QUIZ_IDS.attempt, quizId: QUIZ_IDS.quiz, resumed: false, deadlineAt: '2100-01-01T00:00:00Z' })
-      if (path.includes('/attempts/')) return answer({ attemptId: QUIZ_IDS.attempt, quizId: QUIZ_IDS.quiz, status: state.studentStatus,
+      if (path.endsWith('/review')) return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, quizTitle: 'Quiz Student', totalQuestions: 1, correctCount: 1, overallPercentage: 100, questions: [] })
+      if (path.endsWith('/attempts') && method === 'POST') {
+        if (path.includes('/placement/') && !placement) return answer(null, 404, 'No placement quiz has been published yet.')
+        state.activeStudentQuizId = path.includes('/placement/') ? placement.id : QUIZ_IDS.quiz
+        return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, resumed: false, deadlineAt: '2100-01-01T00:00:00Z' })
+      }
+      if (path.includes('/attempts/')) return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, status: state.studentStatus,
         attemptNumber: 1, startedAt: stamp, deadlineAt: '2100-01-01T00:00:00Z', remainingSeconds: 1800,
         totalQuestions: 1, answeredCount: state.studentOption ? 1 : 0,
         answers: state.studentOption ? [{ questionId: QUIZ_IDS.question, selectedOptionId: state.studentOption }] : [] })
@@ -89,14 +105,16 @@ export async function installQuizFixture(page: Page, role: UserRole) {
           questionText: 'Câu hỏi Student', questionType: 'SINGLE_CHOICE', sequence: 1, imageUrl: null,
           options: [{ id: 'option-A', optionText: 'Đáp án Student', sequence: 1 }] }] })
     }
+    if (activeRole === 'STUDENT' && path === '/api/v1/courses/main/suggested') return answer([])
     const writer = ['ADMINISTRATOR', 'STAFF', 'MANAGER'].includes(activeRole)
     if (!writer && activeRole !== 'TEACHER') return answer(null, 403, 'Forbidden')
     if (method !== 'GET') {
-      if (!writer || state.denyNextWrite) { state.denyNextWrite = false; return answer(null, 403, 'Không có quyền ghi quiz.') }
+      if (!writer || state.denyNextWrite) { state.denyNextWrite = false; return answer(null, writer ? state.denyWriteStatus : 403, state.denyWriteMessage) }
       if (state.writeGate) await state.writeGate
     }
     const course = (id: string) => ({ id, title: id === QUIZ_IDS.course ? 'Khóa được phân công' : 'Khóa nháp ngoài phân công',
       courseType: 'MAIN', status: 'DRAFT', phases: [], sections: [], instructors: [], paid: false, price: 0, updatedAt: stamp })
+    if (path === '/api/v1/categories') return answer([{ id: 'category-1', name: 'Toán', active: true, parentId: null, sortOrder: 1 }])
     if (path === '/api/v1/admin/courses') return answer({
       content: (writer ? [QUIZ_IDS.course, QUIZ_IDS.otherCourse] : [QUIZ_IDS.course]).map(course),
       pageNumber: 0, pageSize: 100, totalPages: 1, totalElements: writer ? 2 : 1, isLast: true,
@@ -117,6 +135,11 @@ export async function installQuizFixture(page: Page, role: UserRole) {
       if (['QUICK', 'LESSON'].includes(body.type) && (body.lessonId !== QUIZ_IDS.lesson || body.chapterId || body.courseId)) return answer(null, 400, 'Invalid lesson target')
       if (body.type === 'CHAPTER' && (![QUIZ_IDS.chapter, QUIZ_IDS.otherChapter].includes(body.chapterId) || body.lessonId || body.courseId)) return answer(null, 400, 'Invalid chapter target')
       const created = { ...record('50000000-0000-0000-0000-000000000004', body.title as string, body.type as TeacherQuizType), ...body }
+      if (body.type === 'PLACEMENT') {
+        Object.assign(created, { courseId: null, courseTitle: null, chapterId: null, chapterTitle: null, lessonId: null, lessonTitle: null,
+          passingPercentage: null, showAnswers: false, practiceAllowed: false, questionCount: 0, createdAt: '2026-10-20T00:00:00Z' })
+        state.questions = []; state.sections = []
+      }
       if (body.type === 'LESSON') { created.lessonId = QUIZ_IDS.lesson; created.lessonTitle = 'Bài nháp' }
       if (body.type === 'CHAPTER') { created.lessonId = null; created.lessonTitle = null; created.chapterTitle = body.chapterId === QUIZ_IDS.otherChapter ? 'Chương chưa có bài' : 'Chương nháp' }
       state.quizzes.push(created); return answer(created)
@@ -126,7 +149,7 @@ export async function installQuizFixture(page: Page, role: UserRole) {
       const q = state.quizzes.find(item => item.id === match[1]), action = match[2]
       if (!q) return answer(null, 404, 'Not found')
       if (state.deniedQuiz === q.id || (!writer && q.courseId !== QUIZ_IDS.course)) return answer(null, 403, 'Không được phân công khóa này.')
-      if (!action && method === 'GET') return answer({ quiz: q, sections: [], groups: [], questions: state.questions, pages: [], latestJob: null })
+      if (!action && method === 'GET') return answer({ quiz: q, sections: q.type === 'PLACEMENT' ? state.sections : [], groups: [], questions: state.questions, pages: [], latestJob: null })
       if (!action && method === 'PUT') { Object.assign(q, body); return answer(q) }
       if (!action && method === 'DELETE') { state.quizzes = state.quizzes.filter(item => item.id !== q.id); return answer(null) }
       if (action === 'publish' || action === 'unpublish') { q.status = action === 'publish' ? 'PUBLISHED' : q.attemptCount ? 'ARCHIVED' : 'DRAFT'; return answer(q) }
@@ -138,7 +161,17 @@ export async function installQuizFixture(page: Page, role: UserRole) {
           options: v.options.map((o, i) => ({ ...o, id: `option-${i}`, label: String.fromCharCode(65 + i), sequence: i + 1 })),
         }))
         state.questions.push(...added)
+        q.questionCount = state.questions.length
         return answer(added)
+      }
+      if (action === 'sections' && method === 'PUT') {
+        state.sections = (body.sections as Array<{title: string; fromQuestion?: number; toQuestion?: number}>).map((section,index) => ({
+          id: `section-${index}`, title: section.title, sequence: index + 1, parentId: null, categoryId: null, categoryName: null, suggestedMinutes: null, children: [],
+          firstQuestion: section.fromQuestion ?? 0, lastQuestion: section.toQuestion ?? 0,
+          questionCount: section.fromQuestion && section.toQuestion ? section.toQuestion - section.fromQuestion + 1 : 0,
+        }))
+        state.questions = state.questions.map(question => ({ ...question, sectionId: state.sections.find(section => question.sequence >= section.firstQuestion && question.sequence <= section.lastQuestion)?.id ?? null }))
+        return answer(state.sections)
       }
       if (action === 'questions/order' && method === 'PUT') {
         if (state.denyNextOrder) { state.denyNextOrder = false; return answer(null, 403, 'Không có quyền sắp xếp câu hỏi.') }

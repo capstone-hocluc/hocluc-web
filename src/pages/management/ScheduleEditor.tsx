@@ -173,12 +173,19 @@ export default function ScheduleEditor({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Hình thức">
-              <select name="deliveryMode" disabled={busy} defaultValue={initial?.deliveryMode ?? 'PHYSICAL'} className={fieldControlClass}>
-                <option value="PHYSICAL">Trực tiếp</option>
-                <option value="ONLINE">Trực tuyến</option>
-                <option value="HYBRID">Kết hợp</option>
-                <option value="OFFLINE">Ngoại tuyến</option>
-              </select>
+              <SelectField
+                ariaLabel="Hình thức"
+                name="deliveryMode"
+                disabled={busy}
+                defaultValue={initial?.deliveryMode ?? 'PHYSICAL'}
+                triggerClassName={fieldControlClass}
+                options={[
+                  { id: 'PHYSICAL', label: 'Trực tiếp' },
+                  { id: 'ONLINE', label: 'Trực tuyến' },
+                  { id: 'HYBRID', label: 'Kết hợp' },
+                  { id: 'OFFLINE', label: 'Ngoại tuyến' },
+                ]}
+              />
             </Field>
             <Field label="Phòng / địa điểm">
               <input name="location" autoComplete="off" disabled={busy} defaultValue={initial?.location ?? ''} className={fieldControlClass} />

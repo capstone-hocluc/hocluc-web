@@ -279,7 +279,7 @@ function CourseDetail({ courseId, onBack, onOpenActivity }) {
 
       <main className="flex flex-col gap-4">
         <div className="flex items-end justify-between gap-4 max-[760px]:flex-col max-[760px]:items-start">
-          <h2 className="text-2xl leading-normal font-black tracking-[-0.3px] text-text-heading">
+          <h2 className="text-2xl leading-normal font-bold tracking-[-0.3px] text-text-heading">
             Nội dung khóa học
           </h2>
           <p className="max-w-[560px] text-right text-sm leading-[1.45] font-semibold text-text-secondary max-[760px]:max-w-none max-[760px]:text-left">

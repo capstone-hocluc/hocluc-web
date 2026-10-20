@@ -1,21 +1,21 @@
 import type { FormEvent } from 'react'
-import { Send, X } from '../../console/icons'
+import { Bot, Send, X } from '../../console/icons'
 import { cn } from '../../../lib/cn'
 import Button from '../../ui/Button'
 import { Input } from '../../ui/Field'
 import { quickActions, type AiMessage } from './teacherAiMock'
-import SubjectAvatarIcon from '../../common/SubjectAvatarIcon'
 
-// Floating avatar that opens the chat.
+// Compact action keeps the lesson visible while offering access to the assistant.
 export function TeacherAiButton({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
-      className="absolute right-7 bottom-7 z-4 grid animate-float-y cursor-pointer place-items-center drop-shadow-[0_16px_22px_rgba(0,0,0,0.28)] max-[760px]:right-3.5 max-[760px]:bottom-3.5"
+      className="absolute right-6 bottom-6 z-4 inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-full border border-line-brand bg-surface px-4 text-sm font-semibold text-primary-text shadow-card-soft transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring max-[760px]:right-4 max-[760px]:bottom-4"
       aria-label="Mở Teacher AI"
       onClick={onOpen}
     >
-      <SubjectAvatarIcon type="cloud" className="size-[78px] max-[760px]:size-[52px]" />
+      <Bot size={20} />
+      <span>Hỏi trợ lý AI</span>
     </button>
   )
 }
@@ -40,11 +40,11 @@ export function TeacherAiPanel({
   onQuickAction,
 }: TeacherAiPanelProps) {
   return (
-    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-lock-soft shadow-card max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
+    <aside className="relative z-5 flex h-[min(100%,620px)] w-full flex-col self-center overflow-hidden rounded-2xl border border-line-card bg-lock-soft shadow-card max-[760px]:absolute max-[760px]:inset-x-2.5 max-[760px]:bottom-2.5 max-[760px]:h-auto max-[760px]:max-h-[calc(100dvh_-_92px)] max-[760px]:w-auto">
       <div className="flex shrink-0 items-center justify-between gap-2.5 bg-primary px-4 py-4 text-white">
-        <SubjectAvatarIcon type="cloud" className="size-[38px] rounded-full bg-surface p-[5px]" />
+        <Bot size={24} className="shrink-0" />
         <div className="min-w-0 flex-1">
-          <strong className="block text-lg font-black">Trợ lý AI HocLuc</strong>
+          <strong className="block text-lg font-bold">Trợ lý AI HocLuc</strong>
           <span className="mt-[3px] block text-[13px] leading-[1.35] font-bold">
             <i className="mr-1.5 inline-block size-2 rounded-full bg-success" /> Đang hoạt động
           </span>
@@ -67,9 +67,9 @@ export function TeacherAiPanel({
           <p
             key={message.id}
             className={cn(
-              'max-w-[90%] rounded-2xl px-4 py-3 text-[15px] leading-[1.5]',
+              'max-w-[90%] rounded-xl px-4 py-3 text-[15px] leading-[1.5]',
               message.role === 'ai'
-                ? 'self-start border-[1.5px] border-line-card bg-surface text-text-body shadow-card-soft'
+                ? 'self-start border border-line-card bg-surface text-text-body shadow-card-soft'
                 : 'self-end bg-primary font-semibold text-white'
             )}
           >
@@ -78,7 +78,7 @@ export function TeacherAiPanel({
         ))}
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-1.5 border-t-[1.5px] border-line bg-surface px-[18px] pt-3.5 pb-2">
+      <div className="flex shrink-0 flex-wrap gap-1.5 border-t border-line bg-surface px-[18px] pt-3.5 pb-2">
         {quickActions.map((action) => (
           <Button
             key={action}

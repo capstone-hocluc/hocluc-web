@@ -16,14 +16,10 @@
 
 /* New styles added after the split above go here. */
 @import './styles/landing/course-catalog.css';
-@import './styles/landing/cart.css';
-@import './styles/landing/checkout.css';
-@import './styles/landing/orders.css';
-@import './styles/landing/payment-result.css';
-@import './styles/landing/payment-instructions.css';
 @import './styles/base/theme-overrides.css';
 @import './styles/student/student-theme.css';
 @import './styles/tailgrids/tailgrids-theme.css';
 @import './styles/tailgrids/tailgrids-default.css';
 @import './styles/tailgrids/tailgrids-dark.css';
+@import './styles/base/dashboard-brand.css';
 @custom-variant dark (&:where(html[data-theme='dark'], html[data-theme='dark'] *));

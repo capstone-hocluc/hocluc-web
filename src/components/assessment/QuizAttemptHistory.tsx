@@ -24,11 +24,11 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
           const canReview = allowReview && attempt.status !== 'IN_PROGRESS'
           return (
             <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface-sky px-4 py-3.5"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-card bg-surface-sky px-4 py-3.5"
               key={attempt.attemptId}
             >
               <div className="flex min-w-[96px] flex-col gap-0.5">
-                <span className="text-base font-extrabold text-text-heading">
+                <span className="text-base font-semibold text-text-heading">
                   Lần {attempt.attemptNumber}
                 </span>
                 <span className="text-sm text-text-secondary">
@@ -37,7 +37,9 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
               </div>
               <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
                 {attempt.status !== 'IN_PROGRESS' && (
-                  <strong className="text-base font-black text-primary-text">{attempt.percentage}%</strong>
+                  <strong className="text-base font-bold text-primary-text">
+                    {attempt.percentage}%
+                  </strong>
                 )}
                 {attempt.timeSpentSeconds > 0 && (
                   <span>{formatDuration(attempt.timeSpentSeconds)}</span>
@@ -49,7 +51,7 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
                   appearance="outline"
                   shape="pill"
                   size="sm"
-                  className="h-auto border-primary px-4 py-2 text-sm font-extrabold"
+                  className="h-auto border-primary px-4 py-2 text-sm font-semibold"
                   onClick={() => onOpenReview(attempt.attemptId)}
                 >
                   <Eye size={16} />

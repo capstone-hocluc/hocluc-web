@@ -1,7 +1,7 @@
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { ForbiddenPage } from '../../console/access-states'
 import QuizDetails from './QuizDetails'
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import {
   ArrowLeft,
   ArrowUp,
@@ -59,6 +59,7 @@ import StatusBadge from '../../console/status'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
 
 interface TeacherQuizProps {
+  navigation?: ReactNode
   readOnly?: boolean
   initialEditorId?: string | null
   course: { id: string; name: string }
@@ -116,7 +117,7 @@ function quizIsLocked(quiz: TeacherQuizRecord | undefined) {
   return Boolean(quiz?.locked || (quiz?.attemptCount ?? 0) > 0)
 }
 
-function QuizScreen({ course, onBack, onAction, startCreating = false, readOnly = true, initialEditorId = null }: TeacherQuizProps) {
+function QuizScreen({ navigation, course, onBack, onAction, startCreating = false, readOnly = true, initialEditorId = null }: TeacherQuizProps) {
   const quizzes = usePageResource(() => getTeacherQuizzes(course.id || undefined), [course.id])
   const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [creating, setCreating] = useState(!readOnly && startCreating)
@@ -181,7 +182,8 @@ function QuizScreen({ course, onBack, onAction, startCreating = false, readOnly 
       <PageHeading title="Bài kiểm tra" readOnly={readOnly}
         subtitle={readOnly ? 'Xem nội dung và theo dõi bài kiểm tra trong các khóa được phân công.' : 'Quản lý quiz nhanh, kiểm tra cuối bài và cuối chương theo khóa học.'}
         action={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />Tạo bài kiểm tra</Button>} />
-      <QuizCatalog items={quizItems} status={quizzes.status}
+      {navigation}
+      <QuizCatalog scope={course.id} items={quizItems} status={quizzes.status}
         errorMessage={quizzes.errorMessage} onRetry={refresh} readOnly={readOnly}
         renderActions={(quiz) => <RowActions>
                   <IconAction label="Xem nội dung" icon={Eye} onClick={() => setViewingId(quiz.id)} />

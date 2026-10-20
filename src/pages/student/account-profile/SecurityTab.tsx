@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { AlertCircle, CheckCircle2, Circle, Eye, EyeOff, LockKeyhole } from '../../../components/console/icons'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Circle,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+} from '../../../components/console/icons'
 import {
   AccountForm,
   AccountPanel,
@@ -155,8 +162,10 @@ function SecurityTab() {
             />
           </Field>
 
-          <div className="col-span-full rounded-2xl border-[1.5px] border-line-card bg-surface-brand p-4">
-            <strong className="text-[15px] font-black text-text-heading">Mật khẩu cần đáp ứng</strong>
+          <div className="col-span-full rounded-xl border border-line-card bg-surface-brand p-4">
+            <strong className="text-[15px] font-bold text-text-heading">
+              Mật khẩu cần đáp ứng
+            </strong>
             <ul className="mt-2 grid gap-1.5">
               {requirements.map((rule) => (
                 <li

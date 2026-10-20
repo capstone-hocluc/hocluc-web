@@ -4,12 +4,12 @@ import { ActivityCard, ActivityCardTitle } from './ActivityCard'
 
 // Number and action buttons inside the tracker share one look; `state` recolours them.
 const trackerButton = cva(
-  'min-h-10 cursor-pointer rounded-xl border-2 text-sm font-extrabold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+  'min-h-10 cursor-pointer rounded-xl border text-sm font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
   {
     variants: {
       state: {
         idle: 'border-line bg-surface text-text-secondary hover:bg-surface-brand',
-        active: 'border-[#84d8ff] bg-primary-soft text-primary-text',
+        active: 'border-primary-bright bg-primary-soft text-primary-text',
         answered: 'border-line-practice bg-practice-soft text-practice',
         answeredActive: 'border-primary bg-primary text-white',
         reviewCorrect: 'border-line-practice bg-practice-soft text-practice',
@@ -54,16 +54,11 @@ function QuestionTracker({
       <ActivityCardTitle className="mb-0">{title}</ActivityCardTitle>
       <div className="grid grid-cols-2 gap-2">
         {stats.map((stat) => (
-          <p
-            key={stat.label}
-            className="rounded-2xl bg-surface-brand p-3"
-          >
-            <span className="block text-xs font-extrabold tracking-[0.04em] text-text-secondary uppercase">
+          <p key={stat.label} className="rounded-xl bg-surface-brand p-3">
+            <span className="block text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase">
               {stat.label}
             </span>
-            <strong className="mt-1 block text-lg font-black text-text-heading">
-              {stat.value}
-            </strong>
+            <strong className="mt-1 block text-lg font-bold text-text-heading">{stat.value}</strong>
           </p>
         ))}
       </div>

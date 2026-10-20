@@ -50,7 +50,7 @@ function LessonDrawer({
       <SheetBody className="flex flex-col gap-5 p-4">
         {grouped.map(([chapterTitle, items]) => (
           <section className="grid gap-2" key={chapterTitle}>
-            <strong className="text-base font-extrabold text-text-heading">{chapterTitle}</strong>
+            <strong className="text-base font-semibold text-text-heading">{chapterTitle}</strong>
             {items.map((item) => {
               const isCurrent = item.activity.id === context.activity.id
               const locked = item.activity.status === 'locked'
@@ -59,11 +59,13 @@ function LessonDrawer({
                   key={item.activity.id}
                   type="button"
                   className={cn(
-                    'grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2.5 rounded-2xl border-[1.5px] px-3 py-2.5 text-left text-sm leading-[1.4] font-bold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+                    'grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm leading-[1.4] font-bold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
                     isCurrent
                       ? 'border-transparent bg-surface-brand text-primary-text'
-                      : 'border-line bg-surface text-text-body hover:border-[#84d8ff] hover:bg-surface-brand',
-                    locked ? 'cursor-default bg-surface-soft text-lock hover:border-line hover:bg-surface-soft' : 'cursor-pointer'
+                      : 'border-line bg-surface text-text-body hover:border-primary-bright hover:bg-surface-brand',
+                    locked
+                      ? 'cursor-default bg-surface-soft text-lock hover:border-line hover:bg-surface-soft'
+                      : 'cursor-pointer'
                   )}
                   onClick={() => {
                     if (locked) {

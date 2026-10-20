@@ -22,7 +22,7 @@ export function FieldLabel({
   children: ReactNode
 }) {
   return (
-    <span className="mb-[9px] flex items-center gap-[7px] text-sm font-extrabold text-text-heading [&>svg]:text-primary-text">
+    <span className="mb-[9px] flex items-center gap-[7px] text-sm font-semibold text-text-heading [&>svg]:text-primary-text">
       <Icon size={16} />
       {children}
     </span>
@@ -71,7 +71,7 @@ export function SearchSelect({
             </span>
           </span>
         )}
-        triggerClassName="flex h-[52px] items-center gap-[9px] py-0 rounded-2xl border-2 border-line bg-surface px-3.5 text-text-subtle transition focus-within:border-primary focus-within:shadow-[0_0_0_4px_rgba(28,176,246,0.15)] aria-invalid:border-danger"
+        triggerClassName="flex h-[52px] items-center gap-[9px] py-0 rounded-xl border border-line bg-surface px-3.5 text-text-subtle transition focus-within:border-primary focus-within:ring-3 focus-within:ring-focus-ring/15 aria-invalid:border-danger"
         value={value || null}
         onChange={(nextValue) => onChange(nextValue ?? '')}
       />
@@ -81,11 +81,11 @@ export function SearchSelect({
 }
 
 const subjectChip = cva(
-  'inline-flex min-h-10 cursor-pointer items-center gap-[5px] rounded-full border-2 border-line bg-surface px-3.5 py-2 text-sm font-bold text-text-body transition hover:border-primary hover:bg-surface-brand hover:text-primary-text focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+  'inline-flex min-h-10 cursor-pointer items-center gap-[5px] rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-bold text-text-body transition hover:border-primary hover:bg-surface-brand hover:text-primary-text focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
   {
     variants: {
       selected: {
-        true: 'border-primary bg-primary-soft font-extrabold text-primary-text',
+        true: 'border-primary bg-primary-soft font-semibold text-primary-text',
         false: '',
       },
     },
@@ -132,7 +132,7 @@ export function SubjectChoice({ label, hint, selected, onChange, error }: Subjec
     <OnboardingField>
       <FieldLabel icon={BookOpen}>
         {label}
-        <strong className="ml-auto text-xs font-black tracking-[0.3px] text-primary-text">
+        <strong className="ml-auto text-xs font-bold tracking-[0.3px] text-primary-text">
           {selected.length} môn đã chọn
         </strong>
       </FieldLabel>
@@ -140,11 +140,11 @@ export function SubjectChoice({ label, hint, selected, onChange, error }: Subjec
       <div className="flex flex-col gap-3">
         {subjectGroups.map((group) => (
           <div
-            className="rounded-2xl border-[1.5px] border-line-card bg-surface p-3.5 first:border-line-brand first:bg-surface-brand"
+            className="rounded-xl border border-line-card bg-surface p-3.5 first:border-line-brand first:bg-surface-brand"
             key={group.label}
           >
             <div className="mb-[9px] flex items-baseline justify-between gap-2.5 max-[701px]:flex-col max-[701px]:items-start max-[701px]:gap-[3px]">
-              <strong className="text-sm font-black text-text-heading">{group.label}</strong>
+              <strong className="text-sm font-bold text-text-heading">{group.label}</strong>
               <span className="text-right text-xs text-text-body max-[701px]:text-left">
                 {group.description}
               </span>

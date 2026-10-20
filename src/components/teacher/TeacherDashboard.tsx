@@ -1,20 +1,13 @@
 import { lazy, Suspense, useState } from 'react'
-import {
-  ArrowRight,
-  BookOpen,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardCheck,
-  Clock3,
-} from '../console/icons'
+import { CheckCircle2 } from '../console/icons'
 import TeacherCourses from './TeacherCourses'
 import ConsoleShell from '../console/console-shell'
 import ProfilePage from '../console/profile-page'
 import TeacherAssignments from './TeacherAssignments'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
-import TeacherPageHeader from './TeacherPageHeader'
 import QuizConsoleScreen from '../management/quiz/QuizConsoleScreen'
-import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
+import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
+import { DashboardActions, RoleDashboardWelcome } from '../common/DashboardWelcome'
 import { ManagementScreen } from '../management/ManagementDashboard'
 import { ForbiddenPage } from '../console/access-states'
 import { buildNavSections, canAccessPage } from '../../lib/console-nav'
@@ -101,12 +94,6 @@ function TeacherDashboard({
       if (key === 'dashboard') setSelectedCourse(null)
     }
   }
-  const shortcuts = [
-    { key: 'courses', title: 'Lớp của tôi', icon: BookOpen },
-    { key: 'schedule', title: 'Lịch dạy', icon: CalendarDays },
-    { key: 'availability', title: 'Giờ rảnh', icon: Clock3 },
-    { key: 'mock-exams', title: 'Bài thi thử', icon: ClipboardCheck },
-  ]
   const sections = buildNavSections('TEACHER')
   const allowed = view === 'profile' || canAccessPage('TEACHER', menuPageOf(view))
   const teacherScreens = [
@@ -122,7 +109,7 @@ function TeacherDashboard({
   return (
     <ConsoleShell
       sections={sections}
-      activeKey={menuPageOf(view)}
+      activeKey={quizSidebarPage(menuPageOf(view))}
       onNavigate={navigate}
       onOpenProfile={() => navigate('profile')}
       onLogout={() => onLogout?.()}
@@ -153,26 +140,8 @@ function TeacherDashboard({
           <ProfilePage />
         ) : view === 'dashboard' ? (
           <>
-            <TeacherPageHeader title="Tổng quan" />
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {shortcuts.map(({ key, title, icon: Icon }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => navigate(key)}
-                  className="group flex items-center gap-4 rounded-xl border border-card-border bg-card-background p-5 text-left transition-colors hover:bg-background-gray-secondary"
-                >
-                  <span className="grid size-11 shrink-0 place-items-center rounded-full bg-badge-blue-background text-badge-blue-icon-color">
-                    <Icon size={20} />
-                  </span>
-                  <span className="flex-1 text-base font-medium text-text-primary">{title}</span>
-                  <ArrowRight
-                    size={16}
-                    className="text-icon-tertiary transition-transform group-hover:translate-x-0.5"
-                  />
-                </button>
-              ))}
-            </div>
+            <RoleDashboardWelcome role="TEACHER" />
+            <DashboardActions role="TEACHER" onNavigate={navigate} />
           </>
         ) : assignmentCourse ? (
           <TeacherAssignments

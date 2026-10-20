@@ -1,5 +1,6 @@
 import { usePageResource } from '../../../hooks/usePageResource'
-import { getTeacherQuiz } from '../../../services/teacherQuizService'
+import { getTeacherQuiz, type TeacherQuizType } from '../../../services/teacherQuizService'
+import { ApiError } from '../../../lib/api'
 import Button from '../../console/button'
 import Card, { CardTitle } from '../../console/card'
 import PageHeading from '../../console/page-heading'
@@ -12,8 +13,12 @@ import ScheduleResourceState from '../../console/schedule/schedule-resource-stat
 const statusLabels = { DRAFT: 'Bản nháp', PUBLISHED: 'Đã xuất bản', ARCHIVED: 'Đã lưu trữ' }
 
 /** Read the existing editor response without mounting any editor or write handler. */
-export default function QuizDetails({ quizId, onBack }: { quizId: string; onBack: () => void }) {
-  const resource = usePageResource(() => getTeacherQuiz(quizId), [quizId])
+export default function QuizDetails({ quizId, onBack, expectedType }: { quizId: string; onBack: () => void; expectedType?: TeacherQuizType }) {
+  const resource = usePageResource(async () => {
+    const result = await getTeacherQuiz(quizId)
+    if (expectedType && result.quiz.type !== expectedType) throw new ApiError('Bài kiểm tra không thuộc loại đang mở.', 404)
+    return result
+  }, [quizId, expectedType])
   const editor = resource.status === 'ready' ? resource.data : null
   const quiz = editor?.quiz
   return (
@@ -29,7 +34,7 @@ export default function QuizDetails({ quizId, onBack }: { quizId: string; onBack
               <div className="min-w-0 flex-1">
                 <CardTitle className="text-lg break-words">{quiz.title}</CardTitle>
                 <Status tone="info">{quizTypeLabel(quiz.type)}</Status>
-                <p className="text-sm text-text-tertiary">{[quiz.courseTitle, quiz.chapterTitle, quiz.lessonTitle].filter(Boolean).join(' · ') || 'Chưa gắn khóa học'}</p>
+                <p className="text-sm text-text-tertiary">{[quiz.courseTitle, quiz.chapterTitle, quiz.lessonTitle].filter(Boolean).join(' · ') || (quiz.type === 'PLACEMENT' ? 'Bài đánh giá đầu vào độc lập' : 'Chưa gắn khóa học')}</p>
                 <p className="text-sm text-text-tertiary">{quizRequirement(quiz.type)}</p>
               </div>
               <Status tone={quiz.status === 'PUBLISHED' ? 'success' : quiz.status === 'DRAFT' ? 'warning' : 'neutral'}>{statusLabels[quiz.status]}</Status>

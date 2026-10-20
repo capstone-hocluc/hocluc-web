@@ -60,7 +60,7 @@ export default function Sidebar({
           isSidebarOpen ? 'justify-between' : 'flex-col justify-center gap-4',
         )}
       >
-        <Logo />
+        <Logo markOnly={!isSidebarOpen} />
         <button
           type="button"
           onClick={toggleSidebar}
@@ -70,7 +70,8 @@ export default function Sidebar({
               ? 'rounded-lg text-icon-tertiary hover:bg-background-gray-primary hover:text-text-primary'
               : 'text-icon-tertiary hover:text-text-secondary',
           )}
-          aria-label={isMobileSheet ? 'Đóng menu' : 'Thu gọn menu'}
+          aria-label={isMobileSheet ? 'Đóng menu' : isSidebarOpen ? 'Thu gọn menu' : 'Mở rộng menu'}
+          aria-expanded={isSidebarOpen}
         >
           {isMobileSheet ? <CloseIcon /> : <SidebarExpandedIcon />}
         </button>

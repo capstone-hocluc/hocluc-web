@@ -29,11 +29,10 @@ export function getOrderStatusTone(status: string): OrderStatusTone {
   return STATUS_TONES[status] || 'neutral'
 }
 
-// An order can be paid/cancelled only while it's still PENDING. Backend
-// remains authoritative - these just gate which actions the UI offers;
-// the API itself still enforces the real rule.
+// The backend can issue payment details for pending, failed, and expired orders.
+// Cancellation stays limited to pending orders; the API enforces both rules.
 export function canPayOrder(status: string) {
-  return status === 'PENDING'
+  return status === 'PENDING' || status === 'FAILED' || status === 'EXPIRED'
 }
 
 export function canCancelOrder(status: string) {

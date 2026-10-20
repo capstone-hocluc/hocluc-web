@@ -40,14 +40,14 @@ function ConsoleShell({
 
   return (
     <ThemeProvider>
-      <div className="flex min-h-screen bg-background-gray-secondary_alt_2 font-sans xl:h-screen xl:overflow-hidden">
+      <div className="dashboard-layout console-layout flex min-h-screen bg-background-gray-secondary_alt_2 font-sans xl:h-screen xl:overflow-hidden">
         <aside
           style={{
             width: isSidebarOpen ? '270px' : '72px',
             minWidth: isSidebarOpen ? '270px' : '72px',
             transition: 'width 300ms cubic-bezier(0.4,0,0.2,1), min-width 300ms cubic-bezier(0.4,0,0.2,1)',
           }}
-          className="hidden shrink-0 overflow-hidden xl:block"
+          className="hidden shrink-0 overflow-hidden border-r border-card-border bg-card-background xl:block"
         >
           <Sidebar
             sections={sections}

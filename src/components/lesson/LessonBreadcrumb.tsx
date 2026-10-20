@@ -16,7 +16,7 @@ function LessonBreadcrumb({ lesson, onBack }: LessonBreadcrumbProps) {
       <Button
         appearance="ghost"
         size="sm"
-        className="h-auto gap-1.5 p-0 text-sm font-extrabold text-primary-text hover:bg-transparent"
+        className="h-auto gap-1.5 p-0 text-sm font-semibold text-primary-text hover:bg-transparent"
         onClick={onBack}
       >
         <ArrowLeft size={16} />
@@ -35,7 +35,7 @@ function LessonBreadcrumb({ lesson, onBack }: LessonBreadcrumbProps) {
         </>
       )}
       <ChevronRight size={13} />
-      <span className="max-w-[260px] truncate font-extrabold text-text-heading">{lesson.title}</span>
+      <span className="max-w-[260px] truncate font-semibold text-text-heading">{lesson.title}</span>
     </nav>
   )
 }

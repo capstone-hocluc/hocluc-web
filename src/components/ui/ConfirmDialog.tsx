@@ -40,7 +40,9 @@ function ConfirmDialog({
     <AlertDialog.Root open onOpenChange={(open) => !open && onCancel()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 z-90 grid place-items-center bg-[rgba(13,19,38,0.55)] p-5">
-          <AlertDialog.Content className={`w-full max-w-[420px] rounded-[18px] bg-surface p-[26px] shadow-[0_30px_60px_-20px_rgba(17,24,58,0.4)] ${contentClassName ?? ''}`}>
+          <AlertDialog.Content
+            className={`w-full max-w-[420px] rounded-2xl bg-surface p-6 shadow-[0_30px_60px_-20px_rgba(17,24,58,0.4)] ${contentClassName ?? ''}`}
+          >
             <AlertDialog.Title className="mb-2.5 text-[17px] font-bold text-text-heading">
               {title}
             </AlertDialog.Title>

@@ -3,11 +3,9 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/cn'
 
-// Landing-page buttons: solid colour with a 4px "ledge" under it that the button
-// presses into on :active. Same variant x appearance x size cva structure as
-// before; Tailwind utility classes only - no index.css rule.
+// Shared product actions use the current Học Lực tokens, including in portals.
 const button = cva(
-  'inline-flex items-center justify-center gap-2 rounded-[13px] border-2 border-transparent font-extrabold whitespace-nowrap transition-[transform,box-shadow,background-color] duration-150 [&>svg]:shrink-0 not-disabled:hover:-translate-y-0.5 not-disabled:active:translate-y-[3px] not-disabled:active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#174fbd]',
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-transparent font-semibold whitespace-nowrap transition-colors duration-150 [&>svg]:shrink-0 not-disabled:active:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
   {
     variants: {
       variant: {
@@ -18,13 +16,14 @@ const button = cva(
       appearance: {
         fill: '',
         outline: 'bg-surface',
-        ghost: 'bg-transparent hover:shadow-none not-disabled:hover:translate-y-0 not-disabled:active:translate-y-0',
+        ghost:
+          'bg-transparent hover:shadow-none not-disabled:hover:translate-y-0 not-disabled:active:translate-y-0',
       },
       size: {
-        sm: 'h-9 gap-1.5 px-3.5 text-sm [&>svg]:size-4',
+        sm: 'min-h-11 gap-1.5 px-3.5 py-2 text-sm [&>svg]:size-4',
         md: 'h-11 px-5 text-[15px] [&>svg]:size-[18px]',
         lg: 'h-[50px] px-6 text-base [&>svg]:size-[18px]',
-        icon: 'size-10 p-0 [&>svg]:size-[18px]',
+        icon: 'size-11 p-0 [&>svg]:size-[18px]',
       },
       shape: {
         default: '',
@@ -35,7 +34,7 @@ const button = cva(
       {
         variant: 'primary',
         appearance: 'fill',
-        className: 'bg-primary text-white shadow-[0_4px_0_#0797d6] hover:bg-[#48c2fa]',
+        className: 'bg-primary text-white shadow-none hover:bg-primary-dark',
       },
       {
         variant: 'primary',
@@ -50,7 +49,7 @@ const button = cva(
       {
         variant: 'danger',
         appearance: 'fill',
-        className: 'bg-danger text-white shadow-[0_4px_0_#b8243a] hover:brightness-110',
+        className: 'bg-danger text-white shadow-none hover:brightness-110',
       },
       {
         variant: 'danger',
@@ -65,7 +64,7 @@ const button = cva(
       {
         variant: 'success',
         appearance: 'fill',
-        className: 'bg-success text-white shadow-[0_4px_0_#0f7a43] hover:brightness-110',
+        className: 'bg-success text-white shadow-none hover:brightness-110',
       },
       {
         variant: 'success',
@@ -108,6 +107,9 @@ function Button({
   return (
     <Comp
       {...(asChild ? {} : { type })}
+      data-ui-button=""
+      data-variant={variant ?? 'primary'}
+      data-appearance={appearance ?? 'fill'}
       className={cn(button({ variant, appearance, size, shape }), className)}
       {...props}
     >

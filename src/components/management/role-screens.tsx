@@ -189,7 +189,7 @@ export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => v
     { page: 'solution-queue', label: 'Lời giải chờ duyệt', value: pending, icon: Clock3, tone: 'warning' as const },
   ]
   return (
-    <Page title="Tổng quan">
+    <section aria-label="Tình hình đồng hành">
       <div className="grid gap-3 sm:grid-cols-3">
         {cards.map(({ page, ...card }) => (
           <button key={page} type="button" className="text-left" onClick={() => onNavigate(page)}>
@@ -197,7 +197,7 @@ export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => v
           </button>
         ))}
       </div>
-    </Page>
+    </section>
   )
 }
 

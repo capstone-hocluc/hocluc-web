@@ -9,7 +9,7 @@ import { cn } from '../../lib/cn'
 // Tailwind utility classes only - no index.css rule, mirrors the reference
 // CRM's Badge (tailgrids/core/badge.tsx).
 const badge = cva(
-  'inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full font-extrabold',
+  'inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full font-semibold',
   {
     variants: {
       tone: {

@@ -4,13 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:e2e:purchase": "tsc --noEmit -p tsconfig.e2e.purchase.json && playwright test purchase.spec.ts",
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e:core-crud": "tsc --noEmit -p tsconfig.e2e.json && playwright test core-crud.spec.ts",
     "test:e2e:chat": "tsc --noEmit -p tsconfig.e2e.json && playwright test chat.spec.ts",
     "test:e2e:quiz-permissions": "tsc --noEmit -p tsconfig.e2e.json && playwright test quiz-permissions.spec.ts",
+    "test:e2e:placement": "tsc --noEmit -p tsconfig.e2e.json && playwright test placement.spec.ts",
     "test:e2e:landing": "tsc --noEmit -p tsconfig.e2e.json && playwright test landing.spec.ts"
   },
   "dependencies": {

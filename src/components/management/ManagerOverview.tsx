@@ -53,9 +53,9 @@ function ManagerOverview({ onNavigate }: ManagerOverviewProps) {
   return (
     <section className="space-y-5" aria-busy={loading}>
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Khóa học đang mở" value={loading ? '—' : summary.total} icon={BookOpen} tone="info" />
-        <StatCard label="Khóa học miễn phí" value={loading ? '—' : summary.free} icon={BookOpenCheck} tone="success" />
-        <StatCard label="Khóa học có học phí" value={loading ? '—' : summary.paid} icon={Wallet} tone="warning" />
+        <StatCard label="Khóa học đang mở" value={loading || error ? '—' : summary.total} icon={BookOpen} tone="info" />
+        <StatCard label="Khóa học miễn phí" value={loading || error ? '—' : summary.free} icon={BookOpenCheck} tone="success" />
+        <StatCard label="Khóa học có học phí" value={loading || error ? '—' : summary.paid} icon={Wallet} tone="warning" />
       </div>
 
       {error ? (

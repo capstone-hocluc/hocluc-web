@@ -23,7 +23,7 @@ function ActivityShell({
     <StudentPageContainer className="flex flex-col gap-5 pb-8 text-text-heading max-[760px]:pb-7">
       <Button
         appearance="ghost"
-        className="h-auto w-max gap-2 border-0 p-0 text-sm font-extrabold text-primary-text hover:bg-transparent hover:underline"
+        className="h-auto w-max gap-2 border-0 p-0 text-sm font-semibold text-primary-text hover:bg-transparent hover:underline"
         onClick={onBack}
       >
         <ArrowLeft size={17} />
@@ -34,7 +34,7 @@ function ActivityShell({
         <ChevronRight size={15} />
         <span>{subjectTitle}</span>
         <ChevronRight size={15} />
-        <strong className="font-extrabold text-text-heading">{chapterTitle}</strong>
+        <strong className="font-semibold text-text-heading">{chapterTitle}</strong>
       </div>
       {children}
     </StudentPageContainer>

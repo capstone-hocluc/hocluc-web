@@ -1,4 +1,12 @@
-import { ArrowRight, BookOpen, CalendarDays, CheckCircle2, CircleDot, Users } from '../../console/icons'
+import { useState } from 'react'
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  CircleDot,
+  Users,
+} from '../../console/icons'
 import type { MyCourseEnrollment } from '../../../services/courseService'
 import {
   formatDate,
@@ -30,6 +38,7 @@ interface MyCourseCardProps {
 // Course card for "My courses": cover, meta, learning progress and status.
 function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
   const { course } = enrollment
+  const [coverFailed, setCoverFailed] = useState(false)
   const progress = Math.max(0, Math.min(100, enrollment.progressPercentage ?? 0))
   const status = getStatus(progress)
   const isCompleted = status === 'completed'
@@ -41,24 +50,34 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
     <button
       type="button"
       onClick={() => onOpen(course)}
-      className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-3xl border-[1.5px] border-line-card bg-surface p-0 text-left shadow-card transition duration-150 hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-[#174fbd] active:translate-y-[3px] active:shadow-none"
+      className="group flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-2xl border border-line-card bg-surface p-0 text-left shadow-card transition duration-150  hover:shadow-card-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-focus-ring  active:shadow-none"
     >
       <div
         className={cn(
-          'flex h-[104px] items-center justify-between gap-3 px-5',
+          'relative flex aspect-[16/9] items-center justify-between gap-3 overflow-hidden px-5',
           isCompleted ? 'bg-practice-soft' : 'bg-primary-soft'
         )}
       >
+        {course.imageUrl && !coverFailed && (
+          <img
+            src={course.imageUrl}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 size-full object-cover"
+            onError={() => setCoverFailed(true)}
+          />
+        )}
         <StatusBadge
           tone={isCompleted ? 'success' : 'primary'}
           size="sm"
-          className="max-w-[calc(100%-64px)] overflow-hidden bg-surface px-3 py-1 text-xs text-ellipsis uppercase"
+          className="relative max-w-[calc(100%-64px)] self-start mt-4 overflow-hidden bg-surface px-3 py-1 text-xs text-ellipsis"
         >
           {badgeLabel}
         </StatusBadge>
         <span
           className={cn(
-            'grid size-14 shrink-0 place-items-center rounded-2xl bg-surface shadow-card-soft',
+            'relative grid size-12 shrink-0 place-items-center rounded-xl bg-surface',
+            course.imageUrl && !coverFailed && 'invisible',
             isCompleted ? 'text-practice' : 'text-primary'
           )}
         >
@@ -68,7 +87,7 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
 
       <div className="flex flex-1 flex-col gap-3.5 px-5 pt-4 pb-5">
         <div>
-          <h3 className="line-clamp-2 min-h-[50px] text-lg leading-[1.35] font-black tracking-[-0.2px] text-text-heading">
+          <h3 className="line-clamp-2 min-h-[50px] text-lg leading-[1.35] font-bold tracking-[-0.2px] text-text-heading">
             {course.title}
           </h3>
           <p className="mt-1.5 line-clamp-2 text-sm leading-normal text-text-body">
@@ -96,19 +115,22 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
 
         <CourseProgress value={progress} />
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t-[1.5px] border-line pt-3.5">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-3.5">
           <span
             className={cn(
-              'inline-flex items-center gap-1.5 text-sm font-extrabold',
+              'inline-flex items-center gap-1.5 text-sm font-semibold',
               isCompleted ? 'text-badge-success-text' : 'text-primary-text'
             )}
           >
             {isCompleted ? <CheckCircle2 size={16} /> : <CircleDot size={16} />}
             {statusLabels[status]}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-extrabold whitespace-nowrap text-primary-text">
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap text-primary-text">
             Tiếp tục học
-            <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-[3px]" />
+            <ArrowRight
+              size={16}
+              className="transition-transform duration-200 group-hover:translate-x-[3px]"
+            />
           </span>
         </div>
       </div>

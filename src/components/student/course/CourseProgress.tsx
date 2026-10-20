@@ -15,9 +15,9 @@ interface CourseProgressProps {
 function CourseProgress({ value, label = 'Tiến độ học tập', className }: CourseProgressProps) {
   return (
     <div className={cn('flex flex-col gap-2', className)}>
-      <div className="flex items-center justify-between gap-2.5 text-[13px] font-extrabold text-text-secondary">
+      <div className="flex items-center justify-between gap-2.5 text-[13px] font-semibold text-text-secondary">
         <span>{label}</span>
-        <strong className="text-sm font-black text-primary-text">{value}%</strong>
+        <strong className="text-sm font-bold text-primary-text">{value}%</strong>
       </div>
       <Progress value={value} aria-label={typeof label === 'string' ? label : undefined} />
     </div>

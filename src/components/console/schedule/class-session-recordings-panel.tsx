@@ -1,3 +1,4 @@
+import SelectField from '../select-field'
 import { useEffect, useState, type FormEvent } from 'react'
 import { ExternalLink, Pencil, PlayCircle, RefreshCw, Trash2 } from '../icons'
 import {
@@ -187,11 +188,16 @@ export default function ClassSessionRecordingsPanel({
             <input name="title" autoComplete="off" value={title} onChange={(event) => setTitle(event.target.value)} disabled={busy} required className={fieldControlClass} />
           </Field>
           <Field label="Nền tảng">
-            <select name="provider" autoComplete="off" value={provider} onChange={(event) => setProvider(event.target.value as MeetingProvider)} disabled={busy} className={fieldControlClass}>
-              {providerOptions.map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </select>
+            <SelectField
+              ariaLabel="Nền tảng"
+              name="provider"
+              autoComplete="off"
+              value={provider}
+              onChange={(nextValue) => setProvider(nextValue as MeetingProvider)}
+              disabled={busy}
+              triggerClassName={fieldControlClass}
+              options={providerOptions.map((option) => ({ id: String(option.id), label: option.label }))}
+            />
           </Field>
           <div className="sm:col-span-2">
             <Field label="URL video">
@@ -232,17 +238,15 @@ export default function ClassSessionRecordingsPanel({
               />
             </Field>
             <Field label="Nền tảng">
-              <select
+              <SelectField
+                ariaLabel="Nền tảng"
                 name="editProvider"
                 disabled={busy}
                 value={editProvider}
-                onChange={(event) => setEditProvider(event.target.value as MeetingProvider)}
-                className={fieldControlClass}
-              >
-                {providerOptions.map((option) => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
+                onChange={(nextValue) => setEditProvider(nextValue as MeetingProvider)}
+                triggerClassName={fieldControlClass}
+                options={providerOptions.map((option) => ({ id: String(option.id), label: option.label }))}
+              />
             </Field>
             <Field label="URL video">
               <input

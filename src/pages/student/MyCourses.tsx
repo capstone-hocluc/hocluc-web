@@ -56,7 +56,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
         description="Quản lý và tiếp tục học các khóa học ĐGNL bạn đã đăng ký."
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-4 max-[640px]:flex-col max-[640px]:items-stretch">
         <Tabs value={tab} onValueChange={(value) => setTab(value as CourseTab)}>
           <TabsList aria-label="Loại khóa học">
             <TabsTrigger value="main">Khóa học chính</TabsTrigger>
@@ -65,7 +65,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
         </Tabs>
 
         <SearchInput
-          className="ml-auto max-[640px]:ml-0"
+          className="ml-auto max-[640px]:ml-0 max-[640px]:w-full max-[640px]:flex-none"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Tìm kiếm khóa học"
@@ -74,11 +74,11 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
 
       <section>
         <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-2xl font-black tracking-[-0.3px] text-text-heading">
+          <h2 className="text-2xl font-bold tracking-[-0.3px] text-text-heading">
             {isMain ? 'Khóa học chính' : 'Khóa học bổ trợ'}
           </h2>
           {status === 'ready' && (
-            <span className="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-extrabold text-primary-text">
+            <span className="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-semibold text-primary-text">
               {visibleEnrollments.length} khóa học
             </span>
           )}
@@ -87,7 +87,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
         {status === 'loading' && (
           <div className={courseGrid}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-80 rounded-3xl" />
+              <Skeleton key={index} className="h-80 rounded-2xl" />
             ))}
           </div>
         )}

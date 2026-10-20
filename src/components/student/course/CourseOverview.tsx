@@ -40,11 +40,11 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
   const targetLessonId = study.continueLessonId || fallbackLesson?.id
 
   return (
-    <header className="rounded-3xl border-[1.5px] border-line-card bg-surface-brand p-6 shadow-card max-[640px]:p-4">
+    <header className="rounded-2xl border border-line-card bg-surface-brand p-6 shadow-card max-[640px]:p-4">
       <Button
         appearance="ghost"
         size="sm"
-        className="h-auto gap-2 p-0 text-sm font-extrabold text-primary-text hover:bg-transparent hover:underline"
+        className="h-auto gap-2 p-0 text-sm font-semibold text-primary-text hover:bg-transparent hover:underline"
         onClick={onBack}
       >
         <ArrowLeft size={17} />
@@ -54,11 +54,15 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_320px] items-center gap-6 max-[820px]:grid-cols-1">
         <div className="min-w-0">
           {trackLabel && (
-            <StatusBadge tone="primary" size="sm" className="bg-surface px-3 py-1 text-xs uppercase">
+            <StatusBadge
+              tone="primary"
+              size="sm"
+              className="bg-surface px-3 py-1 text-xs uppercase"
+            >
               {trackLabel}
             </StatusBadge>
           )}
-          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(24px,2.6vw,32px)] leading-[1.16] font-black tracking-[-0.5px] text-text-heading">
+          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(24px,2.6vw,32px)] leading-[1.16] font-bold tracking-[-0.5px] text-text-heading">
             {study.title}
           </h1>
           <div className="mt-4 flex flex-wrap gap-2.5">
@@ -72,13 +76,15 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border-[1.5px] border-line-card bg-surface p-5 shadow-card-soft">
-          <span className="text-sm font-extrabold text-text-heading">Tiến độ khóa học</span>
+        <div className="flex flex-col gap-3 rounded-xl border border-line-card bg-surface p-5 shadow-card-soft">
+          <span className="text-sm font-semibold text-text-heading">Tiến độ khóa học</span>
           <div className="flex items-center justify-between gap-3">
             <small className="text-sm font-semibold text-text-secondary">
               {completed}/{total} bài học
             </small>
-            <strong className="text-4xl leading-none font-black text-primary-text">{progress}%</strong>
+            <strong className="text-4xl leading-none font-bold text-primary-text">
+              {progress}%
+            </strong>
           </div>
           <Progress value={progress} aria-label="Tiến độ khóa học" />
           {targetLessonId && (

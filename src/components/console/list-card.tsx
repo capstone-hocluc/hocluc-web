@@ -13,6 +13,8 @@ interface ListCardProps<T extends RowData> {
   searchText: (row: T) => string
   filter?: { ariaLabel: string; allLabel: string; options: string[]; get: (row: T) => string }
   extraFilters?: ReactNode
+  searchState?: { value: string; onChange: (value: string) => void }
+  filterState?: { value: string; onChange: (value: string) => void }
   emptyMessage?: string
 }
 
@@ -24,10 +26,16 @@ function ListCard<T extends RowData>({
   searchText,
   filter,
   extraFilters,
+  searchState,
+  filterState,
   emptyMessage = 'Không có dữ liệu phù hợp.',
 }: ListCardProps<T>) {
-  const [query, setQuery] = useState('')
-  const [filterValue, setFilterValue] = useState('ALL')
+  const [localQuery, setLocalQuery] = useState('')
+  const [localFilterValue, setLocalFilterValue] = useState('ALL')
+  const query = searchState?.value ?? localQuery
+  const setQuery = searchState?.onChange ?? setLocalQuery
+  const filterValue = filterState?.value ?? localFilterValue
+  const setFilterValue = filterState?.onChange ?? setLocalFilterValue
 
   const rows = useMemo(() => {
     return data.filter(
