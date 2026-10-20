@@ -164,6 +164,7 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
     state.requests.push({ method, path, query: Object.fromEntries(url.searchParams.entries()), body, authorization })
     const answer = (data: unknown, status = 200, message = 'OK') => route.fulfill({ status,
       contentType: 'application/json', body: JSON.stringify({ success: status < 400, status, message, data }) })
+    if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
     const contentAttachment = path.match(/attachments\/([^/]+)\/content$/)?.[1]
     if (contentAttachment) {
       if (authorization !== `Bearer ${sentinelAccess}`) return answer(null, 401, 'Access token is required.')

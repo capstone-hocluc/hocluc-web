@@ -71,6 +71,7 @@ export async function installQuizFixture(page: Page, role: UserRole) {
     state.requests.push({ method, path, query: url.search, body, role: activeRole })
     const answer = (data: unknown, status = 200, message = 'OK') => route.fulfill({ status, contentType: 'application/json',
       body: JSON.stringify({ success: status < 400, status, data, message }) })
+    if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
     if (path === '/api/v1/users/profiles') return answer({ id: QUIZ_IDS.user, role: activeRole,
       roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER', 'STUDENT'], displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
       email: 'quiz@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
