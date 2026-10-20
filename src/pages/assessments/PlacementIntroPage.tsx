@@ -31,7 +31,7 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
       return { test, attempts }
     },
     [],
-    { forbidden: false, notFound: false }
+    { forbidden: false }
   )
   const [starting, setStarting] = useState(false)
 
@@ -61,6 +61,7 @@ function PlacementIntroPage({ onStartAttempt, onOpenReview, onBack }: PlacementI
         errorMessage={errorMessage}
         onRetry={reload}
         loading={<Skeleton className="h-[260px] rounded-xl" />}
+        notFound={{ title: 'Chưa có bài đánh giá đầu vào', message: 'Bài đánh giá đầu vào chưa được xuất bản. Vui lòng quay lại sau.', actionLabel: 'Kiểm tra lại', onAction: reload }}
         error={{ title: 'Không thể tải bài kiểm tra đầu vào.' }}
       />
 

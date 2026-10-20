@@ -1,5 +1,6 @@
 import { CONSOLE_LOGIN_PATH, isConsolePath } from './console-routes'
 import { purchaseLoginPath, safePurchaseReturnTo } from './purchaseSession'
+import { loginPathFor } from './auth-return-to'
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
@@ -50,6 +51,8 @@ export interface RequestOptions {
   // data available" - it must never clear tokens or force-redirect to
   // /login the way an actual expired-session 401 does.
   optionalAuth?: boolean
+  /** Discard late console responses after logout/account/active-role changes. */
+  guardIdentity?: boolean
 }
 
 function createHeaders(auth: boolean, isFormData: boolean) {
@@ -75,6 +78,22 @@ function tokenIdentity(token: string | null): string | null {
   }
 }
 
+/** UI guard only. The API still authenticates the token and enforces its own scopes. */
+export function accessTokenRole(): string | null {
+  try {
+    const token = getAccessToken()
+    if (!token) return null
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    // AuthServiceImpl.issueTokens writes Spring authorities (e.g. ROLE_STAFF),
+    // while profile responses and the FE permission table use enum names (STAFF).
+    return typeof payload.role === 'string' ? payload.role.replace(/^ROLE_/, '') : null
+  } catch { return null }
+}
+
+export function accessTokenIdentity(): string | null {
+  return tokenIdentity(getAccessToken())
+}
+
 export async function request<T = unknown>(
   path: string,
   {
@@ -83,6 +102,7 @@ export async function request<T = unknown>(
     auth = false,
     retryOnUnauthorized = true,
     optionalAuth = false,
+    guardIdentity = false,
     headers = {},
     timeoutMs,
   }: RequestOptions = {}
@@ -90,6 +110,13 @@ export async function request<T = unknown>(
   const attachesToken = auth || optionalAuth
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   const tokenAtStart = getAccessToken()
+  const assertSameIdentity = () => {
+    if (!guardIdentity || !attachesToken || tokenAtStart === getAccessToken()) return
+    const identity = tokenIdentity(tokenAtStart)
+    if (!identity || identity !== tokenIdentity(getAccessToken())) {
+      throw new ApiError('Phiên đăng nhập đã thay đổi. Hãy mở lại màn hình.', 409)
+    }
+  }
   let response: Response
   const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
   try {
@@ -109,6 +136,7 @@ export async function request<T = unknown>(
   }
 
   const data = await response.json().catch(() => null)
+  assertSameIdentity()
   if (attachesToken && response.status === 401 && tokenAtStart !== getAccessToken()) {
     // A sibling HTTP/socket refresh may already have rotated this same actor's JWT.
     // Never replay across a logout, account change, or active-role switch.
@@ -120,6 +148,7 @@ export async function request<T = unknown>(
         auth,
         retryOnUnauthorized: false,
         optionalAuth,
+        guardIdentity,
         headers,
         timeoutMs,
       })
@@ -129,12 +158,14 @@ export async function request<T = unknown>(
   if (attachesToken && response.status === 401 && retryOnUnauthorized && path !== REFRESH_PATH) {
     const refreshed = await refreshStoredTokens(optionalAuth)
     if (refreshed) {
+      assertSameIdentity()
       return request<T>(path, {
         method,
         body,
         auth,
         retryOnUnauthorized: false,
         optionalAuth,
+        guardIdentity,
         headers,
         timeoutMs,
       })
@@ -230,7 +261,7 @@ function getSessionLoginPath() {
   const pathname = window.location.pathname.replace(/\/$/, '') || '/'
   if (isConsolePath(pathname)) return CONSOLE_LOGIN_PATH
   if (safePurchaseReturnTo(pathname + window.location.search)) return purchaseLoginPath()
-  return '/login'
+  return loginPathFor(pathname)
 }
 
 function handleSessionExpired() {

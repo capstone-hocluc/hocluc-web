@@ -27,7 +27,7 @@ import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePref
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
 import PurchaseGuard from './components/purchase/PurchaseGuard'
-import { safePurchaseReturnTo } from './lib/purchaseSession'
+import { loginPathFor, safeAuthReturnTo } from './lib/auth-return-to'
 
 const APP_HISTORY_INDEX = '__hoclucNavigationIndex'
 
@@ -57,6 +57,12 @@ function App() {
       return 'management-login'
     }
     const path = stripConsolePrefix(rawPath)
+    const quizRoute = path.match(/^\/(admin|staff|manager|teacher|mentor)\/(quizzes|mock-exams|placements)(?:\/(new|[0-9a-f-]+)(?:\/(edit))?)?$/i)
+    if (quizRoute) {
+      const [, area, screen, target, edit] = quizRoute
+      const page = !target ? screen : target === 'new' ? `${screen}-new` : `${screen}-${edit ? 'edit' : 'view'}-${target}`
+      return `${area}-${page}`
+    }
     const profileMatch = path.match(/^\/(admin|staff|manager|mentor|teacher)\/profile$/)
     if (profileMatch) return `${profileMatch[1]}-profile`
     if (path === '/staff/dashboard') return 'staff-dashboard'
@@ -159,7 +165,7 @@ function App() {
 
   const navigateAuth = (mode) => {
     runWithUnsavedActionGuard(() => {
-      const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+      const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
       pushHistoryEntry({}, `/${mode}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode(mode)
       setCurrentPath(`/${mode}`)
@@ -191,7 +197,8 @@ function App() {
   const goToEmailVerification = (email = '') => {
     runWithUnsavedActionGuard(() => {
       setPendingVerificationEmail(email)
-      pushHistoryEntry({}, '/verify-email')
+      const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+      pushHistoryEntry({}, `/verify-email${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode('verify-email')
       setCurrentPath('/verify-email')
     })
@@ -236,7 +243,7 @@ function App() {
         dashboard: '/mentor/dashboard',
       },
     } as const
-    const path = paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${page}`
+    const path = toConsolePath(paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${page}`)
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`${scope}-${page}`)
@@ -253,7 +260,7 @@ function App() {
       availability: '/teacher/availability',
       'mock-exams': '/teacher/mock-exams',
     }
-    const path = page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page] ?? `/teacher/${page}`
+    const path = toConsolePath(page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page] ?? `/teacher/${page}`)
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`teacher-${page}`)
@@ -262,7 +269,7 @@ function App() {
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
-    const returnTo = safePurchaseReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+    const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
     navigateTo(profile.role === 'STUDENT' && returnTo ? returnTo : roleHome(profile.role))
   }
 
@@ -489,7 +496,7 @@ function App() {
   const studentRoute = parseStudentRoute(currentPath)
   if (studentRoute)
     return (
-      <StudentRouteGuard onLogin={() => navigateTo('/login')} onGoToRole={navigateTo}>
+      <StudentRouteGuard onLogin={() => navigateTo(loginPathFor(currentPath))} onGoToRole={navigateTo}>
         <StudentRoutes
           route={studentRoute}
           currentPath={currentPath}

@@ -1,25 +1,26 @@
-import { useRef, useState } from 'react'
-import { matchesSearch } from '../../lib/search'
-import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useQuizAccess } from '../../../hooks/useQuizAccess'
+import { getCategories, type Category } from '../../../services/categoryService'
+import { ForbiddenPage } from '../../console/access-states'
+import QuizDetails from './QuizDetails'
+import { useRef, useState, type ReactNode } from 'react'
+import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import {
   ArrowDown,
   ArrowLeft,
+  Eye,
   ArrowUp,
-  CalendarClock,
-  CheckCircle2,
   ClipboardCheck,
   Clock3,
   Copy,
-  FilePlus2,
   MoreHorizontal,
   Pencil,
   Plus,
   Send,
   Trash2,
-  Users,
   X,
-} from '../console/icons'
-import { getMainCourses, type Course } from '../../services/courseService'
+} from '../../console/icons'
+import { getQuizCourses } from '../../../services/quizCourseService'
+import type { CourseAdmin } from '../../../services/courseAdminService'
 import {
   addTeacherQuizQuestions,
   AmbiguousTeacherQuestionSaveError,
@@ -41,22 +42,34 @@ import {
   type TeacherQuizQuestion,
   type TeacherQuizRecord,
   type TeacherQuizSectionSpec,
-} from '../../services/teacherQuizService'
-import { ApiError } from '../../lib/api'
-import { getErrorMessage } from '../../lib/errors'
-import { usePageResource } from '../../hooks/usePageResource'
-import Button from '../console/button'
-import TeacherPageHeader from './TeacherPageHeader'
-import Card, { CardEyebrow, CardTitle } from '../console/card'
-import ConfirmDialog from '../console/confirm-dialog'
-import DropdownField from '../console/dropdown-field'
-import SearchFilterBar from '../console/search-filter-bar'
-import { Skeleton } from '../tailgrids/core/skeleton'
-import Notice from '../console/notice'
-import StatusBadge from '../console/status'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
+} from '../../../services/teacherQuizService'
+import { ApiError } from '../../../lib/api'
+import { getErrorMessage } from '../../../lib/errors'
+import { usePageResource } from '../../../hooks/usePageResource'
+import Button from '../../console/button'
+import PageHeading from '../../console/page-heading'
+import { IconAction, RowActions } from '../../console/icon-action'
+import { fieldControlClass, textareaControlClass } from '../../console/form-field'
+import QuizCatalog from './QuizCatalog'
+import DragHandle from '../crud/drag-handle'
+import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
+import { cn } from '../../../lib/cn'
+import Card, { CardEyebrow, CardTitle } from '../../console/card'
+import ConfirmDialog from '../../console/confirm-dialog'
+import DropdownField from '../../console/dropdown-field'
+import { Skeleton } from '../../tailgrids/core/skeleton'
+import Notice from '../../console/notice'
+import StatusBadge from '../../console/status'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
+
+type AssessmentType = 'EXAM' | 'PLACEMENT'
 
 interface TeacherMockExamsProps {
+  navigation?: ReactNode
+  assessmentType?: AssessmentType
+  readOnly?: boolean
+  startCreating?: boolean
+  initialEditorId?: string | null
   onBack: () => void
   onAction: (message: string) => void
 }
@@ -93,6 +106,7 @@ interface DraftSection {
 }
 
 interface ExamSettings {
+  description: string
   title: string
   courseId: string
   duration: string
@@ -105,6 +119,7 @@ interface ExamSettings {
 }
 
 interface PendingExamCreate {
+  type: AssessmentType
   existingIds: Set<string>
   startedAt: number
   createdById: string | null
@@ -112,16 +127,14 @@ interface PendingExamCreate {
   courseId: string
   durationMinutes: number
   maxAttempts: number
-  passingPercentage: number
+  passingPercentage: number | null
   showAnswers: boolean
   practiceAllowed: boolean
   availableFrom: number | null
   availableUntil: number | null
 }
 
-type StatusFilter = 'Tất cả' | 'Bản nháp' | 'Đã xuất bản' | 'Đã lưu trữ'
 
-const STATUS_FILTERS: StatusFilter[] = ['Tất cả', 'Bản nháp', 'Đã xuất bản', 'Đã lưu trữ']
 const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']
 const QUESTION_TYPE_OPTIONS: Array<{ id: TeacherQuestionType; label: string }> = [
   { id: 'SINGLE_CHOICE', label: 'Trắc nghiệm một đáp án' },
@@ -241,13 +254,6 @@ function fromDateTimeLocal(value: string) {
   return value ? new Date(value).toISOString() : undefined
 }
 
-function displayDate(value: string | null) {
-  if (!value) return 'Chưa đặt lịch'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Thời gian không hợp lệ'
-  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
-}
-
 function isLocked(quiz: TeacherQuizRecord | null | undefined) {
   return Boolean(quiz?.locked || (quiz?.attemptCount ?? 0) > 0)
 }
@@ -259,9 +265,9 @@ function findPendingExamCreateCandidates(
 ) {
   if (!pending || !pending.createdById) return []
   return quizzes.filter((quiz) => {
-    if (pending.existingIds.has(quiz.id) || quiz.type !== 'EXAM' || quiz.status !== 'DRAFT') return false
+    if (pending.existingIds.has(quiz.id) || quiz.type !== pending.type || quiz.status !== 'DRAFT') return false
     if (!pending.createdById || quiz.createdById !== pending.createdById) return false
-    if (quiz.title !== pending.title || quiz.courseId !== pending.courseId) return false
+    if (quiz.title !== pending.title || (quiz.courseId ?? '') !== pending.courseId) return false
     if (quiz.durationMinutes !== pending.durationMinutes ||
       quiz.maxAttempts !== pending.maxAttempts ||
       quiz.passingPercentage !== pending.passingPercentage) return false
@@ -432,12 +438,12 @@ function sameLayout(a: TeacherQuizSectionSpec[], b: TeacherQuizSectionSpec[]) {
   ]))
 }
 
-function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
+function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
+  const placement = assessmentType === 'PLACEMENT'
   const quizzes = usePageResource(() => getTeacherQuizzes(), [])
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('Tất cả')
-  const [creating, setCreating] = useState(false)
-  const [editorQuizId, setEditorQuizId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(!readOnly && startCreating)
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
   const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
@@ -449,7 +455,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
     successMessage: string,
     forceCopyAfterSuccess = false,
   ) => {
-    if (busyId) return
+    if (readOnly || busyId) return
     setBusyId(quiz.id)
     try {
       await operation()
@@ -471,13 +477,14 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
   }
 
   const openExamForEdit = async (exam: TeacherQuizRecord) => {
+    if (readOnly) return
     const shouldDuplicate =
       exam.status !== 'DRAFT' || isLocked(exam) || forceCopyIds.has(exam.id)
     if (!shouldDuplicate) {
       setEditorQuizId(exam.id)
       return
     }
-    if (busyId) return
+    if (readOnly || busyId) return
     setBusyId(exam.id)
     try {
       const copy = await duplicateTeacherQuiz(exam.id)
@@ -491,9 +498,12 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
     }
   }
 
-  if (creating || editorQuizId) {
+  if (viewingId) return <QuizDetails quizId={viewingId} onBack={() => setViewingId(null)} />
+
+  if (!readOnly && (creating || editorQuizId)) {
     return (
       <TeacherMockExamEditor
+        assessmentType={assessmentType}
         quizId={editorQuizId}
         onCancel={() => {
           setCreating(false)
@@ -510,105 +520,22 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
     )
   }
 
-  const allExams = (quizzes.data ?? []).filter((quiz) => quiz.type === 'EXAM')
-  const examItems = allExams.filter((exam) => {
-    const matchesQuery = matchesSearch(search, exam.title, exam.courseTitle)
-    const matchesStatus = statusFilter === 'Tất cả' ||
-      (statusFilter === 'Bản nháp' && exam.status === 'DRAFT') ||
-      (statusFilter === 'Đã xuất bản' && exam.status === 'PUBLISHED') ||
-      (statusFilter === 'Đã lưu trữ' && exam.status === 'ARCHIVED')
-    return matchesQuery && matchesStatus
-  })
-  const hasActiveFilters = Boolean(search.trim()) || statusFilter !== 'Tất cả'
+  const examItems = (quizzes.data ?? []).filter(quiz => quiz.type === assessmentType)
 
   return (
-    <section className="flex flex-col gap-5">
-      <Button appearance="ghost" size="sm" type="button" onClick={onBack}>
-        <ArrowLeft size={16} />Quay lại tổng quan
-      </Button>
-      <TeacherPageHeader title="Bài thi thử" actions={<Button className="min-h-11" onClick={() => setCreating(true)}><Plus size={16} />Tạo đề thi thử</Button>} />
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="flex items-center gap-3" padding="md">
-          <ClipboardCheck className="text-primary" size={21} aria-hidden="true" />
-          <div><strong className="block text-base text-text-primary">{allExams.length}</strong><span className="text-xs text-text-tertiary">Đề thi thử</span></div>
-        </Card>
-        <Card className="flex items-center gap-3" padding="md">
-          <CheckCircle2 className="text-success" size={21} aria-hidden="true" />
-          <div><strong className="block text-base text-text-primary">{allExams.filter((exam) => exam.status === 'PUBLISHED').length}</strong><span className="text-xs text-text-tertiary">Đang xuất bản</span></div>
-        </Card>
-        <Card className="flex items-center gap-3" padding="md">
-          <Users className="text-primary" size={21} aria-hidden="true" />
-          <div><strong className="block text-base text-text-primary">{allExams.reduce((total, exam) => total + exam.attemptCount, 0)}</strong><span className="text-xs text-text-tertiary">Lượt dự thi</span></div>
-        </Card>
-      </div>
-
-      <Card as="section" padding="lg" aria-labelledby="teacher-exam-list-title">
-        <div className="mb-4">
-          <CardEyebrow>SOẠN VÀ QUẢN LÝ</CardEyebrow>
-          <CardTitle id="teacher-exam-list-title" className="text-base">Danh sách đề thi thử</CardTitle>
-        </div>
-        <SearchFilterBar
-          query={search}
-          onQueryChange={setSearch}
-          placeholder="Tìm theo tên đề thi hoặc khóa học"
-          filter={statusFilter}
-          onFilterChange={(value) => setStatusFilter(value as StatusFilter)}
-          filterOptions={STATUS_FILTERS}
-          resultCount={quizzes.status === 'ready' ? examItems.length : undefined}
-          resultLabel="đề thi"
-        />
-
-        {quizzes.status === 'loading' ? (
-          <div className="flex flex-col gap-3" aria-label="Đang tải danh sách đề thi">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-        ) : quizzes.status !== 'ready' ? (
-          <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
-            <p className="m-0 text-sm text-text-tertiary">
-              {quizzes.status === 'forbidden'
-                ? 'Tài khoản hiện tại chưa có quyền xem các đề thi được giao.'
-                : quizzes.errorMessage || 'Không thể tải danh sách đề thi.'}
-            </p>
-            <Button appearance="outline" className="mt-3 min-h-11" onClick={refresh}>Thử lại</Button>
-          </div>
-        ) : examItems.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-card-border bg-background-gray-secondary px-5 py-8 text-center">
-            <FilePlus2 className="mx-auto mb-2 text-primary" size={24} aria-hidden="true" />
-            <strong className="block text-sm text-text-primary">
-              {hasActiveFilters ? 'Không tìm thấy đề thi phù hợp' : 'Chưa có đề thi thử'}
-            </strong>
-            <p className="mt-1 mb-0 text-sm text-text-tertiary">
-              {hasActiveFilters ? 'Thử từ khóa hoặc trạng thái khác.' : 'Tạo đề thi thử đầu tiên cho một khóa học chính.'}
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {examItems.map((exam) => (
-              <article key={exam.id} className="flex flex-col gap-3 rounded-xl border border-card-border bg-card-background p-4 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="m-0 text-sm font-medium text-text-primary">{exam.title}</h2>
-                    <StatusBadge tone={statusTone(exam.status)}>{statusLabel(exam.status)}</StatusBadge>
-                    {isLocked(exam) && <StatusBadge tone="neutral">Đã có lượt thi</StatusBadge>}
-                  </div>
-                  <p className="mt-1 mb-0 text-xs text-text-tertiary">
-                    {[exam.courseTitle, exam.questionCount + ' câu', exam.durationMinutes ? exam.durationMinutes + ' phút' : null,
-                      exam.passingPercentage != null ? 'Điểm đạt ' + exam.passingPercentage + '%' : null]
-                      .filter(Boolean).join(' · ')}
-                  </p>
-                  <p className="mt-1 mb-0 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-tertiary">
-                    <span className="inline-flex items-center gap-1"><CalendarClock size={13} />Hạn làm: {displayDate(exam.availableUntil)}</span>
-                    <span className="inline-flex items-center gap-1"><Users size={13} />{exam.attemptCount} lượt thi</span>
-                  </p>
-                  {exam.status === 'DRAFT' && (exam.publishProblems?.length ?? 0) > 0 && (
-                    <p className="mt-1 mb-0 text-xs text-text-tertiary">Cần hoàn thiện: {exam.publishProblems?.join(', ')}</p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 md:justify-end">
+    <section className="flex min-w-0 flex-col gap-5">
+      <PageHeading title={navigation ? 'Bài kiểm tra' : placement ? 'Đánh giá đầu vào' : 'Bài thi thử'} readOnly={readOnly}
+        subtitle={placement ? 'Quản lý bài đánh giá đầu vào độc lập với khóa học.' : readOnly ? 'Xem nội dung và theo dõi bài kiểm tra trong các khóa được phân công.' : 'Quản lý đề thi thử, lịch làm bài và nội dung câu hỏi.'}
+        action={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />{placement ? 'Tạo đánh giá đầu vào' : 'Tạo đề thi thử'}</Button>} />
+      {navigation}
+      {placement && <Notice tone="info">Student sẽ nhận bài đã xuất bản được tạo mới nhất. Xuất bản lại bài cũ không thay đổi thời điểm tạo bài. Khi ẩn bài đang dùng, bài đã xuất bản mới nhất còn lại sẽ được chọn.</Notice>}
+      <QuizCatalog items={examItems} status={quizzes.status}
+        errorMessage={quizzes.errorMessage} onRetry={refresh} readOnly={readOnly} exam placement={placement}
+        renderActions={(exam) => <RowActions>
+                  <IconAction label="Xem nội dung" icon={Eye} onClick={() => setViewingId(exam.id)} />
+                  {!readOnly && <>
                   <Button
-                    className="min-h-11 flex-1 sm:flex-none"
+                    size="sm" appearance="ghost"
                     disabled={busyId !== null}
                     onClick={() => void openExamForEdit(exam)}
                   >
@@ -620,17 +547,17 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
                   {exam.status !== 'ARCHIVED' && (
                     <Button
                       appearance="outline"
-                      className="min-h-11 flex-1 sm:flex-none"
+                      size="sm"
                       disabled={busyId !== null}
                       onClick={() => void runAction(
                         exam,
                         () => exam.status === 'PUBLISHED' ? unpublishTeacherQuiz(exam.id) : publishTeacherQuiz(exam.id),
-                        exam.status === 'PUBLISHED' ? 'Đã ẩn đề thi thử.' : 'Đã xuất bản đề thi thử.',
+                        placement ? exam.status === 'PUBLISHED' ? 'Đã ẩn bài đánh giá đầu vào.' : 'Đã xuất bản bài đánh giá đầu vào.' : exam.status === 'PUBLISHED' ? 'Đã ẩn đề thi thử.' : 'Đã xuất bản đề thi thử.',
                         exam.status === 'PUBLISHED'
                       )}
                     >
                       {exam.status === 'PUBLISHED' ? <X size={15} /> : <Send size={15} />}
-                      {exam.status === 'PUBLISHED' ? 'Ẩn đề thi' : 'Xuất bản'}
+                      {exam.status === 'PUBLISHED' ? placement ? 'Ẩn bài' : 'Ẩn đề thi' : 'Xuất bản'}
                     </Button>
                   )}
                   <DropdownMenu>
@@ -650,16 +577,12 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </Card>
+                  </>}
+        </RowActions>} />
 
-      {confirmDelete && (
+      {!readOnly && confirmDelete && (
         <ConfirmDialog
-          title="Xóa đề thi thử?"
+          title={placement ? 'Xóa bài đánh giá đầu vào?' : 'Xóa đề thi thử?'}
           description={<>Đề <strong>{confirmDelete.title}</strong> sẽ bị xóa khỏi danh sách.</>}
           cancelLabel="Hủy"
           confirmLabel="Xóa đề"
@@ -669,6 +592,7 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
           busyLabel="Đang xóa..."
           onCancel={() => setConfirmDelete(null)}
           onConfirm={async () => {
+            if (readOnly) return
             const target = confirmDelete
             setBusyId(target.id)
             try {
@@ -689,15 +613,19 @@ function TeacherMockExams({ onBack, onAction }: TeacherMockExamsProps) {
 }
 
 function TeacherMockExamEditor({
+  assessmentType,
   quizId,
   onCancel,
   onSaved,
 }: {
+  assessmentType: AssessmentType
   quizId: string | null
   onCancel: () => void
   onSaved: (message: string) => void
 }) {
-  const editor = usePageResource(() => quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId])
+  const access = useQuizAccess()
+  const editor = usePageResource(() => access.canWrite && quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
+  if (!access.canWrite) return <ForbiddenPage />
   if (quizId && editor.status === 'loading') {
     return <div className="flex flex-col gap-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48" /><Skeleton className="h-72" /></div>
   }
@@ -718,9 +646,11 @@ function TeacherMockExamEditor({
       </div>
     )
   }
+  if (quizId && editor.data?.quiz.type !== assessmentType) return <Notice tone="warning">Bài kiểm tra không thuộc loại đang mở. <Button appearance="outline" onClick={onCancel}>Quay lại</Button></Notice>
   return (
     <TeacherMockExamForm
       key={quizId ?? 'new-exam'}
+      assessmentType={assessmentType}
       initial={quizId ? editor.data : null}
       onCancel={onCancel}
       onSaved={onSaved}
@@ -729,29 +659,34 @@ function TeacherMockExamEditor({
 }
 
 function TeacherMockExamForm({
+  assessmentType,
   initial,
   onCancel,
   onSaved,
 }: {
+  assessmentType: AssessmentType
   initial: TeacherQuizEditor | null
   onCancel: () => void
   onSaved: (message: string) => void
 }) {
+  const access = useQuizAccess()
+  const placement = assessmentType === 'PLACEMENT'
   const { profile: currentUser } = useCurrentUser()
   const originalEditorRef = useRef<TeacherQuizEditor | null>(initial)
   const initialQuiz = initial?.quiz ?? null
   const [serverQuizId, setServerQuizId] = useState<string | null>(initialQuiz?.id ?? null)
   const [quizSnapshot, setQuizSnapshot] = useState<TeacherQuizRecord | null>(initialQuiz)
   const [settings, setSettings] = useState<ExamSettings>({
+    description: initialQuiz?.description ?? '',
     title: initialQuiz?.title ?? '',
     courseId: initialQuiz?.courseId ?? '',
-    duration: String(initialQuiz?.durationMinutes ?? 120),
+    duration: String(initialQuiz?.durationMinutes ?? (placement ? 30 : 120)),
     maxAttempts: String(initialQuiz?.maxAttempts ?? 1),
     passingPercentage: String(initialQuiz?.passingPercentage ?? 60),
     availableFrom: toDateTimeLocal(initialQuiz?.availableFrom),
     availableUntil: toDateTimeLocal(initialQuiz?.availableUntil),
     showAnswers: initialQuiz?.showAnswers ?? false,
-    practiceAllowed: initialQuiz?.practiceAllowed ?? true,
+    practiceAllowed: initialQuiz?.practiceAllowed ?? !placement,
   })
   const [sections, setSections] = useState<DraftSection[]>(() =>
     initial ? fromServerEditor(initial) : [createDraftSection('Phần 1')]
@@ -763,11 +698,11 @@ function TeacherMockExamForm({
   const pendingCreateRef = useRef<PendingExamCreate | null>(null)
 
   const courseCatalog = usePageResource(async () => {
-    if (initialQuiz) return [] as Course[]
-    const response = await getMainCourses()
-    if (!response.data) throw new Error('Không thể tải danh sách khóa học chính.')
-    return response.data
-  }, [Boolean(initialQuiz)])
+    if (initialQuiz || placement) return [] as CourseAdmin[]
+    return getQuizCourses('MAIN')
+  }, [Boolean(initialQuiz), placement])
+  const categories = usePageResource(() => placement ? getCategories() : Promise.resolve([] as Category[]), [placement])
+  const categoryOptions = (categories.data ?? []).filter(category => category.active).map(category => ({ id: category.id, label: category.name }))
 
   const settingsLocked = isLocked(quizSnapshot)
   const questionsLocked = settingsLocked || ambiguousCreate || ambiguousQuestionSave
@@ -824,6 +759,7 @@ function TeacherMockExamForm({
   }
 
   const moveQuestion = (sectionId: string, clientId: string, direction: -1 | 1) => {
+    if (!access.canWrite || !canEditQuestions || busy) return
     setSections((items) => items.map((section) => {
       if (section.clientId !== sectionId) return section
       const index = section.questions.findIndex((question) => question.clientId === clientId)
@@ -835,10 +771,27 @@ function TeacherMockExamForm({
     }))
   }
 
+  const questionDrag = useDragReorder(
+    (fromId, toId) => {
+      if (!access.canWrite || !canEditQuestions || busy) return
+      setSections(items => items.map(section => {
+        const ids = section.questions.map(question => question.clientId)
+        // Keep the existing section boundary; dragging does not assign questions to another section.
+        if (!ids.includes(fromId) || !ids.includes(toId) || !section.questions.find(question => question.clientId === fromId)?.editable) return section
+        const byId = new Map(section.questions.map(question => [question.clientId, question]))
+        return { ...section, questions: arrayMove(ids, fromId, toId).map(id => byId.get(id)!) }
+      }))
+    },
+    (id, direction) => {
+      const section = sections.find(item => item.questions.some(question => question.clientId === id))
+      if (section) moveQuestion(section.clientId, id, direction)
+    }
+  )
+
   const validate = (publish: boolean) => {
     const title = settings.title.trim()
     if (!title) return 'Nhập tên đề thi trước khi lưu.'
-    if (!serverQuizId && !settings.courseId) return 'Chọn khóa học chính cho đề thi.'
+    if (!placement && !serverQuizId && !settings.courseId) return 'Chọn khóa học chính cho đề thi.'
     const duration = Number(settings.duration)
     if (!Number.isInteger(duration) || duration < 1 || duration > 600) return 'Thời gian làm bài phải từ 1 đến 600 phút.'
     const attempts = Number(settings.maxAttempts)
@@ -879,6 +832,7 @@ function TeacherMockExamForm({
         }
       }
       if (publish && nonEmptyQuestions.length === 0) return 'Thêm ít nhất một câu hỏi trước khi xuất bản.'
+      if (placement && publish && nonEmptyQuestions.some(question => question.questionType !== 'SINGLE_CHOICE')) return 'Màn Student hiện chỉ làm được câu hỏi một đáp án. Cần hoàn thiện hỗ trợ loại câu hỏi khác trước khi xuất bản bài này.'
     }
     return ''
   }
@@ -904,6 +858,7 @@ function TeacherMockExamForm({
   }
 
   const save = async (publish: boolean) => {
+    if (!access.canWrite) return
     if (busy) return
     if (publishedQuiz) {
       setError('Đề đã xuất bản hoặc lưu trữ chỉ xem. Tạo bản nháp để chỉnh sửa nội dung.')
@@ -932,6 +887,7 @@ function TeacherMockExamForm({
       if (!quizId) {
         const existing = await getTeacherQuizzes()
         const pending: PendingExamCreate = {
+          type: assessmentType,
           existingIds: new Set(existing.map((quiz) => quiz.id)),
           startedAt: Date.now(),
           createdById: currentUser?.id ?? null,
@@ -939,7 +895,7 @@ function TeacherMockExamForm({
           courseId: settings.courseId,
           durationMinutes,
           maxAttempts,
-          passingPercentage,
+          passingPercentage: placement ? null : passingPercentage,
           showAnswers: settings.showAnswers,
           practiceAllowed: settings.practiceAllowed,
           availableFrom: dateTimeMillis(fromDateTimeLocal(settings.availableFrom)),
@@ -948,14 +904,12 @@ function TeacherMockExamForm({
         pendingCreateRef.current = pending
         try {
           const created = await createTeacherQuiz({
-            type: 'EXAM',
-            courseId: settings.courseId,
+            type: assessmentType,
+            ...(placement ? { description: settings.description.trim() } : { courseId: settings.courseId }),
             title: settings.title.trim(),
             durationMinutes,
             maxAttempts,
-            passingPercentage,
-            showAnswers: settings.showAnswers,
-            practiceAllowed: settings.practiceAllowed,
+            ...(!placement ? { passingPercentage, showAnswers: settings.showAnswers, practiceAllowed: settings.practiceAllowed } : {}),
             ...(fromDateTimeLocal(settings.availableFrom) ? { availableFrom: fromDateTimeLocal(settings.availableFrom) } : {}),
             ...(fromDateTimeLocal(settings.availableUntil) ? { availableUntil: fromDateTimeLocal(settings.availableUntil) } : {}),
           })
@@ -973,14 +927,13 @@ function TeacherMockExamForm({
         }
       } else {
         const updatePayload = settingsLocked
-          ? { title: settings.title.trim() }
+          ? { title: settings.title.trim(), ...(placement ? { description: settings.description.trim() } : {}) }
           : {
               title: settings.title.trim(),
+              ...(placement ? { description: settings.description.trim() } : {}),
               durationMinutes,
               maxAttempts,
-              passingPercentage,
-              showAnswers: settings.showAnswers,
-              practiceAllowed: settings.practiceAllowed,
+              ...(!placement ? { passingPercentage, showAnswers: settings.showAnswers, practiceAllowed: settings.practiceAllowed } : {}),
               ...(fromDateTimeLocal(settings.availableFrom) ? { availableFrom: fromDateTimeLocal(settings.availableFrom) } : {}),
               ...(fromDateTimeLocal(settings.availableUntil) ? { availableUntil: fromDateTimeLocal(settings.availableUntil) } : {}),
             }
@@ -1103,29 +1056,35 @@ function TeacherMockExamForm({
 
   return (
     <section className="flex flex-col gap-4">
-      <Button appearance="ghost" size="sm" type="button" onClick={onCancel}>
-        <ArrowLeft size={16} />Quay lại danh sách đề thi
+      <Button appearance="ghost" size="sm" className="self-start" type="button" onClick={onCancel}>
+        <ArrowLeft size={16} />{placement ? 'Quay lại đánh giá đầu vào' : 'Quay lại danh sách đề thi'}
       </Button>
-      <TeacherPageHeader title={initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'} actions={quizSnapshot ? <StatusBadge tone={statusTone(quizSnapshot.status)}>{statusLabel(quizSnapshot.status)}</StatusBadge> : undefined} />
+      <PageHeading title={placement ? initialQuiz ? 'Chỉnh sửa đánh giá đầu vào' : hasCreatedQuiz ? 'Hoàn thiện bài đầu vào nháp' : 'Tạo đánh giá đầu vào' : initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'} action={quizSnapshot ? <StatusBadge tone={statusTone(quizSnapshot.status)}>{statusLabel(quizSnapshot.status)}</StatusBadge> : undefined} />
 
       <Card as="section" padding="lg" aria-labelledby="exam-settings-title">
         <div className="mb-4">
           <CardEyebrow>THÔNG TIN VÀ QUY ĐỊNH</CardEyebrow>
-          <CardTitle id="exam-settings-title" className="text-base">Cấu hình đề thi</CardTitle>
+          <CardTitle id="exam-settings-title" className="text-base">{placement ? 'Thông tin bài đánh giá' : 'Cấu hình đề thi'}</CardTitle>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
-            Tên đề thi thử
+            {placement ? 'Tên bài đánh giá đầu vào' : 'Tên đề thi thử'}
             <input
-              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
+              className={fieldControlClass}
               value={settings.title}
               onChange={(event) => updateSettings('title', event.target.value)}
-              placeholder="Ví dụ: Đề thi thử V-ACT số 02"
+              placeholder={placement ? 'Ví dụ: Đánh giá năng lực đầu vào' : 'Ví dụ: Đề thi thử V-ACT số 02'}
               disabled={publishedQuiz || busy}
               maxLength={500}
             />
           </label>
-          {!initialQuiz && (
+          {placement && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
+            Mô tả
+            <textarea aria-label="Mô tả" className={textareaControlClass} value={settings.description} disabled={publishedQuiz || busy}
+              onChange={event => updateSettings('description', event.target.value)} />
+            <span className="text-xs font-normal text-text-tertiary">Không gắn khóa học. Student được xem đáp án sau khi bài đã chấm; kết quả được phân loại theo môn.</span>
+          </label>}
+          {!placement && !initialQuiz && (
             <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
               Khóa học chính
               <DropdownField
@@ -1153,7 +1112,7 @@ function TeacherMockExamForm({
               )}
             </label>
           )}
-          {initialQuiz && (
+          {!placement && initialQuiz && (
             <div className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm md:col-span-2">
               <span className="block text-xs font-medium text-text-tertiary">Khóa học</span>
               <strong className="mt-1 block text-text-primary">{serverCourseName}</strong>
@@ -1162,7 +1121,7 @@ function TeacherMockExamForm({
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Thời gian làm bài (phút)
             <input
-              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
+              className={fieldControlClass}
               type="number" min="1" max="600"
               value={settings.duration}
               onChange={(event) => updateSettings('duration', event.target.value)}
@@ -1172,17 +1131,17 @@ function TeacherMockExamForm({
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Số lượt làm tối đa
             <input
-              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
+              className={fieldControlClass}
               type="number" min="1" max="999"
               value={settings.maxAttempts}
               onChange={(event) => updateSettings('maxAttempts', event.target.value)}
               disabled={fieldsLocked || busy}
             />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
+          {!placement && <><label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Điểm đạt (%)
             <input
-              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
+              className={fieldControlClass}
               type="number" min="0" max="100" step="0.01"
               value={settings.passingPercentage}
               onChange={(event) => updateSettings('passingPercentage', event.target.value)}
@@ -1192,7 +1151,7 @@ function TeacherMockExamForm({
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Bắt đầu làm bài
             <input
-              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
+              className={fieldControlClass}
               type="datetime-local"
               value={settings.availableFrom}
               onChange={(event) => updateSettings('availableFrom', event.target.value)}
@@ -1203,16 +1162,16 @@ function TeacherMockExamForm({
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Hạn làm bài
             <input
-              className="h-11 rounded-lg border border-card-border bg-card-background px-3 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
+              className={fieldControlClass}
               type="datetime-local"
               value={settings.availableUntil}
               onChange={(event) => updateSettings('availableUntil', event.target.value)}
               disabled={fieldsLocked || busy}
               required={Boolean(quizSnapshot?.availableUntil)}
             />
-          </label>
+          </label></>}
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {!placement && <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="flex min-h-11 items-center gap-2 rounded-lg border border-card-border px-3 py-2 text-sm text-text-primary">
             <input type="checkbox" checked={settings.showAnswers} onChange={(event) => updateSettings('showAnswers', event.target.checked)} disabled={fieldsLocked || busy} />
             Cho phép xem đáp án sau khi nộp
@@ -1221,7 +1180,7 @@ function TeacherMockExamForm({
             <input type="checkbox" checked={settings.practiceAllowed} onChange={(event) => updateSettings('practiceAllowed', event.target.checked)} disabled={fieldsLocked || busy} />
             Cho phép học viên luyện tập lại
           </label>
-        </div>
+        </div>}
         {settingsLocked && (
           <p className="mt-3 mb-0 rounded-lg bg-badge-warning-bg px-3 py-2 text-xs text-badge-warning-text">
             Đề đã có lượt thi. Các quy định và câu hỏi được khóa; bạn vẫn có thể đổi tên đề.
@@ -1235,9 +1194,14 @@ function TeacherMockExamForm({
       </Card>
 
       <Card as="section" padding="lg" aria-labelledby="exam-sections-title">
+        {placement && <div className="mb-4 space-y-2">
+          <p className="text-sm text-text-tertiary">Gắn môn/nhóm đánh giá cho từng câu để có kết quả theo môn. Câu chưa gắn môn vẫn được tính điểm tổng.</p>
+          {categories.status === 'loading' && <p role="status" className="text-sm">Đang tải môn học...</p>}
+          {['error', 'forbidden', 'not-found'].includes(categories.status) && <Notice tone="warning">{categories.errorMessage || 'Không tải được các môn bạn được phép xem. Có thể lưu nháp và bổ sung sau.'}<Button appearance="outline" onClick={categories.reload}>Thử tải môn học</Button></Notice>}
+        </div>}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardEyebrow>NỘI DUNG ĐỀ THI</CardEyebrow>
+            <CardEyebrow>{placement ? 'NỘI DUNG ĐÁNH GIÁ' : 'NỘI DUNG ĐỀ THI'}</CardEyebrow>
             <CardTitle id="exam-sections-title" className="mb-0 text-base">Các phần và câu hỏi</CardTitle>
           </div>
           {canEditQuestions && (
@@ -1246,6 +1210,7 @@ function TeacherMockExamForm({
             </Button>
           )}
         </div>
+        {canEditQuestions && <p className="mb-4 text-xs text-text-tertiary">Kéo biểu tượng cạnh số câu hoặc dùng nút lên/xuống để sắp xếp trong cùng phần thi. Nhấn lưu để giữ thứ tự mới.</p>}
         {structureReadOnly && (
           <div className="mb-4 rounded-xl border border-badge-warning-text/20 bg-badge-warning-bg p-3 text-sm text-badge-warning-text" role="status">
             Đề này có nhóm câu hỏi hoặc phần lồng nhau. Nội dung đang ở chế độ chỉ xem để giữ nguyên cấu trúc; bạn vẫn có thể lưu các thông tin đề thi được phép sửa.
@@ -1270,7 +1235,7 @@ function TeacherMockExamForm({
                       <label className="flex flex-col gap-1.5 text-xs font-medium text-text-tertiary">
                         <span>Phần {sectionIndex + 1} · {section.questions.length} câu</span>
                         <input
-                          className="h-10 rounded-lg border border-card-border bg-card-background px-3 text-sm font-medium text-text-primary outline-none focus-visible:border-primary"
+                          className={fieldControlClass}
                           value={section.title}
                           onChange={(event) => updateSection(section.clientId, { title: event.target.value })}
                           placeholder="Tên phần thi, ví dụ: Tư duy định lượng"
@@ -1291,13 +1256,18 @@ function TeacherMockExamForm({
                 {section.questions.length > 0 ? (
                   <div className="flex flex-col gap-3">
                     {section.questions.map((question, questionIndex) => {
-                      const editable = canEditQuestions && question.editable
+                      const editable = canEditQuestions && question.editable && (!placement || question.questionType === 'SINGLE_CHOICE')
                       const typeLabel = QUESTION_TYPE_OPTIONS.find((option) => option.id === question.questionType)?.label ??
                         (question.questionType === 'TRUE_FALSE' ? 'Đúng / sai' : 'Trả lời ngắn')
                       return (
-                        <article key={question.clientId} className="rounded-xl border border-card-border bg-card-background p-4">
+                        <article key={question.clientId}
+                          {...(canEditQuestions && !busy ? questionDrag.rowProps(question.clientId) : {})}
+                          className={cn('rounded-xl border border-card-border bg-card-background p-4', questionDrag.rowProps(question.clientId).className)}>
                           <div className="mb-3 flex items-center justify-between gap-3">
-                            <strong className="text-sm text-primary">Câu {questionIndex + 1}</strong>
+                            <div className="flex items-center gap-1">
+                              {editable && <DragHandle {...questionDrag.handleProps(question.clientId, `câu ${questionIndex + 1} trong phần ${sectionIndex + 1}`, busy)} />}
+                              <strong className="text-sm text-primary">Câu {questionIndex + 1}</strong>
+                            </div>
                             <div className="flex gap-1">
                               {editable && (
                                 <>
@@ -1314,7 +1284,7 @@ function TeacherMockExamForm({
                               {question.editable ? (
                                 <DropdownField
                                   ariaLabel="Loại câu hỏi"
-                                  options={QUESTION_TYPE_OPTIONS}
+                                  options={placement ? QUESTION_TYPE_OPTIONS.filter(option => option.id === 'SINGLE_CHOICE') : QUESTION_TYPE_OPTIONS}
                                   value={question.questionType}
                                   onChange={(value) => {
                                     if (!value) return
@@ -1338,13 +1308,22 @@ function TeacherMockExamForm({
                             <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                               Nội dung câu hỏi
                               <textarea
-                                className="min-h-24 rounded-lg border border-card-border bg-card-background px-3 py-2.5 text-sm font-normal leading-6 text-text-primary outline-none focus-visible:border-primary disabled:bg-background-gray-secondary"
+                                className={textareaControlClass}
                                 value={question.questionText}
                                 onChange={(event) => updateQuestion(section.clientId, question.clientId, { questionText: event.target.value })}
                                 placeholder="Nhập nội dung câu hỏi"
                                 disabled={!editable || busy}
                               />
                             </label>
+                            {placement && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
+                              Môn/nhóm đánh giá
+                              <DropdownField ariaLabel={`Môn cho câu ${questionIndex + 1} trong ${section.title}`}
+                                options={categoryOptions.some(option => option.id === question.categoryId) || !question.categoryId ? categoryOptions : [...categoryOptions, { id: question.categoryId, label: 'Môn đã gắn' }]}
+                                value={question.categoryId} placeholder="Chọn môn (không bắt buộc)"
+                                isLoading={categories.status === 'loading'} emptyMessage="Chưa có môn khả dụng."
+                                isDisabled={!editable || busy || categories.status !== 'ready'}
+                                onChange={value => updateQuestion(section.clientId, question.clientId, { categoryId: value })} />
+                            </label>}
                             {CHOICE_TYPES.includes(question.questionType) ? (
                               <div>
                                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -1376,7 +1355,7 @@ function TeacherMockExamForm({
                                       />
                                       <span className="grid size-6 shrink-0 place-items-center rounded-md bg-badge-blue-background text-xs font-medium text-primary">{String.fromCharCode(65 + optionIndex)}</span>
                                       <input
-                                        className="h-9 min-w-0 flex-1 border-0 bg-transparent text-sm text-text-primary outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:text-text-tertiary"
+                                        className={`${fieldControlClass} min-w-0 flex-1`}
                                         value={option.text}
                                         onChange={(event) => {
                                           const options = question.options.map((item, index) => index === optionIndex ? { ...item, text: event.target.value } : item)
@@ -1402,7 +1381,7 @@ function TeacherMockExamForm({
                               <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                                 Đáp án / hướng dẫn chấm
                                 <textarea
-                                  className="min-h-20 rounded-lg border border-card-border bg-card-background px-3 py-2.5 text-sm font-normal leading-6 text-text-primary outline-none focus-visible:border-primary disabled:bg-background-gray-secondary"
+                                  className={textareaControlClass}
                                   value={question.explanation}
                                   onChange={(event) => updateQuestion(section.clientId, question.clientId, { explanation: event.target.value })}
                                   placeholder="Nhập đáp án gợi ý hoặc tiêu chí chấm điểm"
@@ -1491,4 +1470,4 @@ function TeacherMockExamForm({
   )
 }
 
-export default TeacherMockExams
+export default MockExamScreen
