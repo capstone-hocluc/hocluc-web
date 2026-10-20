@@ -6,6 +6,7 @@ import GoogleSignInButton from './GoogleSignInButton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
 import { clearTokens } from '../../lib/api'
+import { pendingAuthEmail, setPendingAuthEmail } from '../../lib/auth-email'
 import { getPasswordHelper, getPasswordIssues, validatePassword } from '../../lib/passwordRules'
 import { showSuccessToast } from '../../lib/toastBus'
 import type { UserRole } from '../../services/userService'
@@ -37,6 +38,9 @@ function AuthPage({
   const { loadCurrentUser } = useCurrentUser()
   const [mode, setMode] = useState(initialMode)
   const [authEmail, setAuthEmail] = useState('')
+  const [verificationInputEmail, setVerificationInputEmail] = useState(() =>
+    pendingAuthEmail('verification')
+  )
   const [authPassword, setAuthPassword] = useState('')
   const [signupForm, setSignupForm] = useState({
     firstName: '',
@@ -58,7 +62,7 @@ function AuthPage({
   const [recoveryLoading, setRecoveryLoading] = useState(false)
   const [recoverySuccess, setRecoverySuccess] = useState('')
   const [recoveryForm, setRecoveryForm] = useState({
-    email: '',
+    email: pendingAuthEmail('reset'),
     otp: '',
     password: '',
     confirmPassword: '',
@@ -92,7 +96,7 @@ function AuthPage({
     setRecoverySuccess('')
     setRecoveryErrors({})
     setRecoveryForm({
-      email: '',
+      email: pendingAuthEmail('reset'),
       otp: '',
       password: '',
       confirmPassword: '',
@@ -175,6 +179,7 @@ function AuthPage({
     switchMode('login')
   }
   const updateRecovery = (key, value) => {
+    if (key === 'email') setPendingAuthEmail('reset', value)
     setRecoveryForm((current) => ({ ...current, [key]: value }))
     setRecoveryErrors((current) => ({ ...current, [key]: '' }))
     setRecoverySuccess('')
@@ -188,7 +193,7 @@ function AuthPage({
   const passwordIssues = getPasswordIssues
   const passwordHelper = getPasswordHelper(authPassword)
   const recoveryPasswordHelper = getPasswordHelper(recoveryForm.password)
-  const currentVerificationEmail = verificationEmail || authEmail
+  const currentVerificationEmail = (verificationEmail || verificationInputEmail || authEmail).trim()
   const verificationCountdownLabel = `00:${String(verificationCountdown).padStart(2, '0')}`
 
   const submitRecoveryEmail = async () => {
@@ -205,6 +210,7 @@ function AuthPage({
     clearRecoveryTimers()
     try {
       const response = await forgotPassword({ email })
+      setPendingAuthEmail('reset', email)
       setRecoveryForm((current) => ({ ...current, email }))
       setRecoverySuccess(
         response?.message || 'Mã xác nhận đặt lại mật khẩu đã được gửi tới email của bạn.'
@@ -278,7 +284,8 @@ function AuthPage({
     const otp = recoveryForm.otp.trim()
     const nextErrors: Record<string, string> = {}
 
-    if (!email) nextErrors.otp = 'Không tìm thấy email khôi phục. Vui lòng yêu cầu mã mới.'
+    if (!email) nextErrors.email = 'Vui lòng nhập email đã đăng ký.'
+    else if (!isValidEmail(email)) nextErrors.email = 'Email chưa đúng định dạng.'
     else if (!otp) nextErrors.otp = 'Vui lòng nhập mã xác nhận.'
 
     const issues = passwordIssues(recoveryForm.password)
@@ -297,6 +304,7 @@ function AuthPage({
     clearRecoveryTimers()
     try {
       const response = await resetPassword({ email, otp, newPassword: recoveryForm.password })
+      setPendingAuthEmail('reset', '')
       showSuccessToast(
         response?.message || 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.'
       )
@@ -322,7 +330,7 @@ function AuthPage({
       setVerificationError('Vui lòng nhập mã xác nhận.')
       return
     }
-    if (!currentVerificationEmail) {
+    if (!isValidEmail(currentVerificationEmail)) {
       setVerificationError('Không tìm thấy email đăng ký. Vui lòng đăng ký lại.')
       return
     }
@@ -336,6 +344,8 @@ function AuthPage({
         email: currentVerificationEmail,
         otp: code,
       })
+      setPendingAuthEmail('verification', '')
+      setVerificationInputEmail('')
       setVerificationCode('')
       clearVerificationTimers()
       resetRecovery()
@@ -356,7 +366,7 @@ function AuthPage({
 
   const handleVerificationResend = async () => {
     if (verificationLoading || verificationCountdown > 0) return
-    if (!currentVerificationEmail) {
+    if (!isValidEmail(currentVerificationEmail)) {
       setVerificationError('Không tìm thấy email đăng ký. Vui lòng đăng ký lại.')
       return
     }
@@ -555,6 +565,19 @@ function AuthPage({
             </label>
           ) : (
             <>
+              <label className="hl-auth-label">
+                Email
+                <span className={`hl-auth-input ${recoveryErrors.email ? 'has-error' : ''}`}>
+                  <Mail size={19} />
+                  <input
+                    type="email"
+                    value={recoveryForm.email}
+                    onChange={(event) => updateRecovery('email', event.target.value)}
+                    autoComplete="email"
+                  />
+                </span>
+                {recoveryErrors.email && <small className="hl-auth-error">{recoveryErrors.email}</small>}
+              </label>
               <label className="hl-auth-label hl-auth-verification-label">
                 Mã xác nhận
                 <span
@@ -672,6 +695,23 @@ function AuthPage({
       </div>
 
       <div className="hl-auth-step">
+        {!verificationEmail && (
+          <label className="hl-auth-label">
+            Email
+            <span className="hl-auth-input">
+              <Mail size={19} />
+              <input
+                type="email"
+                value={verificationInputEmail}
+                onChange={(event) => {
+                  setVerificationInputEmail(event.target.value)
+                  setPendingAuthEmail('verification', event.target.value)
+                }}
+                autoComplete="email"
+              />
+            </span>
+          </label>
+        )}
         <label className="hl-auth-label hl-auth-verification-label">
           Mã xác thực
           <span

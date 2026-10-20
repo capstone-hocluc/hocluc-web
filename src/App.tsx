@@ -28,6 +28,7 @@ import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
 import PurchaseGuard from './components/purchase/PurchaseGuard'
 import { loginPathFor, safeAuthReturnTo } from './lib/auth-return-to'
+import { pendingAuthEmail, setPendingAuthEmail } from './lib/auth-email'
 
 const APP_HISTORY_INDEX = '__hoclucNavigationIndex'
 
@@ -145,7 +146,9 @@ function App() {
   const historyRestoreInProgressRef = useRef(false)
   const ignoreNextHistoryGuardRef = useRef(false)
   const afterHistoryRestoreRef = useRef<(() => void) | null>(null)
-  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('')
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState(() =>
+    pendingAuthEmail('verification')
+  )
   const [logoutLoading, setLogoutLoading] = useState(false)
   const logoutInFlight = useRef(false)
   const pushHistoryEntry = useCallback((state: unknown, path: string) => {
@@ -165,6 +168,10 @@ function App() {
 
   const navigateAuth = (mode) => {
     runWithUnsavedActionGuard(() => {
+      if (mode === 'login') {
+        setPendingAuthEmail('verification', '')
+        setPendingVerificationEmail('')
+      }
       const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
       pushHistoryEntry({}, `/${mode}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode(mode)
@@ -197,6 +204,7 @@ function App() {
   const goToEmailVerification = (email = '') => {
     runWithUnsavedActionGuard(() => {
       setPendingVerificationEmail(email)
+      setPendingAuthEmail('verification', email)
       const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
       pushHistoryEntry({}, `/verify-email${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode('verify-email')
@@ -269,6 +277,7 @@ function App() {
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
+    setPendingAuthEmail('verification', '')
     const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
     navigateTo(profile.role === 'STUDENT' && returnTo ? returnTo : roleHome(profile.role))
   }

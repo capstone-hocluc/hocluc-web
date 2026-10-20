@@ -1,6 +1,7 @@
 import { CONSOLE_LOGIN_PATH, isConsolePath } from './console-routes'
 import { purchaseLoginPath, safePurchaseReturnTo } from './purchaseSession'
 import { loginPathFor } from './auth-return-to'
+import { clearPendingAuthEmails } from './auth-email'
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
@@ -252,6 +253,7 @@ export function setTokens({
 
 export function clearTokens() {
   authEpoch++
+  clearPendingAuthEmails()
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
   window.dispatchEvent(new Event(AUTH_TOKENS_EVENT))
@@ -359,8 +361,16 @@ export async function ensureFreshAccessToken(
     const refreshAtStart = getRefreshToken()
     const run = async () => {
       // Another tab may have rotated the refresh token while this tab waited for its lock.
-      if (getRefreshToken() !== refreshAtStart)
+      if (getRefreshToken() !== refreshAtStart) {
+        const identity = tokenIdentity(token)
+        const current = getAccessToken()
+        const expiresAt = accessTokenExpiresAt(current)
+        if (
+          getRefreshToken() && current !== token && identity &&
+          identity === tokenIdentity(current) && expiresAt !== null && expiresAt > Date.now()
+        ) return
         throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+      }
       await refreshToken(refreshAtStart)
     }
     const refresh =
