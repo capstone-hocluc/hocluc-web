@@ -5,19 +5,21 @@ import { isPlainNavigation } from './navigation'
 interface AuthLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
   mode?: LandingAuthMode
   onNavigate?: () => void
+  destination?: string
 }
 
-// Keeps a real /login href for open-in-new-tab, but opens the auth dialog on a normal click.
-function AuthLink({ mode = 'login', onNavigate, onClick, children, ...rest }: AuthLinkProps) {
+// Assessment links enter the protected destination; its guard preserves the login return path.
+function AuthLink({ mode = 'login', destination, onNavigate, onClick, children, ...rest }: AuthLinkProps) {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(event)
     if (!isPlainNavigation(event)) return
     event.preventDefault()
     onNavigate?.()
-    openLandingAuth(mode)
+    if (destination) window.dispatchEvent(new CustomEvent('hl-navigate', { detail: { path: destination } }))
+    else openLandingAuth(mode)
   }
   return (
-    <a href={`/${mode}`} data-auth={mode} {...rest} onClick={handleClick}>
+    <a href={destination ?? `/${mode}`} data-auth={mode} {...rest} onClick={handleClick}>
       {children}
     </a>
   )

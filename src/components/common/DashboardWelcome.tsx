@@ -57,7 +57,7 @@ const ACTIONS: Record<PersonnelRole, string[]> = {
   ADMINISTRATOR: ['users', 'learners', 'courses', 'orders'],
   MANAGER: ['courses', 'schedules', 'attendance', 'enrollments'],
   STAFF: ['learners', 'enrollments', 'orders', 'schedules'],
-  TEACHER: ['courses', 'schedule', 'availability', 'mock-exams'],
+  TEACHER: ['courses', 'schedule', 'availability', 'quizzes'],
   MENTOR: ['groups', 'students', 'solution-queue', 'chat'],
 }
 
@@ -71,7 +71,7 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
   attendance: 'Theo dõi tham gia buổi học',
   enrollments: 'Đăng ký và quyền học tập',
   availability: 'Cập nhật thời gian có thể dạy',
-  'mock-exams': 'Chuẩn bị và quản lý đề thi',
+  quizzes: 'Xem bài kiểm tra và bài làm trong khóa được phân công',
   groups: 'Các nhóm bạn đang đồng hành',
   students: 'Tiến độ và nhu cầu hỗ trợ',
   'solution-queue': 'Xem và duyệt lời giải',

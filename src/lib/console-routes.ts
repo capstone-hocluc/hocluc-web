@@ -7,6 +7,23 @@
 
 export const CONSOLE_LOGIN_PATH = '/console/login'
 
+export function quizMenuPage(page: string): string {
+  if (/^placements(?:-|$)/.test(page)) return 'placements'
+  if (/^(quizzes(?:-|$)|quiz-)/.test(page)) return 'quizzes'
+  if (/^mock-exams(?:-|$)/.test(page)) return 'mock-exams'
+  return page
+}
+
+export function isQuizPage(page: string): boolean {
+  return ['quizzes', 'mock-exams', 'placements', 'question-review', 'attempts'].includes(quizMenuPage(page))
+}
+
+/** Sidebar grouping only. quizMenuPage retains each tab's route and permission. */
+export function quizSidebarPage(page: string): string {
+  const menu = quizMenuPage(page)
+  return ['placements', 'mock-exams'].includes(menu) ? 'quizzes' : menu
+}
+
 const LEGACY_AREA = /^\/(admin|manager|staff|teacher|mentor)(?=\/|$)/
 const LEGACY_LOGIN = /^\/(admin|management)\/login\/?$/
 

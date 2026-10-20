@@ -12,6 +12,7 @@ import Status from '../console/status'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getErrorMessage } from '../../lib/errors'
+import { assertQuizWriteAccess } from '../../services/teacherQuizService'
 import {
   getTeacherAttemptReview,
   getTeacherQuiz,
@@ -69,13 +70,15 @@ async function loadReviewRows(): Promise<ReviewRow[]> {
   )
 }
 
-export function QuestionReview() {
+export function QuestionReview({ readOnly = true }: { readOnly?: boolean }) {
   const { data, setData, status, errorMessage, reload } = usePageResource(loadReviewRows, [])
   const [error, setError] = useState('')
 
   const markReviewed = async (row: ReviewRow) => {
+    if (readOnly) return
     setError('')
     try {
+      assertQuizWriteAccess()
       await markTeacherQuestionsReviewed(row.quizId, [row.id])
       setData((current) => current?.filter((item) => item.id !== row.id) ?? current)
     } catch (requestError) {
@@ -104,7 +107,7 @@ export function QuestionReview() {
         id: 'actions',
         header: '',
         enableSorting: false,
-        cell: ({ row }) => (
+        cell: ({ row }) => readOnly ? null : (
           <div className="flex justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -128,7 +131,7 @@ export function QuestionReview() {
   const rows = data ?? []
   return (
     <Page
-      title="Duyệt câu hỏi"
+      title={readOnly ? 'Câu hỏi cần kiểm tra' : 'Duyệt câu hỏi'}
       stats={[
         { label: 'Câu hỏi chờ duyệt', value: rows.length, icon: Clock3, tone: 'warning' },
         { label: 'Bài kiểm tra liên quan', value: new Set(rows.map((row) => row.quizId)).size, icon: ClipboardList },

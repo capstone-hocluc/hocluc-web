@@ -1,6 +1,7 @@
 import type { LandingHero } from '../../data/landing-content'
 import Icon from './Icon'
 import AuthLink from './AuthLink'
+import { studentRoutes } from '../../lib/studentRoutes'
 import { useHeroCarousel } from './useHeroCarousel'
 
 function HeroSection({ hero }: { hero: LandingHero }) {
@@ -23,7 +24,7 @@ function HeroSection({ hero }: { hero: LandingHero }) {
           </h1>
           <p className="hero-copy-description">{hero.description}</p>
           <div className="hero-buttons">
-            <AuthLink className="btn btn-primary">
+            <AuthLink destination={studentRoutes.placement()} className="btn btn-primary">
               {hero.primaryCta}
               <Icon name="arrow-right" />
             </AuthLink>
