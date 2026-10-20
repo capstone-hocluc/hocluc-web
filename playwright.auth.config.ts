@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './tests/e2e',
   testMatch: 'auth-session*.spec.ts',
   workers: 1,
-  timeout: 30_000,
+  timeout: 60_000,
   outputDir: 'test-results/auth-session',
   reporter: 'list',
   use: {

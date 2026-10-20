@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './auth-live-test'
 
 test('a waiting tab reuses refresh but rejects account changes and logout', async ({ page, context }) => {
   await page.goto('/login')

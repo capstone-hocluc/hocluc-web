@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './auth-live-test'
 
 test('verification and reset email can be recovered after reload', async ({ page }) => {
   for (const path of ['/verify-email', '/reset-password']) {

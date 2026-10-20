@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './auth-live-test'
 
 test('logout with an expired access token revokes the rotated session', async ({ page }) => {
   const secret = process.env.AUTH_TEST_JWT_SECRET
