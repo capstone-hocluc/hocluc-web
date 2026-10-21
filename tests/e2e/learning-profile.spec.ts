@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises'
 import type { Page } from '@playwright/test'
 import { expect, test } from './auth-live-test'
 import type { StudentProfile, UserProfile } from '../../src/services/userService'
@@ -155,27 +156,63 @@ test('live subject choices are exclusive and persist with real category identiti
   await login(page)
   await page.goto('/student/learning-profile')
   const goals = page.getByRole('region', { name: 'Mục tiêu và môn học tự đánh giá', exact: true })
-  const categories = page.waitForResponse((response) => response.url().endsWith('/api/v1/categories') && response.request().method() === 'GET')
+  const categories = page.waitForResponse((response) => response.url().endsWith('/api/v1/users/student-profiles/subjects') && response.request().method() === 'GET')
   await goals.getByRole('button', { name: 'Chỉnh sửa mục tiêu', exact: true }).click()
   const response = await categories
   await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-  if (response.status() === 403) {
-    await expect(page.getByRole('alert')).toContainText('Không thể tải môn học')
-    test.skip(true, 'Backend category API forbids STUDENT; requires a student-readable category contract. No fake IDs or backend edits.')
-  }
   expect(response.status()).toBe(200)
-  const subject = page.getByRole('dialog').getByRole('group').first()
+  const dialog = page.getByRole('dialog')
+  const expectedGroups = [
+    { label: 'Tư duy & Ngôn ngữ', names: ['Toán học', 'Ngữ văn', 'Tiếng Anh'] },
+    { label: 'Khoa học tự nhiên', names: ['Vật lý', 'Hóa học', 'Sinh học'] },
+    { label: 'Khoa học xã hội', names: ['Lịch sử', 'Địa lý'] },
+  ]
+  const body = await response.json()
+  expect(body.data).toHaveLength(8)
+  await expect(dialog.getByRole('group')).toHaveCount(8)
+  for (const group of expectedGroups) {
+    const section = dialog.locator('section').filter({ has: page.getByRole('heading', { name: group.label, exact: true }) })
+    for (const name of group.names) await expect(section.getByRole('group', { name, exact: true })).toHaveCount(1)
+  }
+  const subjectName = 'Toán học'
+  const subjectId = body.data.find((item: { name: string }) => item.name === subjectName).id
+  const subject = dialog.getByRole('group', { name: subjectName, exact: true })
   await expect(subject).toBeVisible()
-  const subjectName = await subject.getAttribute('aria-label')
   await subject.getByRole('button', { name: 'Tự tin', exact: true }).click()
   await expect(subject.getByRole('button', { name: 'Tự tin', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await subject.getByRole('button', { name: 'Cần cải thiện', exact: true }).click()
   await expect(subject.getByRole('button', { name: 'Tự tin', exact: true })).toHaveAttribute('aria-pressed', 'false')
   await expect(subject.getByRole('button', { name: 'Cần cải thiện', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await mkdir('.pi', { recursive: true })
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: width === 1280 ? 900 : 844 })
+    await subject.scrollIntoViewIfNeeded()
+    const bounds = await dialog.boundingBox()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width)
+    expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await expect(dialog.getByRole('button', { name: 'Lưu và đến bài đánh giá', exact: true })).toBeVisible()
+    await page.screenshot({ path: `.pi/jobc-subjects-${width}.png` })
+    if (width === 390) {
+      await dialog.getByRole('group', { name: 'Địa lý', exact: true }).scrollIntoViewIfNeeded()
+      await expect(dialog.getByRole('group', { name: 'Địa lý', exact: true })).toBeVisible()
+      await page.screenshot({ path: '.pi/jobc-subjects-390-bottom.png' })
+    }
+  }
+  const save = page.waitForResponse((result) => result.url().endsWith('/api/v1/users/student-profiles') && result.request().method() === 'PUT')
   await page.getByRole('button', { name: 'Lưu và đến bài đánh giá', exact: true }).click()
   await expect(page).toHaveURL('/student/assessments/placement')
   await page.goto('/student/learning-profile')
+  const savedResponse = await save
+  expect(savedResponse.status()).toBe(200)
+  expect(savedResponse.request().postDataJSON().subjectAssessments).toContainEqual({ categoryId: subjectId, level: 'NEEDS_WORK' })
+  await page.reload()
   await expect(goals).toContainText(`${subjectName} · Cần cải thiện`)
+  await goals.getByRole('button', { name: 'Chỉnh sửa mục tiêu', exact: true }).click()
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
+  await expect(subject.getByRole('button', { name: 'Cần cải thiện', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(subject.getByRole('button', { name: 'Tự tin', exact: true })).toHaveAttribute('aria-pressed', 'false')
+  await page.keyboard.press('Escape')
 })
 
 test('completed profile dismissals discard edits and explicit saving preserves completed state', async ({ page }) => {

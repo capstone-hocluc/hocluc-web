@@ -3,20 +3,15 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { X } from '../console/icons'
 import Button from '../ui/Button'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
-import { getCategories, type Category } from '../../services/categoryService'
-import { updateStudentProfile, type SubjectLevel } from '../../services/userService'
+import { getProfileSubjects, updateStudentProfile, type ProfileSubject, type SubjectLevel } from '../../services/userService'
 import { getErrorMessage } from '../../lib/errors'
 
 const inputClass = 'mt-2 min-h-11 w-full rounded-xl border border-line bg-surface-input px-3 text-text-heading focus-visible:outline-2 focus-visible:outline-focus-ring aria-invalid:border-danger'
-const groups = ['Tư duy & Ngôn ngữ', 'Khoa học tự nhiên', 'Khoa học xã hội']
-
-function subjectGroup(category: Category, categories: Category[]): number {
-  const parent = categories.find((item) => item.id === category.parentId)
-  const name = `${category.name} ${category.slug} ${parent?.name ?? ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g, 'd').replace(/[-_]/g, ' ')
-  if (/vat ly|hoa hoc|sinh hoc|tu nhien|physics|chemistry|biology/.test(name)) return 1
-  if (/lich su|dia ly|xa hoi|history|geography/.test(name)) return 2
-  return 0
-}
+const groups = [
+  { label: 'Tư duy & Ngôn ngữ', names: ['Toán học', 'Ngữ văn', 'Tiếng Anh'] },
+  { label: 'Khoa học tự nhiên', names: ['Vật lý', 'Hóa học', 'Sinh học'] },
+  { label: 'Khoa học xã hội', names: ['Lịch sử', 'Địa lý'] },
+]
 
 interface Props {
   onClose: () => void
@@ -36,7 +31,7 @@ export default function StudentOnboarding({ onClose, onComplete, restoreFocus }:
   const [subjects, setSubjects] = useState<Record<string, SubjectLevel>>(() => Object.fromEntries(
     (saved?.subjectAssessments ?? []).map((item) => [item.categoryId, item.level])
   ))
-  const [categories, setCategories] = useState<Category[]>([])
+  const [categories, setCategories] = useState<ProfileSubject[]>([])
   const [categoryError, setCategoryError] = useState(false)
   const [categoryLoading, setCategoryLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -51,11 +46,11 @@ export default function StudentOnboarding({ onClose, onComplete, restoreFocus }:
   const loadCategories = () => {
     setCategoryLoading(true)
     setCategoryError(false)
-    getCategories().then(setCategories).catch(() => setCategoryError(true)).finally(() => setCategoryLoading(false))
+    getProfileSubjects().then(setCategories).catch(() => setCategoryError(true)).finally(() => setCategoryLoading(false))
   }
   useEffect(() => {
     let active = true
-    getCategories().then((items) => { if (active) setCategories(items) })
+    getProfileSubjects().then((items) => { if (active) setCategories(items) })
       .catch(() => { if (active) setCategoryError(true) })
       .finally(() => { if (active) setCategoryLoading(false) })
     return () => { active = false }
@@ -101,8 +96,6 @@ export default function StudentOnboarding({ onClose, onComplete, restoreFocus }:
     if (completed) onClose()
     else void save('DEFERRED')
   }
-  // The API supplies category identities; only subject roots are offered, not their chapters.
-  const roots = categories.filter((item) => item.active && !item.parentId).sort((a, b) => a.sortOrder - b.sortOrder)
 
   return (
     <Dialog.Root open onOpenChange={(open) => { if (!open) defer() }}>
@@ -158,11 +151,11 @@ export default function StudentOnboarding({ onClose, onComplete, restoreFocus }:
                 <p className="text-sm text-text-body">Chọn mức tự đánh giá cho từng môn, hoặc bỏ trống. Nhấn lại lựa chọn để bỏ chọn.</p>
                 {categoryLoading && <p role="status">Đang tải môn học…</p>}
                 {categoryError && <div role="alert">Không thể tải môn học. Các lựa chọn đã lưu vẫn được giữ.<Button appearance="outline" onClick={loadCategories}>Thử tải lại</Button></div>}
-                {!categoryLoading && !categoryError && roots.length === 0 && <p>Chưa có môn học để lựa chọn.</p>}
-                {groups.map((group, index) => {
-                  const items = roots.filter((item) => subjectGroup(item, categories) === index)
+                {!categoryLoading && !categoryError && categories.length === 0 && <p>Chưa có môn học để lựa chọn.</p>}
+                {groups.map((group) => {
+                  const items = group.names.flatMap((name) => categories.filter((item) => item.name === name))
                   if (!items.length) return null
-                  return <section key={group} className="rounded-xl border border-line-card p-4"><h3 className="mb-3 font-bold">{group}</h3><div className="flex flex-col gap-4">{items.map((item) => (
+                  return <section key={group.label} className="rounded-xl border border-line-card p-4"><h3 className="mb-3 font-bold">{group.label}</h3><div className="flex flex-col gap-4">{items.map((item) => (
                     <div key={item.id} role="group" aria-label={item.name} className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-sm font-semibold">{item.name}</span>
                       <div className="flex gap-2">{([['STRONG', 'Tự tin'], ['NEEDS_WORK', 'Cần cải thiện']] as const).map(([level, label]) => (

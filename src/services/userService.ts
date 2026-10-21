@@ -280,3 +280,14 @@ export async function updateUserRoles(id: string, roles: UserRole[]): Promise<Us
   })
   return requireResponseData(response, 'Không thể cập nhật vai trò được cấp.')
 }
+
+export interface ProfileSubject {
+  id: string
+  name: string
+}
+
+export async function getProfileSubjects(): Promise<ProfileSubject[]> {
+  const response = await request<ProfileSubject[]>('/api/v1/users/student-profiles/subjects', { auth: true })
+  if (!response.data) throw new Error('Không thể tải môn học.')
+  return response.data
+}
