@@ -1,3 +1,4 @@
+import LearningProfileFlow from '../onboarding/LearningProfileFlow'
 import { type ReactNode, useEffect, useState } from 'react'
 import StudentSidebar from './StudentSidebar'
 import StudentTopbar from './StudentTopbar'
@@ -91,7 +92,7 @@ function StudentLayout({
         tabIndex={-1}
         className="col-start-2 row-start-2 min-w-0 px-8 pt-8 pb-12 max-[760px]:px-4 max-[760px]:pt-6 max-[760px]:pb-8"
       >
-        {children}
+        <LearningProfileFlow currentPath={currentPath} onNavigate={onNavigate}>{children}</LearningProfileFlow>
       </main>
       <StudentToast message={message} />
     </div>

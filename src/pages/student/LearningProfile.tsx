@@ -1,3 +1,4 @@
+import SavedLearningGoals from '../../components/student/learning-profile/SavedLearningGoals'
 import { useMemo, useState } from 'react'
 import { CalendarDays } from '../../components/console/icons'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -42,6 +43,7 @@ function LearningProfile({ onEditProfile }: LearningProfileProps) {
 
   return (
     <>
+      <SavedLearningGoals />
       <ResourceState
         status={status}
         errorMessage={errorMessage}
@@ -78,7 +80,7 @@ function LearningProfileContent({
   const heroMetrics = [
     { label: 'Hiện tại', value: profile.currentScore },
     { label: 'Điểm gần nhất', value: profile.latestScore },
-    { label: 'Mục tiêu', value: profile.targetScore },
+    { label: 'Mục tiêu', value: currentUser?.studentProfile?.targetScore ?? 'Chưa xác định' },
   ]
 
   const showMessage = (text = 'Tính năng này đang được phát triển.') => show(text)

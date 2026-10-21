@@ -10,7 +10,6 @@ import OrderDetailPage from './pages/orders/OrderDetailPage'
 import PaymentResultPage from './pages/payment/PaymentResultPage'
 import PaymentInstructionsPage from './pages/payment/PaymentInstructionsPage'
 import AuthPage from './components/auth/AuthPage'
-import StudentOnboarding from './components/student/StudentOnboarding'
 import StudentRouteGuard from './components/student/StudentRouteGuard'
 import StudentRoutes from './pages/student/StudentRoutes'
 import AdminLoginPage from './pages/AdminLoginPage'
@@ -107,7 +106,7 @@ function App() {
     if (path === '/staff/users') return 'staff-users'
     const rolePage = path.match(/^\/(admin|staff|manager|mentor|teacher)\/([a-z-]+)$/)
     if (rolePage) return `${rolePage[1]}-${rolePage[2]}`
-    if (path === '/onboarding') return 'onboarding'
+    if (path === '/onboarding') return null
     if (path === '/verify-email') return 'verify-email'
     if (path === '/forgot-password') return 'forgot-password'
     if (path === '/reset-password') return 'reset-password'
@@ -121,7 +120,8 @@ function App() {
 
   const [authMode, setAuthMode] = useState(getAuthMode)
   const [currentPath, setCurrentPath] = useState(() => {
-    const path = window.location.pathname.replace(/\/$/, '') || '/'
+    const rawPath = window.location.pathname.replace(/\/$/, '') || '/'
+    const path = rawPath === '/onboarding' ? '/student/dashboard' : rawPath
     const existingIndex = getAppHistoryIndex(window.history.state)
     const index = existingIndex ?? 0
     if (existingIndex === null) {
@@ -132,7 +132,7 @@ function App() {
       )
     }
     const target = toConsolePath(toStudentPath(path))
-    if (target !== path) {
+    if (target !== rawPath) {
       window.history.replaceState(
         withAppHistoryIndex(window.history.state, index),
         '',
@@ -185,7 +185,7 @@ function App() {
   // instructions) to the next page without a prop path, since it's not
   // returned by GET endpoints and would otherwise be lost on navigation.
   const navigateTo = useCallback((rawPath, state = {}) => {
-    const path = toConsolePath(toStudentPath(rawPath))
+    const path = toConsolePath(toStudentPath(rawPath === '/onboarding' ? '/student/dashboard' : rawPath))
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry(state, path)
       setAuthMode(getAuthMode())
@@ -332,7 +332,9 @@ function App() {
     const syncPath = () => {
       setCurrentSearch(window.location.search)
       setAuthMode(getAuthMode())
-      setCurrentPath(window.location.pathname.replace(/\/$/, '') || '/')
+      const path = window.location.pathname.replace(/\/$/, '') || '/'
+      if (path === '/onboarding') replaceCurrentHistoryEntry({}, '/student/dashboard')
+      setCurrentPath(path === '/onboarding' ? '/student/dashboard' : path)
     }
     const onPopState = (event: PopStateEvent) => {
       if (historyRestoreInProgressRef.current) {
@@ -408,7 +410,7 @@ function App() {
       window.removeEventListener('hl-navigate', onNavigate)
       window.removeEventListener('hl-logout', onLogoutRequested)
     }
-  }, [getAuthMode, handleLogout, navigateTo, pushHistoryEntry])
+  }, [getAuthMode, handleLogout, navigateTo, pushHistoryEntry, replaceCurrentHistoryEntry])
 
   // Segments for any '/courses/...' path: ['courses', courseId]. Only the
   // course detail is public; studying lives under /student/courses/:id/study.
@@ -498,7 +500,6 @@ function App() {
         />
       </ManagementRouteGuard>
     )
-  if (authMode === 'onboarding') return <StudentOnboarding onBack={backToLanding} />
   // Every authenticated learning screen (dashboard, courses, study, lessons,
   // video, quizzes, attempts, results, review, learning profile) renders inside
   // the single StudentLayout owned by StudentRoutes.

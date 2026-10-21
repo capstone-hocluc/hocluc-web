@@ -1,252 +1,200 @@
-import { useState } from 'react'
-import { useLearnerTheme } from '../../hooks/useLearnerTheme'
-import { ArrowLeft, Check, GraduationCap, Target, TrendingUp } from '../console/icons'
-import Logo from '../common/Logo'
+import { useEffect, useRef, useState } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
+import { X } from '../console/icons'
 import Button from '../ui/Button'
-import Card from '../ui/Card'
-import {
-  FieldError,
-  FieldLabel,
-  OnboardingField,
-  SearchSelect,
-  SubjectChoice,
-} from './onboarding/OnboardingFields'
-import OnboardingRail from './onboarding/OnboardingRail'
-import ScoreLimitDialog from './onboarding/ScoreLimitDialog'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { getCategories, type Category } from '../../services/categoryService'
+import { updateStudentProfile, type SubjectLevel } from '../../services/userService'
+import { getErrorMessage } from '../../lib/errors'
 
-const universities = [
-  'Trường Đại học Bách khoa (VNUHCM-UT)',
-  'Trường Đại học Khoa học Tự nhiên (VNUHCM-US)',
-  'Trường Đại học Khoa học Xã hội và Nhân văn (VNUHCM-USSH)',
-  'Trường Đại học Quốc tế (VNUHCM-IU)',
-  'Trường Đại học Công nghệ Thông tin (VNUHCM-UIT)',
-  'Trường Đại học Kinh tế - Luật (VNUHCM-UEL)',
-  'Trường Đại học Khoa học Sức khỏe (VNUHCM-UHS)',
-  'Trường Đại học An Giang (VNUHCM-AGU)',
-]
-const majors = [
-  'Công nghệ thông tin',
-  'Kinh doanh quốc tế',
-  'Kinh tế',
-  'Kỹ thuật điện - điện tử',
-  'Ngôn ngữ Anh',
-  'Truyền thông đa phương tiện',
-  'Khác',
-]
+const inputClass = 'mt-2 min-h-11 w-full rounded-xl border border-line bg-surface-input px-3 text-text-heading focus-visible:outline-2 focus-visible:outline-focus-ring aria-invalid:border-danger'
+const groups = ['Tư duy & Ngôn ngữ', 'Khoa học tự nhiên', 'Khoa học xã hội']
 
-const highlights = ['3 phút hoàn thành', 'Cá nhân hóa ngay từ đầu', 'Có thể cập nhật sau']
-
-const textInput =
-  'border-line bg-surface text-[15px] font-semibold text-text-heading outline-0 focus:border-focus-ring focus:ring-3 focus:ring-focus-ring/15'
-
-function StudentOnboarding({ onBack }) {
-  const [form, setForm] = useState({
-    university: '',
-    major: '',
-    score: 600,
-    weakest: [],
-    strongest: [],
-  })
-  const [otherMajor, setOtherMajor] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [scoreLimitOpen, setScoreLimitOpen] = useState(false)
-
-  // Onboarding renders outside StudentLayout, so it opts into the learner token set itself,
-  // including for the portalled dialog.
-  useLearnerTheme()
-
-  const update = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value }))
-    setErrors((current) => ({ ...current, [key]: '' }))
-  }
-  const handleScoreChange = (rawValue) => {
-    if (rawValue === '') {
-      update('score', 0)
-      return
-    }
-
-    const nextScore = Number(rawValue)
-    if (Number.isNaN(nextScore)) return
-
-    if (nextScore > 1200) {
-      setScoreLimitOpen(true)
-      update('score', 1200)
-      return
-    }
-
-    update('score', Math.max(0, nextScore))
-  }
-  const validate = () => {
-    const next: Record<string, string> = {}
-    if (!form.university) next.university = 'Bạn hãy chọn trường đại học mục tiêu.'
-    if (!form.major) next.major = 'Bạn hãy chọn ngành học mục tiêu.'
-    if (!form.weakest.length) next.weakest = 'Hãy chọn ít nhất một môn bạn muốn cải thiện.'
-    if (!form.strongest.length) next.strongest = 'Hãy chọn ít nhất một môn bạn tự tin nhất.'
-    setErrors(next)
-    return Object.keys(next).length === 0
-  }
-
-  return (
-    <main className="relative min-h-screen bg-app-bg px-6 pt-6 pb-[58px] text-text-heading max-[701px]:px-3.5 max-[701px]:pt-4 max-[701px]:pb-7">
-      <header className="relative z-1 mx-auto mb-6 flex w-[min(1180px,100%)] items-center justify-between max-[701px]:mb-[18px]">
-        <Button appearance="outline" size="icon" onClick={onBack} aria-label="Quay lại">
-          <ArrowLeft size={18} />
-        </Button>
-        <span className="absolute left-1/2 flex -translate-x-1/2 items-center">
-          <Logo />
-        </span>
-        <span className="w-10" />
-      </header>
-      <Card
-        as="section"
-        variant="elevated"
-        radius="xl"
-        padding="none"
-        className="relative z-1 mx-auto w-[min(1180px,100%)] p-7 max-[701px]:p-[18px]"
-      >
-        <div className="relative z-1 grid grid-cols-[minmax(0,1.4fr)_minmax(290px,0.78fr)] gap-6 max-[701px]:grid-cols-1 max-[701px]:gap-[18px]">
-          <div className="min-w-0">
-            <div className="mb-[22px] max-w-[720px] max-[701px]:mb-[18px]">
-              <span className="text-xs font-bold tracking-[0.1em] text-primary-text">
-                BƯỚC 1 / 1 · HỒ SƠ HỌC TẬP
-              </span>
-              <h1 className="my-2.5 max-w-[12ch] text-[length:clamp(29px,3.2vw,42px)] leading-[1.1] font-bold tracking-[-0.9px] max-[701px]:max-w-none max-[701px]:text-[length:clamp(26px,8vw,34px)]">
-                Cùng thiết lập mục tiêu học tập của bạn
-              </h1>
-              <p className="max-w-[60ch] text-base leading-[1.7] text-text-body">
-                Cho chúng mình biết một chút về mục tiêu và điểm mạnh, điểm yếu của bạn để cá nhân
-                hóa lộ trình học phù hợp hơn.
-              </p>
-              <div
-                className="mt-[18px] flex flex-wrap gap-2.5 max-[701px]:gap-2"
-                aria-label="Điểm nổi bật của onboarding"
-              >
-                {highlights.map((item) => (
-                  <span
-                    key={item}
-                    className="inline-flex min-h-9 items-center rounded-full border border-line-brand bg-surface-brand px-3.5 text-[13px] font-semibold text-primary-text max-[701px]:min-h-8"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="mb-6 flex items-center gap-[13px] rounded-xl border border-line-brand bg-surface-brand px-[18px] py-4 shadow-none max-[701px]:items-start">
-              <span className="grid size-11 place-items-center rounded-xl bg-primary text-white shadow-none">
-                <GraduationCap size={22} />
-              </span>
-              <div className="flex flex-1 flex-col gap-1">
-                <small className="text-xs font-semibold tracking-[0.08em] text-text-body uppercase">
-                  Kỳ thi đang ôn luyện
-                </small>
-                <strong className="text-base leading-[1.4] font-bold text-text-heading">
-                  Đánh giá năng lực ĐHQG TP.HCM
-                </strong>
-              </div>
-              <Check size={20} className="text-primary-text" />
-            </div>
-            <div className="grid grid-cols-2 gap-x-5 gap-y-6 max-[701px]:grid-cols-1 max-[701px]:gap-[18px]">
-              <SearchSelect
-                label="Trường đại học mục tiêu"
-                placeholder="Tìm hoặc chọn trường đại học"
-                options={universities}
-                value={form.university}
-                onChange={(value) => update('university', value)}
-                icon={GraduationCap}
-                error={errors.university}
-              />
-              <div className="min-w-0">
-                <SearchSelect
-                  label="Ngành học mục tiêu"
-                  placeholder="Tìm hoặc chọn ngành học"
-                  options={majors}
-                  value={otherMajor ? 'Khác' : form.major}
-                  onChange={(value) => {
-                    setOtherMajor(value === 'Khác')
-                    update('major', value === 'Khác' ? '' : value)
-                  }}
-                  icon={Target}
-                  error={otherMajor ? '' : errors.major}
-                />
-                {otherMajor && (
-                  <label className="mt-2.5 flex flex-col gap-[7px] text-sm font-semibold text-text-heading">
-                    <span>Tên ngành học của bạn</span>
-                    <input
-                      className={`h-12 rounded-xl border px-3.5 placeholder:font-normal placeholder:text-text-subtle ${textInput}`}
-                      value={form.major}
-                      placeholder="Nhập tên ngành học"
-                      onChange={(event) => update('major', event.target.value)}
-                    />
-                    {errors.major && <FieldError>{errors.major}</FieldError>}
-                  </label>
-                )}
-              </div>
-              <OnboardingField className="col-span-full self-start rounded-2xl border border-line-card bg-surface p-5 shadow-card-soft">
-                <FieldLabel icon={TrendingUp}>Điểm ĐGNL mục tiêu</FieldLabel>
-                <div className="mt-px mb-2.5 flex items-baseline gap-[7px]">
-                  <strong className="text-4xl leading-none font-bold text-primary-text">
-                    {form.score}
-                  </strong>
-                  <span className="text-[13px] font-bold text-text-body">/ 1200 điểm</span>
-                </div>
-                <input
-                  className="w-full cursor-pointer accent-primary [color-scheme:light]"
-                  type="range"
-                  min="0"
-                  max="1200"
-                  step="10"
-                  value={form.score}
-                  onChange={(event) => update('score', Number(event.target.value))}
-                />
-                <div className="mt-2.5 flex items-center gap-[7px] text-[13px] font-bold text-text-body">
-                  <input
-                    className="w-24 rounded-xl border border-line bg-surface px-2.5 py-2 text-[15px] font-bold text-text-heading outline-0 focus:border-focus-ring focus:ring-3 focus:ring-focus-ring/15"
-                    type="number"
-                    min="0"
-                    max="1200"
-                    value={form.score}
-                    onChange={(event) => handleScoreChange(event.target.value)}
-                  />
-                  <span>điểm</span>
-                </div>
-              </OnboardingField>
-              <SubjectChoice
-                label="Môn học cần cải thiện"
-                hint="Chọn tất cả môn bạn muốn ưu tiên cải thiện"
-                selected={form.weakest}
-                onChange={(value) => update('weakest', value)}
-                error={errors.weakest}
-              />
-              <SubjectChoice
-                label="Môn học tự tin nhất"
-                hint="Chọn tất cả môn bạn cảm thấy có nền tảng tốt"
-                selected={form.strongest}
-                onChange={(value) => update('strongest', value)}
-                error={errors.strongest}
-              />
-            </div>
-            <div className="mt-7 flex items-center justify-between gap-[18px] border-t-2 border-line pt-[22px] max-[701px]:flex-col-reverse max-[701px]:items-stretch">
-              <span className="flex items-center gap-2 text-[13px] font-semibold text-text-body max-[701px]:justify-center">
-                <span className="size-2 rounded-full bg-success shadow-[0_0_0_6px_rgba(54,179,126,0.12)]" />
-                Thông tin này có thể cập nhật sau
-              </span>
-              <Button
-                size="lg"
-                className="h-auto min-h-[50px] whitespace-normal py-3 max-[701px]:w-full"
-                onClick={() => {
-                  if (validate()) alert('Thông tin đã được ghi nhận!')
-                }}
-              >
-                Tiếp tục làm bài đánh giá đầu vào <span className="ml-2.5 text-[18px]">→</span>
-              </Button>
-            </div>
-          </div>
-          <OnboardingRail />
-        </div>
-      </Card>
-      <ScoreLimitDialog open={scoreLimitOpen} onClose={() => setScoreLimitOpen(false)} />
-    </main>
-  )
+function subjectGroup(category: Category, categories: Category[]): number {
+  const parent = categories.find((item) => item.id === category.parentId)
+  const name = `${category.name} ${category.slug} ${parent?.name ?? ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g, 'd').replace(/[-_]/g, ' ')
+  if (/vat ly|hoa hoc|sinh hoc|tu nhien|physics|chemistry|biology/.test(name)) return 1
+  if (/lich su|dia ly|xa hoi|history|geography/.test(name)) return 2
+  return 0
 }
 
-export default StudentOnboarding
+interface Props {
+  onClose: () => void
+  onComplete: () => void
+  restoreFocus: HTMLElement | null
+}
+
+export default function StudentOnboarding({ onClose, onComplete, restoreFocus }: Props) {
+  const { profile, applyStudentProfile } = useCurrentUser()
+  const saved = profile?.studentProfile
+  const [step, setStep] = useState(1)
+  const heading = useRef<HTMLHeadingElement>(null)
+  const busy = useRef(false)
+  const [score, setScore] = useState(saved?.targetScore == null ? '' : String(saved.targetScore))
+  const [university, setUniversity] = useState(saved?.targetUniversity ?? '')
+  const [major, setMajor] = useState(saved?.targetMajor ?? '')
+  const [subjects, setSubjects] = useState<Record<string, SubjectLevel>>(() => Object.fromEntries(
+    (saved?.subjectAssessments ?? []).map((item) => [item.categoryId, item.level])
+  ))
+  const [categories, setCategories] = useState<Category[]>([])
+  const [categoryError, setCategoryError] = useState(false)
+  const [categoryLoading, setCategoryLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [failure, setFailure] = useState('')
+  const completed = (profile?.onboardingState ?? saved?.onboardingState) === 'COMPLETED'
+  const [retryState, setRetryState] = useState<'DEFERRED' | 'COMPLETED' | 'EDIT'>('DEFERRED')
+  const scoreError = score !== '' && (!Number.isInteger(Number(score)) || Number(score) < 0 || Number(score) > 1200)
+    ? 'Nhập số nguyên từ 0 đến 1200, hoặc chọn Chưa xác định.' : ''
+  const universityError = university.trim().length > 200 ? 'Tên trường tối đa 200 ký tự.' : ''
+  const majorError = major.trim().length > 200 ? 'Tên ngành tối đa 200 ký tự.' : ''
+
+  const loadCategories = () => {
+    setCategoryLoading(true)
+    setCategoryError(false)
+    getCategories().then(setCategories).catch(() => setCategoryError(true)).finally(() => setCategoryLoading(false))
+  }
+  useEffect(() => {
+    let active = true
+    getCategories().then((items) => { if (active) setCategories(items) })
+      .catch(() => { if (active) setCategoryError(true) })
+      .finally(() => { if (active) setCategoryLoading(false) })
+    return () => { active = false }
+  }, [])
+  useEffect(() => { heading.current?.focus() }, [step])
+
+  const save = async (state: 'DEFERRED' | 'COMPLETED' | 'EDIT') => {
+    if (busy.current) return
+    if (state !== 'DEFERRED' && (scoreError || universityError || majorError)) {
+      setStep(1)
+      heading.current?.focus()
+      return
+    }
+    busy.current = true
+    setSaving(true)
+    setFailure('')
+    setRetryState(state)
+    try {
+      const response = await updateStudentProfile({
+        firstName: profile?.firstName, lastName: profile?.lastName,
+        displayName: profile?.displayName, phone: profile?.phone,
+        avatarUrl: profile?.avatarUrl, bio: profile?.bio,
+        targetExam: 'VNUHCM_DGNL',
+        ...(scoreError ? {} : { targetScore: score === '' ? null : Number(score) }),
+        ...(universityError ? {} : { targetUniversity: university.trim() }),
+        ...(majorError ? {} : { targetMajor: major.trim() }),
+        subjectAssessments: Object.entries(subjects).map(([categoryId, level]) => ({ categoryId, level })),
+        onboardingState: state === 'EDIT' ? undefined : state,
+      })
+      if (!response.success || !response.data) throw new Error('Chưa nhận được hồ sơ đã lưu. Vui lòng thử lại.')
+      if (profile) applyStudentProfile(profile.id, response.data)
+      if (state === 'COMPLETED') onComplete()
+      else onClose()
+    } catch (error) {
+      setFailure(getErrorMessage(error) || 'Chưa lưu được hồ sơ. Câu trả lời của bạn vẫn được giữ lại.')
+    } finally {
+      busy.current = false
+      setSaving(false)
+    }
+  }
+  const defer = () => {
+    if (busy.current) return
+    if (completed) onClose()
+    else void save('DEFERRED')
+  }
+  // The API supplies category identities; only subject roots are offered, not their chapters.
+  const roots = categories.filter((item) => item.active && !item.parentId).sort((a, b) => a.sortOrder - b.sortOrder)
+
+  return (
+    <Dialog.Root open onOpenChange={(open) => { if (!open) defer() }}>
+      <Dialog.Portal>
+        <Dialog.Overlay data-testid="learning-profile-backdrop" className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm" />
+        <Dialog.Content
+          aria-modal="true"
+          aria-describedby="learning-profile-description"
+          onInteractOutside={(event) => event.preventDefault()}
+          onOpenAutoFocus={(event) => { event.preventDefault(); heading.current?.focus() }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            if (restoreFocus?.isConnected) restoreFocus.focus()
+            else document.getElementById('student-content')?.focus()
+          }}
+          className="fixed top-1/2 left-1/2 z-60 flex max-h-[min(90dvh,850px)] w-[min(720px,calc(100%-48px))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-line-card bg-surface text-text-heading shadow-xl outline-none max-[760px]:inset-0 max-[760px]:h-dvh max-[760px]:max-h-dvh max-[760px]:w-full max-[760px]:translate-none max-[760px]:rounded-none max-[760px]:border-0"
+        >
+          <header className="shrink-0 border-b border-line px-6 pt-[max(24px,env(safe-area-inset-top))] pb-5 max-[760px]:px-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="mb-2 text-xs font-bold tracking-wider text-primary-text">HỒ SƠ HỌC TẬP · BƯỚC {step} / 2</p>
+                <Dialog.Title ref={heading} tabIndex={-1} className="text-2xl font-bold outline-none">{step === 1 ? 'Mục tiêu' : 'Môn học'}</Dialog.Title>
+              </div>
+              <Button appearance="ghost" size="icon" aria-label={completed ? 'Đóng' : 'Đóng và lưu bản nháp'} disabled={saving} onClick={defer}><X size={20} /></Button>
+            </div>
+            <Dialog.Description id="learning-profile-description" className="mt-2 text-sm text-text-body">Mục tiêu và môn học giúp cá nhân hóa lộ trình; bạn có thể cập nhật sau.</Dialog.Description>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 max-[760px]:px-4" aria-busy={saving}>
+            {step === 1 ? (
+              <div className="flex flex-col gap-5">
+                <div className="rounded-xl border border-line-brand bg-surface-brand p-4"><p className="text-sm text-text-body">Kỳ thi</p><strong>ĐGNL ĐHQG TP.HCM</strong><p className="text-xs text-text-muted">VNUHCM_DGNL</p></div>
+                <div>
+                  <label htmlFor="learning-target-score" className="text-sm font-semibold">Điểm mục tiêu</label>
+                  <input aria-label="Thanh điểm mục tiêu" className="mt-3 w-full accent-primary" type="range" min={0} max={1200} step={1} value={scoreError || score === '' ? 0 : Number(score)} onChange={(event) => setScore(event.target.value)} />
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <input id="learning-target-score" className={`${inputClass.replace('w-full', 'w-28')} mt-0`} type="number" min={0} max={1200} step={1} value={score} placeholder="Chưa đặt" aria-invalid={!!scoreError} aria-describedby={scoreError ? 'learning-score-error' : undefined} onChange={(event) => setScore(event.target.value)} />
+                    <span className="text-sm text-text-body">/ 1200 điểm</span>
+                    <button type="button" aria-pressed={score === ''} className="min-h-11 rounded-xl border border-line-brand px-3 text-sm font-semibold text-primary-text aria-pressed:bg-surface-brand" onClick={() => setScore('')}>Chưa xác định</button>
+                  </div>
+                  {scoreError && <p id="learning-score-error" role="alert" className="mt-2 text-sm text-danger">{scoreError}</p>}
+                </div>
+                <label className="text-sm font-semibold">Trường đại học mục tiêu
+                  <input className={inputClass} value={university} placeholder="Nhập tên trường (không bắt buộc)" aria-invalid={!!universityError} aria-describedby={universityError ? 'learning-university-error' : undefined} onChange={(event) => setUniversity(event.target.value)} />
+                  {universityError && <span id="learning-university-error" className="mt-2 block text-danger">{universityError}</span>}
+                </label>
+                <label className="text-sm font-semibold">Ngành học mục tiêu
+                  <input className={inputClass} value={major} placeholder="Nhập tên ngành (không bắt buộc)" aria-invalid={!!majorError} aria-describedby={majorError ? 'learning-major-error' : undefined} onChange={(event) => setMajor(event.target.value)} />
+                  {majorError && <span id="learning-major-error" className="mt-2 block text-danger">{majorError}</span>}
+                </label>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-5">
+                <p className="text-sm text-text-body">Chọn mức tự đánh giá cho từng môn, hoặc bỏ trống. Nhấn lại lựa chọn để bỏ chọn.</p>
+                {categoryLoading && <p role="status">Đang tải môn học…</p>}
+                {categoryError && <div role="alert">Không thể tải môn học. Các lựa chọn đã lưu vẫn được giữ.<Button appearance="outline" onClick={loadCategories}>Thử tải lại</Button></div>}
+                {!categoryLoading && !categoryError && roots.length === 0 && <p>Chưa có môn học để lựa chọn.</p>}
+                {groups.map((group, index) => {
+                  const items = roots.filter((item) => subjectGroup(item, categories) === index)
+                  if (!items.length) return null
+                  return <section key={group} className="rounded-xl border border-line-card p-4"><h3 className="mb-3 font-bold">{group}</h3><div className="flex flex-col gap-4">{items.map((item) => (
+                    <div key={item.id} role="group" aria-label={item.name} className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-semibold">{item.name}</span>
+                      <div className="flex gap-2">{([['STRONG', 'Tự tin'], ['NEEDS_WORK', 'Cần cải thiện']] as const).map(([level, label]) => (
+                        <button key={level} type="button" aria-pressed={subjects[item.id] === level} className="min-h-11 rounded-xl border border-line px-3 text-sm font-semibold text-text-body transition hover:border-primary aria-pressed:border-primary aria-pressed:bg-surface-brand aria-pressed:text-primary-text focus-visible:outline-2 focus-visible:outline-focus-ring" onClick={() => setSubjects((current) => {
+                          const next = { ...current }
+                          if (next[item.id] === level) delete next[item.id]
+                          else next[item.id] = level
+                          return next
+                        })}>{label}</button>
+                      ))}</div>
+                    </div>
+                  ))}</div></section>
+                })}
+              </div>
+            )}
+          </div>
+          <footer className="shrink-0 border-t border-line px-6 pt-4 pb-[max(20px,env(safe-area-inset-bottom))] max-[760px]:px-4">
+            {failure && <div role="alert" className="mb-3 text-sm text-danger"><p>{failure}</p><Button appearance="outline" disabled={saving} onClick={() => void save(retryState)}>Thử lại</Button></div>}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Button appearance="ghost" disabled={saving} onClick={defer}>Để sau</Button>
+              <div className="flex flex-wrap gap-2">
+                {completed && <Button appearance="outline" disabled={saving} onClick={() => void save('EDIT')}>Lưu và đóng</Button>}
+                {step === 2 && <Button appearance="outline" disabled={saving} onClick={() => setStep(1)}>Quay lại</Button>}
+                <Button disabled={saving} className="whitespace-normal" onClick={() => {
+                  if (step === 1) { if (!scoreError && !universityError && !majorError) setStep(2) }
+                  else void save('COMPLETED')
+                }}>{saving ? 'Đang lưu…' : step === 1 ? 'Tiếp tục' : 'Lưu và đến bài đánh giá'}</Button>
+              </div>
+            </div>
+          </footer>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  )
+}
