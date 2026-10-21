@@ -46,6 +46,7 @@ import PageHeading from '../../console/page-heading'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
+import QuizImportDialog from './QuizImportDialog'
 import DragHandle from '../crud/drag-handle'
 import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
 import { cn } from '../../../lib/cn'
@@ -314,6 +315,7 @@ function TeacherQuizEditorScreen({
       course={course}
       onCancel={onCancel}
       onSaved={onSaved}
+      onReload={editor.reload}
     />
   )
 }
@@ -323,11 +325,13 @@ function TeacherQuizEditorForm({
   course,
   onCancel,
   onSaved,
+  onReload,
 }: {
   initial: TeacherQuizEditor | null
   course: { id: string; name: string }
   onCancel: () => void
   onSaved: (message: string) => void
+  onReload: () => void
 }) {
   const access = useQuizAccess()
   const initialQuiz = initial?.quiz
@@ -349,6 +353,14 @@ function TeacherQuizEditorForm({
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
+  const [importBaseline] = useState(() => JSON.stringify({ title, duration, attempts, questions }))
+  const hasUnsavedChanges = JSON.stringify({ title, duration, attempts, questions }) !== importBaseline
+  const unsupportedStructure = Boolean(initial && (initial.sections.length > 0 || initial.groups.length > 0))
+  const importBlockedReason = !serverQuizId ? 'Lưu bản nháp rồi mở lại bài để nhập câu hỏi.'
+    : initialQuiz?.status !== 'DRAFT' || quizIsLocked(initialQuiz) ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
+      : ambiguousCreate || ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
+        : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
+          : unsupportedStructure ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : ''
 
   const courseCatalog = usePageResource(async () => {
     if (initialQuiz) return [] as CourseAdmin[]
@@ -384,7 +396,7 @@ function TeacherQuizEditorForm({
     ? selectedLessonId
     : ''
   const settingsLocked = quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave
-  const questionsLocked = quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave
+  const questionsLocked = quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave || unsupportedStructure
 
   const clearFieldError = (field: QuizFieldError) => {
     setFieldErrors((current) => ({ ...current, [field]: undefined }))
@@ -669,10 +681,12 @@ function TeacherQuizEditorForm({
       <Card as="section" padding="lg" aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <CardTitle id="quiz-questions-title" className="text-base">Câu hỏi ({questions.length})</CardTitle>
+          <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload} />
           <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={addQuestion}>
             <Plus size={15} />Thêm câu hỏi
           </Button>
         </div>
+        {unsupportedStructure && <Notice tone="warning">Bài có phần hoặc nhóm câu hỏi ngoài phạm vi chỉnh sửa của màn này. Câu hỏi được giữ ở chế độ chỉ xem để bảo toàn cấu trúc.</Notice>}
         {questions.length === 0 ? (
           <p className="rounded-xl bg-background-gray-secondary p-4 text-sm text-text-tertiary">Quiz nháp chưa có câu hỏi. Hãy thêm câu hỏi trước khi xuất bản.</p>
         ) : (

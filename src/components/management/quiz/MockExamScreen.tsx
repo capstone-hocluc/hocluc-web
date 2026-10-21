@@ -51,6 +51,7 @@ import PageHeading from '../../console/page-heading'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
+import QuizImportDialog from './QuizImportDialog'
 import DragHandle from '../crud/drag-handle'
 import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
 import { cn } from '../../../lib/cn'
@@ -654,6 +655,7 @@ function TeacherMockExamEditor({
       initial={quizId ? editor.data : null}
       onCancel={onCancel}
       onSaved={onSaved}
+      onReload={editor.reload}
     />
   )
 }
@@ -663,11 +665,13 @@ function TeacherMockExamForm({
   initial,
   onCancel,
   onSaved,
+  onReload,
 }: {
   assessmentType: AssessmentType
   initial: TeacherQuizEditor | null
   onCancel: () => void
   onSaved: (message: string) => void
+  onReload: () => void
 }) {
   const access = useQuizAccess()
   const placement = assessmentType === 'PLACEMENT'
@@ -695,6 +699,8 @@ function TeacherMockExamForm({
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
+  const [importBaseline] = useState(() => JSON.stringify({ settings, sections }))
+  const hasUnsavedChanges = JSON.stringify({ settings, sections }) !== importBaseline
   const pendingCreateRef = useRef<PendingExamCreate | null>(null)
 
   const courseCatalog = usePageResource(async () => {
@@ -712,6 +718,11 @@ function TeacherMockExamForm({
   const structureReadOnly = !structureSupported
   const canEditQuestions = !questionsLocked && !publishedQuiz && !structureReadOnly
   const hasCreatedQuiz = serverQuizId !== null
+  const importBlockedReason = !serverQuizId ? 'Lưu bản nháp rồi mở lại bài để nhập câu hỏi.'
+    : publishedQuiz || settingsLocked ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
+      : ambiguousCreate || ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
+        : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
+          : structureReadOnly ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : ''
 
   const updateSettings = <K extends keyof ExamSettings>(key: K, value: ExamSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
@@ -1204,6 +1215,7 @@ function TeacherMockExamForm({
             <CardEyebrow>{placement ? 'NỘI DUNG ĐÁNH GIÁ' : 'NỘI DUNG ĐỀ THI'}</CardEyebrow>
             <CardTitle id="exam-sections-title" className="mb-0 text-base">Các phần và câu hỏi</CardTitle>
           </div>
+          <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload} />
           {canEditQuestions && (
             <Button appearance="outline" className="min-h-11" onClick={addSection} disabled={busy}>
               <Plus size={15} />Thêm phần thi
