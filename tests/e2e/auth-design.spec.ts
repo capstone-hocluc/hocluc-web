@@ -79,7 +79,7 @@ test('management sign-in rejects a student profile and clears its session', asyn
     route.fulfill({
       json: {
         success: true,
-        data: { accessToken: 'fixture-access', refreshToken: 'fixture-refresh' },
+        data: { accessToken: 'fixture-access' },
       },
     })
   )

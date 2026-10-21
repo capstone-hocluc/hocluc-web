@@ -21,36 +21,30 @@ test('logout with an expired access token revokes the rotated session', async ({
   const payload = Buffer.from(JSON.stringify({ ...result.claims, exp: Math.floor(Date.now() / 1000) - 60 })).toString('base64url')
   const input = `${header}.${payload}`
   const expired = `${input}.${createHmac(alg, key).update(input).digest('base64url')}`
-  const statuses = await page.evaluate(async (expiredToken) => {
-    const servicePath = '/src/services/authService.ts'
-    const service = await import(/* @vite-ignore */ servicePath)
+  const old = (await page.context().cookies('http://localhost:8080/api/v1/auth'))[0]
+  await page.evaluate(async (expiredToken) => {
     const apiPath = '/src/lib/api.ts'
     const api = await import(/* @vite-ignore */ apiPath)
-    const old = api.getRefreshToken()
     api.setTokens({ accessToken: expiredToken })
-    let rotated: string | undefined
-    const listener = () => { rotated = api.getRefreshToken() ?? rotated }
-    window.addEventListener(api.AUTH_TOKENS_EVENT, listener)
-    await service.logout()
-    window.removeEventListener(api.AUTH_TOKENS_EVENT, listener)
-    const refresh = async (token: string | null | undefined) => {
-      if (!token) return 0
-      const response = await fetch(`${api.API_BASE_URL}/api/v1/auth/refresh`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: token }),
-      })
-      // Clean up the leaked session when running this test against the old implementation.
-      if (response.ok) {
-        const { data } = await response.json()
-        await fetch(`${api.API_BASE_URL}/api/v1/auth/logout`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.accessToken}` },
-          body: JSON.stringify({ refreshToken: data.refreshToken }),
-        })
-      }
-      return response.status
-    }
-    return { old: await refresh(old), rotated: await refresh(rotated), cleared: !api.getRefreshToken() }
+    await api.request('/api/v1/users/profiles', { auth: true })
   }, expired)
-  expect(statuses).toEqual({ old: 401, rotated: 401, cleared: true })
+  const rotated = (await page.context().cookies('http://localhost:8080/api/v1/auth'))[0]
+  expect(Boolean(old && rotated && old.value !== rotated.value)).toBe(true)
+  await page.evaluate(async (expiredToken) => {
+    const apiPath = '/src/lib/api.ts'
+    ;(await import(/* @vite-ignore */ apiPath)).setTokens({ accessToken: expiredToken })
+    const path = '/src/services/authService.ts'
+    await (await import(/* @vite-ignore */ path)).logout()
+  }, expired)
+  expect((await page.context().cookies('http://localhost:8080/api/v1/auth')).length).toBe(0)
+  const statuses = []
+  for (const cookie of [old, rotated]) {
+    await page.context().addCookies([cookie])
+    const response = await page.request.post('http://localhost:8080/api/v1/auth/refresh', {
+      headers: { Origin: 'http://localhost:5174' },
+    })
+    statuses.push(response.status())
+  }
+  expect(statuses).toEqual([401, 401])
+  await page.context().clearCookies()
 })
-

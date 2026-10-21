@@ -2,7 +2,6 @@ import {
   ApiError,
   type ApiResponse,
   clearTokens,
-  getRefreshToken,
   request,
   setTokens,
   type TokenData,
@@ -30,14 +29,6 @@ export interface LoginRequest {
   audience?: 'LEARNER' | 'CONSOLE'
 }
 
-export interface RefreshTokenRequest {
-  refreshToken: string
-}
-
-export interface LogoutRequest {
-  refreshToken: string
-}
-
 export interface ForgotPasswordRequest {
   email: string
 }
@@ -57,12 +48,12 @@ export interface ResendOtpRequest {
 }
 
 function ensureTokenData(response: ApiResponse<TokenData>, fallbackMessage: string) {
-  const { accessToken, refreshToken } = response.data || {}
-  if (!accessToken || !refreshToken) {
+  const { accessToken } = response.data || {}
+  if (!accessToken) {
     throw new ApiError(fallbackMessage, 0)
   }
 
-  setTokens({ accessToken, refreshToken })
+  setTokens({ accessToken })
   return response
 }
 
@@ -93,7 +84,7 @@ export async function login({ email, password, audience }: LoginRequest) {
 // Sends only the Google ID token, obtained from Google's own sign-in flow -
 // never an access token or profile fields collected client-side. Backend
 // decides whether this is a login or a first-time registration; the
-// response shape (accessToken/refreshToken) is identical to login(), so it
+// response shape (accessToken; the refresh token travels as a cookie) is identical to login(), so it
 // goes through the same ensureTokenData() storage path.
 export async function googleAuth({ idToken }: GoogleAuthRequest) {
   const response = await request<TokenData>('/api/v1/auth/google', {
@@ -141,19 +132,9 @@ export async function resendOtp({ email }: ResendOtpRequest) {
 }
 
 export async function logout() {
-  const storedRefreshToken = getRefreshToken()
-
   try {
-    if (storedRefreshToken) {
-      await request('/api/v1/auth/logout', {
-        auth: true,
-        method: 'POST',
-        // request() serializes again after a silent refresh rotates the session.
-        body: {
-          get refreshToken() { return getRefreshToken() ?? storedRefreshToken },
-        } satisfies LogoutRequest,
-      })
-    }
+    // The refresh cookie rides along with the request and the server clears it.
+    await request('/api/v1/auth/logout', { auth: true, method: 'POST', retryOnUnauthorized: false })
   } finally {
     clearTokens()
   }

@@ -4,7 +4,7 @@ import { test as base, expect } from '@playwright/test'
 export const test = base.extend<{ authRateLimit: void }>({
   authRateLimit: [async ({ browser }, use) => {
     void browser
-    await new Promise((resolve) => setTimeout(resolve, 20_000))
+    await new Promise((resolve) => setTimeout(resolve, 40_000))
     await use()
   }, { auto: true }],
 })

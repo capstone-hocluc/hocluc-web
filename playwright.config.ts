@@ -11,7 +11,7 @@ export default defineConfig({
   outputDir: '.pi/qa/core-crud/results',
   reporter: [['list'], ['html', { outputFolder: '.pi/qa/core-crud/report', open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:5174',
+    baseURL: 'http://localhost:5192',
     ...devices['Desktop Chrome'],
     channel: 'chrome',
     screenshot: 'only-on-failure',
@@ -19,8 +19,8 @@ export default defineConfig({
     serviceWorkers: 'block',
   },
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 5174 --strictPort',
-    url: 'http://127.0.0.1:5174',
+    command: 'npm run dev -- --host 127.0.0.1 --port 5192 --strictPort',
+    url: 'http://localhost:5192',
     reuseExistingServer: false,
     env: { VITE_API_BASE_URL: 'http://127.0.0.1:1', VITE_MENTOR_CHAT_ENABLED: 'true' },
     timeout: 60_000,

@@ -9,8 +9,16 @@ export const API_BASE_URL =
 const BASE_URL = API_BASE_URL
 
 const ACCESS_TOKEN_KEY = 'hocluc.accessToken'
-const REFRESH_TOKEN_KEY = 'hocluc.refreshToken'
+// Refresh tokens now live in an httpOnly cookie; drop any copy a previous build left in storage.
+const LEGACY_REFRESH_TOKEN_KEY = 'hocluc.refreshToken'
+try { localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY) } catch { /* storage unavailable */ }
 const REFRESH_PATH = '/api/v1/auth/refresh'
+const AUTH_PATH_PREFIX = '/api/v1/auth/'
+
+// Only the auth endpoints read or write the refresh cookie.
+function credentialsFor(path: string): RequestCredentials {
+  return path.startsWith(AUTH_PATH_PREFIX) ? 'include' : 'same-origin'
+}
 let refreshPromise: Promise<unknown> | null = null
 let authEpoch = 0
 export const AUTH_TOKENS_EVENT = 'hocluc:tokens-changed'
@@ -125,6 +133,7 @@ export async function request<T = unknown>(
       method,
       headers: { ...createHeaders(attachesToken, isFormData), ...headers },
       body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined,
+      credentials: credentialsFor(path),
       signal,
     })
   } catch {
@@ -234,20 +243,9 @@ export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
-export function getRefreshToken() {
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-export function setTokens({
-  accessToken,
-  refreshToken,
-}: {
-  accessToken?: string
-  refreshToken?: string
-}) {
+export function setTokens({ accessToken }: { accessToken?: string }) {
   authEpoch++
   if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
-  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
   window.dispatchEvent(new Event(AUTH_TOKENS_EVENT))
 }
 
@@ -255,7 +253,7 @@ export function clearTokens() {
   authEpoch++
   clearPendingAuthEmails()
   localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY)
   window.dispatchEvent(new Event(AUTH_TOKENS_EVENT))
 }
 
@@ -289,14 +287,10 @@ async function refreshStoredTokens(optionalAuth = false) {
 
 export interface TokenData {
   accessToken: string
-  refreshToken: string
 }
 
-export async function refreshToken(storedRefreshToken = getRefreshToken()) {
-  if (!storedRefreshToken) {
-    throw new ApiError('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.', 401)
-  }
-
+/** Rotates the session through the refresh cookie; the browser attaches it, scripts never see it. */
+export async function refreshToken() {
   const epoch = authEpoch
   const accessAtStart = getAccessToken()
 
@@ -304,25 +298,20 @@ export async function refreshToken(storedRefreshToken = getRefreshToken()) {
   try {
     response = await fetch(`${BASE_URL}${REFRESH_PATH}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: storedRefreshToken }),
+      credentials: 'include',
     })
   } catch {
     throw new Error('Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.')
   }
 
   const data = await response.json().catch(() => null)
-  const { accessToken, refreshToken: nextRefreshToken } = data?.data || {}
+  const { accessToken } = data?.data || {}
 
   // Also guard failed responses: an old role's rejected refresh cannot log out a new session.
-  if (
-    epoch !== authEpoch ||
-    getRefreshToken() !== storedRefreshToken ||
-    getAccessToken() !== accessAtStart
-  ) {
+  if (epoch !== authEpoch || getAccessToken() !== accessAtStart) {
     throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
   }
-  if (!response.ok || data?.success !== true || !accessToken || !nextRefreshToken) {
+  if (!response.ok || data?.success !== true || !accessToken) {
     throw new ApiError(
       data?.message || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
       response.status,
@@ -330,7 +319,7 @@ export async function refreshToken(storedRefreshToken = getRefreshToken()) {
     )
   }
 
-  setTokens({ accessToken, refreshToken: nextRefreshToken })
+  setTokens({ accessToken })
   return data
 }
 
@@ -350,28 +339,23 @@ export async function ensureFreshAccessToken(
   expireSession = true
 ): Promise<string | null> {
   const token = getAccessToken()
-  if (!token) return null
   const expiresAt = accessTokenExpiresAt(token)
-  if (!force && (expiresAt === null || expiresAt > Date.now() + 60_000)) return token
-  if (!getRefreshToken()) {
-    if (expireSession) handleSessionExpired()
-    return null
-  }
+  if (token && !force && (expiresAt === null || expiresAt > Date.now() + 60_000)) return token
   if (!refreshPromise) {
-    const refreshAtStart = getRefreshToken()
     const run = async () => {
-      // Another tab may have rotated the refresh token while this tab waited for its lock.
-      if (getRefreshToken() !== refreshAtStart) {
+      // Another tab may have rotated the session while this tab waited for its lock:
+      // the shared access token changed, so reuse it instead of spending the cookie again.
+      const current = getAccessToken()
+      if (current !== token) {
         const identity = tokenIdentity(token)
-        const current = getAccessToken()
         const expiresAt = accessTokenExpiresAt(current)
         if (
-          getRefreshToken() && current !== token && identity &&
-          identity === tokenIdentity(current) && expiresAt !== null && expiresAt > Date.now()
+          current && (!token || (identity && identity === tokenIdentity(current))) &&
+          expiresAt !== null && expiresAt > Date.now()
         ) return
         throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
       }
-      await refreshToken(refreshAtStart)
+      await refreshToken()
     }
     const refresh =
       typeof navigator !== 'undefined' && navigator.locks

@@ -10,7 +10,8 @@ export default defineConfig({
   use: {
     ...devices['Desktop Chrome'],
     channel: 'chrome',
-    baseURL: 'http://127.0.0.1:5174',
+    launchOptions: { args: ['--host-resolver-rules=MAP localhost 127.0.0.1'] },
+    baseURL: 'http://localhost:5174',
     trace: 'off',
     screenshot: 'off',
     video: 'off',

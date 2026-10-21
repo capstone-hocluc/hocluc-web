@@ -1,6 +1,6 @@
 import { expect, test } from './auth-live-test'
 
-test('wrong login surfaces reject seeded accounts without storing tokens', async ({ page }) => {
+test('wrong login surfaces reject seeded accounts without storing tokens', async ({ page, context }) => {
   await page.goto('/login')
   const result = await page.evaluate(async () => {
     const servicePath = '/src/services/authService.ts'
@@ -16,34 +16,37 @@ test('wrong login surfaces reject seeded accounts without storing tokens', async
         statuses.push((error as { status: number }).status)
       }
     }
-    return { statuses, empty: !api.getAccessToken() && !api.getRefreshToken() }
+    return { statuses, empty: !api.getAccessToken() }
   })
   expect(result).toEqual({ statuses: [403, 403], empty: true })
+  expect((await context.cookies('http://localhost:8080/api/v1/auth')).length).toBe(0)
 })
 
-test('logout after silent refresh invalidates both refresh tokens', async ({ page }) => {
+test('logout after silent refresh invalidates both refresh cookies', async ({ page, context }) => {
   await page.goto('/login')
-  const statuses = await page.evaluate(async () => {
-    const servicePath = '/src/services/authService.ts'
-    const apiPath = '/src/lib/api.ts'
-    const service = await import(/* @vite-ignore */ servicePath)
-    const api = await import(/* @vite-ignore */ apiPath)
-    await service.login({ email: 'student@gmail.com', password: '123456', audience: 'LEARNER' })
-    const old = api.getRefreshToken()
-    await api.ensureFreshAccessToken(true)
-    const rotated = api.getRefreshToken()
-    await service.logout()
-    const codes = []
-    for (const refreshToken of [old, rotated]) {
-      const response = await fetch(`${api.API_BASE_URL}/api/v1/auth/refresh`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      })
-      codes.push(response.status)
-    }
-    return codes
+  await page.evaluate(async () => {
+    const path = '/src/services/authService.ts'
+    await (await import(/* @vite-ignore */ path)).login({ email: 'student@gmail.com', password: '123456', audience: 'LEARNER' })
   })
-  expect(statuses).toEqual([401, 401])
+  const old = (await context.cookies('http://localhost:8080/api/v1/auth'))[0]
+  await page.evaluate(async () => {
+    const path = '/src/lib/api.ts'
+    await (await import(/* @vite-ignore */ path)).ensureFreshAccessToken(true)
+  })
+  const rotated = (await context.cookies('http://localhost:8080/api/v1/auth'))[0]
+  expect(Boolean(old && rotated && old.value !== rotated.value)).toBe(true)
+  await page.evaluate(async () => {
+    const path = '/src/services/authService.ts'
+    await (await import(/* @vite-ignore */ path)).logout()
+  })
+  expect((await context.cookies('http://localhost:8080/api/v1/auth')).length).toBe(0)
+  const codes = []
+  for (const cookie of [old, rotated]) {
+    await context.addCookies([cookie])
+    codes.push((await page.request.post('http://localhost:8080/api/v1/auth/refresh', { headers: { Origin: 'http://localhost:5174' } })).status())
+  }
+  expect(codes).toEqual([401, 401])
+  await context.clearCookies()
 })
 
 test('unknown email and wrong password have identical login errors', async ({ page }) => {

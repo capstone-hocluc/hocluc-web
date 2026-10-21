@@ -60,7 +60,7 @@ export async function installQuizFixture(page: Page, role: UserRole) {
   await page.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname
     if (!path.startsWith('/api/')) {
-      if (url.origin === 'http://127.0.0.1:5174') return route.continue()
+      if (url.origin === 'http://localhost:5192') return route.continue()
       if (['xhr', 'fetch'].includes(request.resourceType())) state.unmatched.push(request.url())
       return route.abort('blockedbyclient')
     }
@@ -77,7 +77,7 @@ export async function installQuizFixture(page: Page, role: UserRole) {
       email: 'quiz@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
     if (path === '/api/v1/auth/switch-role') {
       state.role = body.role as UserRole
-      return answer({ accessToken: quizToken(state.role), refreshToken: 'fixture-refresh' })
+      return answer({ accessToken: quizToken(state.role) })
     }
     if (activeRole === 'STUDENT' && path.startsWith('/api/v1/assessments/')) {
       const placement = state.quizzes.filter(q => q.type === 'PLACEMENT' && q.status === 'PUBLISHED')

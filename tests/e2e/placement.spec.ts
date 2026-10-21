@@ -12,7 +12,7 @@ test('landing free assessment resumes placement after login, retry and auth mode
   let rejectLogin = true
   await page.route('**/api/v1/auth/login', route => route.fulfill({ status: rejectLogin ? 401 : 200,
     json: rejectLogin ? { success: false, message: 'Thông tin đăng nhập không đúng.' }
-      : { success: true, data: { accessToken: quizToken('STUDENT'), refreshToken: 'fixture-refresh' } } }))
+      : { success: true, data: { accessToken: quizToken('STUDENT') } } }))
   await page.goto('/')
   const cta = page.locator('.hero-buttons').getByRole('link', { name: 'Làm đánh giá miễn phí' })
   await expect(cta).toHaveAttribute('href', '/student/assessments/placement')

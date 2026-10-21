@@ -272,7 +272,7 @@ for (const status of ['FAILED', 'EXPIRED'])
 test('guest login resumes purchase', async ({ page }) => {
   await fixture(page, false)
   await page.route('**/api/v1/auth/login', (route) =>
-    respond(route, { accessToken: 'fixture-signed-in', refreshToken: 'fixture-refresh' })
+    respond(route, { accessToken: 'fixture-signed-in' })
   )
   await page.goto('/checkout')
   await expect(page).toHaveURL(/returnTo=%2Fcheckout/)
