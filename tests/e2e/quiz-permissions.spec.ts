@@ -2,6 +2,44 @@ import { expect, test, type Page, type Locator } from '@playwright/test'
 import { installQuizFixture, QUIZ_IDS, quizToken } from './quiz-permissions-fixture'
 
 const writes = (state: Awaited<ReturnType<typeof installQuizFixture>>) => state.requests.filter(r => r.path.startsWith('/api/v1/teacher/') && r.method !== 'GET')
+
+for (const [path, id, label] of [
+  ['quizzes', QUIZ_IDS.quiz, 'Dạng đáp án'],
+  ['mock-exams', QUIZ_IDS.exam, 'Loại câu hỏi'],
+  ['placements', QUIZ_IDS.quiz, 'Loại câu hỏi'],
+] as const) {
+  test(`${path}: editor hides the fixed question type and keeps the answer`, async ({ page }) => {
+    const state = await installQuizFixture(page, 'STAFF')
+    if (path === 'placements') Object.assign(state.quizzes[0], { type: 'PLACEMENT', courseId: null, chapterId: null, lessonId: null })
+    await page.goto(`/console/staff/${path}/${id}/edit`)
+    await expect(page.getByRole('button', { name: new RegExp(`${label}$`) })).toHaveCount(0)
+    await expect(page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true })).toBeChecked()
+    expect(state.questions[0].questionType).toBe('SINGLE_CHOICE')
+    expect(writes(state)).toEqual([])
+  })
+}
+
+for (const type of ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWER'] as const) {
+  test(`${type}: existing non-single questions stay read-only and unchanged on metadata save`, async ({ page }) => {
+    test.setTimeout(60_000)
+    const state = await installQuizFixture(page, 'STAFF')
+    state.questions[0].questionType = type
+    if (type === 'SHORT_ANSWER' || type === 'LONG_ANSWER') state.questions[0].options = []
+    if (type === 'MULTIPLE_CHOICE') state.questions[0].options.forEach(option => { option.correct = true })
+    const original = JSON.stringify(state.questions[0])
+    for (const [path, id] of [['quizzes', QUIZ_IDS.quiz], ['mock-exams', QUIZ_IDS.exam]]) {
+      await page.goto(`/console/staff/${path}/${id}/edit`)
+      await expect(page.getByRole('button', { name: /Dạng đáp án$|Loại câu hỏi$/ })).toHaveCount(0)
+      if (path === 'quizzes') await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
+      else await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toBeDisabled()
+      await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
+      expect(JSON.stringify(state.questions[0])).toBe(original)
+    }
+    expect(writes(state).some(request => request.path.includes('/questions'))).toBe(false)
+    expect(state.pageErrors).toEqual([])
+  })
+}
 async function select(page: Page, label: string, option: string) {
   await page.locator('main').getByRole('button', { name: new RegExp(`${label}$`) }).click()
   await page.getByRole('option', { name: option, exact: true }).click()

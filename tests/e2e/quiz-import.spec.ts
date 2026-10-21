@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
 import { installQuizFixture, QUIZ_IDS, quizToken } from './quiz-permissions-fixture'
 
 const editUrl = `/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`
@@ -128,7 +129,8 @@ test('blocks duplicate clicks and dismissal while uploading; validates files and
   await expect(dialog.getByRole('alert')).toContainText('File đang trống')
   await dialog.locator('input[type=file]').setInputFiles(payload())
   await dialog.getByText('Hướng dẫn định dạng và file mẫu').click()
-  await expect(dialog.getByRole('link', { name: 'Tải file mẫu TXT' })).toHaveAttribute('download', 'mau-nhap-cau-hoi.txt')
+  await expect(dialog.getByRole('link', { name: 'Tải file mẫu TXT (.txt)', exact: true })).toHaveAttribute('download', 'mau-nhap-cau-hoi.txt')
+  await expect(dialog.getByRole('link', { name: /^Tải file mẫu / })).toHaveCount(3)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('quiz-import-mobile.png') })
   await dialog.getByRole('button', { name: 'Nhập vào bản nháp', exact: true }).click()
@@ -138,6 +140,32 @@ test('blocks duplicate clicks and dismissal while uploading; validates files and
   release()
   await expect(dialog.getByText('Tổng câu hỏi')).toBeVisible()
   expect(uploads).toBe(1)
+})
+
+test('format guide downloads real Word, TXT and Markdown templates with matching content', async ({ page }, testInfo) => {
+  await installQuizFixture(page, 'STAFF')
+  await page.setViewportSize({ width: 1440, height: 950 })
+  await page.goto(editUrl)
+  await entry(page).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByText('Hướng dẫn định dạng và file mẫu').click()
+  await expect(dialog.getByText('Ba định dạng cùng một mẫu điền trống.', { exact: false })).toBeVisible()
+  const expected = (await readFile(new URL('../../docs/samples/quiz-import-template.txt', import.meta.url), 'utf8')).replace(/\r\n/g, '\n')
+  expect(expected).toContain('Đáp án: [Điền ký tự đáp án đúng tại đây]')
+  expect(expected).not.toContain('2 + 2')
+  for (const [format, extension] of [['Word (.docx)', 'docx'], ['TXT (.txt)', 'txt'], ['Markdown (.md)', 'md']]) {
+    const link = dialog.getByRole('link', { name: `Tải file mẫu ${format}`, exact: true })
+    await expect(link).toHaveAttribute('href', `/templates/quiz-import/mau-nhap-cau-hoi.${extension}`)
+    const downloading = page.waitForEvent('download')
+    await link.click()
+    const download = await downloading
+    expect(download.suggestedFilename()).toBe(`mau-nhap-cau-hoi.${extension}`)
+    expect(await download.failure()).toBeNull()
+    const bytes = await readFile((await download.path())!)
+    if (extension === 'docx') expect(bytes.subarray(0, 2).toString()).toBe('PK')
+    else expect(bytes.toString('utf8')).toBe(expected)
+  }
+  await page.screenshot({ path: testInfo.outputPath('quiz-import-guide-desktop.png') })
 })
 
 test('Teacher direct editor and active-role switch do not expose import', async ({ page }) => {

@@ -185,8 +185,7 @@ function createUnassignedSection(questions: DraftQuestion[]): DraftSection {
 }
 
 function fromServerQuestion(question: TeacherQuizQuestion): DraftQuestion {
-  const editable =
-    CHOICE_TYPES.includes(question.questionType) || question.questionType === 'LONG_ANSWER'
+  const editable = question.questionType === 'SINGLE_CHOICE'
   return {
     clientId: question.id,
     serverId: question.id,
@@ -1291,32 +1290,9 @@ function TeacherMockExamForm({
                             </div>
                           </div>
                           <div className="grid gap-3">
-                            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-                              Loại câu hỏi
-                              {question.editable ? (
-                                <DropdownField
-                                  ariaLabel="Loại câu hỏi"
-                                  options={placement ? QUESTION_TYPE_OPTIONS.filter(option => option.id === 'SINGLE_CHOICE') : QUESTION_TYPE_OPTIONS}
-                                  value={question.questionType}
-                                  onChange={(value) => {
-                                    if (!value) return
-                                    const nextType = value as TeacherQuestionType
-                                    updateQuestion(section.clientId, question.clientId, {
-                                      questionType: nextType,
-                                      options: nextType === 'LONG_ANSWER'
-                                        ? []
-                                        : question.options.length > 0
-                                          ? question.options.map((option) => ({ ...option, correct: nextType === 'SINGLE_CHOICE' ? false : option.correct }))
-                                          : Array.from({ length: 2 }, () => ({ text: '', correct: false })),
-                                    })
-                                  }}
-                                  mobileTouchTargets
-                                  isDisabled={!editable || busy}
-                                />
-                              ) : (
-                                <span className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm font-normal text-text-tertiary">{typeLabel} · chỉ xem</span>
-                              )}
-                            </label>
+                            {!question.editable && (
+                              <p className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm text-text-tertiary">{typeLabel} · chỉ xem</p>
+                            )}
                             <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                               Nội dung câu hỏi
                               <textarea

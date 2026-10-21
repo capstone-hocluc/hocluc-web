@@ -7,15 +7,19 @@ import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import Notice from '../../console/notice'
 
-const sample = `Câu 1. 2 + 2 bằng bao nhiêu?
-A. 3
-B. 4
-C. 5
-D. 6
-Đáp án: B
-Giải thích: 2 + 2 = 4.
+const sample = `Câu 1. [Điền nội dung câu hỏi tại đây]
+A. [Điền nội dung lựa chọn A tại đây]
+B. [Điền nội dung lựa chọn B tại đây]
+C. [Điền nội dung lựa chọn C tại đây]
+D. [Điền nội dung lựa chọn D tại đây]
+Đáp án: [Điền ký tự đáp án đúng tại đây]
+Giải thích: [Điền giải thích tại đây hoặc xóa dòng này]
 `
-const sampleUrl = `data:text/plain;charset=utf-8,${encodeURIComponent(sample)}`
+const sampleFiles = [
+  { format: 'Word (.docx)', extension: 'docx' },
+  { format: 'TXT (.txt)', extension: 'txt' },
+  { format: 'Markdown (.md)', extension: 'md' },
+]
 
 interface Props {
   quizId: string | null
@@ -114,10 +118,32 @@ function ImportDialog({ quizId, onExit }: { quizId: string; onExit: (reload: boo
           </label>
           <details className="rounded-xl border border-card-border p-3 text-sm text-text-tertiary">
             <summary className="cursor-pointer font-medium text-text-primary">Hướng dẫn định dạng và file mẫu</summary>
-            <p>Mỗi câu và mỗi lựa chọn viết trên một dòng. Dùng “Đáp án: B” để chỉ định đáp án đúng. File TXT/MD dùng UTF-8; trong Word cũng dùng cấu trúc văn bản này.</p>
-            <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-background-gray-secondary p-3">{sample}</pre>
-            <a href={sampleUrl} download="mau-nhap-cau-hoi.txt" className="font-medium underline">Tải file mẫu TXT</a>
-            <p>Excel và PDF không thuộc luồng nhập này. Ảnh, công thức và bảng phức tạp trong Word cần được kiểm tra lại sau khi nhập.</p>
+            <div className="mt-3 space-y-4">
+              <ol className="list-decimal space-y-2 pl-5">
+                <li>Bắt đầu mỗi câu bằng <code>Câu 1.</code>, <code>Câu 2.</code>… Mỗi lựa chọn <code>A.</code>, <code>B.</code>, <code>C.</code>… nằm trên một dòng riêng.</li>
+                <li>Ghi đáp án ở dòng <code>Đáp án: B</code>. Có thể thêm dòng <code>Giải thích:</code> ngay bên dưới.</li>
+                <li>Dùng văn bản thường trong Word; lưu TXT/Markdown bằng UTF-8. Giữ tiền tố và cách xuống dòng như mẫu.</li>
+              </ol>
+              <p className="text-xs">Mỗi câu chỉ chọn một đáp án đúng. Câu nhiều đáp án do BE nhập vào sẽ chỉ xem trong editor; import chưa hỗ trợ các dạng câu hỏi khác.</p>
+              <div>
+                <p className="mb-2 font-medium text-text-primary">Mẫu cấu trúc câu hỏi</p>
+                <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-background-gray-secondary p-3 text-xs leading-6">{sample}</pre>
+              </div>
+              <div>
+                <p className="mb-2 font-medium text-text-primary">Tải file mẫu</p>
+                <p className="mb-3 text-xs">Ba định dạng cùng một mẫu điền trống. Thay nội dung trong ngoặc vuông; dòng đáp án chỉ ghi ký tự lựa chọn đúng. Sao chép khối câu hỏi và tăng số thứ tự để thêm câu.</p>
+                <div className="flex flex-wrap gap-2">
+                  {sampleFiles.map(({ format, extension }) => (
+                    <Button key={extension} asChild appearance="outline" size="sm" className="min-h-10">
+                      <a href={`${import.meta.env.BASE_URL}templates/quiz-import/mau-nhap-cau-hoi.${extension}`} download={`mau-nhap-cau-hoi.${extension}`} aria-label={`Tải file mẫu ${format}`}>
+                        {format}
+                      </a>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <p className="border-t border-card-border pt-3 text-xs">Chưa hỗ trợ Excel/PDF trong luồng này. Kiểm tra lại nội dung sau khi nhập, nhất là ảnh, bảng và công thức trong Word.</p>
+            </div>
           </details>
         </>}
         {pending && <p role="status" className="text-sm text-text-tertiary">Đang xử lý file. Vui lòng chờ và không gửi lại yêu cầu.</p>}

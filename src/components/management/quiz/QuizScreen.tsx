@@ -86,7 +86,7 @@ interface DraftQuestion {
 
 type QuizFieldError = 'title' | 'duration' | 'attempts' | 'target' | 'questions'
 
-const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']
+const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE']
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function createDraftQuestion(): DraftQuestion {
@@ -729,19 +729,6 @@ function TeacherQuizEditorForm({
                           node.focus()
                         }
                       }} className={textareaControlClass} value={question.questionText} disabled={questionsLocked || busy} onChange={(event) => updateQuestion(question.clientId, { questionText: event.target.value })} />
-                    </label>
-                    <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-                      Dạng đáp án
-                      <SelectField ariaLabel="Dạng đáp án" className="w-full md:max-w-64" value={question.questionType} disabled={questionsLocked || busy} onChange={(value) => {
-                        const questionType = value as TeacherQuestionType
-                        const options = questionType === 'SINGLE_CHOICE'
-                          ? question.options.map((option, index) => ({ ...option, correct: option.correct && question.options.findIndex((item) => item.correct) === index }))
-                          : question.options
-                        updateQuestion(question.clientId, { questionType, options })
-                      }} options={[
-                        { id: 'SINGLE_CHOICE', label: 'Chọn một đáp án' },
-                        { id: 'MULTIPLE_CHOICE', label: 'Chọn nhiều đáp án' },
-                      ]} />
                     </label>
                     <div className="flex flex-col gap-2">
                       {question.options.map((option, optionIndex) => (
