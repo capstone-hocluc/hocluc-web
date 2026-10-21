@@ -45,3 +45,24 @@ test('logout after silent refresh invalidates both refresh tokens', async ({ pag
   })
   expect(statuses).toEqual([401, 401])
 })
+
+test('unknown email and wrong password have identical login errors', async ({ page }) => {
+  const messages = []
+  const bodies = []
+  for (const email of ['unknown-auth-check@example.test', 'student@gmail.com']) {
+    await page.goto('/login')
+    await page.locator('input[data-auth-field="email"]').fill(email)
+    await page.locator('input[data-auth-field="password"]').fill('incorrect-password')
+    const response = page.waitForResponse((response) => response.url().endsWith('/api/v1/auth/login'))
+    await page.locator('input[data-auth-field="password"]').press('Enter')
+    const result = await response
+    expect(result.status()).toBe(401)
+    const { timestamp, ...body } = await result.json()
+    expect(timestamp).toBeTruthy()
+    bodies.push(body)
+    await expect(page.getByRole('alert')).toHaveText('Invalid email or password')
+    messages.push(await page.getByRole('alert').textContent())
+  }
+  expect(bodies[0]).toEqual(bodies[1])
+  expect(messages[0]).toBe(messages[1])
+})

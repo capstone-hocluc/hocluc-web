@@ -213,7 +213,7 @@ function AuthPage({
       setPendingAuthEmail('reset', email)
       setRecoveryForm((current) => ({ ...current, email }))
       setRecoverySuccess(
-        response?.message || 'Mã xác nhận đặt lại mật khẩu đã được gửi tới email của bạn.'
+        response?.message || 'Nếu email đã được đăng ký, mã đặt lại mật khẩu đã được gửi.'
       )
       setRecoveryStep(2)
       setResendCountdown(60)
@@ -256,7 +256,7 @@ function AuthPage({
     clearRecoveryTimers()
     try {
       const response = await forgotPassword({ email })
-      setRecoverySuccess(response?.message || 'Mã xác nhận mới đã được gửi tới email của bạn.')
+      setRecoverySuccess(response?.message || 'Nếu email đã được đăng ký, mã đặt lại mật khẩu đã được gửi.')
       setResendCountdown(60)
       const interval = window.setInterval(() => {
         setResendCountdown((current) => {
@@ -375,7 +375,7 @@ function AuthPage({
     setVerificationError('')
     try {
       const response = await resendOtp({ email: currentVerificationEmail })
-      showSuccessToast(response?.message || 'Mã xác nhận mới đã được gửi tới email của bạn.')
+      showSuccessToast(response?.message || 'Nếu email đã được đăng ký, mã đặt lại mật khẩu đã được gửi.')
       // The previous code is no longer valid once a new one is issued.
       setVerificationCode('')
       startVerificationCountdown()
@@ -533,7 +533,7 @@ function AuthPage({
               'Nhập email để nhận mã xác nhận.'
             ) : (
               <>
-                Mã đã gửi tới <strong>{recoveryForm.email || 'email của bạn'}</strong>.
+                Nếu email <strong>{recoveryForm.email || 'của bạn'}</strong> đã được đăng ký, bạn sẽ nhận được mã đặt lại mật khẩu.
               </>
             )}
           </p>
