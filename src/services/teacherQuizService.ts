@@ -229,6 +229,54 @@ export function getTeacherQuiz(quizId: string): Promise<TeacherQuizEditor> {
   return requireData(quizPath(quizId), 'Không thể tải nội dung bài kiểm tra.')
 }
 
+export interface TeacherQuizImportResult {
+  sectionsAdded: number
+  groupsAdded: number
+  questionsAdded: number
+  needsReview: number
+  missingAnswers: number
+  answerKeySource: string | null
+  warnings: string[] | null
+  totalQuestions: number
+}
+
+export class AmbiguousQuizImportError extends Error {
+  constructor() {
+    super('Chưa xác nhận được kết quả nhập. Hãy tải lại bài để kiểm tra trước khi nhập thêm; không gửi lại file ngay.')
+    this.name = 'AmbiguousQuizImportError'
+  }
+}
+
+export async function importTeacherQuizFile(quizId: string, file: File): Promise<TeacherQuizImportResult> {
+  assertQuizWriteAccess()
+  if (!/\.(docx|txt|md)$/i.test(file.name) || file.size === 0) {
+    throw new ApiError('Chọn file .docx, .txt hoặc .md có nội dung câu hỏi.', 400)
+  }
+  // Recheck state on the server: another user may have published the draft or started an attempt.
+  const { quiz } = await getTeacherQuiz(quizId)
+  if (quiz.status !== 'DRAFT' || quiz.locked || quiz.attemptCount > 0) {
+    throw new ApiError('Chỉ nhập câu hỏi vào bản nháp chưa có lượt làm. Hãy tải lại bài để kiểm tra trạng thái.', 409)
+  }
+  const body = new FormData()
+  body.append('file', file)
+  let result: TeacherQuizImportResult
+  try {
+    result = await requireData(`${quizPath(quizId)}/import/file?mode=APPEND`, 'Không thể xác nhận kết quả nhập.', {
+      method: 'POST', body, timeoutMs: 120_000,
+    })
+  } catch (error) {
+    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
+    throw new AmbiguousQuizImportError()
+  }
+  const counts = [result.sectionsAdded, result.groupsAdded, result.questionsAdded,
+    result.needsReview, result.missingAnswers, result.totalQuestions]
+  if (counts.some(value => !Number.isInteger(value) || value < 0) ||
+      (result.warnings !== null && (!Array.isArray(result.warnings) || result.warnings.some(warning => typeof warning !== 'string')))) {
+    throw new AmbiguousQuizImportError()
+  }
+  return result
+}
+
 export function createTeacherQuiz(payload: CreateTeacherQuizRequest): Promise<TeacherQuizRecord> {
   return requireData(quizPath(), 'Không thể tạo bài kiểm tra.', { method: 'POST', body: payload })
 }
