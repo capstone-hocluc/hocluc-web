@@ -25,16 +25,16 @@ const record = (id: string, title: string, type: TeacherQuizType, courseId = QUI
   description: null, chapterId: QUIZ_IDS.chapter, chapterTitle: 'Chương nháp',
   lessonId: type === 'QUICK' ? QUIZ_IDS.lesson : null, lessonTitle: type === 'QUICK' ? 'Bài nháp' : null,
   durationMinutes: 30, maxAttempts: 2, passingPercentage: 60, showAnswers: false,
-  availableFrom: null, availableUntil: null, practiceAllowed: true, examFileUrl: null,
-  pageCount: 0, questionCount: 1, missingAnswerCount: 0, needsReviewCount: 0,
+  availableFrom: null, availableUntil: null, practiceAllowed: true, examFile: null, totalMarks: null, marksSum: null,
+  questionCount: 1, missingAnswerCount: 0, needsReviewCount: 0,
   attemptCount: 0, locked: false, publishProblems: [], createdById: QUIZ_IDS.user,
   createdAt: stamp, updatedAt: stamp,
 })
 const question = (): TeacherQuizQuestion => ({
   id: QUIZ_IDS.question, sequence: 1, sectionId: null, groupId: null,
-  questionText: 'Câu hỏi được phân công', questionType: 'SINGLE_CHOICE', difficulty: null,
+  questionText: 'Câu hỏi được phân công', questionType: 'SINGLE_CHOICE',
   categoryId: null, categoryName: null, explanation: 'Giải thích được phép đọc', imageUrl: null,
-  sourcePage: null, marks: null, needsReview: false, reviewNote: null, correctLabels: 'A',
+  sourcePage: null, marks: 1, marksFixed: false, needsReview: false, reviewNote: null, correctLabels: 'A',
   options: ['A', 'B'].map((label, index) => ({ id: `option-${label}`, label, sequence: index + 1, text: `Lựa chọn ${label}`, correct: index === 0 })),
 })
 
@@ -150,7 +150,7 @@ export async function installQuizFixture(page: Page, role: UserRole) {
       const q = state.quizzes.find(item => item.id === match[1]), action = match[2]
       if (!q) return answer(null, 404, 'Not found')
       if (state.deniedQuiz === q.id || (!writer && q.courseId !== QUIZ_IDS.course)) return answer(null, 403, 'Không được phân công khóa này.')
-      if (!action && method === 'GET') return answer({ quiz: q, sections: q.type === 'PLACEMENT' ? state.sections : [], groups: [], questions: state.questions, pages: [], latestJob: null })
+      if (!action && method === 'GET') return answer({ quiz: q, sections: q.type === 'PLACEMENT' ? state.sections : [], groups: [], questions: state.questions, latestJob: null })
       if (!action && method === 'PUT') { Object.assign(q, body); return answer(q) }
       if (!action && method === 'DELETE') { state.quizzes = state.quizzes.filter(item => item.id !== q.id); return answer(null) }
       if (action === 'publish' || action === 'unpublish') { q.status = action === 'publish' ? 'PUBLISHED' : q.attemptCount ? 'ARCHIVED' : 'DRAFT'; return answer(q) }

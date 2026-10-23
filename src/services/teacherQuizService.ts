@@ -6,6 +6,16 @@ export type TeacherQuizType = 'PLACEMENT' | 'QUICK' | 'LESSON' | 'CHAPTER' | 'EX
 export type TeacherQuizStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 export type TeacherQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'LONG_ANSWER'
 
+export interface TeacherExamFile {
+  fileName: string
+  contentType: string | null
+  size: number | null
+  pageCount: number
+  uploadedAt: string | null
+  url: string | null
+  expiresAt: string | null
+}
+
 export interface TeacherQuizRecord {
   id: string
   type: TeacherQuizType
@@ -25,8 +35,9 @@ export interface TeacherQuizRecord {
   availableFrom: string | null
   availableUntil: string | null
   practiceAllowed: boolean
-  examFileUrl: string | null
-  pageCount: number
+  examFile: TeacherExamFile | null
+  totalMarks: number | null
+  marksSum: number | null
   questionCount: number
   missingAnswerCount: number
   needsReviewCount: number
@@ -53,13 +64,14 @@ export interface TeacherQuizQuestion {
   groupId: string | null
   questionText: string
   questionType: TeacherQuestionType
-  difficulty: string | null
   categoryId: string | null
   categoryName: string | null
   explanation: string | null
   imageUrl: string | null
   sourcePage: number | null
+  /** What the question is worth: its own marks when marksFixed, else its equal share of the quiz total. */
   marks: number | null
+  marksFixed: boolean
   needsReview: boolean
   reviewNote: string | null
   correctLabels: string
@@ -96,7 +108,6 @@ export interface TeacherQuizEditor {
     questionIds: string[]
   }>
   questions: TeacherQuizQuestion[]
-  pages: Array<{ pageNumber: number; url: string; width: number | null; height: number | null }>
   latestJob: unknown | null
 }
 
@@ -136,7 +147,6 @@ export interface SaveTeacherQuestionRequest {
   explanation?: string
   imageUrl?: string
   categoryId?: string
-  difficulty?: string
   sectionId?: string
   groupId?: string
   sourcePage?: number
@@ -186,10 +196,11 @@ function isTeacherQuizQuestion(value: unknown): value is TeacherQuizQuestion {
     isNullableString(question.sectionId) && isNullableString(question.groupId) &&
     typeof question.questionText === 'string' &&
     typeof question.questionType === 'string' && QUESTION_TYPES.has(question.questionType as TeacherQuestionType) &&
-    isNullableString(question.difficulty) && isNullableString(question.categoryId) &&
+    isNullableString(question.categoryId) &&
     isNullableString(question.categoryName) && isNullableString(question.explanation) &&
     isNullableString(question.imageUrl) && isNullableNumber(question.sourcePage) &&
-    isNullableNumber(question.marks) && typeof question.needsReview === 'boolean' &&
+    isNullableNumber(question.marks) && typeof question.marksFixed === 'boolean' &&
+    typeof question.needsReview === 'boolean' &&
     isNullableString(question.reviewNote) && typeof question.correctLabels === 'string' &&
     Array.isArray(question.options) && question.options.every((option) => {
       if (!option || typeof option !== 'object') return false

@@ -88,8 +88,8 @@ interface DraftQuestion {
   explanation: string
   imageUrl: string | null
   categoryId: string | null
-  difficulty: string | null
   sourcePage: number | null
+  /** Only marks the teacher set; an equal share is BE's to compute and must not be sent back as fixed. */
   marks: number | null
   needsReview: boolean
   reviewNote: string
@@ -152,7 +152,6 @@ function createDraftQuestion(): DraftQuestion {
     explanation: '',
     imageUrl: null,
     categoryId: null,
-    difficulty: null,
     sourcePage: null,
     marks: null,
     needsReview: false,
@@ -195,9 +194,8 @@ function fromServerQuestion(question: TeacherQuizQuestion): DraftQuestion {
     explanation: question.explanation ?? '',
     imageUrl: question.imageUrl,
     categoryId: question.categoryId,
-    difficulty: question.difficulty,
     sourcePage: question.sourcePage,
-    marks: question.marks,
+    marks: question.marksFixed ? question.marks : null,
     needsReview: question.needsReview,
     reviewNote: question.reviewNote ?? '',
     editable: editable && question.options.length <= 8,
@@ -366,7 +364,6 @@ function questionPayload(question: DraftQuestion): SaveTeacherQuestionRequest {
     options,
     // Omit the resolved URL so BE keeps its canonical storage reference.
     categoryId: question.categoryId ?? undefined,
-    difficulty: question.difficulty ?? undefined,
     sourcePage: question.sourcePage ?? undefined,
     marks: question.marks ?? undefined,
     needsReview: question.needsReview,
@@ -380,9 +377,8 @@ function questionPayloadMatchesServer(draft: DraftQuestion, server: TeacherQuizQ
     payload.questionType === server.questionType &&
     payload.explanation === (server.explanation ?? '') &&
     (payload.categoryId ?? null) === server.categoryId &&
-    (payload.difficulty ?? null) === server.difficulty &&
     (payload.sourcePage ?? null) === server.sourcePage &&
-    (payload.marks ?? null) === server.marks &&
+    (payload.marks ?? null) === (server.marksFixed ? server.marks : null) &&
     payload.needsReview === server.needsReview &&
     (payload.reviewNote ?? '') === (server.reviewNote ?? '') &&
     payload.options?.length === server.options.length &&
