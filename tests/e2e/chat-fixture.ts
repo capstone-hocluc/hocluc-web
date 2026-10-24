@@ -95,10 +95,10 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
     sendSocketFrame(body: string) { socketBridge.send(body) },
   }
   page.on('pageerror', error => state.pageErrors.push(error.message))
-  await page.addInitScript(({ access, refresh }: { access: string; refresh: string }) => {
+  await page.addInitScript(({ access }: { access: string; refresh: string }) => {
     localStorage.setItem('hocluc.accessToken', access)
-    localStorage.setItem('hocluc.refreshToken', refresh)
   }, localStorageFixture.value)
+  await page.context().addCookies([{ name: 'hocluc_refresh', value: `refresh-${role}`, domain: '127.0.0.1', path: '/api/v1/auth', httpOnly: true, sameSite: 'Lax' }])
   // Download links open in a popup that has no page-level route; fulfil them at
   // the context level so the short-lived URL never reaches the dev server.
   await page.context().route('**/__download/**', route => route.fulfill({ status: 200, contentType: 'application/pdf', body: 'fixture-download' }))
@@ -171,13 +171,14 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
       return route.fulfill({ status: 200, contentType: 'application/pdf', body: 'fixture-download' })
     }
     if (path === '/api/v1/auth/refresh') {
-      const refresh = String(body.refreshToken ?? '')
-      if (!refresh.startsWith('refresh-')) return answer(null, 401, 'Refresh token không hợp lệ.')
-      const account = refresh.replace('refresh-', '')
+      const refresh = (await request.allHeaders()).cookie?.match(/(?:^|;\s*)hocluc_refresh=([^;]+)/)?.[1] ?? ''
+      if (!/^(refresh|rotated)-/.test(refresh)) return answer(null, 401, 'Refresh cookie không hợp lệ.')
+      const account = refresh.replace(/^(refresh|rotated)-/, '')
       const nextAccess = `fixture.${encodeToken(tokens[account] ?? tokens.STUDENT)}.fixture`
       sentinelAccess = nextAccess
       localStorageFixture.value = { access: nextAccess, refresh: `rotated-${account}` }
-      return answer({ accessToken: nextAccess, refreshToken: `rotated-${account}` })
+      return route.fulfill({ json: { success: true, status: 200, data: { accessToken: nextAccess } },
+        headers: { 'set-cookie': `hocluc_refresh=rotated-${account}; HttpOnly; Path=/api/v1/auth; SameSite=Lax` } })
     }
     // Test-only probe used by the transport race tests: a delayed check against
     // the currently issued token, so a sibling refresh can rotate it mid-flight.

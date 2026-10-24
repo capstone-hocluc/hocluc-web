@@ -5,7 +5,7 @@ Tổng hợp toàn bộ API backend mà frontend đang gọi tới, trích xuấ
 ## Cấu hình chung
 
 - **Base URL**: lấy từ biến môi trường `VITE_API_BASE_URL` hoặc `VITE_API_URL`; mặc định `https://developments.hocluc.com`.
-- **Auth**: mọi request có `auth: true` sẽ gắn header `Authorization: Bearer <accessToken>` (token lưu trong `localStorage`). Khi gặp `401`, client tự gọi `POST /api/v1/auth/refresh` để làm mới token rồi retry 1 lần; nếu refresh thất bại sẽ xóa token và điều hướng về trang login.
+- **Auth**: `auth: true` gắn `Authorization: Bearer <accessToken>` (access token lưu trong `localStorage`). Refresh token chỉ nằm trong cookie HttpOnly do BE quản lý, không đọc/ghi bằng JS. API auth gửi `credentials: 'include'`. Khi gặp `401`, client refresh bằng cookie rồi retry tối đa một lần; refresh bị từ chối `401/403` mới kết thúc phiên, lỗi mạng/5xx giữ phiên để thử lại. Chi tiết tại [auth-cookie.md](auth-cookie.md).
 - **optionalAuth**: vẫn gắn token nếu có, nhưng `401` không bị coi là hết phiên (dùng cho các trang public như catalog khóa học).
 - Tổng cộng **48 endpoint** đang được gọi trong code, chia theo 7 module bên dưới.
 
@@ -19,11 +19,11 @@ Tổng hợp toàn bộ API backend mà frontend đang gọi tới, trích xuấ
 | POST | `/api/v1/auth/confirm` | ✗ | Xác nhận đăng ký bằng OTP |
 | POST | `/api/v1/auth/login` | ✗ | Đăng nhập bằng email/password |
 | POST | `/api/v1/auth/google` | ✗ | Đăng nhập/đăng ký qua Google ID token |
-| POST | `/api/v1/auth/refresh` | ✗ (dùng refreshToken) | Làm mới access token |
+| POST | `/api/v1/auth/refresh` | Cookie HttpOnly | Làm mới access token, không có body chứa refresh token |
 | POST | `/api/v1/auth/forgot-password` | ✗ | Gửi OTP quên mật khẩu |
 | POST | `/api/v1/auth/reset-password` | ✗ | Đặt lại mật khẩu bằng OTP |
 | POST | `/api/v1/auth/resend-otp` | ✗ | Gửi lại mã OTP |
-| POST | `/api/v1/auth/logout` | ✗ (gửi refreshToken) | Đăng xuất, thu hồi refresh token |
+| POST | `/api/v1/auth/logout` | Cookie; Bearer nếu còn | Thu hồi phiên và xóa cookie, không gửi refresh token trong body |
 
 ## 2. User / Profile — `src/services/userService.ts`
 
