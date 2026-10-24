@@ -1,4 +1,5 @@
 import { accessTokenRole, ApiError, request, type ApiResponse } from '../lib/api'
+import type { ExtractionJob } from './aiExtractionService'
 import { can, ROLE_PERMISSIONS } from '../lib/permissions'
 import type { UserRole } from './userService'
 
@@ -108,7 +109,7 @@ export interface TeacherQuizEditor {
     questionIds: string[]
   }>
   questions: TeacherQuizQuestion[]
-  latestJob: unknown | null
+  latestJob: ExtractionJob | null
 }
 
 export interface CreateTeacherQuizRequest {
@@ -172,7 +173,7 @@ export class AmbiguousTeacherQuestionSaveError extends Error {
   }
 }
 
-function isDefiniteTeacherQuestionWriteRejection(error: unknown) {
+export function isDefiniteTeacherQuestionWriteRejection(error: unknown) {
   return error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408
 }
 
@@ -211,7 +212,7 @@ function isTeacherQuizQuestion(value: unknown): value is TeacherQuizQuestion {
     })
 }
 
-async function requireData<T>(path: string, fallback: string, options?: Parameters<typeof request<T>>[1]): Promise<T> {
+export async function requireData<T>(path: string, fallback: string, options?: Parameters<typeof request<T>>[1]): Promise<T> {
   if (options?.method && options.method !== 'GET') assertQuizWriteAccess()
   const response = await request<T>(path, { auth: true, guardIdentity: true, ...options })
   if (!response.data) throw new Error(fallback)
@@ -228,7 +229,7 @@ export function assertQuizWriteAccess(): void {
   }
 }
 
-const quizPath = (quizId?: string) =>
+export const quizPath = (quizId?: string) =>
   quizId ? `/api/v1/teacher/quizzes/${encodeURIComponent(quizId)}` : '/api/v1/teacher/quizzes'
 
 export function getTeacherQuizzes(courseId?: string): Promise<TeacherQuizRecord[]> {
