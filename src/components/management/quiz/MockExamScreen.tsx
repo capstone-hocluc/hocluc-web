@@ -52,6 +52,7 @@ import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
 import QuizImportDialog from './QuizImportDialog'
+import ExamExtractionPanel from './ExamExtractionPanel'
 import DragHandle from '../crud/drag-handle'
 import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
 import { cn } from '../../../lib/cn'
@@ -719,6 +720,12 @@ function TeacherMockExamForm({
         : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
           : structureReadOnly ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : ''
 
+  const extractBlockedReason = !serverQuizId ? ''
+    : publishedQuiz || settingsLocked ? 'Chỉ đọc đề vào bản nháp chưa có lượt làm.'
+      : ambiguousCreate || ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi đọc đề.'
+        : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi đọc đề bằng AI.'
+          : structureReadOnly ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : ''
+
   const updateSettings = <K extends keyof ExamSettings>(key: K, value: ExamSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
   }
@@ -1198,6 +1205,9 @@ function TeacherMockExamForm({
           </p>
         )}
       </Card>
+
+      <ExamExtractionPanel quizId={serverQuizId} examFile={quizSnapshot?.examFile ?? null} latestJob={initial?.latestJob ?? null}
+        existingQuestionCount={initial?.questions.length ?? 0} blockedReason={extractBlockedReason} busy={busy} onReload={onReload} />
 
       <Card as="section" padding="lg" aria-labelledby="exam-sections-title">
         {placement && <div className="mb-4 space-y-2">
