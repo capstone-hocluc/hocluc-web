@@ -57,7 +57,8 @@ async function respond(
 ) {
   await route.fulfill({
     status,
-    headers,
+    headers: new URL(route.request().url()).pathname.startsWith('/api/v1/auth/')
+      ? { ...headers, 'access-control-allow-origin': 'http://127.0.0.1:5192', 'access-control-allow-credentials': 'true' } : headers,
     json: {
       success: status < 400,
       data,
@@ -73,6 +74,7 @@ async function fixture(page: Page, loggedIn = true) {
   await page.route('**/api/v1/**', (route) => {
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
     const path = new URL(route.request().url()).pathname
+    if (path === '/api/v1/auth/refresh') return respond(route, null, 401)
     if (path === '/api/v1/users/profiles') return respond(route, profile)
     if (path === '/api/v1/cart') return respond(route, cart)
     if (path.endsWith('/payment') || path.endsWith('/pay') || path.endsWith('/checkout'))

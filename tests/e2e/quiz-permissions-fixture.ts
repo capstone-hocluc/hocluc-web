@@ -39,7 +39,7 @@ const question = (): TeacherQuizQuestion => ({
 })
 
 /** Browser tests with BE-shaped, fail-closed fixtures; never a live BE authorization test. */
-export async function installQuizFixture(page: Page, role: UserRole) {
+export async function installQuizFixture(page: Page, role: UserRole, { authenticated = true } = {}) {
   const state = {
     role, deniedQuiz: '', denyNextWrite: false, denyNextOrder: false, nextQuestion: 2,
     denyWriteStatus: 403, denyWriteMessage: 'Không có quyền ghi quiz.',
@@ -54,13 +54,13 @@ export async function installQuizFixture(page: Page, role: UserRole) {
     studentStatus: 'IN_PROGRESS', studentOption: '', studentLockReason: null as string | null,
   }
   page.on('pageerror', error => state.pageErrors.push(error.message))
-  await page.addInitScript((token) => {
+  if (authenticated) await page.addInitScript((token) => {
     if (!localStorage.getItem('hocluc.accessToken')) localStorage.setItem('hocluc.accessToken', token)
   }, quizToken(role))
   await page.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url()), path = url.pathname
     if (!path.startsWith('/api/')) {
-      if (url.origin === 'http://localhost:5192') return route.continue()
+      if (url.origin === 'http://127.0.0.1:5192') return route.continue()
       if (['xhr', 'fetch'].includes(request.resourceType())) state.unmatched.push(request.url())
       return route.abort('blockedbyclient')
     }
@@ -70,7 +70,10 @@ export async function installQuizFixture(page: Page, role: UserRole) {
     try { activeRole = JSON.parse(Buffer.from(auth!.split('.')[1], 'base64url').toString()).role.replace(/^ROLE_/, '') } catch { /* rejected below */ }
     state.requests.push({ method, path, query: url.search, body, role: activeRole })
     const answer = (data: unknown, status = 200, message = 'OK') => route.fulfill({ status, contentType: 'application/json',
+      headers: path.startsWith('/api/v1/auth/') ? { 'access-control-allow-origin': 'http://127.0.0.1:5192', 'access-control-allow-credentials': 'true' } : undefined,
       body: JSON.stringify({ success: status < 400, status, data, message }) })
+    if (path === '/api/v1/auth/refresh') return answer(null, 401, 'No refresh cookie')
+    if (path === '/api/v1/auth/logout') return answer(null)
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
     if (path === '/api/v1/users/profiles') return answer({ id: QUIZ_IDS.user, role: activeRole,
       roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER', 'STUDENT'], displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',

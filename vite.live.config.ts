@@ -1,10 +1,10 @@
 import { defineConfig, mergeConfig } from 'vite'
-import base from './vite.config'
+import { createAppConfig } from './vite.config'
 import { liveManifest } from './tests/e2e/chat-live-support'
 
 const { backend } = liveManifest()
 // Opt-in real same-origin reverse proxy, no mocked/fulfilled responses. Production config stays untouched.
-export default mergeConfig(base, defineConfig({
+export default defineConfig(configEnv => mergeConfig(createAppConfig(configEnv), {
   server: {
     proxy: {
       '/api/v1': { target: backend, changeOrigin: true },

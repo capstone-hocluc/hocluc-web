@@ -3,25 +3,47 @@ import { purchaseLoginPath, safePurchaseReturnTo } from './purchaseSession'
 import { loginPathFor } from './auth-return-to'
 import { clearPendingAuthEmails } from './auth-email'
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  'https://developments.hocluc.com'
+  import.meta.env.DEV && import.meta.env.VITE_DEV_API_PROXY === 'true'
+    ? window.location.origin
+    : import.meta.env.VITE_API_BASE_URL ||
+      import.meta.env.VITE_API_URL ||
+      'https://developments.hocluc.com'
 const BASE_URL = API_BASE_URL
 
 const ACCESS_TOKEN_KEY = 'hocluc.accessToken'
-// Refresh tokens now live in an httpOnly cookie; drop any copy a previous build left in storage.
-const LEGACY_REFRESH_TOKEN_KEY = 'hocluc.refreshToken'
-try { localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY) } catch { /* storage unavailable */ }
+const REFRESH_TOKEN_KEY = 'hocluc.refreshToken'
+const SESSION_GENERATION_KEY = 'hocluc.sessionGeneration'
+const SESSION_REVISION_KEY = 'hocluc.sessionRevision'
+const COOKIE_SESSION_BLOCKED_KEY = 'hocluc.cookieSessionBlocked'
 const REFRESH_PATH = '/api/v1/auth/refresh'
-const AUTH_PATH_PREFIX = '/api/v1/auth/'
-
-// Only the auth endpoints read or write the refresh cookie.
-function credentialsFor(path: string): RequestCredentials {
-  return path.startsWith(AUTH_PATH_PREFIX) ? 'include' : 'same-origin'
-}
-let refreshPromise: Promise<unknown> | null = null
+let refreshPromise: Promise<string | null> | null = null
+let restorePromise: Promise<string | null> | null = null
+let authQueue: Promise<unknown> = Promise.resolve()
 let authEpoch = 0
 export const AUTH_TOKENS_EVENT = 'hocluc:tokens-changed'
+
+// Cookie rotation and other Set-Cookie responses must be serialized, not merely
+// discarded after fetch: the browser applies Set-Cookie before JS sees a response.
+export async function withAuthSessionLock<T>(operation: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== 'undefined' && navigator.locks) {
+    return await navigator.locks.request('hocluc-token-refresh', operation)
+  }
+  const queued = authQueue.then(operation, operation)
+  authQueue = queued.catch(() => undefined)
+  return queued
+}
+
+export function authSessionStamp() {
+  return JSON.stringify([authEpoch, localStorage.getItem(SESSION_GENERATION_KEY), getAccessToken()])
+}
+
+export function authSessionGeneration() {
+  return localStorage.getItem(SESSION_GENERATION_KEY)
+}
+
+export function assertAuthSessionStamp(stamp: string) {
+  if (stamp !== authSessionStamp()) throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+}
 
 export interface ApiResponse<T = unknown> {
   success: boolean
@@ -119,7 +141,11 @@ export async function request<T = unknown>(
   const attachesToken = auth || optionalAuth
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
   const tokenAtStart = getAccessToken()
+  const generationAtStart = localStorage.getItem(SESSION_GENERATION_KEY)
   const assertSameIdentity = () => {
+    if (attachesToken && generationAtStart !== localStorage.getItem(SESSION_GENERATION_KEY)) {
+      throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+    }
     if (!guardIdentity || !attachesToken || tokenAtStart === getAccessToken()) return
     const identity = tokenIdentity(tokenAtStart)
     if (!identity || identity !== tokenIdentity(getAccessToken())) {
@@ -131,9 +157,9 @@ export async function request<T = unknown>(
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       method,
+      credentials: path.startsWith('/api/v1/auth/') ? 'include' : 'same-origin',
       headers: { ...createHeaders(attachesToken, isFormData), ...headers },
       body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined,
-      credentials: credentialsFor(path),
       signal,
     })
   } catch {
@@ -204,6 +230,7 @@ export async function requestBlob(
 ): Promise<Blob> {
   const attachesToken = auth || optionalAuth
   const tokenAtStart = getAccessToken()
+  const generationAtStart = localStorage.getItem(SESSION_GENERATION_KEY)
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
@@ -212,6 +239,10 @@ export async function requestBlob(
     })
   } catch {
     throw new Error('Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.')
+  }
+
+  if (generationAtStart !== localStorage.getItem(SESSION_GENERATION_KEY) && attachesToken) {
+    throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
   }
 
   if (attachesToken && response.status === 401 && tokenAtStart !== getAccessToken()) {
@@ -223,7 +254,10 @@ export async function requestBlob(
   }
   if (attachesToken && response.status === 401 && retryOnUnauthorized && path !== REFRESH_PATH) {
     const refreshed = await refreshStoredTokens(optionalAuth)
-    if (refreshed) return requestBlob(path, { auth, retryOnUnauthorized: false, optionalAuth })
+    if (refreshed) {
+      if (generationAtStart !== localStorage.getItem(SESSION_GENERATION_KEY)) throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
+      return requestBlob(path, { auth, retryOnUnauthorized: false, optionalAuth })
+    }
     if (!optionalAuth) handleSessionExpired()
   }
 
@@ -243,9 +277,23 @@ export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
-export function setTokens({ accessToken }: { accessToken?: string }) {
+export function setTokens({
+  accessToken,
+}: {
+  accessToken?: string
+}, replaceSession = false) {
   authEpoch++
-  if (accessToken) localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+  if (accessToken) {
+    const previousIdentity = tokenIdentity(getAccessToken())
+    if (replaceSession || (previousIdentity && tokenIdentity(accessToken) !== previousIdentity)) {
+      localStorage.setItem(SESSION_GENERATION_KEY, crypto.randomUUID())
+    }
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+    localStorage.setItem(SESSION_REVISION_KEY, crypto.randomUUID())
+    localStorage.removeItem(COOKIE_SESSION_BLOCKED_KEY)
+  }
+  // Migration only: refresh credentials are never read or retained by JS.
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
   window.dispatchEvent(new Event(AUTH_TOKENS_EVENT))
 }
 
@@ -253,7 +301,10 @@ export function clearTokens() {
   authEpoch++
   clearPendingAuthEmails()
   localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.setItem(COOKIE_SESSION_BLOCKED_KEY, '1')
+  localStorage.setItem(SESSION_GENERATION_KEY, crypto.randomUUID())
+  localStorage.setItem(SESSION_REVISION_KEY, crypto.randomUUID())
   window.dispatchEvent(new Event(AUTH_TOKENS_EVENT))
 }
 
@@ -289,11 +340,8 @@ export interface TokenData {
   accessToken: string
 }
 
-/** Rotates the session through the refresh cookie; the browser attaches it, scripts never see it. */
-export async function refreshToken() {
-  const epoch = authEpoch
-  const accessAtStart = getAccessToken()
-
+async function rotateCookieAccessToken(): Promise<string> {
+  const stamp = authSessionStamp()
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${REFRESH_PATH}`, {
@@ -308,19 +356,35 @@ export async function refreshToken() {
   const { accessToken } = data?.data || {}
 
   // Also guard failed responses: an old role's rejected refresh cannot log out a new session.
-  if (epoch !== authEpoch || getAccessToken() !== accessAtStart) {
-    throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
-  }
-  if (!response.ok || data?.success !== true || !accessToken) {
+  assertAuthSessionStamp(stamp)
+  if (!response.ok || data?.success !== true) {
     throw new ApiError(
       data?.message || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.',
       response.status,
       data?.errors
     )
   }
-
+  if (typeof accessToken !== 'string' || !accessToken.trim()) {
+    throw new ApiError('Máy chủ chưa trả về access token hợp lệ.', 502)
+  }
   setTokens({ accessToken })
-  return data
+  return accessToken
+}
+
+/** Protected entry points share a silent cookie restore; guests are not redirected here. */
+export function restoreCookieSession(): Promise<string | null> {
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  if (!restorePromise) {
+    restorePromise = ensureFreshAccessToken(false, false).catch(error => {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        clearTokens()
+        return null
+      }
+      if (error instanceof ApiError && error.status === 409) return getAccessToken()
+      throw error
+    }).finally(() => { restorePromise = null })
+  }
+  return restorePromise
 }
 
 export function accessTokenExpiresAt(token = getAccessToken()): number | null {
@@ -339,35 +403,27 @@ export async function ensureFreshAccessToken(
   expireSession = true
 ): Promise<string | null> {
   const token = getAccessToken()
+  if (!token && localStorage.getItem(COOKIE_SESSION_BLOCKED_KEY)) return null
   const expiresAt = accessTokenExpiresAt(token)
   if (token && !force && (expiresAt === null || expiresAt > Date.now() + 60_000)) return token
   if (!refreshPromise) {
+    const generation = localStorage.getItem(SESSION_GENERATION_KEY)
+    const revision = localStorage.getItem(SESSION_REVISION_KEY)
     const run = async () => {
-      // Another tab may have rotated the session while this tab waited for its lock:
-      // the shared access token changed, so reuse it instead of spending the cookie again.
-      const current = getAccessToken()
-      if (current !== token) {
-        const identity = tokenIdentity(token)
-        const expiresAt = accessTokenExpiresAt(current)
-        if (
-          current && (!token || (identity && identity === tokenIdentity(current))) &&
-          expiresAt !== null && expiresAt > Date.now()
-        ) return
+      if (generation !== localStorage.getItem(SESSION_GENERATION_KEY))
         throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
-      }
-      await refreshToken()
+      // A sibling tab may have rotated the cookie while we waited for the lock.
+      if (revision !== localStorage.getItem(SESSION_REVISION_KEY) && getAccessToken()) return getAccessToken()
+      if (!getAccessToken() && localStorage.getItem(COOKIE_SESSION_BLOCKED_KEY)) return null
+      return rotateCookieAccessToken()
     }
-    const refresh =
-      typeof navigator !== 'undefined' && navigator.locks
-        ? navigator.locks.request('hocluc-token-refresh', run)
-        : run()
+    const refresh = withAuthSessionLock(run)
     refreshPromise = refresh.finally(() => {
       refreshPromise = null
     })
   }
   try {
-    await refreshPromise
-    return getAccessToken()
+    return await refreshPromise
   } catch (error) {
     if (error instanceof ApiError && error.status === 409) throw error
     if (

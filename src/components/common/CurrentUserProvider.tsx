@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CurrentUserContext, type CurrentUserStatus } from '../../hooks/useCurrentUser'
 import { getCurrentProfile, type StudentProfile, type UserProfile } from '../../services/userService'
-import { ApiError, AUTH_TOKENS_EVENT, getAccessToken } from '../../lib/api'
+import { ApiError, AUTH_TOKENS_EVENT, authSessionGeneration, getAccessToken } from '../../lib/api'
 
 function sessionIdentity() {
   const token = getAccessToken()
   if (!token) return null
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return JSON.stringify([payload.sub, payload.role ?? payload.roles])
+    return JSON.stringify([payload.sub, payload.role ?? payload.roles, authSessionGeneration()])
   } catch {
-    return token
+    return JSON.stringify([token, authSessionGeneration()])
   }
 }
 

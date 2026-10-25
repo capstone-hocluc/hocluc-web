@@ -5,12 +5,13 @@ import DevQuickLogin from '../components/auth/DevQuickLogin'
 import GoogleSignInButton from '../components/auth/GoogleSignInButton'
 import Button from '../components/console/button'
 import { useCurrentUser } from '../hooks/useCurrentUser'
-import { clearTokens } from '../lib/api'
 import { getErrorMessage } from '../lib/errors'
+import { showErrorToast } from '../lib/toastBus'
 import { grantedRoles, ROLE_LABELS, roleHome } from '../lib/role-home'
 import {
   googleConsoleAuth,
   login as loginAccount,
+  logout,
   switchRole as switchRoleRequest,
 } from '../services/authService'
 import type { UserProfile, UserRole } from '../services/userService'
@@ -77,16 +78,13 @@ function AdminLoginPage({
           setRoleChoices(available)
           return
         }
-        clearTokens()
-        clearCurrentUser()
+        try { await logout() } finally { clearCurrentUser() }
         setError(rejectedRoleMessage)
         return
       }
 
       onSuccess(profile)
     } catch (requestError) {
-      clearTokens()
-      clearCurrentUser()
       setError(getErrorMessage(requestError) || 'Email hoặc mật khẩu không đúng.')
     } finally {
       setLoading(false)
@@ -108,16 +106,13 @@ function AdminLoginPage({
           setRoleChoices(available)
           return
         }
-        clearTokens()
-        clearCurrentUser()
+        try { await logout() } finally { clearCurrentUser() }
         setError(rejectedRoleMessage)
         return
       }
 
       onSuccess(profile)
     } catch (requestError) {
-      clearTokens()
-      clearCurrentUser()
       setError(
         getErrorMessage(requestError) || 'Đăng nhập với Google không thành công. Vui lòng thử lại.'
       )
@@ -139,15 +134,22 @@ function AdminLoginPage({
     }
   }
 
+  const discardRoleSession = async (onDone: () => void) => {
+    if (loading) return
+    setLoading(true)
+    try { await logout() } catch (error) { showErrorToast(getErrorMessage(error)) }
+    finally {
+      clearCurrentUser()
+      setRoleChoices([])
+      setLoading(false)
+      onDone()
+    }
+  }
+
   if (roleChoices.length)
     return (
       <AuthShell
-        onBack={() => {
-          clearTokens()
-          clearCurrentUser()
-          setRoleChoices([])
-          onBack()
-        }}
+        onBack={() => void discardRoleSession(onBack)}
         backLabel="Quay lại trang chủ"
         showThemeToggle
       >
@@ -171,11 +173,7 @@ function AdminLoginPage({
               className="brand-auth-alternate"
               appearance="outline"
               disabled={loading}
-              onClick={() => {
-                clearTokens()
-                clearCurrentUser()
-                setRoleChoices([])
-              }}
+              onClick={() => void discardRoleSession(() => undefined)}
             >
               Dùng tài khoản khác
             </Button>
