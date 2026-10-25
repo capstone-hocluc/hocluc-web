@@ -23,7 +23,7 @@ export default defineConfig({
     command: 'npm run dev -- --host 127.0.0.1 --port 5191 --strictPort',
     url: 'http://127.0.0.1:5191',
     reuseExistingServer: false,
-    env: { VITE_API_BASE_URL: 'http://127.0.0.1:1' },
+    env: { VITE_API_BASE_URL: 'http://127.0.0.1:1', VITE_DEV_API_PROXY: 'false' },
     timeout: 60_000,
   },
 })

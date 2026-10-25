@@ -5,7 +5,6 @@ import DevQuickLogin from './DevQuickLogin'
 import GoogleSignInButton from './GoogleSignInButton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
-import { clearTokens } from '../../lib/api'
 import { pendingAuthEmail, setPendingAuthEmail } from '../../lib/auth-email'
 import { getPasswordHelper, getPasswordIssues, validatePassword } from '../../lib/passwordRules'
 import { showSuccessToast } from '../../lib/toastBus'
@@ -14,6 +13,7 @@ import {
   confirmAccount,
   forgotPassword,
   googleAuth,
+  logout,
   login as loginAccount,
   registerStudent,
   resendOtp,
@@ -35,7 +35,7 @@ function AuthPage({
   allowedRoles = DEFAULT_ALLOWED_ROLES,
   rejectedRoleMessage = 'Tài khoản này không có quyền truy cập khu vực học tập.',
 }) {
-  const { loadCurrentUser } = useCurrentUser()
+  const { loadCurrentUser, clearCurrentUser } = useCurrentUser()
   const [mode, setMode] = useState(initialMode)
   const [authEmail, setAuthEmail] = useState('')
   const [verificationInputEmail, setVerificationInputEmail] = useState(() =>
@@ -408,7 +408,7 @@ function AuthPage({
       await loginAccount({ email, password, audience: 'LEARNER' })
       const profile = await loadCurrentUser()
       if (!allowedRoles.includes(profile.role)) {
-        clearTokens()
+        try { await logout() } finally { clearCurrentUser() }
         setLoginError(rejectedRoleMessage)
         return
       }
@@ -438,7 +438,7 @@ function AuthPage({
       await googleAuth({ idToken })
       const profile = await loadCurrentUser()
       if (!allowedRoles.includes(profile.role)) {
-        clearTokens()
+        try { await logout() } finally { clearCurrentUser() }
         setLoginError(rejectedRoleMessage)
         return
       }

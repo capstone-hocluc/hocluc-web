@@ -1,0 +1,7 @@
+Câu 1. [Điền nội dung câu hỏi tại đây]
+A. [Điền nội dung lựa chọn A tại đây]
+B. [Điền nội dung lựa chọn B tại đây]
+C. [Điền nội dung lựa chọn C tại đây]
+D. [Điền nội dung lựa chọn D tại đây]
+Đáp án: [Điền ký tự đáp án đúng tại đây]
+Giải thích: [Điền giải thích tại đây hoặc xóa dòng này]

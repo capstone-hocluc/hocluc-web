@@ -20,6 +20,8 @@ import ManagementRouteGuard, {
 import TeacherDashboard from './components/teacher/TeacherDashboard'
 import { useCurrentUser } from './hooks/useCurrentUser'
 import { logout } from './services/authService.ts'
+import { getErrorMessage } from './lib/errors'
+import { showErrorToast } from './lib/toastBus'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
 import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
@@ -304,6 +306,8 @@ function App() {
     const loginPath = isManagementArea ? CONSOLE_LOGIN_PATH : '/login'
     try {
       await logout()
+    } catch (error) {
+      showErrorToast(getErrorMessage(error))
     } finally {
       clearCurrentUser()
       setPendingVerificationEmail('')

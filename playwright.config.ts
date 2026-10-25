@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 // These tests never call the live API: the browser routes every API request to a fixture.
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: ['core-crud.spec.ts', 'chat.spec.ts', 'landing.spec.ts', 'quiz-permissions.spec.ts', 'placement.spec.ts', 'purchase.spec.ts', 'lesson-labels.spec.ts', 'notifications.spec.ts'],
+  testMatch: ['core-crud.spec.ts', 'chat.spec.ts', 'landing.spec.ts', 'quiz-permissions.spec.ts', 'placement.spec.ts', 'purchase.spec.ts', 'lesson-labels.spec.ts', 'notifications.spec.ts', 'quiz-import.spec.ts', 'auth-cookie.spec.ts'],
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -11,7 +11,7 @@ export default defineConfig({
   outputDir: '.pi/qa/core-crud/results',
   reporter: [['list'], ['html', { outputFolder: '.pi/qa/core-crud/report', open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:5192',
+    baseURL: 'http://127.0.0.1:5192',
     ...devices['Desktop Chrome'],
     channel: 'chrome',
     screenshot: 'only-on-failure',
@@ -20,9 +20,9 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 5192 --strictPort',
-    url: 'http://localhost:5192',
+    url: 'http://127.0.0.1:5192',
     reuseExistingServer: false,
-    env: { VITE_API_BASE_URL: 'http://127.0.0.1:1', VITE_MENTOR_CHAT_ENABLED: 'true' },
+    env: { VITE_API_BASE_URL: 'http://127.0.0.1:1', VITE_DEV_API_PROXY: 'false', VITE_MENTOR_CHAT_ENABLED: 'true' },
     timeout: 60_000,
   },
 })

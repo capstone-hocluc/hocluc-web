@@ -37,7 +37,7 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
     ({ id: `${conversationId}-${sequence}`, conversationId, sequence, senderId: MENTOR_ID, senderName, body,
       createdAt: '2026-10-10T12:00:00Z', attachments: [] })
   for (const id of [CHAT_ID, CHAT_ID_2]) { rows.set(id, row(id, id === CHAT_ID ? 'Bài toán xác suất QA' : 'Bài toán hình học QA')); transcripts.set(id, [message(id)]) }
-  const localStorageFixture = { value: { access: '' } }
+  const localStorageFixture = { value: { access: '' } as { access: string; refresh?: string } }
   const encoded = encodeToken(tokens[role as keyof typeof tokens] ?? tokens.STUDENT)
   localStorageFixture.value = { access: `fixture.${encoded}.fixture` }
   let sentinelAccess = localStorageFixture.value.access
@@ -98,6 +98,7 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
   await page.addInitScript(({ access }: { access: string }) => {
     localStorage.setItem('hocluc.accessToken', access)
   }, localStorageFixture.value)
+  await page.context().addCookies([{ name: 'hocluc_refresh', value: `refresh-${role}`, domain: '127.0.0.1', path: '/api/v1/auth', httpOnly: true, sameSite: 'Lax' }])
   // Download links open in a popup that has no page-level route; fulfil them at
   // the context level so the short-lived URL never reaches the dev server.
   await page.context().route('**/__download/**', route => route.fulfill({ status: 200, contentType: 'application/pdf', body: 'fixture-download' }))
@@ -155,7 +156,7 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
       return route.fulfill({ status: 200, contentType: 'text/plain', body: 'ok' })
     }
     if (!path.startsWith('/api/')) {
-      if (url.origin === 'http://localhost:5192') return route.continue()
+      if (url.origin === 'http://127.0.0.1:5192') return route.continue()
       return route.abort('blockedbyclient')
     }
     const body = request.postDataJSON() ?? {}
@@ -170,12 +171,14 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
       return route.fulfill({ status: 200, contentType: 'application/pdf', body: 'fixture-download' })
     }
     if (path === '/api/v1/auth/refresh') {
-      if (method !== 'POST' || request.postData()) return answer(null, 400, 'Bodyless POST required.')
-      const account = state.role
+      const refresh = (await request.allHeaders()).cookie?.match(/(?:^|;\s*)hocluc_refresh=([^;]+)/)?.[1] ?? ''
+      if (!/^(refresh|rotated)-/.test(refresh)) return answer(null, 401, 'Refresh cookie không hợp lệ.')
+      const account = refresh.replace(/^(refresh|rotated)-/, '')
       const nextAccess = `fixture.${encodeToken(tokens[account] ?? tokens.STUDENT)}.fixture`
       sentinelAccess = nextAccess
-      localStorageFixture.value = { access: nextAccess }
-      return answer({ accessToken: nextAccess })
+      localStorageFixture.value = { access: nextAccess, refresh: `rotated-${account}` }
+      return route.fulfill({ json: { success: true, status: 200, data: { accessToken: nextAccess } },
+        headers: { 'set-cookie': `hocluc_refresh=rotated-${account}; HttpOnly; Path=/api/v1/auth; SameSite=Lax` } })
     }
     // Test-only probe used by the transport race tests: a delayed check against
     // the currently issued token, so a sibling refresh can rotate it mid-flight.
@@ -255,7 +258,7 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
         if (!state.attachmentsEnabled) return answer(null, 403, 'Tệp đính kèm chưa khả dụng.')
         const attachmentId = `att-${++attachmentCounter}`
         reservations.set(attachmentId, { name: String(body.name ?? ''), mimeType: String(body.mimeType ?? ''), sizeBytes: Number(body.sizeBytes ?? 0) })
-        return answer({ attachmentId, uploadUrl: `http://localhost:5192/__upload/${attachmentId}`,
+        return answer({ attachmentId, uploadUrl: `http://127.0.0.1:5192/__upload/${attachmentId}`,
           expiresAt: new Date(Date.now() + 300_000).toISOString(), headers: {} })
       }
       const completedAttachment = path.match(/attachments\/([^/]+)\/complete/)?.[1]
