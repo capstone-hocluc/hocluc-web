@@ -55,6 +55,8 @@ import ConfirmDialog from '../../console/confirm-dialog'
 import DropdownField from '../../console/dropdown-field'
 import SelectField from '../../console/select-field'
 import { Skeleton } from '../../tailgrids/core/skeleton'
+import MockExamEditorSkeleton from './MockExamEditorSkeleton'
+import { describePublishProblems } from './publish-problems'
 import Notice from '../../console/notice'
 import StatusBadge from '../../console/status'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
@@ -145,7 +147,7 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
       const blockers = quiz.publishProblems?.filter(Boolean) ?? []
       onAction(
         error instanceof ApiError && error.status === 409 && quiz.status === 'DRAFT' && blockers.length > 0
-          ? `Chưa thể xuất bản: ${blockers.join(', ')}. Mở chỉnh sửa để hoàn thiện quiz.`
+          ? `Chưa thể xuất bản: ${describePublishProblems(blockers)}. Mở chỉnh sửa để hoàn thiện quiz.`
           : getApiActionError(error)
       )
     } finally {
@@ -181,7 +183,6 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
     <section className="flex min-w-0 flex-col gap-5">
       {course.id && <Button appearance="ghost" size="sm" className="self-start" onClick={onBack}><ArrowLeft size={16} />Quay lại lớp học</Button>}
       <PageHeading title="Bài kiểm tra" readOnly={readOnly}
-        subtitle={readOnly ? 'Xem nội dung và theo dõi bài kiểm tra trong các khóa được phân công.' : 'Quản lý quiz nhanh, kiểm tra cuối bài và cuối chương theo khóa học.'}
         action={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />Tạo bài kiểm tra</Button>} />
       {navigation}
       <QuizCatalog scope={course.id} items={quizItems} status={quizzes.status}
@@ -295,7 +296,7 @@ function TeacherQuizEditorScreen({
   const editor = usePageResource(() => access.canWrite && quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
   if (!access.canWrite) return <ForbiddenPage />
   if (quizId && editor.status === 'loading') {
-    return <div className="flex flex-col gap-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-56" /><Skeleton className="h-64" /></div>
+    return <MockExamEditorSkeleton pdf={false} />
   }
   if (quizId && (editor.status !== 'ready' || !editor.data)) {
     return (
@@ -543,10 +544,7 @@ function TeacherQuizEditorForm({
 
   return (
     <section className="flex flex-col gap-4">
-      <Button appearance="ghost" size="sm" className="self-start" type="button" onClick={onCancel}>
-        <ArrowLeft size={16} />Quay lại danh sách quiz
-      </Button>
-      <PageHeading title={initialQuiz ? 'Chỉnh sửa bài kiểm tra' : serverQuizId ? 'Hoàn thiện bản nháp' : 'Tạo bài kiểm tra'} />
+      <PageHeading onBack={onCancel} backLabel="Quay lại danh sách quiz" parent="Bài kiểm tra" title={initialQuiz ? 'Chỉnh sửa bài kiểm tra' : serverQuizId ? 'Hoàn thiện bản nháp' : 'Tạo bài kiểm tra'} />
 
       {ambiguousCreate && (
         <Notice tone="warning" role="alert" aria-live="assertive">
@@ -612,7 +610,7 @@ function TeacherQuizEditorForm({
             {chapterLessons.status === 'error' && <Button appearance="outline" onClick={chapterLessons.reload}>Thử lại</Button>}
           </div>}
           {fieldErrors.target && <p id="teacher-quiz-target-error" className="mt-2 mb-0 text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.target}</p>}
-          {courseCatalog.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-tertiary" role="status">Đang tải khóa học...</p>}
+          {courseCatalog.status === 'loading' && <Skeleton className="mt-2 h-4 w-48" role="status" aria-label="Đang tải khóa học" />}
           {courseCatalogHasError && (
             <div className="mt-2 flex flex-wrap items-center gap-2" role="alert">
               <p className="m-0 text-sm text-badge-error-text">{courseCatalogError}</p>
@@ -625,7 +623,7 @@ function TeacherQuizEditorForm({
           {activeCourseId && activeCourseDetail && chapterOptions.length === 0 && (
             <p className="mt-2 mb-0 text-sm text-text-tertiary">Khóa học này chưa có chương để gắn bài kiểm tra.</p>
           )}
-          {activeCourseId && courseDetail.status === 'loading' && <p className="mt-2 mb-0 text-sm text-text-tertiary" role="status">Đang tải chương...</p>}
+          {activeCourseId && courseDetail.status === 'loading' && <Skeleton className="mt-2 h-4 w-40" role="status" aria-label="Đang tải chương" />}
           {activeCourseId && courseDetailHasError && (
             <div className="mt-2 flex flex-wrap items-center gap-2" role="alert">
               <p className="m-0 text-sm text-badge-error-text">{courseDetailError}</p>

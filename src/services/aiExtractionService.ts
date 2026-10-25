@@ -5,6 +5,7 @@ import {
   isDefiniteTeacherQuestionWriteRejection,
   quizPath,
   requireData,
+  type CreateTeacherQuizRequest,
   type TeacherQuizImportResult,
   type TeacherQuizRecord,
 } from './teacherQuizService'
@@ -181,6 +182,47 @@ export async function uploadExamFile(quizId: string, file: File): Promise<Teache
   return requireData(`${quizPath(quizId)}/exam-file`, 'Không thể tải file đề lên.', {
     method: 'POST', body, timeoutMs: 120_000,
   })
+}
+
+export interface CreateWithFileResult {
+  quiz: TeacherQuizRecord
+  /** The AI job reading the PDF; null when it was only stored (reading off, or AI not configured). */
+  aiJob: ExtractionJob | null
+  warnings: string[]
+}
+
+/** Creates the draft and stores its PDF in one request, optionally handing it to the AI; a bad file leaves no draft behind. */
+export async function createTeacherQuizWithFile(
+  payload: CreateTeacherQuizRequest,
+  file: File,
+  options: ExtractExamOptions & { read: boolean },
+): Promise<CreateWithFileResult> {
+  assertQuizWriteAccess()
+  if (!/\.pdf$/i.test(file.name) || file.size === 0) throw new ApiError('Chọn file đề .pdf có nội dung.', 400)
+  const { fromPage, toPage } = options
+  if (fromPage !== undefined && toPage !== undefined && fromPage > toPage) {
+    throw new ApiError('Trang bắt đầu phải nhỏ hơn hoặc bằng trang kết thúc.', 400)
+  }
+  const body = new FormData()
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== undefined && value !== null && value !== '') body.append(key, String(value))
+  }
+  body.append('file', file)
+  body.append('read', String(options.read))
+  if (options.read) {
+    if (fromPage !== undefined) body.append('fromPage', String(fromPage))
+    if (toPage !== undefined) body.append('toPage', String(toPage))
+    if (options.hints?.trim()) body.append('hints', options.hints.trim())
+  }
+  const result = await requireData<{ quiz?: TeacherQuizRecord; aiJob?: unknown; warnings?: unknown }>(
+    `${quizPath()}/with-file`, 'Không thể tạo đề cùng file.', { method: 'POST', body, timeoutMs: 120_000 },
+  )
+  if (!result.quiz || typeof result.quiz.id !== 'string') throw new Error('Máy chủ trả về đề vừa tạo không đúng định dạng.')
+  return {
+    quiz: result.quiz,
+    aiJob: result.aiJob ? toJob(result.aiJob) : null,
+    warnings: Array.isArray(result.warnings) ? result.warnings.filter((warning): warning is string => typeof warning === 'string') : [],
+  }
 }
 
 /** Starts reading the uploaded paper in the background; poll {@link getExtractionJob} until it is terminal. */

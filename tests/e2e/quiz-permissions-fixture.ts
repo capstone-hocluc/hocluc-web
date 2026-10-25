@@ -203,3 +203,8 @@ export async function installQuizFixture(page: Page, role: UserRole) {
   })
   return state
 }
+
+/** The exam and placement editors are three steps; open one by its label before touching its fields. */
+export async function showEditorStep(page: Page, label: 'Thông tin và quy định' | 'Đề PDF' | 'Các phần và câu hỏi') {
+  await page.getByRole('list', { name: 'Các bước soạn đề' }).getByRole('button', { name: label }).click()
+}

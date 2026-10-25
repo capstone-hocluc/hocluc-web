@@ -3,6 +3,7 @@ import { cn } from '../../../lib/cn'
 import { ActivityCard, ActivityCardTitle } from './ActivityCard'
 import { getAnswerState } from './answerState'
 import type { ActivityAttempt, ActivityQuestion, AnswerState } from './types'
+import MathText from '../../ui/MathText'
 
 const stateLabel: Record<AnswerState, string> = {
   correct: 'Đúng',
@@ -70,7 +71,7 @@ export function QuestionCard({ question, selectedId, onChoose }: QuestionCardPro
               >
                 {option.id}
               </b>
-              <span className="min-w-0">{option.text}</span>
+              <span className="min-w-0"><MathText>{option.text}</MathText></span>
             </button>
           )
         })}
@@ -129,7 +130,7 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
               )}
             >
               <b className={cn(optionLetter, 'size-8 shrink-0 rounded-xl')}>{option.id}</b>
-              <span>{option.text}</span>
+              <span><MathText>{option.text}</MathText></span>
             </p>
           )
         })}
@@ -140,7 +141,7 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
             Đáp án của bạn:
           </span>
           <strong className="mt-0.5 block text-[15px] font-semibold text-text-heading">
-            {selectedOption ? `${selectedOption.id}. ${selectedOption.text}` : 'Chưa trả lời'}
+            {selectedOption ? <>{selectedOption.id}. <MathText>{selectedOption.text}</MathText></> : 'Chưa trả lời'}
           </strong>
         </p>
         <p>
@@ -148,13 +149,13 @@ export function ReviewQuestionCard({ question, attempt }: ReviewQuestionCardProp
             Đáp án đúng:
           </span>
           <strong className="mt-0.5 block text-[15px] font-semibold text-text-heading">
-            {correctOption.id}. {correctOption.text}
+            {correctOption.id}. <MathText>{correctOption.text}</MathText>
           </strong>
         </p>
       </div>
       <div className="rounded-xl bg-surface-brand p-3.5">
         <strong className="text-sm font-semibold text-text-heading">Giải thích</strong>
-        <p className="mt-1 text-[15px] leading-[1.5] text-text-body">{question.explanation}</p>
+        <p className="mt-1 text-[15px] leading-[1.5] text-text-body"><MathText>{question.explanation}</MathText></p>
       </div>
     </ActivityCard>
   )

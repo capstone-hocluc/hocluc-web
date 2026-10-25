@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { CheckCircle2, ClipboardList, Clock3, Eye, GraduationCap, ListChecks, MoreHorizontal } from '../console/icons'
+import { CheckCircle2, Clock3, Eye, GraduationCap, ListChecks, MoreHorizontal } from '../console/icons'
 import { IconAction, RowActions } from '../console/icon-action'
 import ListCard from '../console/list-card'
 import ScheduleResourceState from '../console/schedule/schedule-resource-state'
@@ -26,6 +26,7 @@ import {
 } from '../../services/teacherQuizService'
 import Page from './screen-page'
 import { text } from './screen-columns'
+import MathText from '../ui/MathText'
 
 // Màn hình dùng API giáo viên (/api/v1/teacher/...): Teacher, Staff, Manager, Admin đều gọi được.
 
@@ -132,10 +133,6 @@ export function QuestionReview({ readOnly = true }: { readOnly?: boolean }) {
   return (
     <Page
       title={readOnly ? 'Câu hỏi cần kiểm tra' : 'Duyệt câu hỏi'}
-      stats={[
-        { label: 'Câu hỏi chờ duyệt', value: rows.length, icon: Clock3, tone: 'warning' },
-        { label: 'Bài kiểm tra liên quan', value: new Set(rows.map((row) => row.quizId)).size, icon: ClipboardList },
-      ]}
     >
       {error && <Notice tone="danger">{error}</Notice>}
       <ScheduleResourceState status={status} errorMessage={errorMessage} onRetry={reload} empty={status === 'ready' && rows.length === 0} emptyMessage="Không có câu hỏi nào chờ duyệt.">
@@ -206,7 +203,7 @@ function AttemptReviewSheet({ row, onClose }: { row: AttemptRow | null; onClose:
                 <li key={question.questionId} className="rounded-xl border border-card-border p-3">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-medium text-text-primary">
-                      Câu {question.sequence}. {question.questionText}
+                      Câu {question.sequence}. <MathText>{question.questionText}</MathText>
                     </p>
                     <Status tone={!question.answered ? 'neutral' : question.correct ? 'success' : 'danger'}>
                       {!question.answered ? 'Bỏ trống' : question.correct ? 'Đúng' : 'Sai'}
@@ -223,13 +220,13 @@ function AttemptReviewSheet({ row, onClose }: { row: AttemptRow | null; onClose:
                             option.correct ? 'bg-badge-green-background text-badge-green-text' : picked ? 'bg-badge-error-background text-badge-error-text' : 'text-text-secondary'
                           }`}
                         >
-                          <span>{option.optionText}</span>
+                          <span><MathText>{option.optionText}</MathText></span>
                           <span className="shrink-0 text-xs">{picked ? 'Học viên chọn' : option.correct ? 'Đáp án đúng' : ''}</span>
                         </li>
                       )
                     })}
                   </ul>
-                  {question.explanation && <p className="mt-2 text-xs text-text-tertiary">Giải thích: {question.explanation}</p>}
+                  {question.explanation && <p className="mt-2 text-xs text-text-tertiary">Giải thích: <MathText>{question.explanation}</MathText></p>}
                 </li>
               ))}
             </ol>

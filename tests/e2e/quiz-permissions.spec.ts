@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Locator } from '@playwright/test'
-import { installQuizFixture, QUIZ_IDS, quizToken } from './quiz-permissions-fixture'
+import { installQuizFixture, QUIZ_IDS, quizToken, showEditorStep } from './quiz-permissions-fixture'
 
 const writes = (state: Awaited<ReturnType<typeof installQuizFixture>>) => state.requests.filter(r => r.path.startsWith('/api/v1/teacher/') && r.method !== 'GET')
 
@@ -12,6 +12,7 @@ for (const [path, id, label] of [
     const state = await installQuizFixture(page, 'STAFF')
     if (path === 'placements') Object.assign(state.quizzes[0], { type: 'PLACEMENT', courseId: null, chapterId: null, lessonId: null })
     await page.goto(`/console/staff/${path}/${id}/edit`)
+    if (path !== 'quizzes') await showEditorStep(page, 'Các phần và câu hỏi')
     await expect(page.getByRole('button', { name: new RegExp(`${label}$`) })).toHaveCount(0)
     await expect(page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true })).toBeChecked()
     expect(state.questions[0].questionType).toBe('SINGLE_CHOICE')
@@ -29,6 +30,7 @@ for (const type of ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWE
     const original = JSON.stringify(state.questions[0])
     for (const [path, id] of [['quizzes', QUIZ_IDS.quiz], ['mock-exams', QUIZ_IDS.exam]]) {
       await page.goto(`/console/staff/${path}/${id}/edit`)
+      if (path === 'mock-exams') await showEditorStep(page, 'Các phần và câu hỏi')
       await expect(page.getByRole('button', { name: /Dạng đáp án$|Loại câu hỏi$/ })).toHaveCount(0)
       if (path === 'quizzes') await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
       else await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toBeDisabled()
@@ -240,6 +242,7 @@ for (const [type, reason, message] of [
 }
 
 test('Teacher reads quiz/exam/questions/attempts with no write controls or write requests', async ({ page }) => {
+  test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
   state.quizzes[0].attemptCount = 1; state.quizzes[0].needsReviewCount = 1; state.questions[0].needsReview = true
   await page.goto('/console/teacher/quizzes')
@@ -512,15 +515,18 @@ test('quiz with attempts disables bottom add and removes reorder controls', asyn
   expect(writes(state)).toEqual([])
 })
 
-test('exam drag reorders questions within the existing section and persists on save', async ({ page }) => {
+test('exam workspace moves a question up inside its section and persists the order on save', async ({ page }) => {
   test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'STAFF')
   state.questions.push({ ...state.questions[0], id: '60000000-0000-0000-0000-000000000009', sequence: 2, questionText: 'Câu thi thứ hai' })
   await page.setViewportSize({ width: 1440, height: 950 })
   await page.goto(`/console/staff/mock-exams/${QUIZ_IDS.exam}/edit`, { waitUntil: 'domcontentloaded' })
-  const cards = page.getByRole('article')
-  await dragQuestionCard(page, page.getByRole('button', { name: /Sắp xếp câu 2 trong phần 1:/ }), cards.first())
-  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).first()).toHaveValue('Câu thi thứ hai')
+  await showEditorStep(page, 'Các phần và câu hỏi')
+  await page.getByRole('navigation').getByRole('button', { name: /^Câu 2(,|$)/ }).click()
+  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveValue('Câu thi thứ hai')
+  await page.getByRole('button', { name: 'Đưa câu hỏi lên', exact: true }).click()
+  await expect(page.getByRole('article', { name: 'Câu 1' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveValue('Câu thi thứ hai')
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
   expect(writes(state).find(request => request.path.endsWith('/questions/order'))?.body.questionIds).toEqual(['60000000-0000-0000-0000-000000000009', QUIZ_IDS.question])

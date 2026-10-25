@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { installQuizFixture, QUIZ_IDS } from './quiz-permissions-fixture'
+import { installQuizFixture, QUIZ_IDS, showEditorStep } from './quiz-permissions-fixture'
 
 const editUrl = `/console/manager/mock-exams/${QUIZ_IDS.exam}/edit`
 const api = (path: string) => `**/api/v1/teacher/quizzes/*/${path}`
@@ -33,11 +33,15 @@ async function uploadAndStart(page: Page) {
   await page.getByRole('button', { name: 'Đọc đề', exact: true }).click()
 }
 
+const steps = (page: Page) => page.getByRole('list', { name: 'Các bước đọc đề' })
+const editorSteps = (page: Page) => page.getByRole('list', { name: 'Các bước soạn đề' })
+const openPdfStep = (page: Page) => showEditorStep(page, 'Đề PDF')
+
 type Fixture = Awaited<ReturnType<typeof installQuizFixture>>
 const stubUpload = (page: Page, state: Fixture) =>
   page.route(api('exam-file'), route => route.fulfill({ json: { success: true, data: { ...state.quizzes[0], examFile } } }))
 
-test('upload, reading and apply: tabs follow the job and apply replaces after confirmation', async ({ page }) => {
+test('upload, reading and apply: steps follow the job and apply replaces after confirmation', async ({ page }) => {
   const state = await installQuizFixture(page, 'MANAGER')
   let applyBody: unknown = null
   let polls = 0
@@ -49,14 +53,15 @@ test('upload, reading and apply: tabs follow the job and apply replaces after co
     await route.fulfill({ json: { success: true, data: { sectionsAdded: 1, groupsAdded: 0, questionsAdded: 2, needsReview: 1, missingAnswers: 1, answerKeySource: 'marked', warnings: ['Thiếu câu 3.'], totalQuestions: 2 } } })
   })
   await page.goto(editUrl)
-  await expect(page.getByRole('tab', { name: /^2 Tuỳ chọn|Tuỳ chọn/ })).toBeDisabled()
-  await expect(page.getByRole('tab', { name: /Duyệt/ })).toBeDisabled()
+  await openPdfStep(page)
+  await expect(steps(page).getByRole('button', { name: /Đọc và duyệt/ })).toBeDisabled()
+  await expect(steps(page).getByRole('button', { name: /Áp dụng/ })).toBeDisabled()
 
   await uploadAndStart(page)
-  await expect(page.getByRole('tab', { name: /AI đọc/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(steps(page).getByRole('button', { name: /Đọc và duyệt/ })).toHaveAttribute('aria-current', 'step')
   await expect(page.getByRole('status').filter({ hasText: 'Đang đọc 3/24 trang' })).toBeVisible()
 
-  await expect(page.getByRole('tab', { name: /Duyệt/ })).toBeEnabled({ timeout: 15_000 })
+  await expect(steps(page).getByRole('button', { name: /Áp dụng/ })).toBeEnabled({ timeout: 15_000 })
   expect(polls).toBeGreaterThan(0)
   await expect(page.getByText('Thiếu 1 câu theo số in trên đề:')).toBeVisible()
   await expect(page.getByText('Hình AI ước lượng, cần kiểm tra')).toBeVisible()
@@ -82,8 +87,9 @@ test('cancelling the apply confirmation sends nothing', async ({ page }) => {
   await page.route(api('ai/extract'), route => route.fulfill({ json: { success: true, data: doneJob } }))
   await page.route(api('ai/jobs/job-1/apply'), route => { applies++; return route.fulfill({ json: { success: true, data: {} } }) })
   await page.goto(editUrl)
+  await openPdfStep(page)
   await uploadAndStart(page)
-  await page.getByRole('tab', { name: /Áp dụng/ }).click()
+  await steps(page).getByRole('button', { name: /Áp dụng/ }).click()
   await page.getByRole('button', { name: 'Áp dụng vào đề', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Quay lại' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -98,6 +104,7 @@ test('a failed job shows the reason and can be read again', async ({ page }) => 
     return route.fulfill({ json: { success: true, data: { ...baseJob, id: `job-${starts}`, status: 'FAILED', error: 'Nhà cung cấp AI trả lỗi.' } } })
   })
   await page.goto(editUrl)
+  await openPdfStep(page)
   await uploadAndStart(page)
   await expect(page.getByRole('alert').filter({ hasText: 'Nhà cung cấp AI trả lỗi.' })).toBeVisible()
   await page.getByRole('button', { name: 'Đọc lại', exact: true }).click()
@@ -110,8 +117,36 @@ test('AI switched off on the server (503) is explained and blocks reading', asyn
     status: 503, json: { success: false, code: 'AI_NOT_CONFIGURED', message: 'AI is not configured on this server (AI_PROVIDER + credentials).' },
   }))
   await page.goto(editUrl)
+  await openPdfStep(page)
   await uploadAndStart(page)
   await expect(page.getByText('AI chưa được bật trên máy chủ này', { exact: false }).first()).toBeVisible()
-  await page.getByRole('tab', { name: /Tuỳ chọn/ }).click()
   await expect(page.getByRole('button', { name: 'Đọc đề', exact: true })).toBeDisabled()
+})
+
+test('a PDF chosen while creating is stored with the draft, then the editor opens on it', async ({ page }) => {
+  const state = await installQuizFixture(page, 'MANAGER')
+  let body = ''
+  await page.route('**/api/v1/teacher/quizzes/with-file', route => {
+    body = route.request().postDataBuffer()?.toString('latin1') ?? ''
+    return route.fulfill({ json: { success: true, data: { quiz: { ...state.quizzes.find(q => q.id === QUIZ_IDS.exam), examFile }, aiJob: { ...baseJob, status: 'RUNNING', progress: 'Đang đọc 1/24 trang' }, imported: null, warnings: [] } } })
+  })
+  await page.goto('/console/manager/mock-exams/new')
+  await page.getByLabel('Tên đề thi thử', { exact: true }).fill('Đề có PDF')
+  await page.locator('main').getByRole('button', { name: /Khóa học chính$/ }).click()
+  await page.getByRole('option').first().click()
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
+  await expect(editorSteps(page).getByRole('button', { name: /Đề PDF/ })).toHaveAttribute('aria-current', 'step')
+  await page.getByLabel('Đề thi dạng PDF').setInputFiles(pdf)
+  await page.getByLabel('Đến trang').fill('5')
+  await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Lưu và xuất bản' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Lưu bản nháp', exact: true }).click()
+  await expect(page.getByText('Đã lưu đề thi dưới dạng bản nháp cùng file PDF.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Đưa đề PDF thành câu hỏi' })).toBeVisible()
+  expect(body).toContain('filename="de-thi.pdf"')
+  expect(body).toContain('name="title"')
+  expect(body).toMatch(/name="read"\r\n\r\ntrue/)
+  expect(body).toMatch(/name="toPage"\r\n\r\n5/)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
 })

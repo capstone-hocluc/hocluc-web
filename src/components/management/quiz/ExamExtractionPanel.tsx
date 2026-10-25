@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useExtractionJob } from '../../../hooks/useExtractionJob'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { ApiError } from '../../../lib/api'
@@ -18,20 +18,19 @@ import {
   type TeacherQuizImportResult,
 } from '../../../services/teacherQuizService'
 import Button from '../../console/button'
-import Card, { CardEyebrow, CardTitle } from '../../console/card'
+import Card, { CardTitle } from '../../console/card'
 import ConfirmDialog from '../../console/confirm-dialog'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import Notice from '../../console/notice'
 import Status from '../../console/status'
-import ExtractionPreview from './ExtractionPreview'
+import ExtractionPreview, { ExtractionPreviewSkeleton } from './ExtractionPreview'
 import { previewCounts } from './extraction-preview-counts'
 
 type TabState = 'done' | 'current' | 'failed' | 'locked'
 
-const STAGES = ['Tải file', 'Tuỳ chọn', 'AI đọc', 'Duyệt', 'Áp dụng'] as const
-const READING = 2
-const REVIEW = 3
-const APPLY = 4
+const STAGES = ['Đề và tuỳ chọn', 'Đọc và duyệt', 'Áp dụng'] as const
+const REVIEW = 1
+const APPLY = 2
 
 interface Props {
   quizId: string | null
@@ -93,13 +92,11 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
   const writeBlocked = busy || Boolean(blockedReason) || pending !== null
 
   const states: TabState[] = [
-    hasFile ? 'done' : 'current',
-    !hasFile ? 'locked' : job ? 'done' : 'current',
-    !job ? 'locked' : running ? 'current' : job.status === 'FAILED' ? 'failed' : 'done',
-    job && (job.status === 'DONE' || job.status === 'APPLIED') ? (job.status === 'DONE' ? 'current' : 'done') : 'locked',
+    job ? 'done' : 'current',
+    !job ? 'locked' : running ? 'current' : job.status === 'FAILED' ? 'failed' : job.status === 'DONE' ? 'current' : 'done',
     job?.status === 'DONE' ? 'current' : job?.status === 'APPLIED' ? 'done' : 'locked',
   ]
-  const defaultStage = !hasFile ? 0 : !job ? 1 : running || job.status === 'FAILED' ? READING : job.status === 'DONE' ? REVIEW : APPLY
+  const defaultStage = !job ? 0 : job.status === 'APPLIED' ? APPLY : REVIEW
   const stageKey = `${hasFile}:${job?.id ?? ''}:${job?.status ?? ''}`
   const stage = selected?.at === stageKey && states[selected.index] !== 'locked' ? selected.index : defaultStage
   const goTo = (index: number) => { if (states[index] !== 'locked') setSelected({ at: stageKey, index }) }
@@ -107,14 +104,6 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
   const editorIsStale = job?.status === 'APPLIED' && !(latestJob?.id === job.id && latestJob.status === 'APPLIED')
   const counts = job?.result ? previewCounts(job.result) : null
   const missing = job?.result?.missingQuestions.length ?? 0
-
-  const metaLines = [
-    hasFile ? examFile.fileName : 'Chưa có file',
-    job ? (fromPage || toPage ? `Trang ${fromPage || 1}–${toPage || 'cuối'}` : 'Cả file') : hasFile ? 'Chọn phạm vi' : '—',
-    !job ? '—' : running ? (job.progress || 'Đang đọc...') : job.status === 'FAILED' ? 'Bị lỗi' : 'Đã đọc xong',
-    job?.questionCount != null && stageHasResult(job) ? `${job.questionCount} câu · ${job.needsReviewCount ?? 0} cần duyệt` : '—',
-    job?.status === 'APPLIED' ? 'Đã đưa vào đề' : job?.status === 'DONE' ? 'Chờ áp dụng' : '—',
-  ]
 
   const run = async (kind: 'upload' | 'start' | 'apply', action: () => Promise<void>) => {
     if (inFlight.current) return
@@ -161,21 +150,8 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
     else void apply()
   }
 
-  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-    if (!step) return
-    event.preventDefault()
-    for (let next = index + step; next >= 0 && next < STAGES.length; next += step) {
-      if (states[next] !== 'locked') {
-        goTo(next)
-        document.getElementById(`extract-tab-${next}`)?.focus()
-        return
-      }
-    }
-  }
-
-  const panels: ReactNode[] = [
-    <div key="upload" className="space-y-4">
+  const fileSection = (
+    <div className="flex flex-col gap-4">
       {hasFile && !picking ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-card-border p-4">
           <div className="min-w-0">
@@ -213,9 +189,11 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
           {hasFile && <p className="m-0 text-xs text-text-tertiary">Đổi file không xoá câu hỏi đã có trong đề. Bạn sẽ chọn lại cách áp dụng ở bước cuối.</p>}
         </>
       )}
-    </div>,
+    </div>
+  )
 
-    <div key="options" className="space-y-4">
+  const optionsSection = (
+    <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
           Từ trang
@@ -240,9 +218,16 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
       <Button className="min-h-11" disabled={writeBlocked || running || aiOff || !hasFile} onClick={() => void start()}>
         {pending === 'start' ? 'Đang bắt đầu...' : job ? 'Đọc lại đề' : 'Đọc đề'}
       </Button>
+    </div>
+  )
+
+  const panels: ReactNode[] = [
+    <div key="file" className="flex flex-col gap-4">
+      {fileSection}
+      {hasFile && !picking && optionsSection}
     </div>,
 
-    <div key="read" className="space-y-4">
+    <div key="review" className="flex flex-col gap-4">
       {job && (
         <>
           <div className="flex flex-wrap items-center gap-2">
@@ -266,22 +251,20 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
             <Notice tone="danger" role="alert"><div className="min-w-0 break-words">{job.error || 'AI không đọc được đề này.'}</div></Notice>
           )}
           {(job.status === 'DONE' || job.status === 'APPLIED') && job.progress && <p className="m-0 text-sm text-text-tertiary">{job.progress}</p>}
-          <div className="flex flex-wrap gap-2">
-            {job.status === 'FAILED' && <Button className="min-h-11" disabled={writeBlocked || aiOff} onClick={() => void start()}>{pending === 'start' ? 'Đang bắt đầu...' : 'Đọc lại'}</Button>}
-            {job.status === 'DONE' && <Button className="min-h-11" onClick={() => goTo(REVIEW)}>Duyệt kết quả</Button>}
-          </div>
+          {job.status === 'FAILED' && (
+            <div className="flex flex-wrap gap-2">
+              <Button className="min-h-11" disabled={writeBlocked || aiOff} onClick={() => void start()}>{pending === 'start' ? 'Đang bắt đầu...' : 'Đọc lại'}</Button>
+            </div>
+          )}
         </>
       )}
-    </div>,
 
-    <div key="review" className="space-y-4">
       {job?.result ? <ExtractionPreview exam={job.result} />
-        : tracker.error ? null
-          : <p role="status" className="m-0 text-sm text-text-tertiary">Đang tải kết quả...</p>}
+        : job && job.status !== 'FAILED' && !tracker.error ? <ExtractionPreviewSkeleton /> : null}
       {job?.status === 'DONE' && job.result && <Button className="min-h-11" onClick={() => goTo(APPLY)}>Tiếp tục: áp dụng</Button>}
     </div>,
 
-    <div key="apply" className="space-y-4">
+    <div key="apply" className="flex flex-col gap-4">
       {job?.status === 'DONE' && (
         <>
           <fieldset className="m-0 space-y-2 border-0 p-0" disabled={writeBlocked}>
@@ -330,37 +313,35 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
   return (
     <Card as="section" padding="lg" aria-labelledby="exam-extract-title">
       <div className="mb-4">
-        <CardEyebrow>ĐỌC ĐỀ BẰNG AI</CardEyebrow>
         <CardTitle id="exam-extract-title" className="mb-0 text-base">Đưa đề PDF thành câu hỏi</CardTitle>
       </div>
       {blockedReason && <p className="mt-0 mb-4 text-xs text-text-tertiary">{blockedReason}</p>}
-      <div role="tablist" aria-label="Các bước đọc đề" className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <ol aria-label="Các bước đọc đề" className="m-0 mb-4 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-sm">
         {STAGES.map((label, index) => {
           const state = states[index]
           const active = stage === index
           return (
-            <button key={label} id={`extract-tab-${index}`} type="button" role="tab" aria-selected={active} aria-controls={`extract-panel-${index}`}
-              aria-disabled={state === 'locked'} tabIndex={active ? 0 : -1} disabled={state === 'locked'}
-              onClick={() => goTo(index)} onKeyDown={(event) => onTabKeyDown(event, index)}
-              className={cn(
-                'flex min-h-14 min-w-32 flex-1 flex-col gap-0.5 rounded-xl border-0 border-b-4 bg-background-gray-secondary px-3 py-2 text-left',
-                state === 'done' && 'border-b-badge-success-text',
-                state === 'current' && 'border-b-primary',
-                state === 'failed' && 'border-b-badge-danger-text',
-                state === 'locked' && 'cursor-not-allowed border-b-transparent opacity-60',
-                active && 'ring-2 ring-primary/40',
-              )}>
-              <span className="flex items-center gap-1.5 text-sm font-medium text-text-primary">
-                <span aria-hidden="true">{state === 'done' ? '✓' : state === 'failed' ? '!' : index + 1}</span>
+            <li key={label} className="flex items-center gap-2">
+              {index > 0 && <span aria-hidden="true" className="text-text-tertiary">›</span>}
+              <button type="button" aria-current={active ? 'step' : undefined} disabled={state === 'locked'} onClick={() => goTo(index)}
+                className={cn(
+                  'inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent px-2 py-1 text-left text-sm',
+                  active ? 'bg-background-gray-secondary font-semibold text-text-primary' : 'text-text-secondary hover:bg-background-gray-secondary',
+                  state === 'failed' && 'text-badge-danger-text',
+                  state === 'locked' && 'cursor-not-allowed opacity-50 hover:bg-transparent',
+                )}>
+                <span aria-hidden="true" className={cn('grid size-5 place-items-center rounded-full text-xs',
+                  state === 'done' ? 'bg-badge-success-bg text-badge-success-text' : state === 'failed' ? 'bg-badge-danger-bg text-badge-danger-text' : 'bg-background-gray-secondary text-text-tertiary')}>
+                  {state === 'done' ? '✓' : state === 'failed' ? '!' : index + 1}
+                </span>
                 {label}
                 <span className="sr-only">{state === 'done' ? ' (đã xong)' : state === 'failed' ? ' (lỗi)' : state === 'locked' ? ' (chưa tới)' : ''}</span>
-              </span>
-              <span className="truncate text-xs text-text-tertiary">{metaLines[index]}</span>
-            </button>
+              </button>
+            </li>
           )
         })}
-      </div>
-      <div id={`extract-panel-${stage}`} role="tabpanel" aria-labelledby={`extract-tab-${stage}`} tabIndex={0} className="space-y-4">
+      </ol>
+      <div className="flex flex-col gap-4">
         {panels[stage]}
         {actionError && <Notice tone="danger" role="alert">{actionError}</Notice>}
         {uncertainApply && <Button appearance="outline" className="min-h-11" onClick={onReload}>Tải lại bài để kiểm tra</Button>}
@@ -381,8 +362,4 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
       )}
     </Card>
   )
-}
-
-function stageHasResult(job: ExtractionJob) {
-  return job.status === 'DONE' || job.status === 'APPLIED'
 }

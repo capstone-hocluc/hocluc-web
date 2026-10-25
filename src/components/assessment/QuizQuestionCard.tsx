@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn'
 import Card from '../ui/Card'
 import StatusBadge from '../ui/StatusBadge'
 import { RadioGroup, RadioGroupItem } from '../ui/RadioGroup'
+import MathText from '../ui/MathText'
 
 interface QuizQuestionCardProps {
   question: QuizQuestion
@@ -61,7 +62,7 @@ function QuizQuestionCard({
       )}
 
       <p className="mb-6 text-lg leading-[1.6] font-semibold text-text-heading max-[640px]:text-[17px]">
-        {question.questionText}
+        <MathText>{question.questionText}</MathText>
       </p>
 
       {question.questionType === 'SINGLE_CHOICE' ? (
@@ -79,7 +80,7 @@ function QuizQuestionCard({
               >
                 {String.fromCharCode(65 + optionIndex)}
               </span>
-              <span className="min-w-0 flex-1">{option.optionText}</span>
+              <span className="min-w-0 flex-1"><MathText>{option.optionText}</MathText></span>
             </RadioGroupItem>
           ))}
         </RadioGroup>

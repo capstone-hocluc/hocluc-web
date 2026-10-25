@@ -4,6 +4,7 @@ import { isQuizPage, quizMenuPage } from '../../../lib/console-routes'
 import { findNavItem } from '../../../lib/console-nav'
 import type { UserRole } from '../../../services/userService'
 import { ForbiddenPage } from '../../console/access-states'
+import { useConsoleFocused } from '../../console/console-focus'
 import Notice from '../../console/notice'
 import { QuestionReview, TeacherAttempts } from '../quiz-review-screens'
 import QuizScreen from './QuizScreen'
@@ -21,6 +22,8 @@ function QuizPage({ role, page, readOnly, onNavigate }: {
   role: UserRole; page: string; readOnly: boolean; onNavigate: (page: string) => void
 }) {
   const [notice, setNotice] = useState('')
+  // An editor that takes the whole window leaves no room for the last action's notice above it.
+  const workspaceOpen = useConsoleFocused()
   const menu = quizMenuPage(page)
   const creating = page === 'quizzes-new' || page === 'mock-exams-new' || page === 'placements-new' || page.startsWith('quiz-new-')
   const editing = page.match(/^(?:quizzes|mock-exams|placements)-edit-([0-9a-f-]+)$/i)?.[1] ?? null
@@ -37,7 +40,7 @@ function QuizPage({ role, page, readOnly, onNavigate }: {
   </TabsList>
   return <Tabs value={menu} onValueChange={onNavigate} activationMode="manual" className="min-w-0">
     <TabsContent value={menu} className="flex min-w-0 flex-col gap-4">
-      {notice && <Notice role="status">{notice}</Notice>}
+      {notice && !workspaceOpen && <Notice role="status">{notice}</Notice>}
       {menu === 'mock-exams' || menu === 'placements'
         ? <MockExamScreen navigation={navigation} assessmentType={menu === 'placements' ? 'PLACEMENT' : 'EXAM'} readOnly={readOnly} startCreating={creating} initialEditorId={editing}
             onBack={() => onNavigate('dashboard')} onAction={setNotice} />

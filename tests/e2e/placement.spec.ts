@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { installQuizFixture, QUIZ_IDS, quizToken } from './quiz-permissions-fixture'
+import { installQuizFixture, QUIZ_IDS, quizToken, showEditorStep } from './quiz-permissions-fixture'
 import type { TeacherQuizRecord } from '../../src/services/teacherQuizService'
 
 const createdId = '50000000-0000-0000-0000-000000000004'
@@ -81,7 +81,7 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     await page.getByRole('option', { name: 'Bản nháp', exact: true }).click()
     await page.getByRole('button', { name: 'Tạo đánh giá đầu vào', exact: true }).click()
     await expect(page.getByRole('tablist')).toHaveCount(0)
-    await page.getByRole('button', { name: 'Hủy', exact: true }).click()
+    await page.getByRole('button', { name: 'Quay lại đánh giá đầu vào', exact: true }).click()
     await expect(page.getByRole('searchbox', { name: 'Tìm bài đánh giá đầu vào...' })).toHaveValue('đầu vào QA')
     await expect(page.getByRole('button', { name: /Lọc trạng thái$/ })).toContainText('Bản nháp')
     await page.reload()
@@ -129,6 +129,7 @@ async function createPlacement(page: Page, area: string) {
   await expect(page.getByRole('button', { name: /Khóa học chính$/ })).toHaveCount(0)
   await page.getByLabel('Tên bài đánh giá đầu vào', { exact: true }).fill('Đầu vào QA')
   await page.getByLabel('Mô tả', { exact: true }).fill('Đánh giá năng lực trước khi học')
+  await showEditorStep(page, 'Các phần và câu hỏi')
   await page.getByRole('button', { name: 'Thêm câu hỏi', exact: true }).click()
   await page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).fill('2 + 2 bằng bao nhiêu?')
   for (const [index, letter] of ['A','B','C','D'].entries()) {
@@ -239,8 +240,10 @@ test('existing placement with attempts only saves mutable metadata and keeps que
   state.quizzes.push({ ...seedPlacement(state.quizzes[0], createdId, 'Bài đã có lượt', '2026-10-20T00:00:00Z'), status: 'DRAFT', attemptCount: 1 })
   await page.goto(`/console/staff/placements/${createdId}/edit`)
   await expect(page.getByLabel('Thời gian làm bài (phút)', { exact: true })).toBeDisabled()
+  await showEditorStep(page, 'Các phần và câu hỏi')
   await expect(page.getByRole('button', { name: 'Thêm câu hỏi', exact: true })).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toBeDisabled()
+  await showEditorStep(page, 'Thông tin và quy định')
   await page.getByLabel('Tên bài đánh giá đầu vào', { exact: true }).fill('Đổi tên')
   await page.getByLabel('Mô tả', { exact: true }).fill('Mô tả mới')
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
@@ -263,7 +266,11 @@ test('placement editor fits mobile and hides the fixed question type', async ({ 
   const state = await installQuizFixture(page, 'STAFF')
   await page.setViewportSize({ width: 390, height: 950 })
   await page.goto('/console/staff/placements/new')
+  await page.getByLabel('Tên bài đánh giá đầu vào', { exact: true }).fill('Đầu vào di động')
+  await showEditorStep(page, 'Các phần và câu hỏi')
+  await page.getByRole('button', { name: 'Danh sách câu', exact: true }).click()
   await page.getByRole('button', { name: 'Thêm câu hỏi', exact: true }).click()
+  await expect(page.getByRole('article', { name: 'Câu 1' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Loại câu hỏi$/ })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('placement-mobile.png'), fullPage: true })
