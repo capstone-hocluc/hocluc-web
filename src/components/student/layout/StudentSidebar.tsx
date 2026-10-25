@@ -18,7 +18,7 @@ function StudentSidebar({
   onCloseMobile,
 }: StudentSidebarProps) {
   const navigation = (mobile: boolean) => (
-    <nav aria-label="Điều hướng học sinh" className="flex w-full flex-col gap-6 overflow-y-auto">
+    <nav aria-label="Điều hướng học sinh" className="flex w-full flex-col gap-6 app-scroll overflow-y-auto">
       {studentNavGroups.map((group, index) => (
         <div
           key={group.label}
@@ -84,7 +84,7 @@ function StudentSidebar({
         id="student-navigation"
         data-collapsed={collapsed}
         className={cn(
-          'group/sidebar sticky top-[72px] col-start-1 row-start-2 flex h-[calc(100dvh-72px)] flex-col border-r border-line-shell bg-surface py-6 max-[760px]:hidden',
+          'group/sidebar sticky top-[72px] col-start-1 row-start-2 flex h-[calc(100dvh-72px)] flex-col bg-surface py-6 max-[760px]:hidden',
           collapsed ? 'items-center px-3' : 'px-4',
           'max-[1180px]:items-center max-[1180px]:px-3'
         )}

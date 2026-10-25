@@ -123,7 +123,7 @@ export default function StudentOnboarding({ onClose, onComplete, restoreFocus }:
             </div>
             <Dialog.Description id="learning-profile-description" className="mt-2 text-sm text-text-body">Mục tiêu và môn học giúp cá nhân hóa lộ trình; bạn có thể cập nhật sau.</Dialog.Description>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 max-[760px]:px-4" aria-busy={saving}>
+          <div className="min-h-0 flex-1 app-scroll overflow-y-auto px-6 py-5 max-[760px]:px-4" aria-busy={saving}>
             {step === 1 ? (
               <div className="flex flex-col gap-5">
                 <div className="rounded-xl border border-line-brand bg-surface-brand p-4"><p className="text-sm text-text-body">Kỳ thi</p><strong>ĐGNL ĐHQG TP.HCM</strong><p className="text-xs text-text-muted">VNUHCM_DGNL</p></div>

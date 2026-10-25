@@ -62,7 +62,7 @@ export function TeacherAiPanel({
         </Button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-[9px] overflow-y-auto bg-lock-soft px-[18px] py-[22px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-[9px] app-scroll overflow-y-auto bg-lock-soft px-[18px] py-[22px]">
         {messages.map((message) => (
           <p
             key={message.id}

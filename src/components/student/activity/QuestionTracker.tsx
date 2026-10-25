@@ -62,7 +62,7 @@ function QuestionTracker({
           </p>
         ))}
       </div>
-      <div className="grid max-h-[min(420px,52vh)] grid-cols-6 gap-2 overflow-y-auto p-0.5">
+      <div className="grid max-h-[min(420px,52vh)] grid-cols-6 gap-2 app-scroll overflow-y-auto p-0.5">
         {numbers.map((item) => (
           <button
             key={item.number}

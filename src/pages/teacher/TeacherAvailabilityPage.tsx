@@ -10,6 +10,7 @@ import {
 import type { AvailabilityExceptionResponse, AvailabilitySlot, DayOfWeek } from '../../types/scheduling'
 import { getErrorMessage } from '../../lib/errors'
 import { localDateLabel } from '../../lib/scheduling'
+import { Checkbox } from '../../components/tailgrids/core/checkbox'
 import Button from '../../components/console/button'
 import { fieldControlClass } from '../../components/console/form-field'
 import Card from '../../components/console/card'
@@ -191,10 +192,9 @@ export default function TeacherAvailabilityPage() {
             <input name="reason" autoComplete="off" disabled={busy} className={fieldClass + ' mt-1 w-full'} />
           </label>
           <div className="flex flex-col justify-end gap-2">
-            <label className="flex items-center gap-2 text-sm text-text-tertiary">
-            <input name="isAvailable" autoComplete="off" type="checkbox" disabled={busy} className="size-5 accent-primary" />
+            <Checkbox name="isAvailable" isDisabled={busy} className="text-sm text-text-tertiary">
               Tôi rảnh thêm giờ này
-            </label>
+            </Checkbox>
             <Button type="submit" disabled={busy || availabilityDirty || resource.status !== 'ready'}><CalendarPlus size={15} />Thêm ngoại lệ</Button>
           </div>
         </form>

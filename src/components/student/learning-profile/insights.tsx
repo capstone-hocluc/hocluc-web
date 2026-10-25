@@ -3,7 +3,6 @@ import { CheckCircle2, Maximize2, Target } from '../../console/icons'
 import { cva } from 'class-variance-authority'
 import { cn } from '../../../lib/cn'
 import { ProfileCard } from './primitives'
-import { thinScrollbar } from './styles'
 
 interface InsightListProps {
   tone: 'strength' | 'improvement'
@@ -111,8 +110,7 @@ export function InsightCard({ tone, size, title, onDetail, children }: InsightCa
       <div
         className={cn(
           'min-h-0 flex-1 pr-1.5',
-          thinScrollbar,
-          large && 'max-h-[116px] overflow-y-auto'
+          large && 'max-h-[116px] app-scroll overflow-y-auto'
         )}
       >
         {children}

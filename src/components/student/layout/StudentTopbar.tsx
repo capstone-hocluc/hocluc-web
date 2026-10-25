@@ -52,11 +52,11 @@ function StudentTopbar({
   onNotify,
 }: StudentTopbarProps) {
   return (
-    <header className="student-topbar sticky top-0 z-50 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-4 border-b border-line-shell bg-surface px-6 py-3 max-[760px]:gap-2 max-[760px]:px-4 max-[560px]:flex-wrap">
+    <header className="student-topbar sticky top-0 z-50 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-4 bg-surface px-6 py-3 max-[760px]:gap-2 max-[760px]:px-4 max-[560px]:flex-wrap">
       <div className="flex min-w-0 flex-none items-center gap-3 max-[760px]:flex-[1_0_auto]">
         <button
           type="button"
-          className={cn(iconButton, 'hidden max-[760px]:grid')}
+          className={cn(iconButton, 'hidden border-transparent hover:border-transparent max-[760px]:grid')}
           aria-label="Mở menu học tập"
           aria-expanded={mobileNavigationOpen}
           onClick={onOpenNavigation}
@@ -65,7 +65,7 @@ function StudentTopbar({
         </button>
         <button
           type="button"
-          className={cn(iconButton, 'max-[1180px]:hidden')}
+          className={cn(iconButton, 'border-transparent hover:border-transparent max-[1180px]:hidden')}
           aria-label={sidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
           aria-expanded={!sidebarCollapsed}
           aria-controls="student-navigation"

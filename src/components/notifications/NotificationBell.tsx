@@ -59,7 +59,7 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
         Chưa tải được số chưa đọc. <button type="button" className="font-semibold text-primary-text underline" onClick={() => void feed.refreshCount()}>Thử lại số chưa đọc</button>
       </div>}
       {feed.mutationError && <Notice tone="danger" role="alert" className="m-3 text-xs font-normal">{feed.mutationError}</Notice>}
-      <div className="max-h-[min(420px,55vh)] overflow-y-auto overscroll-contain" aria-busy={loading}>
+      <div className="max-h-[min(420px,55vh)] app-scroll overflow-y-auto overscroll-contain" aria-busy={loading}>
         {loading ? <div role="status" aria-label="Đang tải thông báo" className="space-y-3 p-4">
           {[0, 1, 2].map(item => <Skeleton key={item} className="h-16 w-full rounded-xl" />)}
         </div> : feed.status === 'error' ? <div className="space-y-3 p-5 text-center">
@@ -113,7 +113,7 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
       }}>
       {detail && <>
         <div role="region" aria-label="Nội dung thông báo" tabIndex={0}
-          className="min-h-0 overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-4 focus-visible:outline-2 focus-visible:outline-focus-ring">
+          className="min-h-0 app-scroll overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-4 focus-visible:outline-2 focus-visible:outline-focus-ring">
           <h3 className="mb-3 text-base font-semibold leading-6 text-text-heading [overflow-wrap:anywhere]">{detail.title}</h3>
           <p className="text-sm leading-7 whitespace-pre-wrap text-text-body [overflow-wrap:anywhere]">{detail.message || 'Thông báo này không có nội dung bổ sung.'}</p>
         </div>

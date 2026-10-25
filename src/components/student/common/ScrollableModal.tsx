@@ -39,7 +39,7 @@ function ScrollableModal({
                 <X size={18} />
               </Dialog.Close>
             </div>
-            <div className="min-h-0 overflow-y-auto px-5 pt-[18px] pb-5 max-[760px]:px-4">
+            <div className="min-h-0 app-scroll overflow-y-auto px-5 pt-[18px] pb-5 max-[760px]:px-4">
               {children}
             </div>
           </Dialog.Content>

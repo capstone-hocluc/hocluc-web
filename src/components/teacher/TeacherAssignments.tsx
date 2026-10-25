@@ -2,21 +2,18 @@ import { MenuBento1 as DragHandle } from '@tailgrids/icons'
 import { useState } from 'react'
 import {
   ArrowLeft,
-  BookOpen,
   CalendarDays,
-  ClipboardList,
   Pencil,
   Plus,
   Send,
   Trash2,
-  Users,
 } from '../console/icons'
+import DateTimeField from '../console/date-time-field'
 import { fieldControlClass } from '../console/form-field'
 import DropdownField from '../console/dropdown-field'
 import Button from '../console/button'
 import Panel from '../console/panel'
 import Status from '../console/status'
-import StatCard from '../ui/StatCard'
 import TeacherPageHeader from './TeacherPageHeader'
 import { cn } from '../../lib/cn'
 
@@ -313,10 +310,7 @@ function AssignmentEditor({ assignment, onCancel, onSave }) {
               }}
             />
           </label>
-          <label className={labelClass}>
-            Hạn nộp
-            <input className={inputClass} type="datetime-local" value={form.deadline} onChange={(event) => setForm({ ...form, deadline: event.target.value })} />
-          </label>
+          <DateTimeField label="Hạn nộp" value={form.deadline} onChange={(deadline) => setForm({ ...form, deadline })} />
           <label className={labelClass}>
             Điểm tối đa
             <input className={inputClass} type="number" min="1" value={form.maxScore} onChange={(event) => setForm({ ...form, maxScore: event.target.value })} />
@@ -384,11 +378,6 @@ function TeacherAssignments({ course, onBack, onAction, assignmentPreset }) {
           </Button>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Bài tập" value={assignments.length} icon={ClipboardList} tone="info" />
-        <StatCard label="Giao theo bài học" value={assignments.filter((item) => item.targetType === 'Bài học').length} icon={BookOpen} tone="success" />
-        <StatCard label="Lượt đã nộp" value={assignments.reduce((total, item) => total + item.submitted, 0)} icon={Users} tone="warning" />
-      </div>
       <Panel title="Danh sách bài tập" className="overflow-hidden">
         <div className="-m-5 overflow-x-auto">
           <table className="w-full min-w-170 text-left text-sm">

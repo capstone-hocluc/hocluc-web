@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-import { installQuizFixture, QUIZ_IDS, quizToken } from './quiz-permissions-fixture'
+import { installQuizFixture, QUIZ_IDS, quizToken, showEditorStep } from './quiz-permissions-fixture'
 
 const editUrl = `/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`
 const importUrl = '**/api/v1/teacher/quizzes/*/import/file?mode=APPEND'
@@ -35,6 +35,7 @@ for (const [role, area, path, id, extension] of [
       await route.fulfill({ json: { success: true, data: result } })
     })
     await page.goto(`/console/${area}/${path}/${id}/edit`)
+    if (path !== 'quizzes') await showEditorStep(page, 'Các phần và câu hỏi')
     await choose(page, extension)
     await page.getByRole('button', { name: 'Nhập vào bản nháp', exact: true }).click()
     const dialog = page.getByRole('dialog')
@@ -43,7 +44,12 @@ for (const [role, area, path, id, extension] of [
     await expect(dialog.getByText('Câu thiếu đáp án')).toBeVisible()
     await expect(dialog.getByText('Kiểm tra đáp án câu mới.')).toBeVisible()
     await dialog.getByRole('button', { name: 'Tải lại bài để kiểm tra' }).click()
-    await expect(page.locator('textarea').filter({ hasText: 'Câu hỏi vừa nhập' })).toBeVisible()
+    if (path === 'quizzes') await expect(page.locator('textarea').filter({ hasText: 'Câu hỏi vừa nhập' })).toBeVisible()
+    else {
+      // The exam workspace shows one question at a time: the imported one is the second cell of the list.
+      await page.getByRole('navigation', { name: 'Danh sách câu hỏi' }).getByRole('button', { name: /^Câu 2(,|$)/ }).click()
+      await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveValue('Câu hỏi vừa nhập')
+    }
     expect(uploads).toBe(1)
     expect(state.requests.filter(r => r.path.endsWith('/publish'))).toEqual([])
     expect(state.unmatched).toEqual([])
@@ -62,6 +68,8 @@ test('unsaved changes and a new draft cannot import; reverting edits restores ac
   await page.locator('textarea').first().fill('Câu hỏi chưa lưu')
   await expect(entry(page)).toBeDisabled()
   await page.goto('/console/staff/placements/new')
+  await page.getByLabel('Tên bài đánh giá đầu vào', { exact: true }).fill('Đầu vào mới')
+  await showEditorStep(page, 'Các phần và câu hỏi')
   await expect(entry(page)).toBeDisabled()
   await expect(page.getByText('Lưu bản nháp rồi mở lại bài để nhập câu hỏi.')).toBeVisible()
 })
