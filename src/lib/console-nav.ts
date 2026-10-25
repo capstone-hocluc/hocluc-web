@@ -12,6 +12,7 @@ import {
   FileText,
   GraduationCap,
   Layers3,
+  Languages,
   LayoutDashboard,
   ListChecks,
   ListTree,
@@ -222,6 +223,14 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     group: 'teaching',
     permission: 'COURSE_READ',
     roles: ['TEACHER'],
+  },
+  // Readability / CEFR profile of an English text; same roles as POST /api/v1/text-profiles.
+  {
+    page: 'text-profiler',
+    label: 'Phân tích văn bản',
+    icon: Languages,
+    group: 'teaching',
+    roles: ['TEACHER', 'STAFF', 'MANAGER', 'ADMINISTRATOR'],
   },
 
   // The teacher marks attendance inside "Lịch dạy"; the operations screens below are for staff.
