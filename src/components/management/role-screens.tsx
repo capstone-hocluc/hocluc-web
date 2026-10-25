@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
-  CheckCircle2,
   Clock3,
   GraduationCap,
-  ListChecks,
   MoreHorizontal,
   Users,
 } from '../console/icons'
 import ListCard from '../console/list-card'
 import Page from './screen-page'
-import type { Stat } from './screen-page'
 import { text } from './screen-columns'
 import Status, { type StatusTone } from '../console/status'
 import StatCard from '../ui/StatCard'
@@ -173,12 +170,6 @@ const reviewStatusColumn = <T extends { status: ReviewStatus }>(): ColumnDef<T> 
   cell: ({ row }) => <Status tone={REVIEW_TONES[row.original.status]}>{REVIEW_LABELS[row.original.status]}</Status>,
 })
 
-const pendingStat = (rows: { status: ReviewStatus }[]): Stat[] => [
-  { label: 'Chờ duyệt', value: rows.filter((row) => row.status === 'PENDING').length, icon: Clock3, tone: 'warning' },
-  { label: 'Đã duyệt', value: rows.filter((row) => row.status === 'APPROVED').length, icon: CheckCircle2, tone: 'success' },
-  { label: 'Từ chối', value: rows.filter((row) => row.status === 'REJECTED').length, icon: ListChecks, tone: 'danger' },
-]
-
 /* ---------- Mentor ---------- */
 
 export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => void }) {
@@ -270,7 +261,7 @@ export function MentorSolutionQueue() {
     [setStatus]
   )
   return (
-    <Page title="Duyệt lời giải AI" stats={pendingStat(rows)}>
+    <Page title="Duyệt lời giải AI">
       <ListCard
         data={rows}
         columns={columns}

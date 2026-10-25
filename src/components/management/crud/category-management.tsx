@@ -195,7 +195,6 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
     <section className="flex flex-col gap-5">
       <PageHeading
         title="Môn học"
-        subtitle="Môn học dùng chung cho khóa học và nội dung."
         readOnly={readOnly}
         action={
           !readOnly && (

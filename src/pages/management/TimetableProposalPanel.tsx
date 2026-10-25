@@ -10,6 +10,7 @@ import {
 } from '../../services/timetableProposalService'
 import type { DeliveryMode, TimetableProposalResponse } from '../../types/scheduling'
 import type { ScheduleResourceStatus } from '../../hooks/useScheduleResource'
+import { Checkbox } from '../../components/tailgrids/core/checkbox'
 import Button from '../../components/console/button'
 import { fieldControlClass } from '../../components/console/form-field'
 import Card from '../../components/console/card'
@@ -308,18 +309,14 @@ export default function TimetableProposalPanel({
           </Button>
           <div className="grid gap-2 sm:grid-cols-2">
             {sections.map((section) => (
-              <label
+              <Checkbox
                 key={section.sectionCourseId}
-                className="flex min-h-11 items-center gap-3 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm text-text-primary"
+                isSelected={selectedSectionIds.includes(section.sectionCourseId)}
+                onChange={() => toggleSection(section.sectionCourseId)}
+                className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm text-text-primary"
               >
-                <input
-                  type="checkbox"
-                  checked={selectedSectionIds.includes(section.sectionCourseId)}
-                  onChange={() => toggleSection(section.sectionCourseId)}
-                  className="size-4 accent-primary"
-                />
-                <span>{section.title}</span>
-              </label>
+                {section.title}
+              </Checkbox>
             ))}
           </div>
         </fieldset>

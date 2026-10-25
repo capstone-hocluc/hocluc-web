@@ -91,7 +91,7 @@ export function ManagementScreen({
     case 'learners':
       return (
         <>
-          <PageHeading title={title} subtitle="Tài khoản học viên, khách hàng của nền tảng." readOnly={readOnly} />
+          <PageHeading title={title} readOnly={readOnly} />
           <UserManagement audience="students" readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
         </>
       )
@@ -123,7 +123,6 @@ export function ManagementScreen({
         <>
           <PageHeading
             title={title}
-            subtitle="Nhóm học theo khóa học và mentor."
             readOnly={readOnly}
           />
           <StudyGroupManagement readOnly={readOnly} />
@@ -134,14 +133,14 @@ export function ManagementScreen({
     case 'enrollments':
       return (
         <>
-          <PageHeading title={title} subtitle="Đăng ký học và học phí." readOnly={readOnly} />
+          <PageHeading title={title} readOnly={readOnly} />
           <EnrollmentManagement readOnly={readOnly} />
         </>
       )
     case 'orders':
       return (
         <>
-          <PageHeading title={title} subtitle="Thanh toán và đối soát." readOnly={readOnly} />
+          <PageHeading title={title} readOnly={readOnly} />
           {/* Confirming a payment by hand stays administrator-only, as on the backend. */}
           <OrderManagement readOnly={readOnly} canConfirm={role === 'ADMINISTRATOR'} />
         </>

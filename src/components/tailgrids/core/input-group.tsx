@@ -15,7 +15,7 @@ function InputGroup({ className, ...props }: InputGroupProps) {
       data-slot="input-group"
       role="group"
       className={cn(
-        "group flex w-full items-center rounded-lg border border-card-border bg-input-background transition-all focus-within:border-input-primary-focus-border focus-within:ring-4 focus-within:ring-input-primary-focus-border/20 has-data-invalid:border-input-error-focus-border focus-within:has-data-invalid:ring-input-error-focus-border/20",
+        "group flex w-full items-center rounded-lg border border-card-border bg-input-background transition-all focus-within:border-input-primary-focus-border has-data-invalid:border-input-error-focus-border focus-within:has-data-invalid:ring-input-error-focus-border/20",
         className,
       )}
       {...props}
@@ -31,7 +31,7 @@ function InputGroupInput({ className, ...props }: InputGroupInputProps) {
     <Input
       data-slot="input-group-control"
       className={cn(
-        "w-full min-w-0 flex-1 rounded-none border-none bg-transparent px-0 shadow-none group-[:has(>input:first-child)]:pl-3 group-[:has(>input:last-child)]:pr-3 focus:border-none focus:ring-0",
+        "w-full min-w-0 flex-1 rounded-none border-none bg-transparent px-0 shadow-none group-[:has(>input:first-child)]:pl-3 group-[:has(>input:last-child)]:pr-3 focus:border-none focus:ring-0 focus-visible:outline-none!",
         className,
       )}
       {...props}
@@ -117,7 +117,7 @@ function InputGroupTextarea({ className, ...props }: InputGroupTextareaProps) {
     <TextArea
       data-slot="input-group-control"
       className={cn(
-        "w-full min-w-0 flex-1 resize-none rounded-none border-none bg-transparent px-3 py-2.5 shadow-none focus:border-none focus:ring-0",
+        "w-full min-w-0 flex-1 resize-none rounded-none border-none bg-transparent px-3 py-2.5 shadow-none focus:border-none focus:ring-0 focus-visible:outline-none!",
         className,
       )}
       {...props}

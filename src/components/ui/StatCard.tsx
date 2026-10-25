@@ -25,17 +25,19 @@ function StatCard({ label, value, icon: Icon, tone = 'info', className }: StatCa
   return (
     <span
       className={cn(
-        'dashboard-stat relative block h-full rounded-2xl border border-card-border bg-card-background p-6 text-sm font-medium text-text-tertiary',
+        'dashboard-stat relative flex h-full items-center gap-3 rounded-2xl border border-card-border bg-card-background p-4 text-sm font-medium text-text-tertiary',
         className
       )}
     >
       {Icon && (
-        <span className={cn('mb-5 grid size-10 place-items-center rounded-xl', ICON_TONES[tone])}>
+        <span className={cn('grid size-9 shrink-0 place-items-center rounded-xl', ICON_TONES[tone])}>
           <Icon size={18} aria-hidden="true" />
         </span>
       )}
-      <b className="mb-1 block text-3xl leading-10 font-bold tracking-tight tabular-nums text-text-primary">{value}</b>
-      {label}
+      <span className="min-w-0">
+        <b className="block text-2xl leading-8 font-bold tracking-tight tabular-nums text-text-primary">{value}</b>
+        {label}
+      </span>
     </span>
   )
 }

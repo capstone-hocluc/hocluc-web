@@ -226,7 +226,7 @@ function SelectContent({ children, className, ...props }: SelectContentProps) {
     return (
       <Popover
         className={cn(
-          "w-(--trigger-width) overflow-auto rounded-lg bg-dropdowns-background shadow-md",
+          "w-(--trigger-width) app-scroll overflow-auto rounded-lg bg-dropdowns-background shadow-md",
           "entering:animate-in entering:fade-in-0 entering:zoom-in-95",
           "exiting:animate-out exiting:fade-out-0 exiting:zoom-out-95",
           className,
@@ -257,7 +257,7 @@ function SelectContent({ children, className, ...props }: SelectContentProps) {
   return (
     <Popover
       className={cn(
-        "w-(--trigger-width) overflow-auto rounded-lg border border-card-border bg-background-white-secondary",
+        "w-(--trigger-width) app-scroll overflow-auto rounded-lg border border-card-border bg-background-white-secondary",
         "entering:animate-in entering:fade-in-0 entering:zoom-in-95",
         "exiting:animate-out exiting:fade-out-0 exiting:zoom-out-95",
         className,

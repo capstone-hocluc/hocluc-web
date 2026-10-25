@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cn } from '../../../lib/cn';
+import ScrollArea from '../../ui/ScrollArea';
 import { ChevronDown } from '../icons';
 import Logo from '../../common/Logo';
 import { CloseIcon, SidebarExpandedIcon } from './sidebar-icons';
@@ -77,7 +78,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <nav className={cn('scrollbar-thin flex-1 overflow-y-auto pb-6', isSidebarOpen ? 'mt-5 space-y-3 px-4' : 'mt-5 px-2')}>
+      <ScrollArea as="nav" className={cn('flex-1 pb-6', isSidebarOpen ? 'mt-5 space-y-3 px-4' : 'mt-5 px-2')}>
         {sections.map((section, index) => {
           // The icon rail has no room for group titles, so it always lists every entry.
           const folded = isSidebarOpen && collapsedGroups.includes(section.label);
@@ -112,7 +113,7 @@ export default function Sidebar({
           </div>
           );
         })}
-      </nav>
+      </ScrollArea>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { roleHome } from './lib/role-home'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import CourseCatalogPage from './pages/CourseCatalogPage'
+import LessonVideosMockPage from './pages/mock/LessonVideosMockPage'
 import CourseDetailPage from './pages/course/CourseDetailPage'
 import CartPage from './pages/cart/CartPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
@@ -111,6 +112,7 @@ function App() {
     if (path === '/forgot-password') return 'forgot-password'
     if (path === '/reset-password') return 'reset-password'
     if (path === '/courses') return 'courses'
+    if (import.meta.env.DEV && path === '/mock/lesson-videos') return 'mock-lesson-videos'
     if (path === '/cart') return 'cart'
     if (path === '/checkout') return 'checkout'
     if (path === '/orders') return 'orders'
@@ -550,6 +552,8 @@ function App() {
         onOpenCourse={(courseId) => navigateTo(`/courses/${courseId}`)}
       />
     )
+  if (authMode === 'mock-lesson-videos')
+    return <LessonVideosMockPage />
   if (authMode === 'courses')
     return <CourseCatalogPage />
   if (authMode === 'cart')

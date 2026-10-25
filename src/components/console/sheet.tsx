@@ -20,7 +20,7 @@ function ConsoleSheet({ open, onClose, title, closeDisabled = false, children }:
           <SheetHeader className="border-b border-card-border py-4 pr-14 pl-5">
             <SheetTitle className="text-xl leading-7 font-medium text-text-primary">{title}</SheetTitle>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+          <div className="min-h-0 flex-1 app-scroll overflow-y-auto px-5 py-4">{children}</div>
         </SheetContent>
       </SheetOverlay>
     </Sheet>

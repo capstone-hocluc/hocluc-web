@@ -188,7 +188,7 @@ export function SheetBody({ className, ...props }: SheetBodyProps) {
   return (
     <div
       data-slot="sheet-body"
-      className={cn("-mx-1 flex-1 overflow-y-auto px-1 text-sm text-text-100", className)}
+      className={cn("-mx-1 flex-1 app-scroll overflow-y-auto px-1 text-sm text-text-100", className)}
       {...props}
     />
   );

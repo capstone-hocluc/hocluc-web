@@ -45,7 +45,7 @@ function ConsoleDialog({
         <DialogTitle className="text-xl leading-7">{title}</DialogTitle>
         {description && <DialogDescription className="text-text-tertiary">{description}</DialogDescription>}
       </DialogHeader>
-      <DialogBody className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</DialogBody>
+      <DialogBody className="min-h-0 flex-1 app-scroll overflow-y-auto px-5 py-4">{children}</DialogBody>
       {footer && <DialogFooter className="border-t border-card-border px-5 py-4">{footer}</DialogFooter>}
     </>
   )

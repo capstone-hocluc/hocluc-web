@@ -114,6 +114,14 @@ html[data-learner]:not([data-theme='dark']) {
   --badge-blue-icon-color: var(--hocluc-blue);
 }
 
+/* The console keeps the kit's neutral grey lines (tables, cards); the blue lines above are for the learner area. */
+html[data-console]:not([data-theme='dark']) {
+  --border-primary: #f4f4f5;
+  --border-secondary: #e4e4e7;
+  --card-border: #e8e8e8;
+  --card-surface-border: #e8e8e8;
+}
+
 html[data-learner]:not([data-theme='dark']) {
   --shadow-card: none;
   --shadow-card-soft: 0 2px 8px rgb(11 58 130 / 4%);
@@ -242,6 +250,10 @@ html[data-console] :where(nav button, label, th) {
 .dashboard-layout :focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 4px;
+}
+/* Text fields show focus through their border only. */
+.dashboard-layout :is(input:not([type='checkbox'], [type='radio'], [type='file']), textarea, select):focus-visible {
+  outline: none;
 }
 .student-dashboard :where(article, section) {
   scroll-margin-top: 96px;

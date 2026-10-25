@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
+import { Checkbox } from '../../tailgrids/core/checkbox'
 import Field, { fieldControlClass } from '../../console/form-field'
 import Notice from '../../console/notice'
 import {
@@ -67,16 +68,9 @@ export default function EnrollmentExpiryDialog({
         <p className="text-sm text-text-tertiary">
           Hiện tại: {enrollment.expiresAt ? formatDateTime(enrollment.expiresAt) : 'Không giới hạn'}
         </p>
-        <label className="flex items-center gap-2 text-sm font-medium text-text-primary">
-          <input
-            type="checkbox"
-            className="size-4 rounded border-card-border"
-            checked={unlimited}
-            onChange={(event) => setUnlimited(event.target.checked)}
-            disabled={busy}
-          />
+        <Checkbox isSelected={unlimited} onChange={setUnlimited} isDisabled={busy} className="text-sm font-medium text-text-primary">
           Không giới hạn
-        </label>
+        </Checkbox>
         {!unlimited && (
           <Field label="Hết hạn ngày" hint="Hết ngày đã chọn theo giờ Việt Nam.">
             <input

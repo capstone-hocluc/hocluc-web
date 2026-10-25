@@ -322,7 +322,6 @@ export default function CourseManagement({
     <section className="flex flex-col gap-5">
       <PageHeading
         title={title}
-        subtitle="Soạn khóa, gửi duyệt và theo dõi trạng thái bán. Bấm vào một khóa để xem chi tiết."
         readOnly={readOnly}
         action={
           <>
