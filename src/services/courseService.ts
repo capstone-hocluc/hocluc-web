@@ -104,6 +104,15 @@ export interface GiftCourse {
   progressPercentage?: number | null
 }
 
+/** A course learning outcome (CLO), as the public course page shows it. */
+export interface CourseOutcomeView {
+  id: string
+  code: string
+  description: string
+  sequence: number
+  skills: { code: string; name: string | null }[]
+}
+
 export interface CourseDetail {
   id: string
   title: string
@@ -131,6 +140,8 @@ export interface CourseDetail {
   totalDurationSeconds?: number
   phases?: CoursePhase[]
   gifts?: GiftCourse[]
+  /** What a student can do once the course is done (absent on older backends). */
+  outcomes?: CourseOutcomeView[]
 }
 
 // Public course detail. Same opportunistic-auth rationale as getMainCourses -
