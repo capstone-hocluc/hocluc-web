@@ -32,7 +32,8 @@ const record = (id: string, title: string, type: TeacherQuizType, courseId = QUI
 })
 const question = (): TeacherQuizQuestion => ({
   id: QUIZ_IDS.question, sequence: 1, sectionId: null, groupId: null,
-  questionText: 'Câu hỏi được phân công', questionType: 'SINGLE_CHOICE', difficulty: null,
+  // Match BE TeacherQuestionResponse: difficulty is not part of the response.
+  questionText: 'Câu hỏi được phân công', questionType: 'SINGLE_CHOICE',
   categoryId: null, categoryName: null, explanation: 'Giải thích được phép đọc', imageUrl: null,
   sourcePage: null, marks: null, needsReview: false, reviewNote: null, correctLabels: 'A',
   options: ['A', 'B'].map((label, index) => ({ id: `option-${label}`, label, sequence: index + 1, text: `Lựa chọn ${label}`, correct: index === 0 })),

@@ -24,7 +24,7 @@ import { getErrorMessage } from './lib/errors'
 import { showErrorToast } from './lib/toastBus'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
-import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
+import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, quizPagePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
 import PurchaseGuard from './components/purchase/PurchaseGuard'
@@ -253,7 +253,7 @@ function App() {
         dashboard: '/mentor/dashboard',
       },
     } as const
-    const path = toConsolePath(paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${page}`)
+    const path = toConsolePath(paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${quizPagePath(page)}`)
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`${scope}-${page}`)

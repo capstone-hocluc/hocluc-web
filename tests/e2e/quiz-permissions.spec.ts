@@ -3,6 +3,57 @@ import { installQuizFixture, QUIZ_IDS, quizToken } from './quiz-permissions-fixt
 
 const writes = (state: Awaited<ReturnType<typeof installQuizFixture>>) => state.requests.filter(r => r.path.startsWith('/api/v1/teacher/') && r.method !== 'GET')
 
+test('BE response without difficulty supports adding, updating and ordering questions', async ({ page }) => {
+  const state = await installQuizFixture(page, 'STAFF')
+  await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
+  await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toBeVisible()
+  const result = await page.evaluate(async quizId => {
+    const servicePath = '/src/services/teacherQuizService.ts'
+    const service = await import(servicePath)
+    const original = await service.getTeacherQuiz(quizId)
+    const created = await service.addTeacherQuizQuestions(quizId, [{ questionText: 'Câu vừa thêm', questionType: 'SINGLE_CHOICE',
+      options: [{ text: 'A', correct: true }, { text: 'B', correct: false }] }])
+    const updated = await service.updateTeacherQuizQuestion(created[0].id, { questionText: 'Câu đã sửa', questionType: 'SINGLE_CHOICE',
+      options: [{ text: 'A', correct: true }, { text: 'B', correct: false }] })
+    const expectedIds = [updated.id, ...original.questions.map((q: { id: string }) => q.id)]
+    const ordered = await service.reorderTeacherQuizQuestions(quizId, expectedIds)
+    return { expectedIds, orderedIds: ordered.map((q: { id: string }) => q.id), text: updated.questionText,
+      includesDifficulty: [...created, updated, ...ordered].some((q: object) => Object.hasOwn(q, 'difficulty')) }
+  }, QUIZ_IDS.quiz)
+  expect(result.orderedIds).toEqual(result.expectedIds)
+  expect(result.text).toBe('Câu đã sửa')
+  expect(result.includesDifficulty).toBe(false)
+  expect(state.pageErrors).toEqual([])
+})
+
+for (const mode of ['unchanged', 'edited', 'invalid-response'] as const) {
+  test(`placement saves BE question DTO without difficulty: ${mode}`, async ({ page }) => {
+    const state = await installQuizFixture(page, 'STAFF')
+    Object.assign(state.quizzes[0], { type: 'PLACEMENT', courseId: null, chapterId: null, lessonId: null })
+    if (mode === 'invalid-response') await page.route(`**/api/v1/teacher/questions/${QUIZ_IDS.question}`, route => {
+      const { id, ...invalid } = state.questions[0]
+      void id
+      return route.fulfill({ json: { success: true, data: invalid } })
+    })
+    await page.goto(`/console/staff/placements/${QUIZ_IDS.quiz}/edit`)
+    await expect(page.getByLabel('Tên bài đánh giá đầu vào', { exact: true })).toBeVisible()
+    if (mode !== 'unchanged') await page.getByPlaceholder('Nhập nội dung câu hỏi', { exact: true }).fill('Câu hỏi vừa chỉnh sửa')
+    await page.getByRole('button', { name: 'Lưu và xuất bản', exact: true }).click()
+    if (mode === 'invalid-response') {
+      await expect(page.getByText('Máy chủ có thể đã nhận một phần thay đổi câu hỏi', { exact: false })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Lưu và xuất bản', exact: true })).toBeDisabled()
+      expect(writes(state).some(r => r.path.endsWith('/publish'))).toBe(false)
+    } else {
+      await expect(page.getByRole('table').getByText('Đã xuất bản', { exact: true })).toBeVisible()
+      expect(writes(state).some(r => r.path.endsWith('/publish'))).toBe(true)
+      const questionUpdates = writes(state).filter(r => r.path === `/api/v1/teacher/questions/${QUIZ_IDS.question}`)
+      expect(questionUpdates).toHaveLength(mode === 'unchanged' ? 0 : 1)
+      if (mode === 'edited') expect(state.questions[0].questionText).toBe('Câu hỏi vừa chỉnh sửa')
+    }
+    expect(state.pageErrors).toEqual([])
+  })
+}
+
 for (const [path, id, label] of [
   ['quizzes', QUIZ_IDS.quiz, 'Dạng đáp án'],
   ['mock-exams', QUIZ_IDS.exam, 'Loại câu hỏi'],

@@ -37,6 +37,7 @@ import {
   type TeacherQuizEditor,
   type TeacherQuizQuestion,
   type TeacherQuizRecord,
+  type CreateTeacherQuizRequest,
 } from '../../../services/teacherQuizService'
 import { getErrorMessage } from '../../../lib/errors'
 import { ApiError } from '../../../lib/api'
@@ -47,6 +48,7 @@ import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
 import QuizImportDialog from './QuizImportDialog'
+import QuizPdfImportPanel from './QuizPdfImportPanel'
 import DragHandle from '../crud/drag-handle'
 import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
 import { cn } from '../../../lib/cn'
@@ -60,6 +62,7 @@ import StatusBadge from '../../console/status'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
 
 interface TeacherQuizProps {
+  onOpenEditor?: (quizId: string) => void
   navigation?: ReactNode
   readOnly?: boolean
   initialEditorId?: string | null
@@ -118,7 +121,7 @@ function quizIsLocked(quiz: TeacherQuizRecord | undefined) {
   return Boolean(quiz?.locked || (quiz?.attemptCount ?? 0) > 0)
 }
 
-function QuizScreen({ navigation, course, onBack, onAction, startCreating = false, readOnly = true, initialEditorId = null }: TeacherQuizProps) {
+function QuizScreen({ navigation, course, onBack, onAction, onOpenEditor, startCreating = false, readOnly = true, initialEditorId = null }: TeacherQuizProps) {
   const quizzes = usePageResource(() => getTeacherQuizzes(course.id || undefined), [course.id])
   const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [creating, setCreating] = useState(!readOnly && startCreating)
@@ -159,6 +162,7 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
     return (
       <TeacherQuizEditorScreen
         quizId={editorQuizId}
+        onCreated={id => { if (onOpenEditor) onOpenEditor(id); else { setCreating(false); setEditorQuizId(id) } }}
         course={course}
         onCancel={() => {
           setCreating(false)
@@ -282,11 +286,13 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
 
 function TeacherQuizEditorScreen({
   quizId,
+  onCreated,
   course,
   onCancel,
   onSaved,
 }: {
   quizId: string | null
+  onCreated: (id: string) => void
   course: { id: string; name: string }
   onCancel: () => void
   onSaved: (message: string) => void
@@ -316,18 +322,21 @@ function TeacherQuizEditorScreen({
       onCancel={onCancel}
       onSaved={onSaved}
       onReload={editor.reload}
+      onCreated={onCreated}
     />
   )
 }
 
 function TeacherQuizEditorForm({
   initial,
+  onCreated,
   course,
   onCancel,
   onSaved,
   onReload,
 }: {
   initial: TeacherQuizEditor | null
+  onCreated: (id: string) => void
   course: { id: string; name: string }
   onCancel: () => void
   onSaved: (message: string) => void
@@ -356,7 +365,11 @@ function TeacherQuizEditorForm({
   const [importBaseline] = useState(() => JSON.stringify({ title, duration, attempts, questions }))
   const hasUnsavedChanges = JSON.stringify({ title, duration, attempts, questions }) !== importBaseline
   const unsupportedStructure = Boolean(initial && (initial.sections.length > 0 || initial.groups.length > 0))
-  const importBlockedReason = !serverQuizId ? 'Lưu bản nháp rồi mở lại bài để nhập câu hỏi.'
+  const aiReading = initial?.latestJob?.kind === 'EXAM_FILE' && (initial.latestJob.status === 'PENDING' || initial.latestJob.status === 'RUNNING')
+  const importBlockedReason = !serverQuizId ? ambiguousCreate || ambiguousQuestionSave ? 'Kiểm tra danh sách đề trước khi tạo lại.'
+    : questions.some(q => q.questionText.trim() || q.explanation.trim() || q.options.some(o => o.text.trim() || o.correct))
+      ? 'Đang có câu hỏi soạn tay. Lưu bản nháp trước để giữ nội dung, rồi nhập thêm file.' : ''
+    : aiReading ? 'AI đang đọc PDF. Kiểm tra tiến trình trước khi nhập thêm.'
     : initialQuiz?.status !== 'DRAFT' || quizIsLocked(initialQuiz) ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
       : ambiguousCreate || ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
         : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
@@ -395,8 +408,8 @@ function TeacherQuizEditorForm({
   const effectiveLessonId = lessonOptions.some((lesson) => lesson.id === selectedLessonId)
     ? selectedLessonId
     : ''
-  const settingsLocked = quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave
-  const questionsLocked = quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave || unsupportedStructure
+  const settingsLocked = aiReading || quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave
+  const questionsLocked = aiReading || quizIsLocked(initialQuiz) || ambiguousCreate || ambiguousQuestionSave || unsupportedStructure
 
   const clearFieldError = (field: QuizFieldError) => {
     setFieldErrors((current) => ({ ...current, [field]: undefined }))
@@ -434,8 +447,21 @@ function TeacherQuizEditorForm({
     })
   }
 
+  const getImportCreateRequest = (): CreateTeacherQuizRequest | null => {
+    const errors: Partial<Record<QuizFieldError, string>> = {}
+    if (!title.trim() || title.trim().length > 500) errors.title = 'Nhập tên bài kiểm tra, tối đa 500 ký tự.'
+    if (!Number.isInteger(Number(duration)) || Number(duration) < 1 || Number(duration) > 600) errors.duration = 'Thời gian làm bài phải từ 1 đến 600 phút.'
+    if (!Number.isInteger(Number(attempts)) || Number(attempts) < 1 || Number(attempts) > 999) errors.attempts = 'Số lần thử tối đa phải từ 1 đến 999.'
+    if (!activeCourseId || !effectiveChapterId || (needsLesson && !effectiveLessonId)) errors.target = needsLesson ? 'Chọn khóa học, chương và bài học.' : 'Chọn khóa học và chương.'
+    setFieldErrors(errors)
+    if (Object.keys(errors).length) { setError('Hoàn thiện thông tin bài kiểm tra trước khi nhập file.'); return null }
+    setError('')
+    return { type: selectedType, title: title.trim(), durationMinutes: Number(duration), maxAttempts: Number(attempts),
+      ...(needsLesson ? { lessonId: effectiveLessonId } : { chapterId: effectiveChapterId }) }
+  }
+
   const saveQuiz = async (publish: boolean) => {
-    if (!access.canWrite || busy) return
+    if (!access.canWrite || busy || aiReading) return
     if (ambiguousQuestionSave) {
       setError('Kết quả lưu câu hỏi chưa rõ. Hãy quay về danh sách và mở lại quiz để kiểm tra; không gửi lại biểu mẫu này.')
       return
@@ -555,7 +581,7 @@ function TeacherQuizEditorForm({
       )}
       {ambiguousQuestionSave && (
         <Notice tone="warning" role="alert" aria-live="assertive">
-          Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không lưu lại từ biểu mẫu này; hãy quay về danh sách và mở lại quiz để kiểm tra.
+          Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn hoặc dữ liệu trả về chưa hợp lệ. Không lưu lại từ biểu mẫu này; hãy quay về danh sách và mở lại quiz để kiểm tra.
         </Notice>
       )}
 
@@ -662,7 +688,7 @@ function TeacherQuizEditorForm({
         <div className="grid gap-4 md:grid-cols-4">
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
             Tên bài kiểm tra
-            <input id="teacher-quiz-title" className={`${fieldControlClass} aria-invalid:border-input-error-focus-border`} value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || ambiguousCreate || ambiguousQuestionSave} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
+            <input id="teacher-quiz-title" className={`${fieldControlClass} aria-invalid:border-input-error-focus-border`} value={title} onChange={(event) => { setTitle(event.target.value); clearFieldError('title') }} disabled={busy || aiReading || ambiguousCreate || ambiguousQuestionSave} maxLength={500} aria-invalid={fieldErrors.title ? true : undefined} aria-describedby={fieldErrors.title ? 'teacher-quiz-title-error' : undefined} />
             {fieldErrors.title && <span id="teacher-quiz-title-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.title}</span>}
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
@@ -681,12 +707,16 @@ function TeacherQuizEditorForm({
       <Card as="section" padding="lg" aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <CardTitle id="quiz-questions-title" className="text-base">Câu hỏi ({questions.length})</CardTitle>
-          <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload} />
+          <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload}
+            getCreateRequest={getImportCreateRequest} onCreated={onCreated} onUncertainCreate={() => setAmbiguousCreate(true)} onBusyChange={setBusy} />
           <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={addQuestion}>
             <Plus size={15} />Thêm câu hỏi
           </Button>
         </div>
         {unsupportedStructure && <Notice tone="warning">Bài có phần hoặc nhóm câu hỏi ngoài phạm vi chỉnh sửa của màn này. Câu hỏi được giữ ở chế độ chỉ xem để bảo toàn cấu trúc.</Notice>}
+        {serverQuizId && initial?.latestJob?.kind === 'EXAM_FILE' && <QuizPdfImportPanel quizId={serverQuizId} jobId={initial.latestJob.id}
+          blockedReason={hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi áp dụng.' : initialQuiz?.status !== 'DRAFT' || quizIsLocked(initialQuiz) ? 'Chỉ áp dụng vào bản nháp chưa có lượt làm.' : ambiguousQuestionSave ? 'Tải lại bài để kiểm tra kết quả lưu.' : ''}
+          busy={busy} onBusyChange={setBusy} onReload={onReload} />}
         {questions.length === 0 ? (
           <p className="rounded-xl bg-background-gray-secondary p-4 text-sm text-text-tertiary">Quiz nháp chưa có câu hỏi. Hãy thêm câu hỏi trước khi xuất bản.</p>
         ) : (
@@ -778,11 +808,11 @@ function TeacherQuizEditorForm({
         {error && <p className="mt-4 mb-0 text-sm font-medium text-badge-error-text" role="alert">{error}</p>}
         <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-card-border pt-4">
           <Button appearance="outline" className="min-h-11" disabled={busy} onClick={onCancel}>{ambiguousCreate || ambiguousQuestionSave ? 'Quay về danh sách quiz' : 'Hủy'}</Button>
-          <Button appearance="outline" className="min-h-11" disabled={busy || ambiguousCreate || ambiguousQuestionSave} onClick={() => void saveQuiz(false)}>
+          <Button appearance="outline" className="min-h-11" disabled={busy || aiReading || ambiguousCreate || ambiguousQuestionSave} onClick={() => void saveQuiz(false)}>
             {busy ? 'Đang lưu...' : initialQuiz || serverQuizId ? 'Lưu thay đổi' : 'Lưu bản nháp'}
           </Button>
           {(!initialQuiz || initialQuiz.status !== 'PUBLISHED') && (
-            <Button className="min-h-11" disabled={busy || ambiguousCreate || ambiguousQuestionSave} onClick={() => void saveQuiz(true)}>
+            <Button className="min-h-11" disabled={busy || aiReading || ambiguousCreate || ambiguousQuestionSave} onClick={() => void saveQuiz(true)}>
               <CheckCircle2 size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
             </Button>
           )}
