@@ -7,6 +7,13 @@
 
 export const CONSOLE_LOGIN_PATH = '/console/login'
 
+/** Convert the console's quiz page keys into reloadable URLs. */
+export function quizPagePath(page: string): string {
+  const editor = page.match(/^(quizzes|mock-exams|placements)-(edit|view)-([0-9a-f-]+)$/i)
+  if (editor) return `${editor[1]}/${editor[3]}${editor[2] === 'edit' ? '/edit' : ''}`
+  return page.replace(/^(quizzes|mock-exams|placements)-new$/, '$1/new')
+}
+
 export function quizMenuPage(page: string): string {
   if (/^placements(?:-|$)/.test(page)) return 'placements'
   if (/^(quizzes(?:-|$)|quiz-)/.test(page)) return 'quizzes'

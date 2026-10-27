@@ -43,8 +43,10 @@ function QuizPage({ role, page, readOnly, onNavigate }: {
       {notice && !workspaceOpen && <Notice role="status">{notice}</Notice>}
       {menu === 'mock-exams' || menu === 'placements'
         ? <MockExamScreen navigation={navigation} assessmentType={menu === 'placements' ? 'PLACEMENT' : 'EXAM'} readOnly={readOnly} startCreating={creating} initialEditorId={editing}
+            onOpenEditor={id => onNavigate(`${menu}-edit-${id}`)}
             onBack={() => onNavigate('dashboard')} onAction={setNotice} />
         : <QuizScreen navigation={navigation} course={{ id: courseId, name: 'Khóa học' }} readOnly={readOnly}
+            onOpenEditor={id => onNavigate(`quizzes-edit-${id}`)}
             startCreating={creating} initialEditorId={editing}
             onBack={() => onNavigate(courseId ? 'courses' : 'dashboard')} onAction={setNotice} />}
     </TabsContent>

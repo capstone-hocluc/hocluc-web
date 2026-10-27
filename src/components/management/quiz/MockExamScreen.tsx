@@ -59,6 +59,7 @@ import ExamExtractionPanel from './ExamExtractionPanel'
 import Card from '../../console/card'
 import DateTimeField from '../../console/date-time-field'
 import { Checkbox } from '../../tailgrids/core/checkbox'
+import QuizPdfImportPanel from './QuizPdfImportPanel'
 import ConfirmDialog from '../../console/confirm-dialog'
 import DropdownField from '../../console/dropdown-field'
 import { emptyExamFileDraft, type ExamFileDraft } from './exam-file-draft'
@@ -82,6 +83,7 @@ type AssessmentType = 'EXAM' | 'PLACEMENT'
 const LAST_EXAM_STEP = 2
 
 interface TeacherMockExamsProps {
+  onOpenEditor?: (quizId: string) => void
   navigation?: ReactNode
   assessmentType?: AssessmentType
   readOnly?: boolean
@@ -127,6 +129,7 @@ function createDraftQuestion(): DraftQuestion {
     serverId: null,
     questionText: '',
     questionType: 'SINGLE_CHOICE',
+    difficulty: null,
     options: Array.from({ length: 4 }, () => ({ text: '', correct: false })),
     explanation: '',
     imageUrl: null,
@@ -176,6 +179,7 @@ function fromServerQuestion(question: TeacherQuizQuestion): DraftQuestion {
     explanation: question.explanation ?? '',
     imageUrl: question.imageUrl,
     categoryId: question.categoryId,
+    difficulty: question.difficulty ?? null,
     sourcePage: question.sourcePage,
     marks: question.marksFixed ? question.marks : null,
     needsReview: question.needsReview,
@@ -348,6 +352,7 @@ function questionPayload(question: DraftQuestion): SaveTeacherQuestionRequest {
     options,
     // Omit the resolved URL so BE keeps its canonical storage reference.
     categoryId: question.categoryId ?? undefined,
+    difficulty: question.difficulty ?? undefined,
     sourcePage: question.sourcePage ?? undefined,
     marks: question.marks ?? undefined,
     needsReview: question.needsReview,
@@ -361,6 +366,7 @@ function questionPayloadMatchesServer(draft: DraftQuestion, server: TeacherQuizQ
     payload.questionType === server.questionType &&
     payload.explanation === (server.explanation ?? '') &&
     (payload.categoryId ?? null) === server.categoryId &&
+    (payload.difficulty ?? null) === (server.difficulty ?? null) &&
     (payload.sourcePage ?? null) === server.sourcePage &&
     (payload.marks ?? null) === (server.marksFixed ? server.marks : null) &&
     payload.needsReview === server.needsReview &&
@@ -418,7 +424,7 @@ function sameLayout(a: TeacherQuizSectionSpec[], b: TeacherQuizSectionSpec[]) {
   ]))
 }
 
-function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
+function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, onOpenEditor, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
   const placement = assessmentType === 'PLACEMENT'
   const quizzes = usePageResource(() => getTeacherQuizzes(), [])
   const [creating, setCreating] = useState(!readOnly && startCreating)
@@ -485,6 +491,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
   if (!readOnly && (creating || editorQuizId)) {
     return (
       <TeacherMockExamEditor
+        onCreated={id => { if (onOpenEditor) onOpenEditor(id); else { setCreating(false); setEditorQuizId(id) } }}
         assessmentType={assessmentType}
         quizId={editorQuizId}
         notice={editorNotice}
@@ -597,12 +604,14 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
 }
 
 function TeacherMockExamEditor({
+  onCreated,
   assessmentType,
   quizId,
   notice,
   onCancel,
   onSaved,
 }: {
+  onCreated: (id: string) => void
   assessmentType: AssessmentType
   quizId: string | null
   notice: string
@@ -651,11 +660,13 @@ function TeacherMockExamEditor({
         onSaved(message, openQuizId)
       }}
       onReload={editor.reload}
+      onCreated={onCreated}
     />
   )
 }
 
 function TeacherMockExamForm({
+  onCreated,
   assessmentType,
   initial,
   initialStep,
@@ -665,6 +676,7 @@ function TeacherMockExamForm({
   onSaved,
   onReload,
 }: {
+  onCreated: (id: string) => void
   assessmentType: AssessmentType
   initial: TeacherQuizEditor | null
   initialStep: number | null
@@ -706,6 +718,7 @@ function TeacherMockExamForm({
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
   const [importBaseline] = useState(() => JSON.stringify({ settings, sections }))
   const hasUnsavedChanges = JSON.stringify({ settings, sections }) !== importBaseline
+  const aiReading = initial?.latestJob?.kind === 'EXAM_FILE' && (initial.latestJob.status === 'PENDING' || initial.latestJob.status === 'RUNNING')
   const pendingCreateRef = useRef<PendingExamCreate | null>(null)
   // A paper still being read, ready to review, or stored but not yet read reopens on its PDF step; everything else starts on the settings.
   const [step, setStep] = useState(() => {
@@ -723,9 +736,9 @@ function TeacherMockExamForm({
   const categoryOptions = (categories.data ?? []).filter(category => category.active).map(category => ({ id: category.id, label: category.name }))
 
   const settingsLocked = isLocked(quizSnapshot)
-  const questionsLocked = settingsLocked || ambiguousCreate || ambiguousQuestionSave
+  const questionsLocked = aiReading || settingsLocked || ambiguousCreate || ambiguousQuestionSave
   const publishedQuiz = Boolean(quizSnapshot && quizSnapshot.status !== 'DRAFT')
-  const fieldsLocked = settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave
+  const fieldsLocked = aiReading || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave
   const structureSupported = initial ? sectionStructureIsSupported(initial, fromServerEditor(initial)) : true
   const structureReadOnly = !structureSupported
   // A nested structure (groups, parent sections) stays fixed, but the content of each question can still be corrected.
@@ -739,7 +752,10 @@ function TeacherMockExamForm({
     ?? (sections.some((section) => section.clientId === selectedId) ? null : numbered[0] ?? null)
   const activeSection = activeEntry?.section ?? sections.find((section) => section.clientId === selectedId) ?? sections[0] ?? null
   const railSelectedId = activeEntry ? activeEntry.question.clientId : selectedId
-  const importBlockedReason = !serverQuizId ? 'Lưu bản nháp rồi mở lại bài để nhập câu hỏi.'
+  const importBlockedReason = !serverQuizId ? ambiguousCreate || ambiguousQuestionSave ? 'Kiểm tra danh sách đề trước khi tạo lại.'
+    : sections.length !== 1 || sections[0].title !== 'Phần 1' || sections[0].categoryId || sections[0].suggestedMinutes || sections.some(s => s.questions.some(q => questionHasAnyContent(q) || q.explanation.trim() || q.options.some(o => o.correct)))
+      ? 'Đang có nội dung hoặc cấu trúc soạn tay. Lưu bản nháp trước để giữ nội dung, rồi nhập thêm file.' : ''
+    : aiReading ? 'AI đang đọc PDF. Kiểm tra tiến trình trước khi nhập thêm.'
     : publishedQuiz || settingsLocked ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
       : ambiguousCreate || ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
         : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
@@ -903,6 +919,22 @@ function TeacherMockExamForm({
     onStepChange(next)
   }
 
+  const getImportCreateRequest = (): CreateTeacherQuizRequest | null => {
+    const validation = validate(false).message
+    if (validation || settings.title.trim().length > 500) {
+      setError(validation || 'Tên đề thi tối đa 500 ký tự.')
+      return null
+    }
+    setError('')
+    return {
+      type: assessmentType, title: settings.title.trim(), durationMinutes: Number(settings.duration), maxAttempts: Number(settings.maxAttempts),
+      ...(placement ? { description: settings.description.trim() } : { courseId: settings.courseId,
+        passingPercentage: Number(settings.passingPercentage), showAnswers: settings.showAnswers, practiceAllowed: settings.practiceAllowed }),
+      ...(fromDateTimeLocal(settings.availableFrom) ? { availableFrom: fromDateTimeLocal(settings.availableFrom) } : {}),
+      ...(fromDateTimeLocal(settings.availableUntil) ? { availableUntil: fromDateTimeLocal(settings.availableUntil) } : {}),
+    }
+  }
+
   const checkPendingCreate = async () => {
     const pending = pendingCreateRef.current
     if (!pending || busy) return
@@ -925,7 +957,7 @@ function TeacherMockExamForm({
 
   const save = async (publish: boolean) => {
     if (!access.canWrite) return
-    if (busy) return
+    if (busy || aiReading) return
     if (publishedQuiz) {
       setError('Đề đã xuất bản hoặc lưu trữ chỉ xem. Tạo bản nháp để chỉnh sửa nội dung.')
       return
@@ -1206,7 +1238,6 @@ function TeacherMockExamForm({
   // In the drawer every choice also closes it, so the question it leads to is in view.
   const rail = (afterChoice?: () => void) => (
     <ExamQuestionRail sections={sections} selectedId={railSelectedId} canEditStructure={canEditQuestions} busy={busy}
-      footer={<QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload} />}
       onSelect={(clientId) => { setSelectedId(clientId); afterChoice?.() }}
       onAddQuestion={(sectionId) => { addQuestion(sectionId); afterChoice?.() }}
       onAddSection={() => { addSection(); afterChoice?.() }} />
@@ -1279,13 +1310,13 @@ function TeacherMockExamForm({
               value={settings.title}
               onChange={(event) => updateSettings('title', event.target.value)}
               placeholder={placement ? 'Ví dụ: Đánh giá năng lực đầu vào' : 'Ví dụ: Đề thi thử V-ACT số 02'}
-              disabled={publishedQuiz || busy}
+              disabled={publishedQuiz || busy || aiReading}
               maxLength={500}
             />
           </label>
           {placement && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-3">
             Mô tả
-            <textarea aria-label="Mô tả" className={textareaControlClass} value={settings.description} disabled={publishedQuiz || busy}
+            <textarea aria-label="Mô tả" className={textareaControlClass} value={settings.description} disabled={publishedQuiz || busy || aiReading}
               onChange={event => updateSettings('description', event.target.value)} />
             <span className="text-xs font-normal text-text-tertiary">Không gắn khóa học. Student được xem đáp án sau khi bài đã chấm; kết quả được phân loại theo môn.</span>
           </label>}
@@ -1398,8 +1429,9 @@ function TeacherMockExamForm({
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
       {!serverQuizId && <ExamFileOnCreate value={examFileDraft} onChange={setExamFileDraft} disabled={busy || ambiguousCreate} />}
 
-      <ExamExtractionPanel quizId={serverQuizId} examFile={quizSnapshot?.examFile ?? null} latestJob={initial?.latestJob ?? null}
-        existingQuestionCount={initial?.questions.length ?? 0} blockedReason={extractBlockedReason} busy={busy} onReload={onReload} />
+      <ExamExtractionPanel quizId={serverQuizId} examFile={quizSnapshot?.examFile ?? null} latestJob={initial?.latestJob ? { ...initial.latestJob, result: null } : null}
+        existingQuestionCount={initial?.questions.length ?? 0} blockedReason={extractBlockedReason} busy={busy} onReload={() => { onStepChange(step); onReload() }} />
+      {serverQuizId && initial?.latestJob?.kind === 'EXAM_FILE' && <QuizPdfImportPanel quizId={serverQuizId} jobId={initial.latestJob.id} blockedReason={extractBlockedReason} busy={busy} onBusyChange={setBusy} onReload={() => { onStepChange(step); onReload() }} />}
           </div>
         </ScrollArea>
 
@@ -1408,6 +1440,7 @@ function TeacherMockExamForm({
             {rail()}
           </aside>
           <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 px-4 pt-3 sm:px-6"><QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={() => { onStepChange(step); onReload() }} getCreateRequest={getImportCreateRequest} onCreated={onCreated} onUncertainCreate={() => setAmbiguousCreate(true)} onBusyChange={setBusy} /></div>
             <div className="flex shrink-0 border-b border-card-border px-4 py-2 sm:px-6 lg:hidden">
               <Button appearance="outline" size="sm" onClick={() => setRailOpen(true)}>Danh sách câu</Button>
             </div>
