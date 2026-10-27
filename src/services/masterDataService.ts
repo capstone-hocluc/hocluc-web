@@ -77,10 +77,14 @@ export interface MdPattern {
   responseType: string | null
   primarySkillCode: string | null
   difficultyBand: string | null
+  difficultyMin?: DifficultyLevel | null
+  difficultyMax?: DifficultyLevel | null
   vactRelevance: string | null
   sourceStatus: string | null
   notes: string | null
 }
+
+export type DifficultyLevel = 'DE' | 'TB' | 'KHO'
 
 export interface MdSkill {
   id: string
@@ -237,6 +241,106 @@ export async function deleteDraftVersion(versionId: string): Promise<void> {
 }
 
 export const deleteMasterDataDraft = deleteDraftVersion
+
+/** Copies a version into a new DRAFT, the only kind of version whose labels can be changed. */
+export function cloneVersion(versionId: string, body: { version: string; description: string | null }): Promise<MasterDataVersion> {
+  return requireData(`${versionPath(versionId)}/clone`, 'Không nhận được bản nháp vừa tạo.', { method: 'POST', body })
+}
+
+export interface DomainBody {
+  code: string
+  nameVi: string
+  nameEn: string | null
+  scope: string | null
+  curriculumLevel: string | null
+  sourceStatus: string | null
+  notes: string | null
+}
+
+export interface PatternBody {
+  code: string
+  domainCode: string
+  nameVi: string
+  canonicalPrompt: string | null
+  stimulusType: string | null
+  stimulusKind: string | null
+  responseType: string | null
+  difficultyMin: DifficultyLevel | null
+  difficultyMax: DifficultyLevel | null
+  vactRelevance: string | null
+  sourceStatus: string | null
+  notes: string | null
+}
+
+export interface SkillBody {
+  code: string
+  domainCodes: string[]
+  nameVi: string
+  nameEn: string | null
+  skillCategory: string | null
+  description: string | null
+  observableBehavior: string | null
+  level: string | null
+  prerequisiteSkillCode: string | null
+  vactRelevance: string | null
+  sourceStatus: string | null
+}
+
+export interface MicroSkillBody {
+  code: string
+  skillCode: string
+  nameVi: string
+  description: string | null
+  masteryEvidence: string | null
+  suggestedDrill: string | null
+  defaultErrorCode: string | null
+  difficultyBand: string | null
+  sourceStatus: string | null
+}
+
+export interface ErrorCodeBody {
+  code: string
+  errorCategory: string | null
+  nameVi: string
+  diagnosticRule: string | null
+  remediationAction: string | null
+  allDomains: boolean
+  domainCodes: string[]
+}
+
+export interface MappingBody {
+  patternCode: string
+  skillCode: string
+  microSkillCode: string | null
+  role: 'PRIMARY' | 'SUPPORTING'
+  weight: number
+  notes: string | null
+}
+
+/** What a draft holds, by the path segment of its endpoints. */
+export interface LabelBodies {
+  domains: DomainBody
+  patterns: PatternBody
+  skills: SkillBody
+  'micro-skills': MicroSkillBody
+  'error-codes': ErrorCodeBody
+  mappings: MappingBody
+}
+
+/** Creates a label in a draft (no id) or replaces one (with its id); a code never changes. */
+export function saveLabel<K extends keyof LabelBodies>(
+  versionId: string,
+  segment: K,
+  id: string | null,
+  body: LabelBodies[K]
+): Promise<unknown> {
+  const path = `${versionPath(versionId)}/${segment}${id ? `/${encodeURIComponent(id)}` : ''}`
+  return requireData(path, 'Không nhận được dữ liệu vừa lưu.', { method: id ? 'PUT' : 'POST', body })
+}
+
+export async function deleteLabel(versionId: string, segment: keyof LabelBodies, id: string): Promise<void> {
+  await request<void>(`${versionPath(versionId)}/${segment}/${encodeURIComponent(id)}`, { auth: true, method: 'DELETE' })
+}
 
 export function getVersionDiff(versionId: string): Promise<VersionDiff> {
   return requireData(`${versionPath(versionId)}/diff`, 'Không thể so sánh phiên bản.')

@@ -10,7 +10,7 @@ const ROWS: { label: string; added: keyof VersionDiff; removed: keyof VersionDif
   { label: 'Dạng câu', added: 'addedPatterns', removed: 'removedPatterns' },
   { label: 'Kỹ năng', added: 'addedSkills', removed: 'removedSkills' },
   { label: 'Micro-skill', added: 'addedMicroSkills', removed: 'removedMicroSkills' },
-  { label: 'Mã lỗi', added: 'addedErrorCodes', removed: 'removedErrorCodes' },
+  { label: 'Lỗi sai thường gặp', added: 'addedErrorCodes', removed: 'removedErrorCodes' },
 ]
 
 function CodeList({ codes, removed }: { codes: string[]; removed?: boolean }) {

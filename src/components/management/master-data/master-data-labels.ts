@@ -14,6 +14,7 @@ export const VERSION_STATUS_TONES: Record<MasterDataVersionStatus, StatusTone> =
 }
 
 export type MasterDataTab =
+  | 'structure'
   | 'domains'
   | 'patterns'
   | 'skills'
@@ -23,13 +24,13 @@ export type MasterDataTab =
   | 'history'
 
 /** The tabs over the six tables, in workbook order, then the version history. */
-export const TABLE_TABS: { id: Exclude<MasterDataTab, 'history'>; label: string; sheet: string }[] = [
+export const TABLE_TABS: { id: Exclude<MasterDataTab, 'history' | 'structure'>; label: string; sheet: string }[] = [
   { id: 'domains', label: 'Domain', sheet: 'Domains' },
   { id: 'patterns', label: 'Dạng câu', sheet: 'Question_Types' },
   { id: 'skills', label: 'Kỹ năng', sheet: 'Skills' },
   { id: 'microSkills', label: 'Micro-skill', sheet: 'Micro_Skills' },
   { id: 'mappings', label: 'Mapping', sheet: 'Mappings' },
-  { id: 'errorCodes', label: 'Mã lỗi', sheet: 'Error_Codes' },
+  { id: 'errorCodes', label: 'Lỗi sai thường gặp', sheet: 'Error_Codes' },
 ]
 
 /** "11 domain · 20 dạng câu · …" for the version bar. */
@@ -40,7 +41,7 @@ export function contentSummary(content: MasterDataContent, withMappings: boolean
     `${content.skills.length} kỹ năng`,
     `${content.microSkills.length} micro-skill`,
     withMappings ? `${content.mappings.length} mapping` : null,
-    `${content.errorCodes.length} mã lỗi`,
+    `${content.errorCodes.length} lỗi sai thường gặp`,
   ]
     .filter(Boolean)
     .join(' · ')
