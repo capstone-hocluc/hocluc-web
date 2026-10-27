@@ -10,6 +10,7 @@ import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
 import CategoryManagement from './crud/category-management'
+import MasterDataManagement from './master-data/master-data-management'
 import ExamYearManagement from './crud/exam-year-management'
 import OrderManagement from './crud/order-management'
 import EnrollmentManagement from './crud/enrollment-management'
@@ -21,7 +22,6 @@ import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
   AdminBlueprints,
-  AdminTaxonomy,
   MentorGroups,
   MentorOverview,
   MentorSolutionQueue,
@@ -99,7 +99,7 @@ export function ManagementScreen({
     case 'audit-log':
       return <AdminAuditLog />
     case 'taxonomy':
-      return <AdminTaxonomy />
+      return <MasterDataManagement title={title} reader={role === 'TEACHER'} />
     case 'blueprints':
       return <AdminBlueprints />
     case 'categories':

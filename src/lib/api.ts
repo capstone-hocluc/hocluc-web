@@ -60,12 +60,21 @@ export class ApiError extends Error {
   status: number
   errors?: Record<string, string>
   code?: string
+  /** The response's `data` on a failure, when the backend sends one (a validation report, say). */
+  data?: unknown
 
-  constructor(message: string, status: number, errors?: Record<string, string>, code?: string) {
+  constructor(
+    message: string,
+    status: number,
+    errors?: Record<string, string>,
+    code?: string,
+    data?: unknown
+  ) {
     super(message)
     this.status = status
     this.errors = errors
     this.code = code
+    this.data = data
   }
 }
 
@@ -217,7 +226,8 @@ export async function request<T = unknown>(
       data?.message || `Request failed with status ${response.status}`,
       response.status,
       data?.errors,
-      data?.code
+      data?.code,
+      data?.data ?? undefined
     )
   }
   return data

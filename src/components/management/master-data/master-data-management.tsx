@@ -1,0 +1,409 @@
+import { useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
+import Button from '../../console/button'
+import ConfirmDialog from '../../console/confirm-dialog'
+import DataTable from '../../console/data-table'
+import Notice from '../../console/notice'
+import PageHeading from '../../console/page-heading'
+import Panel from '../../console/panel'
+import SelectField from '../../console/select-field'
+import Status from '../../console/status'
+import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
+import { CheckCircle2, Plus, Repeat2, Trash2 } from '../../console/icons'
+import { ConsoleTabs, ConsoleTabsContent, ConsoleTabsList, ConsoleTabsTrigger } from '../../console/tabs'
+import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { getCategories, type Category } from '../../../services/categoryService'
+import {
+  activateVersion,
+  deleteDraftVersion,
+  getActiveCategories,
+  getActiveContent,
+  getVersionContent,
+  getVersions,
+  type MasterDataVersion,
+} from '../../../services/masterDataService'
+import { crudError } from '../crud/crud-errors'
+import { formatDateTime } from '../crud/crud-format'
+import {
+  contentSummary,
+  TABLE_TABS,
+  VERSION_STATUS_LABELS,
+  VERSION_STATUS_TONES,
+  type MasterDataTab,
+} from './master-data-labels'
+import MasterDataTable, { type Selection } from './master-data-tables'
+import MasterDataDetail from './master-data-detail'
+import MasterDataImportDialog from './master-data-import-dialog'
+import MasterDataDiffDialog from './master-data-diff-dialog'
+
+interface SubjectOption {
+  id: string
+  label: string
+}
+
+const STATUS_ORDER = { ACTIVE: 0, DRAFT: 1, RETIRED: 2 } as const
+
+/** The version a subject opens on: the active one, else the newest import. */
+function defaultVersion(versions: MasterDataVersion[]): MasterDataVersion | undefined {
+  return versions.find((v) => v.status === 'ACTIVE') ?? versions[0]
+}
+
+/**
+ * The subjects a workbook belongs to, in menu order: a group with subjects under it ("Sử dụng ngôn ngữ")
+ * is left out and its subjects read "Group › Subject"; a top-level subject without children stays.
+ */
+function subjectTree(categories: Category[]): SubjectOption[] {
+  const active = categories.filter((c) => c.active)
+  const byOrder = (a: Category, b: Category) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'vi')
+  const ids = new Set(active.map((c) => c.id))
+  const roots = active.filter((c) => !c.parentId || !ids.has(c.parentId)).sort(byOrder)
+  const hasChildren = (root: Category) => active.some((c) => c.parentId === root.id)
+  return roots.flatMap((root) => [
+    ...(hasChildren(root) ? [] : [{ id: root.id, label: root.name }]),
+    ...active
+      .filter((c) => c.parentId === root.id)
+      .sort(byOrder)
+      .map((c) => ({ id: c.id, label: `${root.name} › ${c.name}` })),
+  ])
+}
+
+/**
+ * Master data per subject: domains, question patterns, skills, micro-skills, mappings and error codes.
+ * Staff import a workbook as a draft, compare it and activate it; teachers read the active version.
+ */
+export default function MasterDataManagement({ title, reader }: { title: string; reader: boolean }) {
+  const categories = useScheduleResource<SubjectOption[]>(reader ? 'md-subjects-active' : 'md-subjects', async () =>
+    reader
+      ? (await getActiveCategories()).map((c) => ({ id: c.categoryId, label: `${c.categoryName} · v${c.version}` }))
+      : subjectTree(await getCategories())
+  )
+  const [pickedCategory, setPickedCategory] = useState<string | null>(null)
+  const categoryId = pickedCategory ?? categories.data?.[0]?.id ?? null
+
+  const versions = useScheduleResource(!reader && categoryId ? `md-versions:${categoryId}` : null, () =>
+    getVersions(categoryId!)
+  )
+  const [pickedVersion, setPickedVersion] = useState<string | null>(null)
+  const versionList = useMemo(
+    () =>
+      [...(versions.data ?? [])].sort(
+        (a, b) => (b.importedAt ?? '').localeCompare(a.importedAt ?? '') || STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
+      ),
+    [versions.data]
+  )
+  const version =
+    versionList.find((v) => v.id === pickedVersion) ?? defaultVersion(versionList)
+
+  const contentKey = reader ? (categoryId ? `md-active:${categoryId}` : null) : version ? `md-content:${version.id}` : null
+  const content = useScheduleResource(contentKey, () =>
+    reader ? getActiveContent(categoryId!) : getVersionContent(version!.id)
+  )
+
+  const [tab, setTab] = useState<MasterDataTab>('domains')
+  const [stack, setStack] = useState<Selection[]>([])
+  const [importing, setImporting] = useState(false)
+  const [comparing, setComparing] = useState(false)
+  const [confirm, setConfirm] = useState<'activate' | 'delete' | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+
+  function chooseCategory(id: string) {
+    setPickedCategory(id)
+    setPickedVersion(null)
+    setStack([])
+    setError('')
+    setNotice('')
+  }
+
+  function chooseVersion(id: string) {
+    setPickedVersion(id)
+    setStack([])
+    setError('')
+    setNotice('')
+  }
+
+  async function runConfirmed() {
+    if (!version || !confirm) return
+    setBusy(true)
+    setError('')
+    try {
+      if (confirm === 'activate') {
+        await activateVersion(version.id)
+        setNotice(`Đã kích hoạt phiên bản ${version.version}. Bài học và câu hỏi gắn nhãn theo phiên bản này.`)
+        setPickedVersion(version.id)
+      } else {
+        await deleteDraftVersion(version.id)
+        setNotice(`Đã xóa bản nháp ${version.version}.`)
+        setPickedVersion(null)
+      }
+      setConfirm(null)
+      setComparing(false)
+      versions.reload()
+    } catch (err) {
+      setError(crudError(err))
+      setConfirm(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const tabs = reader ? TABLE_TABS.filter((t) => t.id !== 'mappings') : TABLE_TABS
+  const isDraft = version?.status === 'DRAFT'
+  const hasData = reader ? !!categoryId : versionList.length > 0
+  const versionsLoading = !reader && versions.status !== 'ready'
+
+  const historyColumns = useMemo<ColumnDef<MasterDataVersion>[]>(
+    () => [
+      {
+        id: 'version',
+        header: 'Phiên bản',
+        accessorKey: 'version',
+        cell: ({ row }) => <span className="font-medium text-text-primary">{row.original.version}</span>,
+      },
+      {
+        id: 'status',
+        header: 'Trạng thái',
+        accessorKey: 'status',
+        cell: ({ row }) => (
+          <Status tone={VERSION_STATUS_TONES[row.original.status]}>{VERSION_STATUS_LABELS[row.original.status]}</Status>
+        ),
+      },
+      {
+        id: 'file',
+        header: 'File',
+        accessorFn: (r) => r.sourceFilename ?? '',
+        cell: ({ getValue }) => <span className="text-text-secondary">{String(getValue() || '—')}</span>,
+      },
+      {
+        id: 'imported',
+        header: 'Nhập lúc',
+        accessorFn: (r) => r.importedAt ?? '',
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-text-secondary">
+            {row.original.importedAt ? formatDateTime(row.original.importedAt) : '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'activated',
+        header: 'Kích hoạt lúc',
+        accessorFn: (r) => r.activatedAt ?? '',
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-text-secondary">
+            {row.original.activatedAt ? formatDateTime(row.original.activatedAt) : '—'}
+          </span>
+        ),
+      },
+    ],
+    []
+  )
+
+  return (
+    <>
+      <PageHeading
+        title={title}
+        readOnly={reader}
+        subtitle={
+          reader
+            ? 'Domain, dạng câu, kỹ năng, micro-skill và mã lỗi đang dùng để gắn nhãn bài học và câu hỏi.'
+            : 'Bộ nhãn của từng môn, nhập từ file Excel. Bản nháp chỉ được dùng sau khi kích hoạt.'
+        }
+        action={
+          !reader && (
+            <Button onClick={() => setImporting(true)} disabled={categories.status !== 'ready'}>
+              <Plus size={16} />
+              Nhập file Excel
+            </Button>
+          )
+        }
+      />
+
+      <ScheduleResourceState
+        status={categories.status}
+        errorMessage={categories.errorMessage}
+        onRetry={categories.reload}
+        empty={!categories.data?.length}
+        emptyMessage={reader ? 'Chưa môn nào có master data đang dùng.' : 'Chưa có môn học.'}
+        skeleton="detail"
+      >
+        <div className="flex flex-col gap-5">
+          <Panel>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="w-full sm:w-72">
+                  <SelectField
+                    ariaLabel="Môn học"
+                    value={categoryId ?? undefined}
+                    onChange={chooseCategory}
+                    options={categories.data ?? []}
+                  />
+                </div>
+                {!reader && versionList.length > 0 && (
+                  <div className="w-full sm:w-64">
+                    <SelectField
+                      ariaLabel="Phiên bản"
+                      value={version?.id}
+                      onChange={chooseVersion}
+                      options={versionList.map((v) => ({
+                        id: v.id,
+                        label: `v${v.version} · ${VERSION_STATUS_LABELS[v.status]}`,
+                      }))}
+                    />
+                  </div>
+                )}
+                {version && !reader && (
+                  <Status tone={VERSION_STATUS_TONES[version.status]}>{VERSION_STATUS_LABELS[version.status]}</Status>
+                )}
+                {isDraft && !reader && (
+                  <div className="flex flex-wrap gap-2 sm:ml-auto">
+                    <Button appearance="outline" size="sm" onClick={() => setComparing(true)}>
+                      <Repeat2 size={14} />
+                      So sánh
+                    </Button>
+                    <Button size="sm" onClick={() => setConfirm('activate')}>
+                      <CheckCircle2 size={14} />
+                      Kích hoạt
+                    </Button>
+                    <Button variant="danger" appearance="outline" size="sm" onClick={() => setConfirm('delete')}>
+                      <Trash2 size={14} />
+                      Xóa nháp
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {content.data && (
+                <p className="text-sm text-text-secondary">{contentSummary(content.data, !reader)}</p>
+              )}
+              {isDraft && !reader && (
+                <Notice tone="warning">Bản nháp, chưa dùng cho bài học và câu hỏi.</Notice>
+              )}
+            </div>
+          </Panel>
+
+          {notice && <Notice tone="info">{notice}</Notice>}
+          {error && (
+            <Notice tone="danger">
+              <span role="alert">{error}</span>
+            </Notice>
+          )}
+
+          {versionsLoading ? (
+            <ScheduleResourceState
+              status={versions.status}
+              errorMessage={versions.errorMessage}
+              onRetry={versions.reload}
+              skeleton="table"
+            >
+              {null}
+            </ScheduleResourceState>
+          ) : !hasData ? (
+            <div className="rounded-xl border border-dashed border-card-border px-5 py-10 text-center">
+              <p className="text-sm font-medium text-text-primary">Môn này chưa có master data</p>
+              <p className="mt-1 text-sm text-text-tertiary">
+                Nhập file Excel của môn (7 sheet) để tạo bản nháp đầu tiên.
+              </p>
+            </div>
+          ) : (
+            <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as MasterDataTab)}>
+              <ConsoleTabsList aria-label="Bảng master data">
+                {tabs.map((t) => (
+                  <ConsoleTabsTrigger key={t.id} value={t.id}>
+                    {t.label}
+                  </ConsoleTabsTrigger>
+                ))}
+                {!reader && <ConsoleTabsTrigger value="history">Lịch sử phiên bản</ConsoleTabsTrigger>}
+              </ConsoleTabsList>
+              {tabs.map((t) => (
+                <ConsoleTabsContent key={t.id} value={t.id}>
+                  <ScheduleResourceState
+                    status={content.status}
+                    errorMessage={content.errorMessage}
+                    onRetry={content.reload}
+                    skeleton="table"
+                  >
+                    {content.data && tab === t.id && (
+                      <MasterDataTable
+                        key={contentKey}
+                        tab={t.id}
+                        content={content.data}
+                        onOpen={(selection) => setStack([selection])}
+                      />
+                    )}
+                  </ScheduleResourceState>
+                </ConsoleTabsContent>
+              ))}
+              {!reader && (
+                <ConsoleTabsContent value="history">
+                  <DataTable
+                    data={versionList}
+                    columns={historyColumns}
+                    getRowKey={(row) => row.id}
+                    onRowClick={(row) => {
+                      chooseVersion(row.id)
+                      setTab('domains')
+                    }}
+                  />
+                </ConsoleTabsContent>
+              )}
+            </ConsoleTabs>
+          )}
+        </div>
+      </ScheduleResourceState>
+
+      {content.data && (
+        <MasterDataDetail
+          selection={stack[stack.length - 1] ?? null}
+          content={content.data}
+          onOpen={(selection) => setStack((current) => [...current, selection])}
+          onBack={stack.length > 1 ? () => setStack((current) => current.slice(0, -1)) : undefined}
+          onClose={() => setStack([])}
+        />
+      )}
+
+      {importing && (
+        <MasterDataImportDialog
+          categories={(categories.data ?? []).map((c) => ({ id: c.id, name: c.label }))}
+          initialCategoryId={categoryId}
+          onClose={() => setImporting(false)}
+          onImported={(importedCategory, result) => {
+            setImporting(false)
+            setPickedCategory(importedCategory)
+            setPickedVersion(result.versionId)
+            setTab('domains')
+            setStack([])
+            setNotice(`Đã nhập phiên bản ${result.version} thành bản nháp. Kiểm tra rồi kích hoạt khi sẵn sàng.`)
+            if (importedCategory === categoryId) versions.reload()
+          }}
+        />
+      )}
+
+      {comparing && version && (
+        <MasterDataDiffDialog
+          version={version}
+          canActivate={isDraft}
+          onActivate={() => setConfirm('activate')}
+          onClose={() => setComparing(false)}
+        />
+      )}
+
+      {confirm && version && (
+        <ConfirmDialog
+          title={confirm === 'activate' ? `Kích hoạt phiên bản ${version.version}?` : `Xóa bản nháp ${version.version}?`}
+          description={
+            confirm === 'activate'
+              ? `Phiên bản đang dùng của ${version.categoryName} sẽ chuyển sang "Đã ngưng". Bài học và câu hỏi mới sẽ gắn nhãn theo phiên bản này. Nên xem "So sánh" trước.`
+              : 'Bản nháp và toàn bộ dữ liệu đã nhập của nó sẽ bị xóa. Không thể hoàn tác.'
+          }
+          cancelLabel="Hủy"
+          confirmLabel={confirm === 'activate' ? 'Kích hoạt' : 'Xóa nháp'}
+          busyLabel={confirm === 'activate' ? 'Đang kích hoạt...' : 'Đang xóa...'}
+          variant={confirm === 'delete' ? 'danger' : 'primary'}
+          busy={busy}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => void runConfirmed()}
+        />
+      )}
+    </>
+  )
+}

@@ -128,7 +128,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
 
   {
     page: 'taxonomy',
-    label: 'Phân loại kiến thức',
+    label: 'Master data',
     icon: ListTree,
     group: 'academic',
     permission: 'TAXONOMY_WRITE',
