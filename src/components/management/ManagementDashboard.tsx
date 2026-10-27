@@ -10,6 +10,8 @@ import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
 import CategoryManagement from './crud/category-management'
+import MasterDataManagement from './master-data/master-data-management'
+import ExamYearManagement from './crud/exam-year-management'
 import OrderManagement from './crud/order-management'
 import EnrollmentManagement from './crud/enrollment-management'
 import StudyGroupManagement from './crud/study-group-management'
@@ -27,7 +29,6 @@ import {
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
 import QuestionBankScreen from './question-bank/QuestionBankScreen'
-import MasterDataScreen from './master-data/MasterDataScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
 import { buildNavSections, canWrite, findNavItem, navLabel } from '../../lib/console-nav'
 
@@ -106,16 +107,13 @@ export function ManagementScreen({
         </>
       )
     case 'taxonomy':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <MasterDataScreen readOnly={readOnly} />
-        </>
-      )
+      return <MasterDataManagement title={title} reader={readOnly} />
     case 'blueprints':
       return <AdminBlueprints />
     case 'categories':
       return <CategoryManagement readOnly={readOnly} />
+    case 'exam-years':
+      return <ExamYearManagement readOnly={readOnly} title={title} />
     case 'courses':
       return <ManagementCourseList readOnly={readOnly} title={title} />
     case 'schedules':

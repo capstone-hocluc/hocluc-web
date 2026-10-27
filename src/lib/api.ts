@@ -60,7 +60,9 @@ export class ApiError extends Error {
   status: number
   errors?: Record<string, string>
   code?: string
-  /** The body's `data` of a failed call, when the server sends one (a rejected file's report). */
+  /** The response's `data` on a failure, when the backend sends one (a validation report, say). */
+  data?: unknown
+  /** Backwards-compatible alias used by older callers. */
   details?: unknown
 
   constructor(message: string, status: number, errors?: Record<string, string>, code?: string, details?: unknown) {
@@ -69,6 +71,7 @@ export class ApiError extends Error {
     this.errors = errors
     this.code = code
     this.details = details
+    this.data = details
   }
 }
 

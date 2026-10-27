@@ -16,6 +16,7 @@ interface ListCardProps<T extends RowData> {
   searchState?: { value: string; onChange: (value: string) => void }
   filterState?: { value: string; onChange: (value: string) => void }
   emptyMessage?: string
+  onRowClick?: (row: T) => void
 }
 
 function ListCard<T extends RowData>({
@@ -29,6 +30,7 @@ function ListCard<T extends RowData>({
   searchState,
   filterState,
   emptyMessage = 'Không có dữ liệu phù hợp.',
+  onRowClick,
 }: ListCardProps<T>) {
   const [localQuery, setLocalQuery] = useState('')
   const [localFilterValue, setLocalFilterValue] = useState('ALL')
@@ -61,7 +63,13 @@ function ListCard<T extends RowData>({
           </FilterGroup>
         )}
       </FilterToolbar>
-      <DataTable columns={columns} data={rows} getRowKey={getRowKey} emptyMessage={emptyMessage} />
+      <DataTable
+        columns={columns}
+        data={rows}
+        getRowKey={getRowKey}
+        emptyMessage={emptyMessage}
+        onRowClick={onRowClick}
+      />
       <div className="border-t border-card-border px-4 py-3 text-sm text-text-tertiary">{rows.length} mục</div>
     </section>
   )

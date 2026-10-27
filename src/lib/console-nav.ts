@@ -128,7 +128,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
 
   {
     page: 'taxonomy',
-    label: 'Phân loại kiến thức',
+    label: 'Master data',
     icon: ListTree,
     group: 'academic',
     permission: 'TAXONOMY_WRITE',
@@ -145,6 +145,15 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     page: 'categories',
     label: 'Môn học',
     icon: Layers3,
+    group: 'academic',
+    permission: 'COURSE_READ',
+    writePermission: 'COURSE_WRITE',
+    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
+  },
+  {
+    page: 'exam-years',
+    label: 'Năm thi & đợt thi',
+    icon: CalendarDays,
     group: 'academic',
     permission: 'COURSE_READ',
     writePermission: 'COURSE_WRITE',

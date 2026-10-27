@@ -68,7 +68,10 @@ function CompareTable({ courses }: { courses: Course[] }) {
                   </th>
                   <td data-label="Khai giảng">{formatDay(course.startDate)}</td>
                   <td data-label="Kết thúc">{formatDay(course.endDate)}</td>
-                  <td data-label="Ngày thi">{formatDay(course.examSessionDate)}</td>
+                  <td data-label="Ngày thi">
+                    {formatDay(course.examSessionDate)}
+                    {course.examSession && !course.examSession.dateConfirmed && ' (dự kiến)'}
+                  </td>
                   <td data-label="Thời gian học">{weeks ? `${weeks} tuần` : '—'}</td>
                   <td data-label="Học phí" className="compare-price">
                     {formatCoursePrice(course.price) ?? '—'}

@@ -619,3 +619,31 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* Learning outcomes: a numbered list, the code as a small badge. */
+.course-page .cd-outcomes {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.course-page .cd-outcomes li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.course-page .cd-outcome-code {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  font-size: var(--small);
+  font-weight: 700;
+}
