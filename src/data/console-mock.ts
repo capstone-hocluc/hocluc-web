@@ -10,15 +10,6 @@ export const BLUEPRINTS = [
   { id: 'bp-05', name: 'Luyện chùm theo kỹ năng', type: 'Luyện tập', questions: 20, minutes: 30, version: 'v0.3', status: 'Nháp' },
 ]
 
-export const TAXONOMY = [
-  { id: 'dm-01', domain: 'Đại số', questionTypes: 18, skills: 22, questions: 640, version: 'v2.0' },
-  { id: 'dm-02', domain: 'Hình học không gian', questionTypes: 12, skills: 14, questions: 380, version: 'v2.0' },
-  { id: 'dm-03', domain: 'Xác suất - Thống kê', questionTypes: 9, skills: 11, questions: 270, version: 'v2.0' },
-  { id: 'dm-04', domain: 'Hàm số và đồ thị', questionTypes: 14, skills: 16, questions: 410, version: 'v2.0' },
-  { id: 'dm-05', domain: 'Tư duy logic', questionTypes: 11, skills: 13, questions: 300, version: 'v2.0' },
-  { id: 'dm-06', domain: 'Khoa học tự nhiên', questionTypes: 16, skills: 19, questions: 520, version: 'v2.0' },
-]
-
 export const AUDIT_LOG = [
   { id: 'lg-01', time: '10/10/2026 08:42', actor: 'Admin User', role: 'Quản trị viên', action: 'Cấp vai trò Mentor', target: 'long.nguyen@hocluc.local' },
   { id: 'lg-02', time: '10/10/2026 08:15', actor: 'Staff User', role: 'Nhân viên', action: 'Duyệt câu hỏi', target: 'Q-2041' },

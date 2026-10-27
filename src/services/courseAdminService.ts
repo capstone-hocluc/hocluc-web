@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { ExamSessionSummary } from './examYearService'
 
 export type CourseType = 'MAIN' | 'SECTION'
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
@@ -24,6 +25,8 @@ export interface CourseAdmin {
   endDate: string | null
   targetExam: string | null
   examSessionDate: string | null
+  /** The exam sitting a MAIN course prepares for (absent on older backends). */
+  examSession?: ExamSessionSummary | null
   accessMode: AccessMode | null
   accessDays: number | null
   publishedAt: string | null
@@ -97,7 +100,12 @@ export type SaveCourseRequest = Pick<
   | 'examSessionDate'
   | 'accessMode'
   | 'accessDays'
-> & { slug?: string; expectedUpdatedAt?: string }
+> & {
+  slug?: string
+  /** MAIN only: the sitting the course prepares for; the exam date then comes from it. */
+  examSessionId?: string | null
+  expectedUpdatedAt?: string
+}
 
 const path = (id?: string) => `/api/v1/admin/courses${id ? `/${encodeURIComponent(id)}` : ''}`
 const requireData = <T>(response: { data?: T }): T => {

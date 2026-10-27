@@ -27,6 +27,7 @@ import {
   getCourseDetail,
   type CourseChapter,
   type CourseDetail,
+  type CourseOutcomeView,
   type GiftCourse,
 } from '../../services/courseService'
 import '../../styles/landing/landing-page.css'
@@ -58,6 +59,23 @@ function GiftCard({ gift }: { gift: GiftCourse }) {
         {gift.chapterCount} chương · {gift.lessonCount} bài học
       </p>
     </li>
+  )
+}
+
+/** The course's learning outcomes (CLO): what a student can do once it is done. */
+function Outcomes({ outcomes }: { outcomes: CourseOutcomeView[] }) {
+  return (
+    <section className="cd-block" aria-labelledby="cd-outcomes-title">
+      <h2 id="cd-outcomes-title">Học xong bạn sẽ</h2>
+      <ol className="cd-outcomes">
+        {outcomes.map((outcome) => (
+          <li key={outcome.id}>
+            <span className="cd-outcome-code">{outcome.code}</span>
+            <span>{outcome.description}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
@@ -317,7 +335,11 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                         {day(course.examSessionDate) && (
                           <div>
                             <dt>Ngày thi</dt>
-                            <dd>{day(course.examSessionDate)}</dd>
+                            <dd>
+                              {course.examSession && `${course.examSession.name} · `}
+                              {day(course.examSessionDate)}
+                              {course.examSession && !course.examSession.dateConfirmed && ' (dự kiến)'}
+                            </dd>
                           </div>
                         )}
                         {view.weeks && (
@@ -342,6 +364,8 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                     </header>
 
                     {view.about.length > 0 && <CourseAbout blocks={view.about} startDate={course.startDate} />}
+
+                    {course.outcomes && course.outcomes.length > 0 && <Outcomes outcomes={course.outcomes} />}
 
                     {view.stages ? (
                       <Roadmap stages={view.stages} />

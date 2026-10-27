@@ -30,6 +30,7 @@ import CoursePhasesPanel from './course-phases-panel'
 import CourseSectionsPanel from './course-sections-panel'
 import CourseInstructorsPanel from './course-instructors-panel'
 import CourseContentPanel from './course-content-panel'
+import CourseOutcomesPanel from './course-outcomes-panel'
 import ContentSectionsPanel from './content-sections-panel'
 import CourseEditorDialog from './course-editor-dialog'
 import CourseRejectDialog from './course-reject-dialog'
@@ -377,6 +378,7 @@ export default function CourseDetailScreen({
                     </p>
                   )}
                 </Panel>
+                <CourseOutcomesPanel courseId={course.id} readOnly={readOnly} />
               </ConsoleTabsContent>
 
               <ConsoleTabsContent value="content">
