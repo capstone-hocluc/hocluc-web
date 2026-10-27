@@ -2,7 +2,7 @@ import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getCategories, type Category } from '../../../services/categoryService'
 import { ForbiddenPage } from '../../console/access-states'
 import QuizDetails from './QuizDetails'
-import { useDeferredValue, useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import {
   ArrowDown,
@@ -67,9 +67,7 @@ import ExamEditorSteps from './ExamEditorSteps'
 import { describePublishProblems } from './publish-problems'
 import MockExamEditorSkeleton from './MockExamEditorSkeleton'
 import ExamQuestionEditor from './ExamQuestionEditor'
-import ExamQuestionListSkeleton from './ExamQuestionListSkeleton'
 import ExamQuestionRail from './ExamQuestionRail'
-import ExamViewToggle, { type ExamEditorView } from './ExamViewToggle'
 import { CHOICE_TYPES, type DraftQuestion, type DraftSection } from './exam-draft'
 import ScrollArea from '../../ui/ScrollArea'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -700,9 +698,6 @@ function TeacherMockExamForm({
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [railOpen, setRailOpen] = useState(false)
-  const [view, setView] = useState<ExamEditorView>('single')
-  // The toggle answers at once; the page of every question, which is heavy to build, follows in the background.
-  const shownView = useDeferredValue(view)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
@@ -1157,23 +1152,6 @@ function TeacherMockExamForm({
 
   const numberOf = new Map(numbered.map((entry, index) => [entry.question.clientId, index + 1]))
 
-  // On the scrolling page a choice in the list brings that question to the top instead of replacing the one shown.
-  const scrollToQuestion = (clientId: string, framesLeft = 90) => requestAnimationFrame(() => {
-    const target = document.getElementById('exam-question-' + clientId)
-    if (target) target.scrollIntoView({ block: 'start' })
-    else if (framesLeft > 0) scrollToQuestion(clientId, framesLeft - 1)
-  })
-
-  const selectQuestion = (clientId: string) => {
-    setSelectedId(clientId)
-    if (shownView === 'all') scrollToQuestion(clientId)
-  }
-
-  const changeView = (next: ExamEditorView) => {
-    setView(next)
-    if (next === 'all' && activeEntry) scrollToQuestion(activeEntry.question.clientId)
-  }
-
   const sectionBar = (section: DraftSection) => {
     const sectionIndex = sections.indexOf(section)
     const position = editableSections.indexOf(section) + 1
@@ -1198,7 +1176,7 @@ function TeacherMockExamForm({
     )
   }
 
-  const questionEditor = (section: DraftSection, question: DraftQuestion, paged: boolean) => {
+  const questionEditor = (section: DraftSection, question: DraftQuestion) => {
     const number = numberOf.get(question.clientId) ?? 0
     const position = section.questions.indexOf(question)
     return (
@@ -1219,8 +1197,8 @@ function TeacherMockExamForm({
         onChange={(update) => updateQuestion(section.clientId, question.clientId, update)}
         onMove={(direction) => moveQuestion(section.clientId, question.clientId, direction)}
         onDelete={() => deleteQuestion(section.clientId, question.clientId)}
-        onPrevious={paged ? (number > 1 ? () => setSelectedId(numbered[number - 2].question.clientId) : null) : undefined}
-        onNext={paged ? (number < numbered.length ? () => setSelectedId(numbered[number].question.clientId) : null) : undefined}
+        onPrevious={number > 1 ? () => setSelectedId(numbered[number - 2].question.clientId) : null}
+        onNext={number < numbered.length ? () => setSelectedId(numbered[number].question.clientId) : null}
       />
     )
   }
@@ -1229,7 +1207,7 @@ function TeacherMockExamForm({
   const rail = (afterChoice?: () => void) => (
     <ExamQuestionRail sections={sections} selectedId={railSelectedId} canEditStructure={canEditQuestions} busy={busy}
       footer={<QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload} />}
-      onSelect={(clientId) => { selectQuestion(clientId); afterChoice?.() }}
+      onSelect={(clientId) => { setSelectedId(clientId); afterChoice?.() }}
       onAddQuestion={(sectionId) => { addQuestion(sectionId); afterChoice?.() }}
       onAddSection={() => { addSection(); afterChoice?.() }} />
   )
@@ -1249,7 +1227,6 @@ function TeacherMockExamForm({
           <ExamEditorSteps current={step} onSelect={goToStep} disabled={busy} />
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {step === LAST_EXAM_STEP && <ExamViewToggle view={view} onChange={changeView} />}
           <Button appearance="ghost" className={ambiguousCreate || ambiguousQuestionSave ? undefined : 'max-sm:hidden'} onClick={onCancel} disabled={busy}>
             {ambiguousCreate || ambiguousQuestionSave ? 'Quay về danh sách' : 'Hủy'}
           </Button>
@@ -1434,60 +1411,23 @@ function TeacherMockExamForm({
             <div className="flex shrink-0 border-b border-card-border px-4 py-2 sm:px-6 lg:hidden">
               <Button appearance="outline" size="sm" onClick={() => setRailOpen(true)}>Danh sách câu</Button>
             </div>
-            <ScrollArea className="min-h-0 flex-1">
+            <ScrollArea aria-label="Nội dung đề" className="min-h-0 flex-1">
               {placement && ['loading', 'error', 'forbidden', 'not-found'].includes(categories.status) && (
                 <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-4 sm:px-6">
                   {categories.status === 'loading' && <Skeleton className="h-4 w-44" role="status" aria-label="Đang tải môn học" />}
                   {['error', 'forbidden', 'not-found'].includes(categories.status) && <Notice tone="warning">{categories.errorMessage || 'Không tải được các môn bạn được phép xem. Có thể lưu nháp và bổ sung sau.'}<Button appearance="outline" onClick={categories.reload}>Thử tải môn học</Button></Notice>}
                 </div>
               )}
-              {view === 'all' && shownView !== 'all' ? <ExamQuestionListSkeleton /> : shownView === 'all' ? (
-                <div className="mx-auto flex w-full max-w-3xl flex-col pb-6">
-                  {sections.map((section) => (section.questions.length === 0 && !canEditQuestions ? null : (
-                    <section key={section.clientId} id={'exam-section-' + section.clientId} aria-label={section.title}>
-                      {canEditQuestions && !section.unassigned
-                        ? sectionBar(section)
-                        : <h2 className="m-0 px-4 pt-6 text-sm font-semibold text-text-secondary sm:px-6">{section.title}</h2>}
-                      {section.questions.map((question) => (
-                        <div
-                          key={question.clientId}
-                          id={'exam-question-' + question.clientId}
-                          onFocusCapture={() => setSelectedId(question.clientId)}
-                          className="scroll-mt-2 border-b border-card-border [contain-intrinsic-size:auto_30rem] [content-visibility:auto] last:border-b-0"
-                        >
-                          {questionEditor(section, question, false)}
-                        </div>
-                      ))}
-                      {section.questions.length === 0 && (
-                        <div className="px-4 py-4 sm:px-6">
-                          <Button appearance="outline" onClick={() => addQuestion(section.clientId)} disabled={busy}><Plus size={15} />Thêm câu hỏi đầu tiên</Button>
-                        </div>
-                      )}
-                    </section>
-                  )))}
-                  {sections.length === 0 && (
-                    <div className="flex flex-col items-start gap-3 p-4 sm:p-6">
-                      <p className="m-0 w-full rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
-                        Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.
-                      </p>
-                      {canEditQuestions && <Button appearance="outline" onClick={addSection} disabled={busy}><Plus size={15} />Thêm phần thi</Button>}
-                    </div>
-                  )}
+              {activeSection && canEditQuestions && !activeSection.unassigned && sectionBar(activeSection)}
+              {activeEntry ? questionEditor(activeEntry.section, activeEntry.question) : (
+                <div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-3 p-4 sm:p-6">
+                  <p className="m-0 w-full rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
+                    {sections.length === 0 ? 'Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.' : 'Phần này chưa có câu hỏi.'}
+                  </p>
+                  {canEditQuestions && (sections.length === 0
+                    ? <Button appearance="outline" onClick={addSection} disabled={busy}><Plus size={15} />Thêm phần thi</Button>
+                    : activeSection && <Button appearance="outline" onClick={() => addQuestion(activeSection.clientId)} disabled={busy}><Plus size={15} />Thêm câu hỏi đầu tiên</Button>)}
                 </div>
-              ) : (
-                <>
-                  {activeSection && canEditQuestions && !activeSection.unassigned && sectionBar(activeSection)}
-                  {activeEntry ? questionEditor(activeEntry.section, activeEntry.question, true) : (
-                    <div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-3 p-4 sm:p-6">
-                      <p className="m-0 w-full rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
-                        {sections.length === 0 ? 'Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.' : 'Phần này chưa có câu hỏi.'}
-                      </p>
-                      {canEditQuestions && (sections.length === 0
-                        ? <Button appearance="outline" onClick={addSection} disabled={busy}><Plus size={15} />Thêm phần thi</Button>
-                        : activeSection && <Button appearance="outline" onClick={() => addQuestion(activeSection.clientId)} disabled={busy}><Plus size={15} />Thêm câu hỏi đầu tiên</Button>)}
-                    </div>
-                  )}
-                </>
               )}
             </ScrollArea>
           </div>

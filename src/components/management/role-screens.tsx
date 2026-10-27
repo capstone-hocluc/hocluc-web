@@ -19,7 +19,6 @@ import {
   GROUPS,
   MENTOR_STUDENTS,
   SOLUTION_QUEUE,
-  TAXONOMY,
   type ReviewStatus,
 } from '../../data/console-mock'
 
@@ -50,7 +49,6 @@ const progressColumn = <T extends { progress: number }>(header: string): ColumnD
 })
 
 type Blueprint = (typeof BLUEPRINTS)[number]
-type Domain = (typeof TAXONOMY)[number]
 type AuditEntry = (typeof AUDIT_LOG)[number]
 type Group = (typeof GROUPS)[number]
 type MentorStudent = (typeof MENTOR_STUDENTS)[number]
@@ -79,30 +77,6 @@ export function AdminBlueprints() {
         searchPlaceholder="Tìm blueprint..."
         searchText={(row) => `${row.name} ${row.type}`}
         filter={{ ariaLabel: 'Lọc theo trạng thái', allLabel: 'Tất cả trạng thái', options: ['Đang dùng', 'Nháp'], get: (row) => row.status }}
-      />
-    </Page>
-  )
-}
-
-export function AdminTaxonomy() {
-  const columns = useMemo<ColumnDef<Domain>[]>(
-    () => [
-      text<Domain>('domain', 'Lĩnh vực', 'font-medium text-text-primary'),
-      text<Domain>('questionTypes', 'Dạng câu'),
-      text<Domain>('skills', 'Kỹ năng'),
-      text<Domain>('questions', 'Câu hỏi'),
-      text<Domain>('version', 'Phiên bản'),
-    ],
-    []
-  )
-  return (
-    <Page title="Phân loại kiến thức">
-      <ListCard
-        data={TAXONOMY}
-        columns={columns}
-        getRowKey={(row) => row.id}
-        searchPlaceholder="Tìm lĩnh vực..."
-        searchText={(row) => row.domain}
       />
     </Page>
   )

@@ -165,8 +165,9 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     label: 'Ngân hàng câu hỏi',
     icon: FileQuestion,
     group: 'content',
-    permission: 'CONTENT_WRITE',
-    soon: true,
+    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
+    // The BE lets STAFF and above correct a label; a teacher only browses.
+    writePermission: 'QUIZ_WRITE',
   },
   {
     page: 'quizzes',

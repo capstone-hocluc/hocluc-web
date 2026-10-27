@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Plus, Trash2, X } from '../../console/icons'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Pencil, Plus, Trash2, X } from '../../console/icons'
 import Button from '../../console/button'
 import DropdownField from '../../console/dropdown-field'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
@@ -52,6 +52,38 @@ export default function ExamQuestionEditor({
   const isChoice = CHOICE_TYPES.includes(question.questionType)
   // The explanation is optional for a choice question: it stays folded until there is one or the teacher asks for it.
   const [explaining, setExplaining] = useState(Boolean(question.explanation))
+  const [editing, setEditing] = useState(false)
+  const navigation = onPrevious !== undefined && (
+    <footer className="flex items-center justify-between gap-3 border-t border-card-border pt-4">
+      <Button appearance="outline" onClick={onPrevious ?? undefined} disabled={!onPrevious}><ArrowLeft size={15} />Câu trước</Button>
+      <Button appearance="outline" onClick={onNext ?? undefined} disabled={!onNext}>Câu sau<ArrowRight size={15} /></Button>
+    </footer>
+  )
+
+  if (!editing || !editable) return (
+    <article aria-label={`Câu ${number}`} className="mx-auto flex w-full max-w-3xl flex-col gap-3 p-4 text-sm leading-6 text-text-primary sm:px-6">
+      <header className="flex items-center justify-between gap-3">
+        <h2 className="m-0 text-base font-semibold">Câu {number}</h2>
+        {editable && <Button appearance="ghost" size="sm" disabled={busy} onClick={() => setEditing(true)}><Pencil size={14} />Sửa</Button>}
+      </header>
+      <p className="m-0 whitespace-pre-wrap break-words"><MathText>{question.questionText || 'Chưa có nội dung câu hỏi.'}</MathText></p>
+      {question.imageUrl && <img src={question.imageUrl} alt={`Hình minh họa câu ${number}`} className="max-h-80 max-w-full self-start object-contain" />}
+      {isChoice && (
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+          {question.options.map((option, index) => (
+            <p key={index} className={cn('m-0 flex min-w-0 items-baseline gap-2 rounded-md px-2 py-1', option.correct && 'bg-badge-success-bg text-badge-success-text')}>
+              <strong className="shrink-0">{String.fromCharCode(65 + index)}.</strong>
+              <span className="min-w-0 whitespace-pre-wrap break-words"><MathText>{option.text || '…'}</MathText>{option.correct && <span className="sr-only"> (Đáp án đúng)</span>}</span>
+            </p>
+          ))}
+        </div>
+      )}
+      {question.explanation && <details className="text-text-secondary"><summary className="cursor-pointer font-medium">{isChoice ? 'Giải thích' : 'Đáp án / hướng dẫn chấm'}</summary><p className="mt-2 mb-0 whitespace-pre-wrap break-words"><MathText>{question.explanation}</MathText></p></details>}
+      {placement && question.categoryId && <p className="m-0 text-xs text-text-tertiary">Môn/nhóm đánh giá: {categoryOptions.find(option => option.id === question.categoryId)?.label ?? 'Môn đã gắn'}</p>}
+      {question.needsReview && <p className="m-0 rounded-md bg-badge-warning-bg px-2 py-1 text-xs text-badge-warning-text">Cần rà soát{question.reviewNote ? `: ${question.reviewNote}` : ''}</p>}
+      {navigation}
+    </article>
+  )
 
   const optionRows = question.options.map((option, optionIndex) => {
     const letter = String.fromCharCode(65 + optionIndex)
@@ -99,6 +131,8 @@ export default function ExamQuestionEditor({
         <div className="min-w-0">
           <h2 className="m-0 text-base font-semibold text-text-primary">Câu {number}</h2>
         </div>
+        <div className="flex items-center gap-2">
+          <Button appearance="outline" size="sm" disabled={busy} onClick={() => setEditing(false)}>Xong</Button>
         {editable && structureEditable && (
           <div className="flex gap-1">
             <Button appearance="outline" size="icon" aria-label="Đưa câu hỏi lên" disabled={busy || !canMoveUp} onClick={() => onMove(-1)}><ArrowUp size={14} /></Button>
@@ -106,6 +140,7 @@ export default function ExamQuestionEditor({
             <Button variant="danger" appearance="ghost" size="icon" aria-label="Xóa câu hỏi" disabled={busy} onClick={onDelete}><Trash2 size={14} /></Button>
           </div>
         )}
+        </div>
       </header>
 
       {!question.editable && (
@@ -115,6 +150,7 @@ export default function ExamQuestionEditor({
       <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
         Nội dung câu hỏi
         <textarea
+          aria-label="Nội dung câu hỏi"
           className={`${textareaControlClass} min-h-11! resize-none field-sizing-content`}
           value={question.questionText}
           onChange={(event) => onChange({ questionText: event.target.value })}
@@ -210,12 +246,7 @@ export default function ExamQuestionEditor({
         </div>
       )}
 
-      {onPrevious !== undefined && (
-        <footer className="flex items-center justify-between gap-3 border-t border-card-border pt-4">
-          <Button appearance="outline" onClick={onPrevious ?? undefined} disabled={!onPrevious}><ArrowLeft size={15} />Câu trước</Button>
-          <Button appearance="outline" onClick={onNext ?? undefined} disabled={!onNext}>Câu sau<ArrowRight size={15} /></Button>
-        </footer>
-      )}
+      {navigation}
     </article>
   )
 }

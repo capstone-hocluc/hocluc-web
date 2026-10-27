@@ -4,7 +4,12 @@ import { ApiError } from '../../../lib/api'
 import Card, { CardTitle } from '../../console/card'
 import PageHeading from '../../console/page-heading'
 import Status from '../../console/status'
-import { CheckCircle2 } from '../../console/icons'
+import { CheckCircle2, FileText } from '../../console/icons'
+import Button from '../../console/button'
+import { ConsoleTabs, ConsoleTabsContent, ConsoleTabsList, ConsoleTabsTrigger } from '../../console/tabs'
+import PagedPreview from './PagedPreview'
+import QuizPaper from './QuizPaper'
+import { printQuizPaper } from './print-quiz-paper'
 import { cn } from '../../../lib/cn'
 import { quizTypeLabel, quizRequirement } from '../../../lib/quiz-types'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
@@ -51,6 +56,26 @@ export default function QuizDetails({ quizId, onBack, expectedType }: { quizId: 
             </dl>
             {quiz.description && <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-text-secondary">{quiz.description}</p>}
           </Card>
+          <ConsoleTabs defaultValue="questions">
+          <ConsoleTabsList aria-label="Cách xem bài kiểm tra">
+            <ConsoleTabsTrigger value="questions">Danh sách câu</ConsoleTabsTrigger>
+            <ConsoleTabsTrigger value="paper">Bản in</ConsoleTabsTrigger>
+          </ConsoleTabsList>
+          <ConsoleTabsContent value="paper">
+            {editor.questions.length === 0
+              ? <Card><p className="py-5 text-center text-sm text-text-tertiary">Chưa có câu hỏi.</p></Card>
+              : <>
+                <div className="flex justify-end">
+                  <Button appearance="outline" onClick={printQuizPaper}><FileText size={16} />Tải PDF</Button>
+                </div>
+                <div className="min-w-0 overflow-x-auto rounded-xl bg-background-gray-secondary p-3 sm:p-6">
+                  <PagedPreview label="Bản in bài kiểm tra, chia trang A4" version={editor.quiz.updatedAt ?? editor.quiz.id}>
+                    <QuizPaper editor={editor} />
+                  </PagedPreview>
+                </div>
+              </>}
+          </ConsoleTabsContent>
+          <ConsoleTabsContent value="questions">
           {editor.questions.length === 0 && <Card><p className="py-5 text-center text-sm text-text-tertiary">Chưa có câu hỏi.</p></Card>}
           {editor.questions.map((question) => <Card key={question.id} padding="lg" as="article">
             <div className="mb-4 flex items-start gap-3">
@@ -71,6 +96,8 @@ export default function QuizDetails({ quizId, onBack, expectedType }: { quizId: 
               <p className="text-sm leading-6 whitespace-pre-wrap break-words text-text-secondary"><MathText>{question.explanation}</MathText></p>
             </div>}
           </Card>)}
+          </ConsoleTabsContent>
+          </ConsoleTabs>
         </>}
       </ScheduleResourceState>
     </section>

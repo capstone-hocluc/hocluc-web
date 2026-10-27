@@ -13,6 +13,7 @@ for (const [path, id, label] of [
     if (path === 'placements') Object.assign(state.quizzes[0], { type: 'PLACEMENT', courseId: null, chapterId: null, lessonId: null })
     await page.goto(`/console/staff/${path}/${id}/edit`)
     if (path !== 'quizzes') await showEditorStep(page, 'Các phần và câu hỏi')
+    if (path !== 'quizzes') await page.getByRole('button', { name: 'Sửa', exact: true }).click()
     await expect(page.getByRole('button', { name: new RegExp(`${label}$`) })).toHaveCount(0)
     await expect(page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true })).toBeChecked()
     expect(state.questions[0].questionType).toBe('SINGLE_CHOICE')
@@ -33,7 +34,10 @@ for (const type of ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWE
       if (path === 'mock-exams') await showEditorStep(page, 'Các phần và câu hỏi')
       await expect(page.getByRole('button', { name: /Dạng đáp án$|Loại câu hỏi$/ })).toHaveCount(0)
       if (path === 'quizzes') await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
-      else await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toBeDisabled()
+      else {
+        await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
+      }
       await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
       await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
       expect(JSON.stringify(state.questions[0])).toBe(original)
@@ -523,6 +527,7 @@ test('exam workspace moves a question up inside its section and persists the ord
   await page.goto(`/console/staff/mock-exams/${QUIZ_IDS.exam}/edit`, { waitUntil: 'domcontentloaded' })
   await showEditorStep(page, 'Các phần và câu hỏi')
   await page.getByRole('navigation').getByRole('button', { name: /^Câu 2(,|$)/ }).click()
+  await page.getByRole('button', { name: 'Sửa', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveValue('Câu thi thứ hai')
   await page.getByRole('button', { name: 'Đưa câu hỏi lên', exact: true }).click()
   await expect(page.getByRole('article', { name: 'Câu 1' })).toBeVisible()

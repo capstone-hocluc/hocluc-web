@@ -40,9 +40,10 @@ function Formulas({ pieces }: { pieces: Piece[] }) {
     : null), [pieces, katex])
   return pieces.map((piece, index) => 'text' in piece
     ? <span key={index}>{piece.text}</span>
-    // Until KaTeX arrives the formula shows as the author typed it.
+    // Until KaTeX arrives the formula shows as the author typed it - marked, so a copy of the text (a paper cut into
+    // printed pages) can wait until every formula is set.
     : html[index] === null
-      ? <span key={index}>{piece.display ? '$$' + piece.formula + '$$' : '$' + piece.formula + '$'}</span>
+      ? <span key={index} data-math-pending="">{piece.display ? '$$' + piece.formula + '$$' : '$' + piece.formula + '$'}</span>
       : <span key={index} dangerouslySetInnerHTML={{ __html: html[index] }} />)
 }
 

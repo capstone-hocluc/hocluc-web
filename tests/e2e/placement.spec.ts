@@ -131,6 +131,7 @@ async function createPlacement(page: Page, area: string) {
   await page.getByLabel('Mô tả', { exact: true }).fill('Đánh giá năng lực trước khi học')
   await showEditorStep(page, 'Các phần và câu hỏi')
   await page.getByRole('button', { name: 'Thêm câu hỏi', exact: true }).click()
+  await page.getByRole('button', { name: 'Sửa', exact: true }).click()
   await page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).fill('2 + 2 bằng bao nhiêu?')
   for (const [index, letter] of ['A','B','C','D'].entries()) {
     await page.getByPlaceholder('Lựa chọn ' + letter, { exact: true }).fill(String(index + 4))
@@ -242,7 +243,8 @@ test('existing placement with attempts only saves mutable metadata and keeps que
   await expect(page.getByLabel('Thời gian làm bài (phút)', { exact: true })).toBeDisabled()
   await showEditorStep(page, 'Các phần và câu hỏi')
   await expect(page.getByRole('button', { name: 'Thêm câu hỏi', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toBeDisabled()
+  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
   await showEditorStep(page, 'Thông tin và quy định')
   await page.getByLabel('Tên bài đánh giá đầu vào', { exact: true }).fill('Đổi tên')
   await page.getByLabel('Mô tả', { exact: true }).fill('Mô tả mới')

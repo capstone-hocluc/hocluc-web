@@ -20,13 +20,14 @@ import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
   AdminBlueprints,
-  AdminTaxonomy,
   MentorGroups,
   MentorOverview,
   MentorSolutionQueue,
   MentorStudents,
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
+import QuestionBankScreen from './question-bank/QuestionBankScreen'
+import MasterDataScreen from './master-data/MasterDataScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
 import { buildNavSections, canWrite, findNavItem, navLabel } from '../../lib/console-nav'
 
@@ -97,8 +98,20 @@ export function ManagementScreen({
       )
     case 'audit-log':
       return <AdminAuditLog />
+    case 'question-bank':
+      return (
+        <>
+          <PageHeading title={title} readOnly={readOnly} />
+          <QuestionBankScreen readOnly={readOnly} />
+        </>
+      )
     case 'taxonomy':
-      return <AdminTaxonomy />
+      return (
+        <>
+          <PageHeading title={title} readOnly={readOnly} />
+          <MasterDataScreen readOnly={readOnly} />
+        </>
+      )
     case 'blueprints':
       return <AdminBlueprints />
     case 'categories':

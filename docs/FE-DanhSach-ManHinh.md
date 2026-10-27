@@ -101,7 +101,7 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 | [x] | Nhân sự & phân quyền (tạo, role, status, cấp role chuyển được) | `users` | Chỉ tài khoản nhân sự (`excludeRole=STUDENT`) |
 | [x] | Học viên (tạo, status) | `learners` | Tài khoản học viên (`role=STUDENT`), tách khỏi nhân sự |
 | [m] | Blueprint đề thi | `blueprints` | Thêm form tạo/sửa blueprint theo năm (4 phần, số câu từng phần) |
-| [m] | Phân loại kiến thức | `taxonomy` | Cần CRUD 9 loại môn học + màn import (mục 3.4) |
+| [~] | Phân loại kiến thức | `taxonomy` | Đã có màn import Master Data: chọn môn, nhập Excel thành bản nháp (hiện lỗi theo sheet/dòng/cột), kích hoạt, xoá bản nháp. Chưa có xem/sửa từng dạng câu, kỹ năng (mục 3.4) |
 | [m] | Nhật ký hoạt động | `audit-log` | |
 | [x] | Quản lý khoá học | `courses` | Dùng chung màn với Staff (mục 3.2) |
 | [x] | Môn học (categories) | `categories` | Môn học hiển thị trên catalog |
@@ -109,7 +109,7 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 | [m] | Duyệt câu hỏi, Duyệt lời giải AI | `question-review`, `solution-queue` | |
 | [ ] | Báo cáo | `reports` | Menu có, màn "Đang phát triển" |
 | [ ] | Cấu hình nghiệp vụ | `settings` | Menu có, màn "Đang phát triển". Các khoá ở file 06 §2.3 (tự duyệt, quyền AI, Casio, kiểu chấm…) — chỉ đọc cũng được ở giai đoạn mock |
-| [ ] | Ngân hàng câu hỏi, Lời giải ngân hàng | `question-bank`, `solutions` | Menu có, màn "Đang phát triển" |
+| [~] | Ngân hàng câu hỏi, Lời giải ngân hàng | `question-bank`, `solutions` | `question-bank` đã có màn xem/lọc/sửa nhãn và nhập đề (PDF + đáp án, AI đọc nền); `solutions` vẫn "Đang phát triển" |
 
 ### 2.4 Staff (`/console/staff/...`)
 
@@ -122,9 +122,9 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 | [m] | Duyệt câu hỏi | `question-review` | Staff duyệt cả câu của mình (D6) |
 | [x] | Lịch học, Điểm danh | `schedules`, `attendance` | |
 | [x] | Quản lý khoá học | `courses` | Mục 3.2 |
-| [m] | Phân loại kiến thức | `taxonomy` | Dùng lại màn admin (mục 1) |
+| [~] | Phân loại kiến thức | `taxonomy` | Dùng lại màn admin (mục 1); BE cần Staff có quyền AUTHOR trên môn, không có thì báo 403 |
 | [x] | Môn học | `categories` | |
-| [ ] | Ngân hàng câu hỏi (toàn bộ) | `question-bank` | Menu có, màn "Đang phát triển". Dùng lại trình soạn của Teacher (mục 3.3) |
+| [~] | Ngân hàng câu hỏi (toàn bộ) | `question-bank` | Đã có màn xem/lọc/sửa nhãn và nhập đề; chưa có soạn/sửa nội dung câu (dùng lại trình soạn của Teacher, mục 3.3) |
 | [x] | **Route cũ đã dọn** | `/staff/batches`, `/staff/invoices`, `/staff/tuition`, `/staff/payments`… | Mô hình batch và công nợ học phí không còn trong scope; URL không có trong menu → 403 |
 
 ### 2.5 Manager (`/console/manager/...`) — chỉ xem (D14, D23)
@@ -151,9 +151,9 @@ Sidebar chia 3 nhóm: **Học tập** (Tổng quan, Lộ trình của tôi, Khó
 | [~] | Duyệt câu hỏi | `question-review` | URL cũ `questions` được chuyển sang đây. Cần thêm **trình soạn câu hỏi** (mục 3.3) |
 | [ ] | Soạn lời giải CT-Pólya | trong trình soạn câu hỏi | Mục 3.3 |
 | [x] | Bài làm học viên | `attempts` | Danh sách thật + xem chi tiết từng câu (`GET /teacher/attempts/{id}`) |
-| [m] | Phân loại kiến thức | `taxonomy` | |
+| [m] | Phân loại kiến thức | `taxonomy` | Menu có nhưng API Master Data không cho TEACHER, màn báo không có quyền |
 | [m] | Duyệt lời giải AI | `solution-queue` | Teacher cũng duyệt được (D7) |
-| [ ] | Ngân hàng câu hỏi, Lời giải ngân hàng | `question-bank`, `solutions` | Menu có, màn "Đang phát triển" |
+| [~] | Ngân hàng câu hỏi, Lời giải ngân hàng | `question-bank`, `solutions` | `question-bank` đã có màn xem (Teacher không sửa nhãn); `solutions` vẫn "Đang phát triển" |
 
 ### 2.7 Mentor (`/console/mentor/...`)
 
