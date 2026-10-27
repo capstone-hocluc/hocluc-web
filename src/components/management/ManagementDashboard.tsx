@@ -27,6 +27,7 @@ import {
   MentorStudents,
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
+import TextProfilerScreen from './screens/TextProfilerScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
 import { buildNavSections, canWrite, findNavItem, navLabel } from '../../lib/console-nav'
 
@@ -168,6 +169,8 @@ export function ManagementScreen({
           />
         </ChatFeatureGate>
       )
+    case 'text-profiler':
+      return <TextProfilerScreen title={title} />
     default:
       return <ComingSoonPage title={title} />
   }
