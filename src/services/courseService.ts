@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { ExamSessionSummary } from './examYearService'
 
 export interface Course {
   id: string
@@ -10,6 +11,8 @@ export interface Course {
   startDate?: string
   endDate?: string
   examSessionDate?: string
+  /** The exam sitting (Đợt 1/2 of an exam year) it prepares for; absent on SECTION courses. */
+  examSession?: ExamSessionSummary | null
   imageUrl?: string
   price?: number
   targetExam?: string
@@ -113,6 +116,8 @@ export interface CourseDetail {
   startDate?: string
   endDate?: string
   examSessionDate?: string
+  /** The exam sitting (Đợt 1/2 of an exam year) it prepares for; absent on SECTION courses. */
+  examSession?: ExamSessionSummary | null
   targetExam?: string
   paid?: boolean
   price?: number

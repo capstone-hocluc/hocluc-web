@@ -10,6 +10,7 @@ import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
 import CategoryManagement from './crud/category-management'
+import ExamYearManagement from './crud/exam-year-management'
 import OrderManagement from './crud/order-management'
 import EnrollmentManagement from './crud/enrollment-management'
 import StudyGroupManagement from './crud/study-group-management'
@@ -103,6 +104,8 @@ export function ManagementScreen({
       return <AdminBlueprints />
     case 'categories':
       return <CategoryManagement readOnly={readOnly} />
+    case 'exam-years':
+      return <ExamYearManagement readOnly={readOnly} title={title} />
     case 'courses':
       return <ManagementCourseList readOnly={readOnly} title={title} />
     case 'schedules':

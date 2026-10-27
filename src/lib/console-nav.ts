@@ -150,6 +150,15 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     writePermission: 'COURSE_WRITE',
     roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
   },
+  {
+    page: 'exam-years',
+    label: 'Năm thi & đợt thi',
+    icon: CalendarDays,
+    group: 'academic',
+    permission: 'COURSE_READ',
+    writePermission: 'COURSE_WRITE',
+    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
+  },
 
   {
     page: 'courses',

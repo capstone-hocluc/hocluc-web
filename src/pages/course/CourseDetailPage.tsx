@@ -317,7 +317,11 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                         {day(course.examSessionDate) && (
                           <div>
                             <dt>Ngày thi</dt>
-                            <dd>{day(course.examSessionDate)}</dd>
+                            <dd>
+                              {course.examSession && `${course.examSession.name} · `}
+                              {day(course.examSessionDate)}
+                              {course.examSession && !course.examSession.dateConfirmed && ' (dự kiến)'}
+                            </dd>
                           </div>
                         )}
                         {view.weeks && (
