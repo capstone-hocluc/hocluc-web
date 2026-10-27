@@ -1,3 +1,4 @@
+import SavedLearningGoals from '../../../components/student/learning-profile/SavedLearningGoals'
 import { useState } from 'react'
 import {
   AccountForm,
@@ -91,12 +92,15 @@ function StudentInfoTab() {
   const studentProfile = profile?.studentProfile
   const [draft, setDraft] = useState(() => buildDraft(studentProfile))
   const [saving, setSaving] = useState(false)
+  const [dirtyGoals, setDirtyGoals] = useState<Set<keyof Draft>>(() => new Set())
+  const currentDraft = buildDraft(studentProfile)
   const { saved, flash, clear } = useSavedIndicator()
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const updateField = (key: keyof Draft, value: string) => {
     setDraft((current) => ({ ...current, [key]: value }))
     setErrors((current) => ({ ...current, [key]: '' }))
+    if (goalFields.some((field) => field.key === key)) setDirtyGoals((current) => new Set(current).add(key))
     clear()
   }
 
@@ -124,20 +128,22 @@ function StudentInfoTab() {
         grade: toNumberOrUndefined(draft.grade),
         graduationYear: toNumberOrUndefined(draft.graduationYear),
         academicTrack: draft.academicTrack || undefined,
-        targetUniversity: draft.targetUniversity || undefined,
-        targetMajor: draft.targetMajor || undefined,
-        targetExam: draft.targetExam || undefined,
-        targetExamYear: toNumberOrUndefined(draft.targetExamYear),
-        targetScore: toNumberOrUndefined(draft.targetScore),
-        // No category-picker source exists yet - never fabricate an id, only
-        // resend whatever the backend already has on file.
-        selfReportedWeakCategoryId: studentProfile?.selfReportedWeakCategoryId,
-        selfReportedStrongCategoryId: studentProfile?.selfReportedStrongCategoryId,
+        targetUniversity: dirtyGoals.has('targetUniversity') ? draft.targetUniversity || undefined : undefined,
+        targetMajor: dirtyGoals.has('targetMajor') ? draft.targetMajor || undefined : undefined,
+        targetExam: dirtyGoals.has('targetExam') ? draft.targetExam || undefined : undefined,
+        targetExamYear: dirtyGoals.has('targetExamYear') ? toNumberOrUndefined(draft.targetExamYear) : undefined,
+        targetScore: dirtyGoals.has('targetScore') ? toNumberOrUndefined(draft.targetScore) : undefined,
+        // Preserve every subject choice while retaining legacy field support.
+        ...(studentProfile?.subjectAssessments ? {} : {
+          selfReportedWeakCategoryId: studentProfile?.selfReportedWeakCategoryId,
+          selfReportedStrongCategoryId: studentProfile?.selfReportedStrongCategoryId,
+        }),
       })
       // Refetch the canonical profile rather than trusting the PUT response
       // shape, matching the existing CurrentUserContext refresh strategy.
       const refreshed = await loadCurrentUser()
       setDraft(buildDraft(refreshed.studentProfile))
+      setDirtyGoals(new Set())
       flash()
     } catch (error) {
       const fieldErrors = getFieldErrors(error)
@@ -157,14 +163,14 @@ function StudentInfoTab() {
           <DropdownField
             ariaLabel={label}
             options={options}
-            value={draft[key] || null}
+            value={(key.startsWith('target') && !dirtyGoals.has(key) ? currentDraft[key] : draft[key]) || null}
             placeholder="Chọn"
             onChange={(value) => updateField(key, value ?? '')}
           />
         ) : (
           <Input
             type={type}
-            value={draft[key]}
+            value={key.startsWith('target') && !dirtyGoals.has(key) ? currentDraft[key] : draft[key]}
             placeholder={placeholder}
             onChange={(event) => updateField(key, event.target.value)}
           />
@@ -174,6 +180,7 @@ function StudentInfoTab() {
 
   return (
     <AccountPanel title="Hồ sơ học tập">
+      <SavedLearningGoals />
       <AccountForm>
         <FormGroupTitle>Thông tin học tập cá nhân</FormGroupTitle>
         {renderFields(personalFields)}
@@ -196,8 +203,8 @@ function StudentInfoTab() {
               <Input value={studentProfile?.selfReportedWeakCategoryName || ''} readOnly disabled />
             </Field>
             <p className="col-span-full text-[13px] text-text-muted">
-              Điểm mạnh/điểm cần cải thiện hiện chưa thể chỉnh sửa tại đây - dữ liệu được giữ nguyên
-              khi lưu.
+              Các trường bên trên là thông tin tương thích với hồ sơ cũ; dùng “Chỉnh sửa mục tiêu”
+              để cập nhật đầy đủ môn học tự đánh giá.
             </p>
           </>
         )}

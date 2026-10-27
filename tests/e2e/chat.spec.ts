@@ -203,7 +203,7 @@ test('concurrent HTTP and socket token preparation performs a single refresh', a
   await page.route('**/api/v1/auth/refresh', async route => {
     refreshes++
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, status: 200,
-      data: { accessToken: `new.${encoded}.fixture`, refreshToken: 'new-fixture-refresh' } }) })
+      data: { accessToken: `new.${encoded}.fixture` } }) })
   })
   await page.route('**/api/v1/chat/probe-fixture', route => {
     const refreshed = route.request().headers().authorization === `Bearer new.${encoded}.fixture`
@@ -215,7 +215,6 @@ test('concurrent HTTP and socket token preparation performs a single refresh', a
     const api = await import(source)
     const expired = btoa(JSON.stringify({ sub: 'student', role: 'STUDENT', exp: 1 }))
     localStorage.setItem('hocluc.accessToken', `old.${expired}.fixture`)
-    localStorage.setItem('hocluc.refreshToken', 'old-fixture-refresh')
     const results = await Promise.all([api.request('/api/v1/chat/probe-fixture', { auth: true }), api.ensureFreshAccessToken(true), api.ensureFreshAccessToken()])
     return { ready: results[0].data.ready, tokens: results.slice(1) }
   })
@@ -1351,7 +1350,7 @@ test('a connected socket rotates JWT without losing draft or subsequent events',
   await page.evaluate(async accessToken => {
     const source = '/src/lib/api.ts'
     const api = await import(source)
-    api.setTokens({ accessToken, refreshToken: 'rotated-STUDENT' })
+    api.setTokens({ accessToken })
   }, rotated)
   await expect.poll(() => state.socketConnections.filter(connection => connection.subscribed).length).toBe(2)
   expect(state.socketConnections[0].disconnected).toBe(true)

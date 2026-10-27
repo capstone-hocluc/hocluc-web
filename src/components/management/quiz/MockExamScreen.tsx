@@ -41,6 +41,7 @@ import {
   type TeacherQuizEditor,
   type TeacherQuizQuestion,
   type TeacherQuizRecord,
+  type CreateTeacherQuizRequest,
   type TeacherQuizSectionSpec,
 } from '../../../services/teacherQuizService'
 import { ApiError } from '../../../lib/api'
@@ -51,6 +52,8 @@ import PageHeading from '../../console/page-heading'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
+import QuizImportDialog from './QuizImportDialog'
+import QuizPdfImportPanel from './QuizPdfImportPanel'
 import DragHandle from '../crud/drag-handle'
 import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
 import { cn } from '../../../lib/cn'
@@ -65,6 +68,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 type AssessmentType = 'EXAM' | 'PLACEMENT'
 
 interface TeacherMockExamsProps {
+  onOpenEditor?: (quizId: string) => void
   navigation?: ReactNode
   assessmentType?: AssessmentType
   readOnly?: boolean
@@ -184,8 +188,7 @@ function createUnassignedSection(questions: DraftQuestion[]): DraftSection {
 }
 
 function fromServerQuestion(question: TeacherQuizQuestion): DraftQuestion {
-  const editable =
-    CHOICE_TYPES.includes(question.questionType) || question.questionType === 'LONG_ANSWER'
+  const editable = question.questionType === 'SINGLE_CHOICE'
   return {
     clientId: question.id,
     serverId: question.id,
@@ -195,7 +198,7 @@ function fromServerQuestion(question: TeacherQuizQuestion): DraftQuestion {
     explanation: question.explanation ?? '',
     imageUrl: question.imageUrl,
     categoryId: question.categoryId,
-    difficulty: question.difficulty,
+    difficulty: question.difficulty ?? null,
     sourcePage: question.sourcePage,
     marks: question.marks,
     needsReview: question.needsReview,
@@ -380,7 +383,7 @@ function questionPayloadMatchesServer(draft: DraftQuestion, server: TeacherQuizQ
     payload.questionType === server.questionType &&
     payload.explanation === (server.explanation ?? '') &&
     (payload.categoryId ?? null) === server.categoryId &&
-    (payload.difficulty ?? null) === server.difficulty &&
+    (payload.difficulty ?? null) === (server.difficulty ?? null) &&
     (payload.sourcePage ?? null) === server.sourcePage &&
     (payload.marks ?? null) === server.marks &&
     payload.needsReview === server.needsReview &&
@@ -438,7 +441,7 @@ function sameLayout(a: TeacherQuizSectionSpec[], b: TeacherQuizSectionSpec[]) {
   ]))
 }
 
-function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
+function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, onOpenEditor, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
   const placement = assessmentType === 'PLACEMENT'
   const quizzes = usePageResource(() => getTeacherQuizzes(), [])
   const [creating, setCreating] = useState(!readOnly && startCreating)
@@ -503,6 +506,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
   if (!readOnly && (creating || editorQuizId)) {
     return (
       <TeacherMockExamEditor
+        onCreated={id => { if (onOpenEditor) onOpenEditor(id); else { setCreating(false); setEditorQuizId(id) } }}
         assessmentType={assessmentType}
         quizId={editorQuizId}
         onCancel={() => {
@@ -613,11 +617,13 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
 }
 
 function TeacherMockExamEditor({
+  onCreated,
   assessmentType,
   quizId,
   onCancel,
   onSaved,
 }: {
+  onCreated: (id: string) => void
   assessmentType: AssessmentType
   quizId: string | null
   onCancel: () => void
@@ -654,20 +660,26 @@ function TeacherMockExamEditor({
       initial={quizId ? editor.data : null}
       onCancel={onCancel}
       onSaved={onSaved}
+      onReload={editor.reload}
+      onCreated={onCreated}
     />
   )
 }
 
 function TeacherMockExamForm({
+  onCreated,
   assessmentType,
   initial,
   onCancel,
   onSaved,
+  onReload,
 }: {
+  onCreated: (id: string) => void
   assessmentType: AssessmentType
   initial: TeacherQuizEditor | null
   onCancel: () => void
   onSaved: (message: string) => void
+  onReload: () => void
 }) {
   const access = useQuizAccess()
   const placement = assessmentType === 'PLACEMENT'
@@ -695,6 +707,9 @@ function TeacherMockExamForm({
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
+  const [importBaseline] = useState(() => JSON.stringify({ settings, sections }))
+  const hasUnsavedChanges = JSON.stringify({ settings, sections }) !== importBaseline
+  const aiReading = initial?.latestJob?.kind === 'EXAM_FILE' && (initial.latestJob.status === 'PENDING' || initial.latestJob.status === 'RUNNING')
   const pendingCreateRef = useRef<PendingExamCreate | null>(null)
 
   const courseCatalog = usePageResource(async () => {
@@ -705,13 +720,21 @@ function TeacherMockExamForm({
   const categoryOptions = (categories.data ?? []).filter(category => category.active).map(category => ({ id: category.id, label: category.name }))
 
   const settingsLocked = isLocked(quizSnapshot)
-  const questionsLocked = settingsLocked || ambiguousCreate || ambiguousQuestionSave
+  const questionsLocked = aiReading || settingsLocked || ambiguousCreate || ambiguousQuestionSave
   const publishedQuiz = Boolean(quizSnapshot && quizSnapshot.status !== 'DRAFT')
-  const fieldsLocked = settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave
+  const fieldsLocked = aiReading || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave
   const structureSupported = initial ? sectionStructureIsSupported(initial, fromServerEditor(initial)) : true
   const structureReadOnly = !structureSupported
   const canEditQuestions = !questionsLocked && !publishedQuiz && !structureReadOnly
   const hasCreatedQuiz = serverQuizId !== null
+  const importBlockedReason = !serverQuizId ? ambiguousCreate || ambiguousQuestionSave ? 'Kiểm tra danh sách đề trước khi tạo lại.'
+    : sections.length !== 1 || sections[0].title !== 'Phần 1' || sections[0].categoryId || sections[0].suggestedMinutes || sections.some(s => s.questions.some(q => questionHasAnyContent(q) || q.explanation.trim() || q.options.some(o => o.correct)))
+      ? 'Đang có nội dung hoặc cấu trúc soạn tay. Lưu bản nháp trước để giữ nội dung, rồi nhập thêm file.' : ''
+    : aiReading ? 'AI đang đọc PDF. Kiểm tra tiến trình trước khi nhập thêm.'
+    : publishedQuiz || settingsLocked ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
+      : ambiguousCreate || ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
+        : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
+          : structureReadOnly ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : ''
 
   const updateSettings = <K extends keyof ExamSettings>(key: K, value: ExamSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
@@ -837,6 +860,22 @@ function TeacherMockExamForm({
     return ''
   }
 
+  const getImportCreateRequest = (): CreateTeacherQuizRequest | null => {
+    const validation = validate(false)
+    if (validation || settings.title.trim().length > 500) {
+      setError(validation || 'Tên đề thi tối đa 500 ký tự.')
+      return null
+    }
+    setError('')
+    return {
+      type: assessmentType, title: settings.title.trim(), durationMinutes: Number(settings.duration), maxAttempts: Number(settings.maxAttempts),
+      ...(placement ? { description: settings.description.trim() } : { courseId: settings.courseId,
+        passingPercentage: Number(settings.passingPercentage), showAnswers: settings.showAnswers, practiceAllowed: settings.practiceAllowed }),
+      ...(fromDateTimeLocal(settings.availableFrom) ? { availableFrom: fromDateTimeLocal(settings.availableFrom) } : {}),
+      ...(fromDateTimeLocal(settings.availableUntil) ? { availableUntil: fromDateTimeLocal(settings.availableUntil) } : {}),
+    }
+  }
+
   const checkPendingCreate = async () => {
     const pending = pendingCreateRef.current
     if (!pending || busy) return
@@ -859,7 +898,7 @@ function TeacherMockExamForm({
 
   const save = async (publish: boolean) => {
     if (!access.canWrite) return
-    if (busy) return
+    if (busy || aiReading) return
     if (publishedQuiz) {
       setError('Đề đã xuất bản hoặc lưu trữ chỉ xem. Tạo bản nháp để chỉnh sửa nội dung.')
       return
@@ -1074,13 +1113,13 @@ function TeacherMockExamForm({
               value={settings.title}
               onChange={(event) => updateSettings('title', event.target.value)}
               placeholder={placement ? 'Ví dụ: Đánh giá năng lực đầu vào' : 'Ví dụ: Đề thi thử V-ACT số 02'}
-              disabled={publishedQuiz || busy}
+              disabled={publishedQuiz || busy || aiReading}
               maxLength={500}
             />
           </label>
           {placement && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
             Mô tả
-            <textarea aria-label="Mô tả" className={textareaControlClass} value={settings.description} disabled={publishedQuiz || busy}
+            <textarea aria-label="Mô tả" className={textareaControlClass} value={settings.description} disabled={publishedQuiz || busy || aiReading}
               onChange={event => updateSettings('description', event.target.value)} />
             <span className="text-xs font-normal text-text-tertiary">Không gắn khóa học. Student được xem đáp án sau khi bài đã chấm; kết quả được phân loại theo môn.</span>
           </label>}
@@ -1204,6 +1243,8 @@ function TeacherMockExamForm({
             <CardEyebrow>{placement ? 'NỘI DUNG ĐÁNH GIÁ' : 'NỘI DUNG ĐỀ THI'}</CardEyebrow>
             <CardTitle id="exam-sections-title" className="mb-0 text-base">Các phần và câu hỏi</CardTitle>
           </div>
+          <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload}
+            getCreateRequest={getImportCreateRequest} onCreated={onCreated} onUncertainCreate={() => setAmbiguousCreate(true)} onBusyChange={setBusy} />
           {canEditQuestions && (
             <Button appearance="outline" className="min-h-11" onClick={addSection} disabled={busy}>
               <Plus size={15} />Thêm phần thi
@@ -1211,6 +1252,9 @@ function TeacherMockExamForm({
           )}
         </div>
         {canEditQuestions && <p className="mb-4 text-xs text-text-tertiary">Kéo biểu tượng cạnh số câu hoặc dùng nút lên/xuống để sắp xếp trong cùng phần thi. Nhấn lưu để giữ thứ tự mới.</p>}
+        {serverQuizId && initial?.latestJob?.kind === 'EXAM_FILE' && <QuizPdfImportPanel quizId={serverQuizId} jobId={initial.latestJob.id}
+          blockedReason={hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi áp dụng.' : publishedQuiz || settingsLocked ? 'Chỉ áp dụng vào bản nháp chưa có lượt làm.' : ambiguousQuestionSave ? 'Tải lại bài để kiểm tra kết quả lưu.' : ''}
+          busy={busy} onBusyChange={setBusy} onReload={onReload} />}
         {structureReadOnly && (
           <div className="mb-4 rounded-xl border border-badge-warning-text/20 bg-badge-warning-bg p-3 text-sm text-badge-warning-text" role="status">
             Đề này có nhóm câu hỏi hoặc phần lồng nhau. Nội dung đang ở chế độ chỉ xem để giữ nguyên cấu trúc; bạn vẫn có thể lưu các thông tin đề thi được phép sửa.
@@ -1279,32 +1323,9 @@ function TeacherMockExamForm({
                             </div>
                           </div>
                           <div className="grid gap-3">
-                            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-                              Loại câu hỏi
-                              {question.editable ? (
-                                <DropdownField
-                                  ariaLabel="Loại câu hỏi"
-                                  options={placement ? QUESTION_TYPE_OPTIONS.filter(option => option.id === 'SINGLE_CHOICE') : QUESTION_TYPE_OPTIONS}
-                                  value={question.questionType}
-                                  onChange={(value) => {
-                                    if (!value) return
-                                    const nextType = value as TeacherQuestionType
-                                    updateQuestion(section.clientId, question.clientId, {
-                                      questionType: nextType,
-                                      options: nextType === 'LONG_ANSWER'
-                                        ? []
-                                        : question.options.length > 0
-                                          ? question.options.map((option) => ({ ...option, correct: nextType === 'SINGLE_CHOICE' ? false : option.correct }))
-                                          : Array.from({ length: 2 }, () => ({ text: '', correct: false })),
-                                    })
-                                  }}
-                                  mobileTouchTargets
-                                  isDisabled={!editable || busy}
-                                />
-                              ) : (
-                                <span className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm font-normal text-text-tertiary">{typeLabel} · chỉ xem</span>
-                              )}
-                            </label>
+                            {!question.editable && (
+                              <p className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm text-text-tertiary">{typeLabel} · chỉ xem</p>
+                            )}
                             <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
                               Nội dung câu hỏi
                               <textarea
@@ -1431,7 +1452,7 @@ function TeacherMockExamForm({
       {error && <p className="m-0 rounded-xl border border-badge-danger-text/25 bg-badge-danger-bg p-3 text-sm font-medium text-badge-danger-text" role="alert">{error}</p>}
       {ambiguousQuestionSave && (
         <Notice tone="warning" role="alert" aria-live="assertive">
-          Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
+          Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn hoặc dữ liệu trả về chưa hợp lệ. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
         </Notice>
       )}
       {ambiguousCreate && (
@@ -1454,13 +1475,13 @@ function TeacherMockExamForm({
             appearance="outline"
             className="min-h-11"
             onClick={() => ambiguousCreate ? void checkPendingCreate() : void save(false)}
-            disabled={busy || publishedQuiz || ambiguousQuestionSave}
+            disabled={busy || aiReading || publishedQuiz || ambiguousQuestionSave}
           >
             {ambiguousCreate ? <ClipboardCheck size={15} /> : <Clock3 size={15} />}
             {busy ? 'Đang kiểm tra...' : ambiguousCreate ? 'Kiểm tra danh sách' : initialQuiz || hasCreatedQuiz ? 'Lưu thay đổi' : 'Lưu bản nháp'}
           </Button>
           {quizSnapshot?.status !== 'ARCHIVED' && (
-            <Button className="min-h-11" onClick={() => void save(true)} disabled={busy || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave}>
+            <Button className="min-h-11" onClick={() => void save(true)} disabled={busy || aiReading || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave}>
               <Send size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
             </Button>
           )}

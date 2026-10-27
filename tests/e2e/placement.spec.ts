@@ -12,7 +12,7 @@ test('landing free assessment resumes placement after login, retry and auth mode
   let rejectLogin = true
   await page.route('**/api/v1/auth/login', route => route.fulfill({ status: rejectLogin ? 401 : 200,
     json: rejectLogin ? { success: false, message: 'Thông tin đăng nhập không đúng.' }
-      : { success: true, data: { accessToken: quizToken('STUDENT'), refreshToken: 'fixture-refresh' } } }))
+      : { success: true, data: { accessToken: quizToken('STUDENT') } } }))
   await page.goto('/')
   const cta = page.locator('.hero-buttons').getByRole('link', { name: 'Làm đánh giá miễn phí' })
   await expect(cta).toHaveAttribute('href', '/student/assessments/placement')
@@ -259,15 +259,12 @@ test('placement editor rejects an EXAM id on its direct URL', async ({ page }) =
   expect(state.requests.some(r => r.method !== 'GET')).toBe(false)
 })
 
-test('placement editor fits mobile and only offers Student-supported question types', async ({ page }, testInfo) => {
+test('placement editor fits mobile and hides the fixed question type', async ({ page }, testInfo) => {
   const state = await installQuizFixture(page, 'STAFF')
   await page.setViewportSize({ width: 390, height: 950 })
   await page.goto('/console/staff/placements/new')
   await page.getByRole('button', { name: 'Thêm câu hỏi', exact: true }).click()
-  await page.getByRole('button', { name: /Loại câu hỏi$/ }).click()
-  await expect(page.getByRole('option', { name: 'Trắc nghiệm một đáp án', exact: true })).toBeVisible()
-  await expect(page.getByRole('option', { name: /nhiều đáp án|Tự luận/ })).toHaveCount(0)
-  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /Loại câu hỏi$/ })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('placement-mobile.png'), fullPage: true })
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])

@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { CurrentUserContext, type CurrentUserStatus } from '../../hooks/useCurrentUser'
-import { getCurrentProfile, type UserProfile } from '../../services/userService'
-import { ApiError, AUTH_TOKENS_EVENT, getAccessToken } from '../../lib/api'
+import { getCurrentProfile, type StudentProfile, type UserProfile } from '../../services/userService'
+import { ApiError, AUTH_TOKENS_EVENT, authSessionGeneration, getAccessToken } from '../../lib/api'
 
 function sessionIdentity() {
   const token = getAccessToken()
   if (!token) return null
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return JSON.stringify([payload.sub, payload.role ?? payload.roles])
+    return JSON.stringify([payload.sub, payload.role ?? payload.roles, authSessionGeneration()])
   } catch {
-    return token
+    return JSON.stringify([token, authSessionGeneration()])
   }
 }
 
@@ -51,6 +51,13 @@ function CurrentUserProvider({ children }: { children: ReactNode }) {
     return request
   }, [])
 
+  // A canonical learning-profile save must not unmount the guarded student shell.
+  const applyStudentProfile = useCallback((userId: string, studentProfile: StudentProfile) => {
+    setProfile((current) => current?.id === userId && current.role === 'STUDENT'
+      ? { ...current, studentProfile, onboardingState: studentProfile.onboardingState ?? current.onboardingState }
+      : current)
+  }, [])
+
   const clearCurrentUser = useCallback(() => {
     epoch.current++
     inFlight.current = null
@@ -75,8 +82,8 @@ function CurrentUserProvider({ children }: { children: ReactNode }) {
   }, [clearCurrentUser])
 
   const value = useMemo(
-    () => ({ profile, status, loadCurrentUser, clearCurrentUser }),
-    [profile, status, loadCurrentUser, clearCurrentUser]
+    () => ({ profile, status, loadCurrentUser, clearCurrentUser, applyStudentProfile }),
+    [profile, status, loadCurrentUser, clearCurrentUser, applyStudentProfile]
   )
 
   return <CurrentUserContext.Provider value={value}>{children}</CurrentUserContext.Provider>

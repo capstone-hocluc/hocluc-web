@@ -10,7 +10,6 @@ import OrderDetailPage from './pages/orders/OrderDetailPage'
 import PaymentResultPage from './pages/payment/PaymentResultPage'
 import PaymentInstructionsPage from './pages/payment/PaymentInstructionsPage'
 import AuthPage from './components/auth/AuthPage'
-import StudentOnboarding from './components/student/StudentOnboarding'
 import StudentRouteGuard from './components/student/StudentRouteGuard'
 import StudentRoutes from './pages/student/StudentRoutes'
 import AdminLoginPage from './pages/AdminLoginPage'
@@ -21,13 +20,16 @@ import ManagementRouteGuard, {
 import TeacherDashboard from './components/teacher/TeacherDashboard'
 import { useCurrentUser } from './hooks/useCurrentUser'
 import { logout } from './services/authService.ts'
+import { getErrorMessage } from './lib/errors'
+import { showErrorToast } from './lib/toastBus'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
-import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
+import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, quizPagePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
 import PurchaseGuard from './components/purchase/PurchaseGuard'
 import { loginPathFor, safeAuthReturnTo } from './lib/auth-return-to'
+import { pendingAuthEmail, setPendingAuthEmail } from './lib/auth-email'
 
 const APP_HISTORY_INDEX = '__hoclucNavigationIndex'
 
@@ -106,7 +108,7 @@ function App() {
     if (path === '/staff/users') return 'staff-users'
     const rolePage = path.match(/^\/(admin|staff|manager|mentor|teacher)\/([a-z-]+)$/)
     if (rolePage) return `${rolePage[1]}-${rolePage[2]}`
-    if (path === '/onboarding') return 'onboarding'
+    if (path === '/onboarding') return null
     if (path === '/verify-email') return 'verify-email'
     if (path === '/forgot-password') return 'forgot-password'
     if (path === '/reset-password') return 'reset-password'
@@ -120,7 +122,8 @@ function App() {
 
   const [authMode, setAuthMode] = useState(getAuthMode)
   const [currentPath, setCurrentPath] = useState(() => {
-    const path = window.location.pathname.replace(/\/$/, '') || '/'
+    const rawPath = window.location.pathname.replace(/\/$/, '') || '/'
+    const path = rawPath === '/onboarding' ? '/student/dashboard' : rawPath
     const existingIndex = getAppHistoryIndex(window.history.state)
     const index = existingIndex ?? 0
     if (existingIndex === null) {
@@ -131,7 +134,7 @@ function App() {
       )
     }
     const target = toConsolePath(toStudentPath(path))
-    if (target !== path) {
+    if (target !== rawPath) {
       window.history.replaceState(
         withAppHistoryIndex(window.history.state, index),
         '',
@@ -145,7 +148,9 @@ function App() {
   const historyRestoreInProgressRef = useRef(false)
   const ignoreNextHistoryGuardRef = useRef(false)
   const afterHistoryRestoreRef = useRef<(() => void) | null>(null)
-  const [pendingVerificationEmail, setPendingVerificationEmail] = useState('')
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState(() =>
+    pendingAuthEmail('verification')
+  )
   const [logoutLoading, setLogoutLoading] = useState(false)
   const logoutInFlight = useRef(false)
   const pushHistoryEntry = useCallback((state: unknown, path: string) => {
@@ -165,6 +170,10 @@ function App() {
 
   const navigateAuth = (mode) => {
     runWithUnsavedActionGuard(() => {
+      if (mode === 'login') {
+        setPendingAuthEmail('verification', '')
+        setPendingVerificationEmail('')
+      }
       const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
       pushHistoryEntry({}, `/${mode}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode(mode)
@@ -178,7 +187,7 @@ function App() {
   // instructions) to the next page without a prop path, since it's not
   // returned by GET endpoints and would otherwise be lost on navigation.
   const navigateTo = useCallback((rawPath, state = {}) => {
-    const path = toConsolePath(toStudentPath(rawPath))
+    const path = toConsolePath(toStudentPath(rawPath === '/onboarding' ? '/student/dashboard' : rawPath))
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry(state, path)
       setAuthMode(getAuthMode())
@@ -197,6 +206,7 @@ function App() {
   const goToEmailVerification = (email = '') => {
     runWithUnsavedActionGuard(() => {
       setPendingVerificationEmail(email)
+      setPendingAuthEmail('verification', email)
       const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
       pushHistoryEntry({}, `/verify-email${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`)
       setAuthMode('verify-email')
@@ -243,7 +253,7 @@ function App() {
         dashboard: '/mentor/dashboard',
       },
     } as const
-    const path = toConsolePath(paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${page}`)
+    const path = toConsolePath(paths[scope][page as keyof (typeof paths)[typeof scope]] ?? `/${scope}/${quizPagePath(page)}`)
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`${scope}-${page}`)
@@ -269,6 +279,7 @@ function App() {
   }
   const goAfterLogin = (profile: UserProfile) => {
     setPendingVerificationEmail('')
+    setPendingAuthEmail('verification', '')
     const returnTo = safeAuthReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
     navigateTo(profile.role === 'STUDENT' && returnTo ? returnTo : roleHome(profile.role))
   }
@@ -295,6 +306,8 @@ function App() {
     const loginPath = isManagementArea ? CONSOLE_LOGIN_PATH : '/login'
     try {
       await logout()
+    } catch (error) {
+      showErrorToast(getErrorMessage(error))
     } finally {
       clearCurrentUser()
       setPendingVerificationEmail('')
@@ -323,7 +336,9 @@ function App() {
     const syncPath = () => {
       setCurrentSearch(window.location.search)
       setAuthMode(getAuthMode())
-      setCurrentPath(window.location.pathname.replace(/\/$/, '') || '/')
+      const path = window.location.pathname.replace(/\/$/, '') || '/'
+      if (path === '/onboarding') replaceCurrentHistoryEntry({}, '/student/dashboard')
+      setCurrentPath(path === '/onboarding' ? '/student/dashboard' : path)
     }
     const onPopState = (event: PopStateEvent) => {
       if (historyRestoreInProgressRef.current) {
@@ -399,7 +414,7 @@ function App() {
       window.removeEventListener('hl-navigate', onNavigate)
       window.removeEventListener('hl-logout', onLogoutRequested)
     }
-  }, [getAuthMode, handleLogout, navigateTo, pushHistoryEntry])
+  }, [getAuthMode, handleLogout, navigateTo, pushHistoryEntry, replaceCurrentHistoryEntry])
 
   // Segments for any '/courses/...' path: ['courses', courseId]. Only the
   // course detail is public; studying lives under /student/courses/:id/study.
@@ -489,7 +504,6 @@ function App() {
         />
       </ManagementRouteGuard>
     )
-  if (authMode === 'onboarding') return <StudentOnboarding onBack={backToLanding} />
   // Every authenticated learning screen (dashboard, courses, study, lessons,
   // video, quizzes, attempts, results, review, learning profile) renders inside
   // the single StudentLayout owned by StudentRoutes.

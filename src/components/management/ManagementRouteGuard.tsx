@@ -1,7 +1,8 @@
 import { ROLE_LABELS } from '../../lib/role-home'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { AlertTriangle, LoaderCircle } from '../console/icons'
-import { clearTokens, getAccessToken } from '../../lib/api'
+import { getAccessToken } from '../../lib/api'
+import { useSessionRestore } from '../../hooks/useSessionRestore'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useActiveRole } from '../../hooks/useActiveRole'
 import type { UserRole } from '../../services/userService'
@@ -71,27 +72,19 @@ function LoadingState() {
   )
 }
 
-// A rejected session is the same as no session: drop it and go to login instead of stranding the visitor.
-function SessionExpired({ onLogin, onReset }: { onLogin: () => void; onReset: () => void }) {
-  useEffect(() => {
-    onReset()
-    onLogin()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  return <LoadingState />
-}
-
 function ManagementRouteGuard({
   allowedRoles,
   onLogin,
   onExit,
   children,
 }: ManagementRouteGuardProps) {
-  const { profile, status, loadCurrentUser, clearCurrentUser } = useCurrentUser()
+  const { profile, status, loadCurrentUser } = useCurrentUser()
+  const session = useSessionRestore()
   const { activeRole, roles, switchRole, switching, error } = useActiveRole()
   const redirecting = useRef(false)
 
   useEffect(() => {
+    if (session.checking || session.error) return
     if (!getAccessToken()) {
       if (!redirecting.current) {
         redirecting.current = true
@@ -103,10 +96,13 @@ function ManagementRouteGuard({
     if (status === 'idle') {
       void loadCurrentUser().catch(() => undefined)
     }
-  }, [loadCurrentUser, onLogin, status])
+  }, [loadCurrentUser, onLogin, status, session.checking, session.error])
 
+  if (session.checking) return <LoadingState />
+  if (session.error || status === 'error') return <AccessState title="Chưa xác thực được tài khoản"
+    description="Kiểm tra kết nối mạng rồi thử lại." actionLabel="Thử lại"
+    onAction={() => { if (session.error) session.retry(); else void loadCurrentUser().catch(() => undefined) }} />
   if (!getAccessToken()) return <LoadingState />
-  if (status === 'error') return <SessionExpired onLogin={onLogin} onReset={() => { clearTokens(); clearCurrentUser() }} />
 
   if (status === 'idle' || status === 'loading' || !profile) return <LoadingState />
 

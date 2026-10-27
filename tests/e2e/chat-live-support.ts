@@ -9,7 +9,7 @@ export interface LiveManifest {
   enrollmentId: string
   accounts: Record<LiveRole, { id: string; email: string; password: string }>
 }
-export interface LiveTokens { accessToken: string; refreshToken: string }
+export interface LiveTokens { accessToken: string; cookies: Awaited<ReturnType<APIRequestContext['storageState']>>['cookies'] }
 export function liveManifest(): LiveManifest {
   const path = process.env.CHAT_LIVE_MANIFEST
   if (!path || Date.now() - statSync(path).mtimeMs > 15 * 60_000) throw new Error('Start the owned BE chat-live-test.ps1 -Browser harness first; fresh CHAT_LIVE_MANIFEST required.')
@@ -25,14 +25,14 @@ export async function login(api: APIRequestContext, data: LiveManifest, role: Li
   const response = await api.post(`${data.backend}/api/v1/auth/login`, { data: { email: account.email, password: account.password } })
   if (response.status() !== 200) throw new Error(`Real login ${role} failed: HTTP ${response.status()}`)
   const body = await response.json()
-  if (!body.data?.accessToken || !body.data?.refreshToken) throw new Error('Real login response missing tokens')
-  return body.data as LiveTokens
+  if (!body.data?.accessToken) throw new Error('Real login response missing tokens')
+  return { accessToken: body.data.accessToken, cookies: (await api.storageState()).cookies.filter(cookie => cookie.name === 'hocluc_refresh') }
 }
 export async function authenticated(context: BrowserContext, tokens: LiveTokens) {
-  await context.addInitScript(({ accessToken, refreshToken }) => {
+  await context.addCookies(tokens.cookies)
+  await context.addInitScript(({ accessToken }) => {
     if (location.origin !== 'http://127.0.0.1:5184') return // Never write tokens into storage/download/about:blank origins.
     localStorage.setItem('hocluc.accessToken', accessToken)
-    localStorage.setItem('hocluc.refreshToken', refreshToken)
   }, tokens)
 }
 export function watch(page: Page) {

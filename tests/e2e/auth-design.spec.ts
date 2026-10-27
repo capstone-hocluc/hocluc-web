@@ -79,7 +79,7 @@ test('management sign-in rejects a student profile and clears its session', asyn
     route.fulfill({
       json: {
         success: true,
-        data: { accessToken: 'fixture-access', refreshToken: 'fixture-refresh' },
+        data: { accessToken: 'fixture-access' },
       },
     })
   )
@@ -131,3 +131,25 @@ test('authentication stays usable across desktop widths and related learner step
     }
   }
 })
+
+for (const email of ['unknown@example.test', 'student@example.test']) {
+  test(`password recovery uses the same conditional success screen for ${email}`, async ({ page }) => {
+    await page.route('**/api/v1/auth/forgot-password', async (route) => {
+      expect(route.request().postDataJSON()).toEqual({ email })
+      await route.fulfill({ json: {
+        success: true, status: 200,
+        message: 'If the email is registered, a password reset code has been sent.',
+      } })
+    })
+    await page.goto('/forgot-password')
+    await page.getByRole('textbox', { name: 'Email', exact: true }).fill(email)
+    await page.getByRole('button', { name: 'Gửi mã xác nhận', exact: true }).click()
+    await expect(page.locator('.hl-auth-heading p')).toHaveText(
+      `Nếu email ${email} đã được đăng ký, bạn sẽ nhận được mã đặt lại mật khẩu.`
+    )
+    await expect(page.getByRole('textbox', { name: 'Mã xác nhận đặt lại mật khẩu' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Email', exact: true })).toHaveValue(email)
+    await expect(page.getByRole('button', { name: /Gửi lại sau/ })).toBeDisabled()
+    expect(await page.evaluate(() => sessionStorage.getItem('hocluc.pendingEmail.reset'))).toBe(email)
+  })
+}

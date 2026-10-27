@@ -1,11 +1,11 @@
 import { defineConfig, mergeConfig } from 'vite'
-import base from './vite.config'
+import { createAppConfig } from './vite.config'
 
 const backend = process.env.CHAT_LOCAL_BACKEND
 if (!backend || !/^http:\/\/127\.0\.0\.1:\d+$/.test(backend)) {
   throw new Error('CHAT_LOCAL_BACKEND must point to the owned loopback backend')
 }
-export default mergeConfig(base, defineConfig({
+export default defineConfig(configEnv => mergeConfig(createAppConfig(configEnv), {
   server: {
     host: '127.0.0.1',
     port: 5184,

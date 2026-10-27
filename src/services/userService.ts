@@ -1,6 +1,16 @@
 import { request } from '../lib/api'
 
+export type OnboardingState = 'NOT_SHOWN' | 'DEFERRED' | 'COMPLETED'
+export type SubjectLevel = 'STRONG' | 'NEEDS_WORK'
+export interface SubjectAssessment {
+  categoryId: string
+  categoryName?: string
+  level: SubjectLevel
+}
+
 export interface StudentProfile {
+  onboardingState?: OnboardingState
+  subjectAssessments?: SubjectAssessment[]
   id: string
   dateOfBirth?: string
   gender?: string
@@ -14,7 +24,7 @@ export interface StudentProfile {
   targetMajor?: string
   targetExam?: string
   targetExamYear?: number
-  targetScore?: number
+  targetScore?: number | null
   level?: string
   selfReportedWeakCategoryId?: string
   selfReportedWeakCategoryName?: string
@@ -43,6 +53,7 @@ export interface UserProfile {
   lastLoginAt?: string
   createdAt?: string
   updatedAt?: string
+  onboardingState?: OnboardingState
   studentProfile?: StudentProfile
 }
 
@@ -119,6 +130,8 @@ export async function updateProfile(payload: UpdateProfileRequest) {
 }
 
 export interface UpdateStudentProfileRequest {
+  onboardingState?: OnboardingState
+  subjectAssessments?: SubjectAssessment[]
   // General-profile fields the backend contract requires on this endpoint too -
   // callers must fill these from the current profile so they aren't wiped out.
   firstName?: string
@@ -140,13 +153,13 @@ export interface UpdateStudentProfileRequest {
   targetMajor?: string
   targetExam?: string
   targetExamYear?: number
-  targetScore?: number
+  targetScore?: number | null
   selfReportedWeakCategoryId?: string
   selfReportedStrongCategoryId?: string
 }
 
 export async function updateStudentProfile(payload: UpdateStudentProfileRequest) {
-  return request<UserProfile>('/api/v1/users/student-profiles', {
+  return request<StudentProfile>('/api/v1/users/student-profiles', {
     method: 'PUT',
     auth: true,
     body: payload,
@@ -266,4 +279,15 @@ export async function updateUserRoles(id: string, roles: UserRole[]): Promise<Us
     body: { roles },
   })
   return requireResponseData(response, 'Không thể cập nhật vai trò được cấp.')
+}
+
+export interface ProfileSubject {
+  id: string
+  name: string
+}
+
+export async function getProfileSubjects(): Promise<ProfileSubject[]> {
+  const response = await request<ProfileSubject[]>('/api/v1/users/student-profiles/subjects', { auth: true })
+  if (!response.data) throw new Error('Không thể tải môn học.')
+  return response.data
 }

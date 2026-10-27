@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { LoaderCircle, ShieldAlert } from '../console/icons'
-import { clearTokens, getAccessToken } from '../../lib/api'
+import { getAccessToken } from '../../lib/api'
+import { useSessionRestore } from '../../hooks/useSessionRestore'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Button from '../ui/Button'
 import { useActiveRole } from '../../hooks/useActiveRole'
@@ -13,11 +14,13 @@ interface Props {
 }
 
 export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Props) {
-  const { profile, status, loadCurrentUser, clearCurrentUser } = useCurrentUser()
+  const { profile, status, loadCurrentUser } = useCurrentUser()
+  const session = useSessionRestore()
   const { activeRole } = useActiveRole()
   const redirecting = useRef(false)
 
   useEffect(() => {
+    if (session.checking || session.error) return
     if (!getAccessToken()) {
       if (!redirecting.current) {
         redirecting.current = true
@@ -26,19 +29,19 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
       return
     }
     if (status === 'idle') void loadCurrentUser().catch(() => undefined)
-  }, [loadCurrentUser, onLogin, status])
+  }, [loadCurrentUser, onLogin, status, session.checking, session.error])
 
-  if (!getAccessToken()) {
+  if (session.checking || (!session.error && !getAccessToken())) {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
         <p className="text-[15px] font-semibold text-text-body" role="status">
-          Đang chuyển đến đăng nhập...
+          {session.checking ? 'Đang kiểm tra phiên đăng nhập...' : 'Đang chuyển đến đăng nhập...'}
         </p>
       </main>
     )
   }
 
-  if (status === 'error') {
+  if (session.error || status === 'error') {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
         <section className="w-full max-w-[460px] rounded-2xl border border-line-card bg-surface p-8 text-center shadow-card">
@@ -47,18 +50,17 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
             Không thể xác thực phiên đăng nhập
           </h1>
           <p className="mt-2 text-[15px] leading-6 text-text-body">
-            Đăng nhập lại để xác nhận quyền truy cập khu vực học viên.
+            Kiểm tra kết nối mạng rồi thử xác thực lại tài khoản.
           </p>
           <Button
             variant="danger"
             className="mt-5"
             onClick={() => {
-              clearTokens()
-              clearCurrentUser()
-              onLogin()
+              if (session.error) session.retry()
+              else void loadCurrentUser().catch(() => undefined)
             }}
           >
-            Đăng nhập lại
+            Thử lại
           </Button>
         </section>
       </main>

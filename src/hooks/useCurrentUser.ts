@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect } from 'react'
 import { getAccessToken } from '../lib/api'
-import type { UserProfile } from '../services/userService'
+import type { StudentProfile, UserProfile } from '../services/userService'
 
 export type CurrentUserStatus = 'idle' | 'loading' | 'ready' | 'error'
 
@@ -12,6 +12,7 @@ export interface CurrentUserContextValue {
   // each issuing its own GET /users/profiles.
   loadCurrentUser: () => Promise<UserProfile>
   clearCurrentUser: () => void
+  applyStudentProfile: (userId: string, studentProfile: StudentProfile) => void
 }
 
 export const CurrentUserContext = createContext<CurrentUserContextValue | null>(null)

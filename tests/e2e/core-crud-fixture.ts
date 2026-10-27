@@ -412,7 +412,7 @@ export async function installCrudFixture(
     const request = route.request()
     const url = new URL(request.url())
     if (!url.pathname.startsWith('/api/')) {
-      if (url.origin === 'http://127.0.0.1:5174') await route.continue()
+      if (url.origin === 'http://127.0.0.1:5192') await route.continue()
       else {
         if (['xhr', 'fetch'].includes(request.resourceType()))
           state.unmatchedRequests.push(`${request.method()} ${request.url()}`)
