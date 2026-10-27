@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import CourseCatalogPage from './pages/CourseCatalogPage'
 import LessonVideosMockPage from './pages/mock/LessonVideosMockPage'
+import AlertsMockPage from './pages/mock/AlertsMockPage'
 import CourseDetailPage from './pages/course/CourseDetailPage'
 import CartPage from './pages/cart/CartPage'
 import CheckoutPage from './pages/checkout/CheckoutPage'
@@ -115,6 +116,7 @@ function App() {
     if (path === '/reset-password') return 'reset-password'
     if (path === '/courses') return 'courses'
     if (import.meta.env.DEV && path === '/mock/lesson-videos') return 'mock-lesson-videos'
+    if (import.meta.env.DEV && path === '/mock/alerts') return 'mock-alerts'
     if (path === '/cart') return 'cart'
     if (path === '/checkout') return 'checkout'
     if (path === '/orders') return 'orders'
@@ -558,6 +560,8 @@ function App() {
     )
   if (authMode === 'mock-lesson-videos')
     return <LessonVideosMockPage />
+  if (authMode === 'mock-alerts')
+    return <AlertsMockPage />
   if (authMode === 'courses')
     return <CourseCatalogPage />
   if (authMode === 'cart')
