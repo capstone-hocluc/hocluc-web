@@ -40,6 +40,8 @@ interface Props {
   blockedReason: string
   busy: boolean
   onReload: () => void
+  applyLocked: boolean
+  onApplyAttempt: () => void
 }
 
 function formatSize(bytes: number) {
@@ -65,7 +67,7 @@ function describeFailure(cause: unknown, fallback: string) {
 }
 
 /** Reading a PDF paper with AI as five steps; each step is a tab and the tabs show how far the run has got. */
-export default function ExamExtractionPanel({ quizId, examFile: savedFile, latestJob, existingQuestionCount, blockedReason, busy, onReload }: Props) {
+export default function ExamExtractionPanel({ quizId, examFile: savedFile, latestJob, existingQuestionCount, blockedReason, busy, onReload, applyLocked, onApplyAttempt }: Props) {
   const access = useQuizAccess()
   const tracker = useExtractionJob(quizId, latestJob)
   const { job } = tracker
@@ -141,6 +143,7 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
 
   const apply = () => job && run('apply', async () => {
     setConfirmApply(false)
+    onApplyAttempt()
     setApplied(await applyExtractionJob(quizId, job.id, mode))
     tracker.track({ ...job, status: 'APPLIED' })
   })
@@ -267,7 +270,7 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
     <div key="apply" className="flex flex-col gap-4">
       {job?.status === 'DONE' && (
         <>
-          <fieldset className="m-0 space-y-2 border-0 p-0" disabled={writeBlocked}>
+          <fieldset className="m-0 space-y-2 border-0 p-0" disabled={writeBlocked || applyLocked}>
             <legend className="mb-2 p-0 text-sm font-medium text-text-primary">Cách đưa vào đề</legend>
             {([
               ['REPLACE', 'Thay thế', `Xoá các phần, nhóm và câu hiện có${existingQuestionCount ? ` (${existingQuestionCount} câu)` : ''} rồi đưa kết quả vào.`],
@@ -286,7 +289,7 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
             </p>
           )}
           {missing > 0 && <Notice tone="danger" role="alert">Còn thiếu {missing} câu so với số in trên đề. Bạn nên đọc lại trước khi áp dụng.</Notice>}
-          <Button className="min-h-11" disabled={writeBlocked} onClick={requestApply}>{pending === 'apply' ? 'Đang áp dụng...' : 'Áp dụng vào đề'}</Button>
+          <Button className="min-h-11" disabled={writeBlocked || applyLocked} onClick={requestApply}>{pending === 'apply' ? 'Đang áp dụng...' : 'Áp dụng vào đề'}</Button>
         </>
       )}
       {job?.status === 'APPLIED' && (
@@ -344,7 +347,8 @@ export default function ExamExtractionPanel({ quizId, examFile: savedFile, lates
       <div className="flex flex-col gap-4">
         {panels[stage]}
         {actionError && <Notice tone="danger" role="alert">{actionError}</Notice>}
-        {uncertainApply && <Button appearance="outline" className="min-h-11" onClick={onReload}>Tải lại bài để kiểm tra</Button>}
+        {applyLocked && job?.status === 'DONE' && <Notice tone="warning">Tải lại nội dung đề để kiểm tra kết quả trước khi áp dụng tiếp.</Notice>}
+        {(uncertainApply || (applyLocked && job?.status === 'DONE')) && <Button appearance="outline" className="min-h-11" onClick={onReload}>Tải lại bài để kiểm tra</Button>}
         {tracker.error && <Notice tone="warning" role="alert">Không cập nhật được tiến độ: {tracker.error}</Notice>}
       </div>
       {confirmApply && (

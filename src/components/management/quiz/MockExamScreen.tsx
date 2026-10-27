@@ -712,6 +712,7 @@ function TeacherMockExamForm({
   const [railOpen, setRailOpen] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pdfApplyAttempted, setPdfApplyAttempted] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
   const [examFileDraft, setExamFileDraft] = useState<ExamFileDraft>(emptyExamFileDraft)
   const savingWithFile = !serverQuizId && examFileDraft.file !== null
@@ -937,7 +938,11 @@ function TeacherMockExamForm({
 
   const checkPendingCreate = async () => {
     const pending = pendingCreateRef.current
-    if (!pending || busy) return
+    if (busy) return
+    if (!pending) {
+      setError('Kết quả nhập file chưa rõ. Hãy quay về danh sách và kiểm tra đề trước khi tạo lại.')
+      return
+    }
     setBusy(true)
     try {
       const candidates = findPendingExamCreateCandidates(await getTeacherQuizzes(), pending)
@@ -1430,8 +1435,8 @@ function TeacherMockExamForm({
       {!serverQuizId && <ExamFileOnCreate value={examFileDraft} onChange={setExamFileDraft} disabled={busy || ambiguousCreate} />}
 
       <ExamExtractionPanel quizId={serverQuizId} examFile={quizSnapshot?.examFile ?? null} latestJob={initial?.latestJob ? { ...initial.latestJob, result: null } : null}
-        existingQuestionCount={initial?.questions.length ?? 0} blockedReason={extractBlockedReason} busy={busy} onReload={() => { onStepChange(step); onReload() }} />
-      {serverQuizId && initial?.latestJob?.kind === 'EXAM_FILE' && <QuizPdfImportPanel quizId={serverQuizId} jobId={initial.latestJob.id} blockedReason={extractBlockedReason} busy={busy} onBusyChange={setBusy} onReload={() => { onStepChange(step); onReload() }} />}
+        existingQuestionCount={initial?.questions.length ?? 0} applyLocked={pdfApplyAttempted} onApplyAttempt={() => setPdfApplyAttempted(true)} blockedReason={extractBlockedReason} busy={busy} onReload={() => { onStepChange(step); onReload() }} />
+      {serverQuizId && initial?.latestJob?.kind === 'EXAM_FILE' && <QuizPdfImportPanel quizId={serverQuizId} jobId={initial.latestJob.id} applyLocked={pdfApplyAttempted} onApplyAttempt={() => setPdfApplyAttempted(true)} blockedReason={extractBlockedReason} busy={busy} onBusyChange={setBusy} onReload={() => { onStepChange(step); onReload() }} />}
           </div>
         </ScrollArea>
 

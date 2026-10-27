@@ -6,9 +6,9 @@ import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import Notice from '../../console/notice'
 
-export default function QuizPdfImportPanel({ quizId, jobId, blockedReason, busy, onBusyChange, onReload }: {
+export default function QuizPdfImportPanel({ quizId, jobId, blockedReason, busy, onBusyChange, onReload, applyLocked, onApplyAttempt }: {
   quizId: string; jobId: string; blockedReason: string; busy: boolean
-  onBusyChange: (value: boolean) => void; onReload: () => void
+  onBusyChange: (value: boolean) => void; onReload: () => void; applyLocked?: boolean; onApplyAttempt?: () => void
 }) {
   const access = useQuizAccess()
   const [job, setJob] = useState<TeacherQuizExtractionJob | null>(null)
@@ -43,9 +43,10 @@ export default function QuizPdfImportPanel({ quizId, jobId, blockedReason, busy,
   const reading = !job || job.status === 'PENDING' || job.status === 'RUNNING'
   const unsupported = job?.result?.questions.some(q => !Array.isArray(q.options) || q.options.length < 2 || q.options.filter(o => o.correct).length > 1)
   const apply = async () => {
-    if (!access.canWrite || blockedReason || busy || inFlight.current || uncertain || !confirmed || unsupported || job?.status !== 'DONE') return
+    if (!access.canWrite || blockedReason || busy || applyLocked || inFlight.current || uncertain || !confirmed || unsupported || job?.status !== 'DONE') return
     inFlight.current = true
     setApplying(true)
+    onApplyAttempt?.()
     onBusyChange(true)
     setError('')
     let applied = false
@@ -81,6 +82,7 @@ export default function QuizPdfImportPanel({ quizId, jobId, blockedReason, busy,
     {unsupported && <Notice tone="warning">Có câu hỏi ngoài dạng trắc nghiệm một đáp án. FE chưa cho áp dụng kết quả này; không tự chuyển đổi loại câu hỏi.</Notice>}
     <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={applying || uncertain} onChange={e => setConfirmed(e.target.checked)} />Tôi đã rà soát nội dung, đáp án và các cảnh báo.</label>
     {blockedReason && <Notice tone="warning">{blockedReason}</Notice>}
+    {applyLocked && <Notice tone="warning">Tải lại nội dung đề để kiểm tra kết quả trước khi áp dụng tiếp.</Notice>}
     {error && <Notice tone="danger" role="alert">{error}</Notice>}
   </div>
 
@@ -101,7 +103,7 @@ export default function QuizPdfImportPanel({ quizId, jobId, blockedReason, busy,
       onClose={() => { if (!inFlight.current) setPreview(false) }} dismissable={!applying} maxWidth={800}
       footer={<><Button appearance="outline" disabled={applying} onClick={() => setPreview(false)}>Đóng</Button>
         {uncertain ? <Button disabled={busy || Boolean(blockedReason)} onClick={onReload}>Tải lại nội dung đề</Button>
-          : <Button disabled={busy || !confirmed || !job?.result?.questions.length || Boolean(unsupported) || Boolean(blockedReason)} onClick={() => void apply()}>{applying ? 'Đang áp dụng…' : 'Áp dụng câu hỏi vào bản nháp'}</Button>}</>}
+          : <Button disabled={busy || applyLocked || !confirmed || !job?.result?.questions.length || Boolean(unsupported) || Boolean(blockedReason)} onClick={() => void apply()}>{applying ? 'Đang áp dụng…' : 'Áp dụng câu hỏi vào bản nháp'}</Button>}</>}
     >{content}</ConsoleDialog>}
   </div>
 }

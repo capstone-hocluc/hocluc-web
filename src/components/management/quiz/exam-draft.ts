@@ -14,6 +14,7 @@ export interface DraftQuestion {
   explanation: string
   imageUrl: string | null
   categoryId: string | null
+  difficulty: string | null
   sourcePage: number | null
   /** Only marks the teacher set; an equal share is BE's to compute and must not be sent back as fixed. */
   marks: number | null

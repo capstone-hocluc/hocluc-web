@@ -117,6 +117,8 @@ for (const status of [400, 403, 413, 500, 0, 200]) {
       await expect(page.getByRole('dialog').getByRole('button', { name: 'Tạo bản nháp và nhập câu hỏi', exact: true })).toHaveCount(0)
       await page.getByRole('button', { name: 'Đóng và kiểm tra danh sách đề' }).click()
       await expect(entry(page)).toBeDisabled()
+      await page.getByRole('button', { name: 'Kiểm tra kết quả tạo' }).click()
+      await expect(page.getByText('Kết quả nhập file chưa rõ.', { exact: false })).toBeVisible()
     } else {
       await expect(page.getByRole('dialog').locator('input[type=file]')).toHaveValue(/cau-hoi.txt$/)
       await page.getByRole('dialog').getByRole('button', { name: 'Đóng', exact: true }).click()
@@ -211,6 +213,28 @@ for (const mode of ['preview', 'unsupported', 'lost', 'auto'] as const) {
     expect(state.pageErrors).toEqual([])
   })
 }
+
+test('an uncertain PDF apply locks both panels until the editor reloads', async ({ page }) => {
+  const { flow } = await installCreateImport(page)
+  flow.job = pdfJob()
+  flow.applyLost = true
+  await prepareNewImport(page)
+  await page.getByLabel('File đề (.pdf, .docx, .txt, .md)', { exact: true }).setInputFiles(payload('pdf'))
+  await page.getByRole('button', { name: 'Tạo bản nháp và nhập câu hỏi', exact: true }).click()
+  await page.getByRole('button', { name: 'Mở bản nháp để rà soát' }).click()
+  const extractionSteps = page.getByRole('list', { name: 'Các bước đọc đề' })
+  await expect(extractionSteps.getByRole('button', { name: /Áp dụng/ })).toBeEnabled()
+  await extractionSteps.getByRole('button', { name: /Áp dụng/ }).click()
+  await expect(page.getByRole('button', { name: 'Áp dụng vào đề', exact: true })).toBeEnabled()
+  await page.getByRole('button', { name: 'Xem trước kết quả PDF' }).click()
+  await page.getByLabel('Tôi đã rà soát nội dung, đáp án và các cảnh báo.').check()
+  await page.getByRole('button', { name: 'Áp dụng câu hỏi vào bản nháp' }).click()
+  await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: 'Đóng', exact: true }).click()
+  await page.getByRole('list', { name: 'Các bước đọc đề' }).getByRole('button', { name: /Áp dụng/ }).click()
+  await expect(page.getByRole('button', { name: 'Áp dụng vào đề', exact: true })).toBeDisabled()
+  expect(flow.applies).toBe(1)
+})
 
 function pdfQuestion() {
   return { id: QUIZ_IDS.question, sequence: 1, sectionId: null, groupId: null, questionText: 'Câu hỏi đọc từ PDF',
@@ -409,7 +433,7 @@ test('format guide downloads real Word, TXT and Markdown templates with matching
     expect(await download.failure()).toBeNull()
     const bytes = await readFile((await download.path())!)
     if (extension === 'docx') expect(bytes.subarray(0, 2).toString()).toBe('PK')
-    else expect(bytes.toString('utf8')).toBe(expected)
+    else expect(bytes.toString('utf8').replace(/\r\n/g, '\n')).toBe(expected.replace(/\r\n/g, '\n'))
   }
   await page.screenshot({ path: testInfo.outputPath('quiz-import-guide-desktop.png') })
 })
@@ -456,8 +480,9 @@ test('PDF failure releases the editor after reloading, without starting another 
   await expect(page.getByLabel('Tên bài đánh giá đầu vào', { exact: true })).toBeDisabled()
   flow.job.status = 'FAILED'
   flow.job.error = 'Không đọc được PDF thử nghiệm.'
-  await expect(page.getByText('Không đọc được PDF thử nghiệm.', { exact: false })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByLabel('Đọc đề PDF bằng AI').getByText('Không đọc được PDF thử nghiệm.', { exact: false })).toBeVisible({ timeout: 10_000 })
   await page.getByRole('button', { name: 'Tải lại nội dung đề' }).click()
+  await showEditorStep(page, 'Thông tin và quy định')
   await expect(page.getByLabel('Tên bài đánh giá đầu vào', { exact: true })).toBeEnabled()
   expect(flow.uploads).toHaveLength(1)
   expect(flow.applies).toBe(0)

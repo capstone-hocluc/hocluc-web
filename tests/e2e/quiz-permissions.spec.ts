@@ -37,7 +37,11 @@ for (const mode of ['unchanged', 'edited', 'invalid-response'] as const) {
     })
     await page.goto(`/console/staff/placements/${QUIZ_IDS.quiz}/edit`)
     await expect(page.getByLabel('Tên bài đánh giá đầu vào', { exact: true })).toBeVisible()
-    if (mode !== 'unchanged') await page.getByPlaceholder('Nhập nội dung câu hỏi', { exact: true }).fill('Câu hỏi vừa chỉnh sửa')
+    await showEditorStep(page, 'Các phần và câu hỏi')
+    if (mode !== 'unchanged') {
+      await page.getByRole('button', { name: 'Sửa', exact: true }).click()
+      await page.getByPlaceholder('Nhập nội dung câu hỏi', { exact: true }).fill('Câu hỏi vừa chỉnh sửa')
+    }
     await page.getByRole('button', { name: 'Lưu và xuất bản', exact: true }).click()
     if (mode === 'invalid-response') {
       await expect(page.getByText('Máy chủ có thể đã nhận một phần thay đổi câu hỏi', { exact: false })).toBeVisible()
