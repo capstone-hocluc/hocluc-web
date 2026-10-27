@@ -9,7 +9,7 @@ import {
   type BankSource,
 } from '../../../services/questionBankService'
 import Button from '../../console/button'
-import { ChevronLeft, ChevronRight, ListTree, RefreshCw } from '../../console/icons'
+import { ChevronLeft, ListTree, RefreshCw } from '../../console/icons'
 import Notice from '../../console/notice'
 import Status from '../../console/status'
 import {
@@ -29,9 +29,8 @@ import {
   type LiveReading,
 } from './live-reading'
 import { failureText } from './question-bank-labels'
-import PagedPreview from '../quiz/PagedPreview'
 import ReadingAsPaper, { type PaperQuestion } from './ReadingAsPaper'
-import ReadingPaper, { type ShownQuestion } from './ReadingPaper'
+import type { ShownQuestion } from './ReadingPaper'
 import ReadingPipeline from './ReadingPipeline'
 
 const POLL_MS = 4000
@@ -74,8 +73,7 @@ function useStoredReading(sourceId: string) {
 }
 
 /**
- * The paper being put into the bank, live: the pipeline of steps and what each is doing on the left, the paper's page
- * on the right with what the AI writes for each question laid over it as it writes (server-sent events).
+ * The live pipeline and the paper reconstructed from the AI reading (server-sent events).
  */
 export default function BankReadingView({
   source,
@@ -99,10 +97,7 @@ export default function BankReadingView({
   const [streaming, setStreaming] = useState<'connecting' | 'open' | 'polling' | 'closed'>(
     'connecting'
   )
-  const [page, setPage] = useState(1)
   const [follow, setFollow] = useState(true)
-  const [overlay, setOverlay] = useState(true)
-  const [paperMode, setPaperMode] = useState<'pdf' | 'html'>('pdf')
   // whether the pipeline is shown is remembered for this browser; storage may be refused, then it is just shown
   const [showPipeline, setShowPipeline] = useState(() => {
     try {
@@ -198,11 +193,6 @@ export default function BankReadingView({
     }))
   }, [shown, reading])
 
-  const regionOf = useMemo(
-    () => new Map(reading?.regions.map((r) => [r.number, r]) ?? []),
-    [reading]
-  )
-  const pageCount = reading?.pageCount ?? 0
   const followed =
     view.parts.find((p) => p.id === followId && p.status === 'READING') ?? followedPart(view.parts)
   const writingNow = useMemo(() => {
@@ -210,43 +200,13 @@ export default function BankReadingView({
     const written = questionsOf(followed)
     return written && written.length > 0 ? written[written.length - 1] : null
   }, [followed])
-
-  // follow the AI: the page of the question it is writing in the part followed
-  const followPage = writingNow
-    ? (regionOf.get(writingNow.number)?.page ?? followed?.firstPage)
-    : followed?.firstPage
-  const following =
-    follow &&
-    followPage !== undefined &&
-    followPage >= 1 &&
-    (pageCount === 0 || followPage <= pageCount)
-  // while following, the page and the question are the AI's; otherwise the viewer's own
-  const shownPage = following ? (followPage as number) : page
-  const shownSelected = following ? (writingNow?.number ?? null) : selected
+  const shownSelected = follow ? (writingNow?.number ?? null) : selected
 
   function select(number: number) {
     setFollow(false)
     setSelected(number)
-    const at =
-      regionOf.get(number)?.page ?? reading?.questions.find((q) => q.number === number)?.sourcePage
-    setPage(at && at >= 1 && at <= pageCount ? at : shownPage)
   }
 
-  function turn(by: number) {
-    setFollow(false)
-    setSelected(shownSelected)
-    setPage(Math.min(Math.max(1, shownPage + by), pageCount))
-  }
-
-  function toggleFollow() {
-    if (follow) {
-      setPage(shownPage)
-      setSelected(shownSelected)
-    }
-    setFollow((f) => !f)
-  }
-
-  const bands = reading?.regions.filter((r) => r.page === shownPage) ?? []
   const read = [...shown.values()].filter((q) => !q.writing).sort((a, b) => a.number - b.number)
   const status = view.status
   return (
@@ -298,21 +258,20 @@ export default function BankReadingView({
       ) : !reading ? (
         <BankReadingSkeleton />
       ) : (
-        <div
-          className={cn('grid gap-5', showPipeline && 'lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]')}
-        >
+        <div className="flex min-w-0 flex-col gap-5">
           {showPipeline && (
-            <section className="flex min-w-0 flex-col gap-3" aria-label="Pipeline">
+            <div>
               <ReadingPipeline
                 reading={view}
                 followedId={followed?.id ?? null}
-                // a question the AI gave back empty was not read
-                questionCount={reading.questions.filter((q) => q.text.trim() !== '').length}
+                questionCount={[...shown.values()].filter((q) => q.text.trim() !== '').length}
+                unlabelledCount={source.unlabelledCount}
                 onFollowPart={(id) => {
                   setFollowId(id)
                   setFollow(true)
                 }}
-              />
+              >
+            <section className="mt-4 flex min-w-0 flex-col gap-3" aria-label="Chi tiết tiến trình">
               {view.progress && status !== 'DONE' && status !== 'FAILED' && (
                 <p className="m-0 text-sm text-text-secondary">{view.progress}</p>
               )}
@@ -334,6 +293,8 @@ export default function BankReadingView({
                   Không mở được luồng trực tiếp, đang cập nhật 4 giây một lần.
                 </p>
               )}
+              <details className="border-t border-card-border pt-3">
+                <summary className="cursor-pointer text-sm font-medium text-text-primary">Nhật ký và câu đã đọc</summary>
               <ConsoleTabs defaultValue="log">
                 <ConsoleTabsList aria-label="Chi tiết">
                   <ConsoleTabsTrigger value="log">Nhật ký</ConsoleTabsTrigger>
@@ -406,141 +367,23 @@ export default function BankReadingView({
                   )}
                 </ConsoleTabsContent>
               </ConsoleTabs>
+              </details>
             </section>
+              </ReadingPipeline>
+            </div>
           )}
 
-          <section className="flex min-w-0 flex-col gap-3" aria-label="Đề gốc">
-            {pageCount > 0 && (
-              <div
-                className="flex gap-1 self-start rounded-lg border border-card-border p-0.5"
-                role="group"
-                aria-label="Cách xem đề"
-              >
-                {(['pdf', 'html'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    aria-pressed={paperMode === mode}
-                    onClick={() => setPaperMode(mode)}
-                    className={cn(
-                      'cursor-pointer rounded-md border-0 px-3 py-1.5 text-sm font-medium',
-                      paperMode === mode
-                        ? 'bg-brand-500 text-white'
-                        : 'bg-transparent text-text-secondary hover:text-text-primary'
-                    )}
-                  >
-                    {mode === 'pdf' ? 'Trang gốc' : 'Bản HTML'}
-                  </button>
-                ))}
-              </div>
-            )}
-            {pageCount === 0 || paperMode === 'html' ? (
-              <>
-                {pageCount === 0 && (
-                  <p className="m-0 text-xs text-text-tertiary">
-                    Chưa có file PDF gốc của đề này: đây là bản dựng lại từ những gì AI đọc được.
-                  </p>
-                )}
-                <div className="max-h-[calc(100dvh-14rem)] min-w-0 overflow-auto rounded-xl bg-background-gray-secondary p-3 sm:p-5">
-                  {view.live ? (
-                    // while the AI writes, one running sheet that grows with it; cut into pages once it is done
-                    <ReadingAsPaper
-                      title={source.title}
-                      sections={reading.sections}
-                      groups={reading.groups}
-                      questions={paperQuestions}
-                      selected={shownSelected}
-                      onSelect={(number) => {
-                        setFollow(false)
-                        select(number)
-                      }}
-                    />
-                  ) : (
-                    <PagedPreview
-                      label="Bản đề AI đọc được, chia trang A4"
-                      version={`${reading.status}:${paperQuestions.length}:${source.finishedAt ?? ''}`}
-                      focus={shownSelected}
-                    >
-                      <ReadingAsPaper
-                        title={source.title}
-                        sections={reading.sections}
-                        groups={reading.groups}
-                        questions={paperQuestions}
-                        selected={null}
-                        onSelect={() => undefined}
-                      />
-                    </PagedPreview>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      appearance="outline"
-                      disabled={shownPage <= 1}
-                      onClick={() => turn(-1)}
-                      aria-label="Trang trước"
-                    >
-                      <ChevronLeft size={17} />
-                    </Button>
-                    <span className="min-w-20 text-center text-sm text-text-tertiary tabular-nums">
-                      Trang {shownPage}/{pageCount}
-                    </span>
-                    <Button
-                      appearance="outline"
-                      disabled={shownPage >= pageCount}
-                      onClick={() => turn(1)}
-                      aria-label="Trang sau"
-                    >
-                      <ChevronRight size={17} />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      appearance={follow ? 'fill' : 'outline'}
-                      aria-pressed={follow}
-                      onClick={toggleFollow}
-                    >
-                      Theo dõi AI
-                    </Button>
-                    <Button
-                      size="sm"
-                      appearance={overlay ? 'fill' : 'outline'}
-                      aria-pressed={overlay}
-                      onClick={() => setOverlay((o) => !o)}
-                    >
-                      Hiện chữ AI viết
-                    </Button>
-                  </div>
-                </div>
-                <ReadingPaper
-                  sourceId={source.id}
-                  page={shownPage}
-                  bands={bands}
-                  shown={shown}
-                  overlay={overlay}
-                  selected={shownSelected}
-                  onSelect={(number) => {
-                    setFollow(false)
-                    select(number)
-                  }}
-                />
-                {reading.regions.length === 0 && writingNow && (
-                  <div
-                    className="rounded-lg border border-card-border p-3 text-sm"
-                    aria-label="AI đang viết"
-                  >
-                    <span className="font-semibold text-text-primary">
-                      AI đang viết câu {writingNow.number}:{' '}
-                    </span>
-                    <span className="break-words text-text-primary">{writingNow.text}</span>
-                  </div>
-                )}
-              </>
-            )}
+          <section className="min-w-0" aria-label="Bản đề AI đọc được">
+            <div className="max-h-[calc(100dvh-14rem)] min-w-0 overflow-auto rounded-xl bg-background-gray-secondary p-3 sm:p-6">
+              <ReadingAsPaper
+                title={source.title}
+                sections={reading.sections}
+                groups={reading.groups}
+                questions={paperQuestions}
+                selected={shownSelected}
+                onSelect={select}
+              />
+            </div>
           </section>
         </div>
       )}

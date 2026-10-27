@@ -152,7 +152,7 @@ export default function ReadingAsPaper({
 
   return (
     <article className="quiz-paper" aria-label="Bản đề AI đọc được">
-      <PaperBrand content="source" />
+      <PaperBrand content="source" showCopyright={false} />
       <h1>{title}</h1>
       <p className="quiz-paper-meta">Bản dựng lại từ những gì AI đọc được · {sorted.filter(q => q.text.trim()).length} câu</p>
       {sorted.length === 0 && <p className="text-center text-slate-500 italic">AI chưa viết câu nào.</p>}

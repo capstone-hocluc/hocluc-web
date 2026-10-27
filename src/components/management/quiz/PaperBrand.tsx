@@ -5,7 +5,7 @@ import Logo from '../../common/Logo'
  * platform made is its own; a paper loaded from elsewhere (a national exam) keeps its maker's rights, the platform's
  * being only its own layout - saying otherwise would claim what is not ours.
  */
-export default function PaperBrand({ content }: { content: 'own' | 'source' }) {
+export default function PaperBrand({ content, showCopyright = true }: { content: 'own' | 'source'; showCopyright?: boolean }) {
   const year = new Date().getFullYear()
   return (
     <header className="quiz-paper-brand">
@@ -13,11 +13,11 @@ export default function PaperBrand({ content }: { content: 'own' | 'source' }) {
         <Logo size={32} />
         <span className="quiz-paper-brand-motto">Mỗi ngày một chút, tiến xa một bước</span>
       </div>
-      <p className="quiz-paper-copyright">
+      {showCopyright && <p className="quiz-paper-copyright">
         {content === 'own'
           ? `© ${year} Hocluc.com. Đề thuộc nền tảng Hocluc.com, chỉ dùng cho học viên của Hocluc.com; không sao chép hay phát hành lại khi chưa được phép.`
           : `© ${year} Hocluc.com: nền tảng và cách trình bày. Nội dung đề thuộc đơn vị ra đề; bản dựng lại chỉ dùng nội bộ để luyện tập, không phát hành lại.`}
-      </p>
+      </p>}
     </header>
   )
 }

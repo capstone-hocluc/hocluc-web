@@ -4,6 +4,7 @@ import { importBankPaper, type BankAnswerSource, type BankSource } from '../../.
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import Field, { fieldControlClass } from '../../console/form-field'
+import FileField from '../../console/file-field'
 import Notice from '../../console/notice'
 import SelectField from '../../console/select-field'
 
@@ -94,23 +95,23 @@ export default function BankImportDialog({
       <div className="flex flex-col gap-4">
         {again && <Notice tone="info">Đề này chưa được lưu file trên máy chủ. Chọn lại đúng file đề và file đáp án.</Notice>}
         <Field label="File đề (PDF)">
-          <input
-            type="file"
+          <FileField
+            value={exam}
+            onChange={setExam}
             accept=".pdf,application/pdf"
-            aria-label="File đề (PDF)"
-            className={fieldControlClass}
+            ariaLabel="File đề (PDF)"
+            placeholder="Chọn hoặc kéo file PDF của đề vào đây"
             disabled={busy || confirming}
-            onChange={event => setExam(event.target.files?.[0] ?? null)}
           />
         </Field>
         <Field label="File đáp án" hint="PDF, TXT hoặc Markdown. Bỏ trống nếu đề chưa có đáp án.">
-          <input
-            type="file"
+          <FileField
+            value={key}
+            onChange={setKey}
             accept=".pdf,.txt,.md,application/pdf,text/plain,text/markdown"
-            aria-label="File đáp án"
-            className={fieldControlClass}
+            ariaLabel="File đáp án"
+            placeholder="Chọn hoặc kéo file đáp án vào đây"
             disabled={busy || confirming}
-            onChange={event => setKey(event.target.files?.[0] ?? null)}
           />
         </Field>
         {key && (
@@ -141,6 +142,7 @@ export default function BankImportDialog({
               inputMode="numeric"
               value={year}
               maxLength={4}
+              placeholder="Ví dụ: 2025"
               aria-invalid={yearInvalid || undefined}
               disabled={busy || confirming}
               onChange={event => setYear(event.target.value)}
