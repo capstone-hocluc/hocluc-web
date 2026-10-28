@@ -27,6 +27,7 @@ import { showErrorToast } from './lib/toastBus'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
 import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, quizPagePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
+import { NotFoundStatusPage } from './components/console/status-page'
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
 import PurchaseGuard from './components/purchase/PurchaseGuard'
@@ -61,6 +62,12 @@ function App() {
       return 'management-login'
     }
     const path = stripConsolePrefix(rawPath)
+    // Breadcrumb "Trang chủ" links to the bare area (/console/manager); it opens that area's dashboard.
+    const areaRoot = path.match(/^\/(admin|staff|manager|mentor|teacher)$/)
+    if (areaRoot) {
+      replaceHistoryEntry(`/console/${areaRoot[1]}/dashboard${window.location.search}`)
+      return `${areaRoot[1]}-dashboard`
+    }
     const quizRoute = path.match(/^\/(admin|staff|manager|teacher|mentor)\/(quizzes|mock-exams|placements)(?:\/(new|[0-9a-f-]+)(?:\/(edit))?)?$/i)
     if (quizRoute) {
       const [, area, screen, target, edit] = quizRoute
@@ -595,6 +602,10 @@ function App() {
         onGoToOrders={() => navigateTo('/orders')}
       />
     )
+  // A console URL that matches no screen must not fall through to the public landing page.
+  if (!authMode && isConsolePath(currentPath)) {
+    return <NotFoundStatusPage onHome={() => navigateTo(managementLoginPath())} />
+  }
   // Login, signup, verification and recovery float over the landing page as one
   // dialog; the URL still reflects the step so refresh and links keep working.
   return (

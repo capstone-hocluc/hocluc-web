@@ -21,7 +21,6 @@ import {
   Sparkles,
   UserCog,
   UserRound,
-  Users,
 } from '../components/console/icons'
 import type { NavIcon, NavSection } from '../components/console/layout/nav-types'
 import { SOLUTION_QUEUE } from '../data/console-mock'
@@ -252,23 +251,6 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     permission: 'ATTENDANCE_WRITE',
     roles: ['STAFF'],
   },
-  {
-    page: 'groups',
-    label: 'Nhóm học',
-    icon: Users,
-    group: 'operations',
-    permission: 'ENROLLMENT_READ',
-    writePermission: 'ENROLLMENT_WRITE',
-    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
-  },
-  {
-    page: 'groups',
-    label: 'Nhóm của tôi',
-    icon: Users,
-    group: 'operations',
-    permission: 'REVIEW_QUEUE_HANDLE',
-    roles: ['MENTOR'],
-  },
 
   {
     page: 'students',
@@ -365,6 +347,11 @@ function allows(role: UserRole, item: ConsoleNavItem) {
 /** The entry a role reaches a page through, ignoring feature flags (a hidden page keeps its own gate). */
 export function findNavItem(role: UserRole, page: string) {
   return CONSOLE_NAV.find((item) => item.page === page && allows(role, item))
+}
+
+/** True when some role has a menu entry for the page, so a miss for one role is 403 and a miss for all is 404. */
+export function isKnownPage(page: string) {
+  return CONSOLE_NAV.some((item) => item.page === page)
 }
 
 export function canAccessPage(role: UserRole, page: string) {

@@ -5,7 +5,7 @@ import ChatAssignmentScreen from './screens/ChatAssignmentScreen'
 import ChatFeatureGate from '../chat-feature-gate'
 import ConsoleShell from '../console/console-shell'
 import ProfilePage from '../console/profile-page'
-import { ComingSoonPage, ForbiddenPage } from '../console/access-states'
+import { ComingSoonPage, ForbiddenPage, NotFoundPage } from '../console/access-states'
 import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
@@ -14,7 +14,6 @@ import MasterDataManagement from './master-data/master-data-management'
 import ExamYearManagement from './crud/exam-year-management'
 import OrderManagement from './crud/order-management'
 import EnrollmentManagement from './crud/enrollment-management'
-import StudyGroupManagement from './crud/study-group-management'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import PageHeading from '../console/page-heading'
@@ -22,15 +21,14 @@ import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
   AdminBlueprints,
-  MentorGroups,
   MentorOverview,
   MentorSolutionQueue,
   MentorStudents,
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
-import QuestionBankScreen from './question-bank/QuestionBankScreen'
+import QuestionBankWorkspace from './question-bank/QuestionBankWorkspace'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
-import { buildNavSections, canWrite, findNavItem, navLabel } from '../../lib/console-nav'
+import { buildNavSections, canWrite, findNavItem, isKnownPage, navLabel } from '../../lib/console-nav'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
 const AttendanceManagementPage = lazy(
@@ -47,7 +45,7 @@ interface ManagementScreenProps {
 
 /**
  * The screen for one console page. Pages the role has no menu entry for render the
- * shared 403 page; entries without a screen yet render "Đang phát triển".
+ * shared 403 page, or the 404 page when no role has one; entries without a screen yet render "Đang phát triển".
  * TeacherDashboard renders the pages it shares with other roles through this too.
  */
 export function ManagementScreen({
@@ -58,7 +56,7 @@ export function ManagementScreen({
   onSelectConversation = () => undefined,
 }: ManagementScreenProps) {
   const item = findNavItem(role, quizMenuPage(page))
-  if (!item) return <ForbiddenPage />
+  if (!item) return isKnownPage(quizMenuPage(page)) ? <ForbiddenPage /> : <NotFoundPage />
   const title = navLabel(role, item)
   if (item.soon) return <ComingSoonPage title={title} />
   const readOnly = !canWrite(role, page)
@@ -100,12 +98,7 @@ export function ManagementScreen({
     case 'audit-log':
       return <AdminAuditLog />
     case 'question-bank':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <QuestionBankScreen readOnly={readOnly} />
-        </>
-      )
+      return <QuestionBankWorkspace title={title} readOnly={readOnly} onBack={() => onNavigate('dashboard')} />
     case 'taxonomy':
       return <MasterDataManagement title={title} reader={readOnly} />
     case 'blueprints':
@@ -127,17 +120,6 @@ export function ManagementScreen({
         <Suspense fallback={<SchedulingPageFallback title={title} />}>
           <AttendanceManagementPage />
         </Suspense>
-      )
-    case 'groups':
-      if (role === 'MENTOR') return <MentorGroups />
-      return (
-        <>
-          <PageHeading
-            title={title}
-            readOnly={readOnly}
-          />
-          <StudyGroupManagement readOnly={readOnly} />
-        </>
       )
     case 'students':
       return <MentorStudents />

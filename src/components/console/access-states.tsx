@@ -1,4 +1,4 @@
-import { Clock3, LockKeyhole } from './icons'
+import { AlertTriangle, Clock3, LockKeyhole } from './icons'
 import PageHeading from './page-heading'
 
 function StateCard({
@@ -29,6 +29,18 @@ export function ForbiddenPage() {
       <StateCard icon={LockKeyhole} title="403 · Không có quyền truy cập">
         Vai trò đang dùng không được mở trang này. Chọn một mục trong menu, hoặc chuyển vai trò ở
         góc trên nếu tài khoản có vai trò khác.
+      </StateCard>
+    </section>
+  )
+}
+
+/** Shown instead of a console URL that no role has a screen for. */
+export function NotFoundPage() {
+  return (
+    <section className="space-y-5">
+      <PageHeading title="Không tìm thấy trang" />
+      <StateCard icon={AlertTriangle} title="404 · Không tìm thấy trang">
+        Đường dẫn này không tồn tại. Chọn một mục trong menu để tiếp tục.
       </StateCard>
     </section>
   )
