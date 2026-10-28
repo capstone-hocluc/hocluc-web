@@ -45,7 +45,7 @@ const ROLE_COPY: Record<PersonnelRole, { title: string; description: string }> =
   },
   MENTOR: {
     title: 'Đồng hành cùng học viên',
-    description: 'Theo dõi nhóm học, hỗ trợ học viên và xử lý các lời giải đang chờ.',
+    description: 'Hỗ trợ học viên và xử lý các lời giải đang chờ.',
   },
 }
 
@@ -58,7 +58,7 @@ const ACTIONS: Record<PersonnelRole, string[]> = {
   MANAGER: ['courses', 'schedules', 'attendance', 'enrollments'],
   STAFF: ['learners', 'enrollments', 'orders', 'schedules'],
   TEACHER: ['courses', 'schedule', 'availability', 'quizzes'],
-  MENTOR: ['groups', 'students', 'solution-queue', 'chat'],
+  MENTOR: ['students', 'solution-queue', 'chat'],
 }
 
 const ACTION_DESCRIPTIONS: Record<string, string> = {
@@ -72,7 +72,6 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
   enrollments: 'Đăng ký và quyền học tập',
   availability: 'Cập nhật thời gian có thể dạy',
   quizzes: 'Xem bài kiểm tra và bài làm trong khóa được phân công',
-  groups: 'Các nhóm bạn đang đồng hành',
   students: 'Tiến độ và nhu cầu hỗ trợ',
   'solution-queue': 'Xem và duyệt lời giải',
   chat: 'Trao đổi cùng học viên',

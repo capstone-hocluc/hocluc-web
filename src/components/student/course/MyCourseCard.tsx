@@ -5,7 +5,6 @@ import {
   CalendarDays,
   CheckCircle2,
   CircleDot,
-  Users,
 } from '../../console/icons'
 import type { MyCourseEnrollment } from '../../../services/courseService'
 import {
@@ -95,7 +94,7 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
           </p>
         </div>
 
-        {(enrolledAtLabel || enrollmentTypeLabel || enrollment.activeStudyGroupName) && (
+        {(enrolledAtLabel || enrollmentTypeLabel) && (
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-bold text-text-secondary [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5">
             {enrolledAtLabel && (
               <span>
@@ -104,12 +103,6 @@ function MyCourseCard({ enrollment, onOpen }: MyCourseCardProps) {
               </span>
             )}
             {enrollmentTypeLabel && <span>{enrollmentTypeLabel}</span>}
-            {enrollment.activeStudyGroupName && (
-              <span>
-                <Users size={14} />
-                {enrollment.activeStudyGroupName}
-              </span>
-            )}
           </div>
         )}
 

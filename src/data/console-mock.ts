@@ -19,13 +19,6 @@ export const AUDIT_LOG = [
   { id: 'lg-06', time: '08/10/2026 14:48', actor: 'Staff User', role: 'Nhân viên', action: 'Ghi danh thủ công', target: 'Như Nguyễn · ĐGNL 12A' },
 ]
 
-export const GROUPS = [
-  { id: 'gr-01', name: 'Nhóm A1', course: 'ĐGNL 12A · K24', mentor: 'Nam Lê', students: 12, progress: 74 },
-  { id: 'gr-02', name: 'Nhóm A2', course: 'ĐGNL 12A · K24', mentor: 'Mai Trần', students: 11, progress: 61 },
-  { id: 'gr-03', name: 'Nhóm B1', course: 'ĐGNL 12B · K24', mentor: 'Long Nguyễn', students: 13, progress: 55 },
-  { id: 'gr-04', name: 'Nhóm C1', course: 'ĐGNL 11A · K25', mentor: 'Nam Lê', students: 10, progress: 42 },
-]
-
 export const MENTOR_STUDENTS = [
   { id: 'st-01', name: 'Quỳnh Như', group: 'Nhóm A1', progress: 82, lastScore: 8.5, weakness: 'Hàm số bậc hai', lastActive: 'Hôm nay' },
   { id: 'st-02', name: 'Minh Khang', group: 'Nhóm A1', progress: 68, lastScore: 7.0, weakness: 'Xác suất', lastActive: 'Hôm nay' },

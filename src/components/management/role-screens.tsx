@@ -4,7 +4,6 @@ import {
   Clock3,
   GraduationCap,
   MoreHorizontal,
-  Users,
 } from '../console/icons'
 import ListCard from '../console/list-card'
 import Page from './screen-page'
@@ -16,7 +15,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import {
   AUDIT_LOG,
   BLUEPRINTS,
-  GROUPS,
   MENTOR_STUDENTS,
   SOLUTION_QUEUE,
   type ReviewStatus,
@@ -50,7 +48,6 @@ const progressColumn = <T extends { progress: number }>(header: string): ColumnD
 
 type Blueprint = (typeof BLUEPRINTS)[number]
 type AuditEntry = (typeof AUDIT_LOG)[number]
-type Group = (typeof GROUPS)[number]
 type MentorStudent = (typeof MENTOR_STUDENTS)[number]
 type SolutionItem = (typeof SOLUTION_QUEUE)[number]
 
@@ -149,7 +146,6 @@ const reviewStatusColumn = <T extends { status: ReviewStatus }>(): ColumnDef<T> 
 export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => void }) {
   const pending = SOLUTION_QUEUE.filter((item) => item.status === 'PENDING').length
   const cards = [
-    { page: 'groups', label: 'Nhóm của tôi', value: GROUPS.length, icon: Users, tone: 'info' as const },
     { page: 'students', label: 'Học viên', value: MENTOR_STUDENTS.length, icon: GraduationCap, tone: 'success' as const },
     { page: 'solution-queue', label: 'Lời giải chờ duyệt', value: pending, icon: Clock3, tone: 'warning' as const },
   ]
@@ -163,29 +159,6 @@ export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => v
         ))}
       </div>
     </section>
-  )
-}
-
-export function MentorGroups() {
-  const columns = useMemo<ColumnDef<Group>[]>(
-    () => [
-      text<Group>('name', 'Nhóm', 'font-medium text-text-primary'),
-      text<Group>('course', 'Khóa học'),
-      text<Group>('students', 'Học viên'),
-      progressColumn<Group>('Tiến độ trung bình'),
-    ],
-    []
-  )
-  return (
-    <Page title="Nhóm của tôi">
-      <ListCard
-        data={GROUPS}
-        columns={columns}
-        getRowKey={(row) => row.id}
-        searchPlaceholder="Tìm nhóm..."
-        searchText={(row) => `${row.name} ${row.course}`}
-      />
-    </Page>
   )
 }
 

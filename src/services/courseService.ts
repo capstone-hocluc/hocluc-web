@@ -29,8 +29,6 @@ export interface MyCourseEnrollment {
   enrolledAt?: string
   enrollmentType?: string
   progressPercentage?: number
-  activeStudyGroupId?: string
-  activeStudyGroupName?: string
 }
 
 export async function getMyCourses() {
@@ -274,8 +272,6 @@ export interface CourseStudy {
   continueLessonId: string | null
   continueLessonTitle: string | null
   continueSectionCourseId: string | null
-  activeStudyGroupId: string | null
-  activeStudyGroupName: string | null
   nextLiveClass: CourseStudyLiveClass | null
   phases: CourseStudyPhase[]
 }
