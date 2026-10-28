@@ -1,3 +1,4 @@
+import DateField from '../../console/date-field'
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
@@ -8,7 +9,6 @@ import Notice from '../../console/notice'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import { Eye } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
-import { Input } from '../../tailgrids/core/input'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourses } from '../../../services/courseAdminService'
@@ -190,26 +190,8 @@ export default function OrderManagement({
                 ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
               ]}
             />
-            <Input
-              type="date"
-              aria-label="Từ ngày tạo"
-              title="Từ ngày"
-              value={query.from ?? ''}
-              className="h-9 w-40 py-0 text-sm"
-              onChange={(event) =>
-                setQuery((old) => ({ ...old, from: event.target.value || undefined, page: 0 }))
-              }
-            />
-            <Input
-              type="date"
-              aria-label="Đến ngày tạo"
-              title="Đến ngày"
-              value={query.to ?? ''}
-              className="h-9 w-40 py-0 text-sm"
-              onChange={(event) =>
-                setQuery((old) => ({ ...old, to: event.target.value || undefined, page: 0 }))
-              }
-            />
+            <DateField label="Từ ngày tạo" hideLabel className="w-40" value={query.from ?? ''} onChange={(value) => setQuery((old) => ({ ...old, from: value || undefined, page: 0 }))} />
+            <DateField label="Đến ngày tạo" hideLabel className="w-40" value={query.to ?? ''} onChange={(value) => setQuery((old) => ({ ...old, to: value || undefined, page: 0 }))} />
           </FilterGroup>
         </FilterToolbar>
         {courses.status === 'error' && (

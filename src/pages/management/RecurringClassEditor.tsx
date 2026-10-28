@@ -1,3 +1,4 @@
+import DateField from '../../components/console/date-field'
 import { useState, type FormEvent } from 'react'
 import { SCHEDULING_TIMEZONE } from '../../lib/scheduling'
 import type {
@@ -52,6 +53,8 @@ export default function RecurringClassEditor({
   onSave,
 }: Props) {
   const editing = Boolean(initial)
+  const [startDate, setStartDate] = useState(initial?.startDate ?? '')
+  const [endDate, setEndDate] = useState(initial?.endDate ?? '')
   const [teacherId, setTeacherId] = useState(initial?.teacherId ?? '')
   const [sectionId, setSectionId] = useState('')
   const [validationMessage, setValidationMessage] = useState('')
@@ -82,7 +85,7 @@ export default function RecurringClassEditor({
     if (!editing && !sectionId) return reject('Chọn môn học thuộc khóa.', '[aria-label="Chọn môn cho lớp lặp"]')
     if (startTime >= endTime) return reject('Giờ kết thúc phải sau giờ bắt đầu.', '[name="endTime"]')
     if (!startDate || !endDate || startDate > endDate) {
-      return reject('Chọn khoảng ngày hợp lệ.', !startDate ? '[name="startDate"]' : '[name="endDate"]')
+      return reject('Chọn khoảng ngày hợp lệ.', !startDate ? '[aria-label="Chọn ngày: Ngày bắt đầu"]' : '[aria-label="Chọn ngày: Ngày kết thúc"]')
     }
     if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
       return reject('Nhập thời lượng hợp lệ.', '[name="durationMinutes"]')
@@ -200,12 +203,8 @@ export default function RecurringClassEditor({
           <input name="durationMinutes" autoComplete="off" type="number" min="1" defaultValue={initial?.durationMinutes ?? 120} required className={fieldControlClass} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Ngày bắt đầu">
-            <input name="startDate" autoComplete="off" type="date" required defaultValue={initial?.startDate} className={fieldControlClass} />
-          </Field>
-          <Field label="Ngày kết thúc">
-            <input name="endDate" autoComplete="off" type="date" required defaultValue={initial?.endDate} className={fieldControlClass} />
-          </Field>
+          <DateField label="Ngày bắt đầu" name="startDate" value={startDate} onChange={setStartDate} required disabled={busy} />
+          <DateField label="Ngày kết thúc" name="endDate" value={endDate} onChange={setEndDate} required disabled={busy} />
         </div>
         <Field label="Phòng / địa điểm">
           <input name="defaultLocation" autoComplete="off" defaultValue={initial?.defaultLocation ?? ''} className={fieldControlClass} />

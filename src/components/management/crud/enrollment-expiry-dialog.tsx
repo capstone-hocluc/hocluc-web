@@ -1,8 +1,8 @@
+import DateField from '../../console/date-field'
 import { useState, type FormEvent } from 'react'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import { Checkbox } from '../../tailgrids/core/checkbox'
-import Field, { fieldControlClass } from '../../console/form-field'
 import Notice from '../../console/notice'
 import {
   changeEnrollmentExpiry,
@@ -72,15 +72,7 @@ export default function EnrollmentExpiryDialog({
           Không giới hạn
         </Checkbox>
         {!unlimited && (
-          <Field label="Hết hạn ngày" hint="Hết ngày đã chọn theo giờ Việt Nam.">
-            <input
-              type="date"
-              className={fieldControlClass}
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              disabled={busy}
-            />
-          </Field>
+          <DateField label="Hết hạn ngày" hint="Hết ngày đã chọn theo giờ Việt Nam." value={date} onChange={setDate} disabled={busy} />
         )}
         {error && (
           <Notice tone="danger">

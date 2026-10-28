@@ -1,3 +1,4 @@
+import DateField from '../../console/date-field'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
@@ -67,6 +68,8 @@ interface Props {
 }
 
 export default function CourseEditorDialog({ course, categories, onClose, onSaved }: Props) {
+  const [startDate, setStartDate] = useState(course?.startDate ?? '')
+  const [endDate, setEndDate] = useState(course?.endDate ?? '')
   const [courseType, setCourseType] = useState<CourseType>(course?.courseType ?? 'MAIN')
   const [categoryId, setCategoryId] = useState(course?.categoryId ?? 'NONE')
   const [paid, setPaid] = useState(course?.paid ?? false)
@@ -400,22 +403,8 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
                   ]}
                 />
               </Field>
-              <Field label="Ngày bắt đầu">
-                <input
-                  name="startDate"
-                  type="date"
-                  defaultValue={course?.startDate ?? ''}
-                  className={fieldControlClass}
-                />
-              </Field>
-              <Field label="Ngày kết thúc">
-                <input
-                  name="endDate"
-                  type="date"
-                  defaultValue={course?.endDate ?? ''}
-                  className={fieldControlClass}
-                />
-              </Field>
+              <DateField label="Ngày bắt đầu" name="startDate" value={startDate} onChange={setStartDate} disabled={busy} />
+              <DateField label="Ngày kết thúc" name="endDate" value={endDate} onChange={setEndDate} disabled={busy} />
             </div>
           </StepPanel>
         )}

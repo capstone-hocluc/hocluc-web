@@ -1,6 +1,6 @@
+import DateField from '../console/date-field'
 import { CalendarDays, List } from '../console/icons'
 import Button from '../ui/Button'
-import { Input } from '../ui/Field'
 import SearchInput from '../ui/SearchInput'
 
 export type ScheduleViewMode = 'agenda' | 'week'
@@ -33,17 +33,7 @@ export default function ScheduleFilters({
         className="min-w-0 flex-1 max-[767px]:h-12"
         placeholder="Tên buổi hoặc lớp…"
       />
-      <label className="flex items-center gap-2 text-sm font-bold text-text-body">
-        <span>Tuần chứa ngày</span>
-        <Input
-          name="scheduleDate"
-          autoComplete="off"
-          type="date"
-          value={date}
-          onChange={(event) => onDateChange(event.target.value)}
-          className="w-auto min-w-0 max-[767px]:h-12"
-        />
-      </label>
+      <DateField label="Tuần chứa ngày" name="scheduleDate" value={date} onChange={onDateChange} student className="sm:w-48" />
       <div
         className="flex gap-1 rounded-xl border border-line bg-surface p-1"
         role="group"
