@@ -3,6 +3,7 @@ import { cn } from '../../../lib/cn'
 import { getErrorMessage } from '../../../lib/errors'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import {
+  approveBankReading,
   getBankQuestion,
   relabelBankQuestion,
   type BankPatternChoice,
@@ -152,6 +153,38 @@ function LabelPanel({
   )
 }
 
+/** A reading the two models could not agree on: a person reads the page and settles it. */
+function ReviewPanel({ question, readOnly, onSaved }: { question: BankQuestionDetail; readOnly: boolean; onSaved: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  if (question.reviewStatus !== 'NEEDS_HUMAN' || readOnly) return null
+
+  async function approve() {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await approveBankReading(question.id)
+      onSaved()
+    } catch (reason) {
+      setError(getErrorMessage(reason))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {error && <Notice tone="danger">{error}</Notice>}
+      <div>
+        <Button size="sm" onClick={approve} disabled={busy}>
+          {busy ? 'Đang lưu...' : 'Đã duyệt bản đọc'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 function QuestionBody({
   question,
   patterns,
@@ -170,6 +203,7 @@ function QuestionBody({
         {question.hasFigure && <Status tone="neutral">Có hình</Status>}
       </div>
       {question.reviewNotes && <Notice tone="warning">{question.reviewNotes}</Notice>}
+      <ReviewPanel question={question} readOnly={readOnly} onSaved={onSaved} />
       {question.passage && (
         <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4 text-sm">
           <p className="m-0 whitespace-pre-wrap break-words text-text-primary">

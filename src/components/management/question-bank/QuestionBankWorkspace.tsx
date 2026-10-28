@@ -29,7 +29,7 @@ export default function QuestionBankWorkspace({
         <h1 className="m-0 min-w-0 truncate text-lg font-semibold text-text-primary">{title}</h1>
       </header>
       <ScrollArea as="main" className="min-h-0 flex-1">
-        <div className="mx-auto flex w-full max-w-384 flex-col gap-5 p-4 pb-5 sm:p-6 lg:p-8">
+        <div className="flex w-full flex-col gap-5 p-4 pb-5 sm:p-6">
           <QuestionBankScreen readOnly={readOnly} />
         </div>
       </ScrollArea>

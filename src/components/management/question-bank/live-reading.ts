@@ -25,6 +25,14 @@ export interface LiveReading {
   parts: BankStreamPart[]
   labelled: number
   labelTotal: number
+  reviewed: number
+  reviewTotal: number
+  rereading: number
+  needsPerson: number
+  /** The question Gemini is checking now. */
+  checking: number | null
+  /** The question Luna is reading again now. */
+  rewriting: number | null
   log: LiveLogEntry[]
   /** The server is reading this paper and streams it; false for a stored snapshot. */
   live: boolean
@@ -38,6 +46,7 @@ export const STAGE_LABELS: Record<BankIngestStage, string> = {
   STRUCTURE: 'Đọc cấu trúc đề',
   QUESTIONS: 'Đọc câu hỏi',
   KEY_TABLE: 'Đọc bảng đáp án trong đề',
+  REVIEW: 'Gemini soát và Luna đọc lại',
   FIGURES: 'Cắt hình',
   KEY: 'Ghép đáp án',
   STORE: 'Lưu và lọc câu trùng',
@@ -49,7 +58,7 @@ export const partName = (part: Pick<BankStreamPart, 'title' | 'fromQuestion' | '
   `${part.title ? part.title + ' · ' : ''}câu ${part.fromQuestion}–${part.toQuestion}`
 
 export function initialReading(status: BankIngestStatus): LiveReading {
-  return { status, stage: null, progress: null, error: null, parts: [], labelled: 0, labelTotal: 0, log: [], live: false, ended: false }
+  return { status, stage: null, progress: null, error: null, parts: [], labelled: 0, labelTotal: 0, reviewed: 0, reviewTotal: 0, rereading: 0, needsPerson: 0, checking: null, rewriting: null, log: [], live: false, ended: false }
 }
 
 function note(state: LiveReading, text: string, tone: LiveLogEntry['tone'] = 'info'): LiveLogEntry[] {
@@ -65,6 +74,12 @@ function fromSnapshot(snapshot: BankStreamSnapshot, previous: LiveReading): Live
     parts: snapshot.parts,
     labelled: snapshot.labelled,
     labelTotal: snapshot.labelTotal,
+    reviewed: snapshot.reviewed ?? 0,
+    reviewTotal: snapshot.reviewTotal ?? 0,
+    rereading: snapshot.rereading ?? 0,
+    needsPerson: snapshot.needsPerson ?? 0,
+    checking: snapshot.checking ?? null,
+    rewriting: snapshot.rewriting ?? null,
     log: previous.log.length ? previous.log : snapshot.live ? note(previous, 'Đã kết nối, đang theo dõi AI đọc đề') : [],
     live: snapshot.live,
     ended: !snapshot.live,
@@ -90,7 +105,7 @@ export function applyEvent(state: LiveReading, event: BankStreamEvent): LiveRead
       return {
         ...state,
         parts: event.data,
-        log: note(state, `Chia đề thành ${event.data.length} phần, AI đọc song song`),
+        log: note(state, `Chia đề thành ${event.data.length} phần, AI đọc lần lượt từ trên xuống`),
       }
     case 'part': {
       const part = event.data
@@ -111,6 +126,25 @@ export function applyEvent(state: LiveReading, event: BankStreamEvent): LiveRead
           p.id === event.data.partId && p.attempt === event.data.attempt ? { ...p, text: p.text + event.data.text } : p
         ),
       }
+    case 'review': {
+      const { reviewed, reviewTotal, rereading, needsPerson, checking, rewriting } = event.data
+      const first = state.reviewTotal === 0 && reviewTotal > 0
+      const newPerson = needsPerson > state.needsPerson
+      return {
+        ...state,
+        reviewed,
+        reviewTotal,
+        rereading,
+        needsPerson,
+        checking: checking ?? null,
+        rewriting: rewriting ?? null,
+        log: first
+          ? note(state, 'Gemini bắt đầu soát từng câu')
+          : newPerson
+            ? note(state, `${needsPerson} câu chờ người duyệt bản đọc`, 'warning')
+            : state.log,
+      }
+    }
     case 'label': {
       const first = state.labelTotal === 0 && event.data.labelTotal > 0
       return {
@@ -123,6 +157,8 @@ export function applyEvent(state: LiveReading, event: BankStreamEvent): LiveRead
     case 'end':
       return {
         ...state,
+        checking: null,
+        rewriting: null,
         status: event.data.status,
         stage: event.data.status === 'DONE' ? 'DONE' : state.stage,
         error: event.data.error,

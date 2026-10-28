@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import {
   BANK_ANSWER_SOURCES,
+  NO_SUBJECT,
   getBankPatterns,
   getBankQuestions,
   getBankStats,
@@ -31,7 +32,6 @@ import QuestionBankDetail from './QuestionBankDetail'
 import {
   ANSWER_SOURCE_LABELS,
   ANSWER_SOURCE_TONES,
-  PART_LABELS,
   confidenceText,
   examName,
   partLabel,
@@ -83,9 +83,18 @@ export default function QuestionBankScreen({ readOnly = false }: { readOnly?: bo
   )
 
   const patternList = useMemo(() => patterns.data ?? [], [patterns.data])
+  // the patterns of the chosen subject's master data: a question is only ever labelled with its own subject's
   const patternOptions = useMemo(
-    () => patternList.filter((p) => !query.partCode || p.partCode === query.partCode),
-    [patternList, query.partCode]
+    () => patternList.filter((p) => !query.subject || query.subject === NO_SUBJECT || p.categoryId === query.subject),
+    [patternList, query.subject]
+  )
+  const subjectOptions = useMemo(
+    () =>
+      (stats.data?.bySubject ?? []).map((s) => ({
+        id: s.id ?? NO_SUBJECT,
+        label: `${s.name ?? 'Chưa xác định môn'} (${number.format(s.count)})`,
+      })),
+    [stats.data]
   )
 
   const columns = useMemo<ColumnDef<BankQuestionRow>[]>(
@@ -257,20 +266,18 @@ export default function QuestionBankScreen({ readOnly = false }: { readOnly?: bo
             </form>
             <FilterGroup>
               <FilterSelect
-                ariaLabel="Lọc theo phần"
-                value={query.partCode ?? 'ALL'}
+                ariaLabel="Lọc theo môn"
+                value={query.subject ?? 'ALL'}
+                disabled={stats.status !== 'ready'}
                 onChange={(value) =>
                   setQuery((old) => ({
                     ...old,
-                    partCode: value === 'ALL' ? undefined : value,
+                    subject: value === 'ALL' ? undefined : value,
                     patternCode: undefined,
                     page: 0,
                   }))
                 }
-                options={[
-                  { id: 'ALL', label: 'Tất cả phần' },
-                  ...Object.entries(PART_LABELS).map(([id, label]) => ({ id, label })),
-                ]}
+                options={[{ id: 'ALL', label: 'Tất cả môn' }, ...subjectOptions]}
               />
               <FilterSelect
                 ariaLabel="Lọc theo dạng câu"

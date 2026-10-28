@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { ApiError } from '../../../lib/api'
 import { cn } from '../../../lib/cn'
 import { getErrorMessage } from '../../../lib/errors'
@@ -18,7 +18,6 @@ import {
   ConsoleTabsList,
   ConsoleTabsTrigger,
 } from '../../console/tabs'
-import MathText from '../../ui/MathText'
 import BankReadingSkeleton from './BankReadingSkeleton'
 import {
   STAGE_LABELS,
@@ -31,10 +30,12 @@ import {
 import { failureText } from './question-bank-labels'
 import ReadingAsPaper, { type PaperQuestion } from './ReadingAsPaper'
 import type { ShownQuestion } from './ReadingPaper'
-import ReadingPipeline from './ReadingPipeline'
+import ReadingPipeline, { ReadingSteps } from './ReadingPipeline'
+import ReadingStructure from './ReadingStructure'
+import { usePaperShare } from './paper-share'
+import SplitHandle from './SplitHandle'
 
 const POLL_MS = 4000
-const PIPELINE_HIDDEN_KEY = 'hocluc.bankReading.pipelineHidden'
 /** How soon after a part comes back the cleaned reading is asked for again. */
 const REFRESH_MS = 800
 const time = new Intl.DateTimeFormat('vi-VN', {
@@ -98,27 +99,11 @@ export default function BankReadingView({
     'connecting'
   )
   const [follow, setFollow] = useState(true)
-  // whether the pipeline is shown is remembered for this browser; storage may be refused, then it is just shown
-  const [showPipeline, setShowPipeline] = useState(() => {
-    try {
-      return localStorage.getItem(PIPELINE_HIDDEN_KEY) !== '1'
-    } catch {
-      return true
-    }
-  })
-  function togglePipeline() {
-    setShowPipeline((shown) => {
-      try {
-        localStorage.setItem(PIPELINE_HIDDEN_KEY, shown ? '1' : '0')
-      } catch {
-        // kept for this visit only
-      }
-      return !shown
-    })
-  }
   const [followId, setFollowId] = useState<string | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const refreshTimer = useRef<number | undefined>(undefined)
+  const rowRef = useRef<HTMLDivElement>(null)
+  const [paperShare, setPaperShare] = usePaperShare()
   const refreshStored = stored.refresh
   const refreshRef = useRef(refreshStored)
   useEffect(() => {
@@ -137,7 +122,8 @@ export default function BankReadingView({
       (event) => {
         setStreaming('open')
         setLive((state) => applyEvent(state, event))
-        if (event.type === 'end' || (event.type === 'part' && event.data.status === 'DONE')) soon()
+        // a part read, or a check done: the stored reading has new questions or new review results
+        if (event.type === 'end' || event.type === 'review' || (event.type === 'part' && event.data.status === 'DONE')) soon()
       },
       controller.signal
     )
@@ -190,8 +176,11 @@ export default function BankReadingView({
       ...q,
       imageUrl: stored.get(q.number)?.imageUrl ?? null,
       groupKey: stored.get(q.number)?.groupKey ?? null,
+      review: stored.get(q.number)?.review ?? null,
+      activity:
+        q.writing || q.number === view.rewriting ? 'writing' : q.number === view.checking ? ('checking' as const) : null,
     }))
-  }, [shown, reading])
+  }, [shown, reading, view.rewriting, view.checking])
 
   const followed =
     view.parts.find((p) => p.id === followId && p.status === 'READING') ?? followedPart(view.parts)
@@ -200,14 +189,15 @@ export default function BankReadingView({
     const written = questionsOf(followed)
     return written && written.length > 0 ? written[written.length - 1] : null
   }, [followed])
-  const shownSelected = follow ? (writingNow?.number ?? null) : selected
+  // following: the question being written, else the one read again, else the one being checked
+  const shownSelected = follow ? (writingNow?.number ?? view.rewriting ?? view.checking ?? null) : selected
 
   function select(number: number) {
     setFollow(false)
     setSelected(number)
   }
 
-  const read = [...shown.values()].filter((q) => !q.writing).sort((a, b) => a.number - b.number)
+  const questionCount = [...shown.values()].filter((q) => q.text.trim() !== '').length
   const status = view.status
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-label={`Đề ${source.title}`}>
@@ -233,22 +223,12 @@ export default function BankReadingView({
             <span className="text-sm text-text-tertiary">{STAGE_LABELS[view.stage]}</span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            appearance="outline"
-            aria-pressed={!showPipeline}
-            onClick={togglePipeline}
-          >
-            {showPipeline ? 'Ẩn pipeline' : 'Hiện pipeline'}
+        {onLabel && status === 'DONE' && (
+          <Button size="sm" onClick={onLabel}>
+            <ListTree size={16} />
+            Gán nhãn
           </Button>
-          {onLabel && status === 'DONE' && (
-            <Button size="sm" onClick={onLabel}>
-              <ListTree size={16} />
-              Gán nhãn
-            </Button>
-          )}
-        </div>
+        )}
       </div>
       {status === 'DONE' && source.unlabelledCount > 0 && labellingBlocker && (
         <Notice tone="warning">{labellingBlocker}</Notice>
@@ -258,123 +238,98 @@ export default function BankReadingView({
       ) : !reading ? (
         <BankReadingSkeleton />
       ) : (
-        <div className="flex min-w-0 flex-col gap-5">
-          {showPipeline && (
-            <div>
+        <div
+          ref={rowRef}
+          style={{ '--left': `${100 - paperShare}fr`, '--right': `${paperShare}fr` } as CSSProperties}
+          className="grid min-w-0 gap-5 lg:h-[calc(100dvh-14rem)] lg:min-h-96 lg:grid-cols-[minmax(0,var(--left))_1.25rem_minmax(0,var(--right))] lg:gap-0"
+        >
+          <ConsoleTabs defaultValue="pipeline" className="flex min-h-0 min-w-0 flex-col">
+            <ConsoleTabsList aria-label="Tiến trình và câu hỏi">
+              <ConsoleTabsTrigger value="pipeline">Pipeline</ConsoleTabsTrigger>
+              <ConsoleTabsTrigger value="questions">Câu hỏi ({questionCount})</ConsoleTabsTrigger>
+            </ConsoleTabsList>
+            <ConsoleTabsContent value="pipeline" className="min-h-0 gap-0 overflow-y-auto pt-3 pr-1 lg:flex-1">
               <ReadingPipeline
                 reading={view}
                 followedId={followed?.id ?? null}
-                questionCount={[...shown.values()].filter((q) => q.text.trim() !== '').length}
-                unlabelledCount={source.unlabelledCount}
                 onFollowPart={(id) => {
                   setFollowId(id)
                   setFollow(true)
                 }}
               >
-            <section className="mt-4 flex min-w-0 flex-col gap-3" aria-label="Chi tiết tiến trình">
-              {view.progress && status !== 'DONE' && status !== 'FAILED' && (
-                <p className="m-0 text-sm text-text-secondary">{view.progress}</p>
-              )}
-              {(view.error ?? reading.error) && (
-                <Notice tone="danger">
-                  <span className="min-w-0 flex-1 break-words">
-                    {failureText(view.error ?? reading.error)}
-                  </span>
-                  {onLoadAgain && (
-                    <Button size="sm" appearance="outline" onClick={onLoadAgain}>
-                      <RefreshCw size={15} />
-                      Nạp lại
-                    </Button>
+                <section className="mt-3 flex min-w-0 flex-col gap-3" aria-label="Chi tiết tiến trình">
+                  {view.progress && status !== 'DONE' && status !== 'FAILED' && (
+                    <p className="m-0 text-sm text-text-secondary">{view.progress}</p>
                   )}
-                </Notice>
-              )}
-              {streaming === 'polling' && busy && (
-                <p className="m-0 text-xs text-text-tertiary">
-                  Không mở được luồng trực tiếp, đang cập nhật 4 giây một lần.
-                </p>
-              )}
-              <details className="border-t border-card-border pt-3">
-                <summary className="cursor-pointer text-sm font-medium text-text-primary">Nhật ký và câu đã đọc</summary>
-              <ConsoleTabs defaultValue="log">
-                <ConsoleTabsList aria-label="Chi tiết">
-                  <ConsoleTabsTrigger value="log">Nhật ký</ConsoleTabsTrigger>
-                  <ConsoleTabsTrigger value="questions">
-                    Câu đã đọc ({read.length})
-                  </ConsoleTabsTrigger>
-                </ConsoleTabsList>
-                <ConsoleTabsContent value="log" className="gap-0 pt-3">
-                  {view.log.length === 0 ? (
-                    <p className="m-0 text-sm text-text-tertiary">
-                      {view.live ? 'Đang chờ AI bắt đầu...' : 'Không có hoạt động đang chạy.'}
+                  {(view.error ?? reading.error) && (
+                    <Notice tone="danger">
+                      <span className="min-w-0 flex-1 break-words">
+                        {failureText(view.error ?? reading.error)}
+                      </span>
+                      {onLoadAgain && (
+                        <Button size="sm" appearance="outline" onClick={onLoadAgain}>
+                          <RefreshCw size={15} />
+                          Nạp lại
+                        </Button>
+                      )}
+                    </Notice>
+                  )}
+                  {streaming === 'polling' && busy && (
+                    <p className="m-0 text-xs text-text-tertiary">
+                      Không mở được luồng trực tiếp, đang cập nhật 4 giây một lần.
                     </p>
-                  ) : (
-                    <ol
-                      className="m-0 flex max-h-64 list-none flex-col gap-1.5 overflow-y-auto p-0 text-sm"
-                      aria-label="Nhật ký hoạt động"
-                    >
-                      {view.log.map((entry, index) => (
-                        <li key={`${entry.at}-${index}`} className="flex gap-2">
-                          <span className="shrink-0 font-mono text-xs text-text-tertiary tabular-nums">
-                            {time.format(entry.at)}
-                          </span>
-                          <span
-                            className={cn(
-                              'min-w-0 break-words',
-                              entry.tone === 'success' && 'text-badge-success-text',
-                              entry.tone === 'warning' && 'text-badge-warning-text',
-                              entry.tone === 'danger' && 'text-badge-error-text',
-                              entry.tone === 'info' && 'text-text-primary'
-                            )}
-                          >
-                            {entry.text}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
                   )}
-                </ConsoleTabsContent>
-                <ConsoleTabsContent value="questions" className="pt-3">
-                  {read.length === 0 ? (
-                    <p className="m-0 text-sm text-text-tertiary">Chưa có câu nào được đọc.</p>
-                  ) : (
-                    <ol className="m-0 flex max-h-80 list-none flex-col gap-2 overflow-y-auto p-0 pr-1">
-                      {read.map((question) => (
-                        <li key={question.number}>
-                          <button
-                            type="button"
-                            aria-pressed={question.number === shownSelected}
-                            onClick={() => {
-                              setFollow(false)
-                              select(question.number)
-                            }}
-                            className={cn(
-                              'w-full cursor-pointer rounded-lg border bg-transparent p-3 text-left text-sm',
-                              question.number === shownSelected
-                                ? 'border-brand-500 bg-badge-blue-background'
-                                : 'border-card-border hover:border-brand-500'
-                            )}
-                          >
-                            <span className="font-semibold text-text-primary">
-                              Câu {question.number}
+                  <div className="border-t border-card-border pt-3">
+                    <h4 className="m-0 mb-2 text-sm font-medium text-text-primary">Nhật ký</h4>
+                    {view.log.length === 0 ? (
+                      <p className="m-0 text-sm text-text-tertiary">
+                        {view.live ? 'Đang chờ AI bắt đầu...' : 'Không có hoạt động đang chạy.'}
+                      </p>
+                    ) : (
+                      <ol
+                        className="m-0 flex max-h-64 list-none flex-col gap-1.5 overflow-y-auto p-0 text-sm"
+                        aria-label="Nhật ký hoạt động"
+                      >
+                        {view.log.map((entry, index) => (
+                          <li key={`${entry.at}-${index}`} className="flex gap-2">
+                            <span className="shrink-0 font-mono text-xs text-text-tertiary tabular-nums">
+                              {time.format(entry.at)}
                             </span>
-                            <span className="mt-1 block break-words text-text-primary">
-                              <MathText>{question.text}</MathText>
+                            <span
+                              className={cn(
+                                'min-w-0 break-words',
+                                entry.tone === 'success' && 'text-badge-success-text',
+                                entry.tone === 'warning' && 'text-badge-warning-text',
+                                entry.tone === 'danger' && 'text-badge-error-text',
+                                entry.tone === 'info' && 'text-text-primary'
+                              )}
+                            >
+                              {entry.text}
                             </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                </ConsoleTabsContent>
-              </ConsoleTabs>
-              </details>
-            </section>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                </section>
               </ReadingPipeline>
-            </div>
-          )}
+            </ConsoleTabsContent>
+            <ConsoleTabsContent value="questions" className="min-h-0 gap-0 overflow-y-auto pt-3 pr-1 lg:flex-1">
+              <ReadingStructure
+                sections={reading.sections}
+                groups={reading.groups}
+                questions={paperQuestions}
+                selected={shownSelected}
+                onSelect={select}
+              />
+            </ConsoleTabsContent>
+          </ConsoleTabs>
 
-          <section className="min-w-0" aria-label="Bản đề AI đọc được">
-            <div className="max-h-[calc(100dvh-14rem)] min-w-0 overflow-auto rounded-xl bg-background-gray-secondary p-3 sm:p-6">
+          <SplitHandle row={rowRef} share={paperShare} onChange={setPaperShare} />
+
+          <section className="flex min-h-0 min-w-0 flex-col gap-3" aria-label="Bản đề AI đọc được">
+            <ReadingSteps reading={view} questionCount={questionCount} unlabelledCount={source.unlabelledCount} />
+            <div className="min-h-0 min-w-0 flex-1 overflow-auto rounded-xl bg-background-gray-secondary p-3 sm:p-6">
               <ReadingAsPaper
                 title={source.title}
                 sections={reading.sections}

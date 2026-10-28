@@ -1,5 +1,5 @@
 import { request, requestBlob } from '../lib/api'
-import type { ExtractedGroup, ExtractedQuestion, ExtractedSection } from './aiExtractionService'
+import type { ExtractedGroup, ExtractedQuestion, ExtractedSection, QuestionReviewStatus } from './aiExtractionService'
 import type { BankIngestStage } from './bankReadingStream'
 
 export const BANK_ANSWER_SOURCES = ['PUBLISHED_KEY', 'REFERENCE_KEY', 'NONE'] as const
@@ -62,6 +62,8 @@ export interface BankQuestionDetail {
   extractConfidence: number | null
   options: BankOption[]
   label: BankLabel | null
+  /** The second model's check of the reading; null for a question stored before readings were checked. */
+  reviewStatus: QuestionReviewStatus | null
 }
 
 export interface BankPatternChoice {
@@ -70,6 +72,8 @@ export interface BankPatternChoice {
   domainCode: string | null
   domainNameVi: string | null
   partCode: string | null
+  /** The subject of the master data the pattern belongs to. */
+  categoryId: string | null
 }
 
 export interface BankStats {
@@ -79,7 +83,18 @@ export interface BankStats {
   byPart: Record<string, number>
   byYear: Record<string, number>
   byAnswerSource: Record<BankAnswerSource, number>
+  /** Questions per subject; `id` null for those whose subject is not known. */
+  bySubject: BankSubjectCount[]
 }
+
+export interface BankSubjectCount {
+  id: string | null
+  name: string | null
+  count: number
+}
+
+/** The subject filter's value for questions whose subject is not known. */
+export const NO_SUBJECT = 'none'
 
 export interface BankQuestionPage {
   content: BankQuestionRow[]
@@ -92,6 +107,8 @@ export interface BankQuestionPage {
 
 export interface BankQuestionQuery {
   q?: string
+  /** A subject's id, or {@link NO_SUBJECT}. */
+  subject?: string
   partCode?: string
   domainCode?: string
   patternCode?: string
@@ -128,6 +145,16 @@ export async function relabelBankQuestion(id: string, patternCode: string): Prom
       auth: true,
       method: 'PUT',
       body: { patternCode },
+    })
+  )
+}
+
+/** A person settles a reading the reviewer disputed; the paper's next labelling then includes it. STAFF and above. */
+export async function approveBankReading(id: string): Promise<BankQuestionDetail> {
+  return requireData(
+    await request<BankQuestionDetail>(`${BASE}/questions/${encodeURIComponent(id)}/review/approve`, {
+      auth: true,
+      method: 'POST',
     })
   )
 }

@@ -44,7 +44,9 @@ function Formulas({ pieces }: { pieces: Piece[] }) {
     // printed pages) can wait until every formula is set.
     : html[index] === null
       ? <span key={index} data-math-pending="">{piece.display ? '$$' + piece.formula + '$$' : '$' + piece.formula + '$'}</span>
-      : <span key={index} dangerouslySetInnerHTML={{ __html: html[index] }} />)
+      // relative: KaTeX's hidden MathML copy is absolutely placed; without a positioned box around it, it escapes any
+      // scrolling panel the formula sits in and stretches the whole page below its content
+      : <span key={index} className="relative" dangerouslySetInnerHTML={{ __html: html[index] }} />)
 }
 
 /** Text with `$…$` and `$$…$$` formulas set as math; text without one is shown as it is. */

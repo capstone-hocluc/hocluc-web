@@ -60,6 +60,18 @@ export interface ExtractedQuestion {
   /** 0..1: how sure the reading is that text and options are complete and right. */
   confidence: number | null
   reviewNote: string | null
+  /** The question bank's check of the reading by a second model. */
+  review?: QuestionReview | null
+}
+
+export type QuestionReviewStatus = 'PENDING' | 'AGREED' | 'REREAD' | 'ACCEPTED' | 'NEEDS_HUMAN' | 'SKIPPED'
+
+export interface QuestionReview {
+  status: QuestionReviewStatus
+  /** Readings again so far. */
+  rereads: number
+  /** Why a person has to look, or why it was kept anyway. */
+  note: string | null
 }
 
 /** Left/top/width/height are fractions (0..1) of the page, measured from its top-left corner. */

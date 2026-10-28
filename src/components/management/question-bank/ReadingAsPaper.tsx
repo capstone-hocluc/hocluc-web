@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { cn } from '../../../lib/cn'
-import type { ExtractedGroup, ExtractedSection } from '../../../services/aiExtractionService'
+import type { ExtractedGroup, ExtractedSection, QuestionReview } from '../../../services/aiExtractionService'
 import MathText from '../../ui/MathText'
 import PaperBrand from '../quiz/PaperBrand'
 import { optionColumns, sharedHeading } from '../quiz/paper-layout'
 import '../quiz/quiz-paper.css'
+import { ACTIVITY_FRAME, ACTIVITY_LABEL, type QuestionActivity } from './question-activity'
 
 /** A question as the paper shows it: what the AI read, or is still writing. */
 export interface PaperQuestion {
@@ -14,6 +15,13 @@ export interface PaperQuestion {
   imageUrl?: string | null
   groupKey?: string | null
   writing: boolean
+  review?: QuestionReview | null
+  /** What an AI is doing to it right now: Luna writing it (or writing it again), Gemini checking it. */
+  activity?: QuestionActivity | null
+}
+const ACTIVITY_TAG: Record<QuestionActivity, string> = {
+  writing: 'bg-sky-100 text-sky-800',
+  checking: 'bg-amber-100 text-amber-800',
 }
 
 function QuestionBlock({ question, selected, onSelect }: { question: PaperQuestion; selected: boolean; onSelect: (n: number) => void }) {
@@ -39,9 +47,20 @@ function QuestionBlock({ question, selected, onSelect }: { question: PaperQuesti
       className={cn(
         'quiz-paper-question -mx-1.5 cursor-pointer rounded px-1.5 outline-none',
         selected && 'bg-sky-50 ring-2 ring-sky-500/60',
-        question.writing && 'bg-sky-50/60'
+        question.activity && ACTIVITY_FRAME[question.activity]
       )}
     >
+      {question.activity && (
+        <span
+          className={cn(
+            'float-right ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-sans text-[11px] font-medium',
+            ACTIVITY_TAG[question.activity]
+          )}
+        >
+          <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-current" />
+          {ACTIVITY_LABEL[question.activity]}
+        </span>
+      )}
       <p className="quiz-paper-stem">
         <strong>Câu {question.number}:</strong>{' '}
         {empty ? <em className="text-slate-500">(AI chưa đọc được câu này)</em> : text(question.text)}
