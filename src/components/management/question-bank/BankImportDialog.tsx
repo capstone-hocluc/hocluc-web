@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { getErrorMessage } from '../../../lib/errors'
+import { getAdminExamYears, type ExamYear } from '../../../services/examYearService'
 import { importBankPaper, type BankAnswerSource, type BankSource } from '../../../services/questionBankService'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
@@ -34,6 +35,28 @@ export default function BankImportDialog({
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [years, setYears] = useState<ExamYear[]>([])
+  const [yearsLoading, setYearsLoading] = useState(true)
+  const [yearsError, setYearsError] = useState('')
+  const [reloadYears, setReloadYears] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    getAdminExamYears().then(
+      data => { if (active) setYears(data) },
+      reason => { if (active) setYearsError(getErrorMessage(reason)) },
+    ).finally(() => { if (active) setYearsLoading(false) })
+    return () => { active = false }
+  }, [reloadYears])
+
+  const selectedYear = years.find(item => String(item.examYear) === year)
+  const yearOptions = years.map(item => ({ id: String(item.examYear), label: item.name }))
+  if (year && !yearOptions.some(item => item.id === year)) yearOptions.push({ id: year, label: year })
+  const roundOptions = (selectedYear?.sessions ?? []).map(session => ({
+    id: `DOT_${session.roundNo}`,
+    label: session.name,
+  }))
+  if (round && !roundOptions.some(item => item.id === round)) roundOptions.push({ id: round, label: round })
 
   const yearValue = year.trim() ? Number(year) : undefined
   const yearInvalid = yearValue !== undefined && (!Number.isInteger(yearValue) || yearValue < 2000 || yearValue > 2100)
@@ -137,29 +160,35 @@ export default function BankImportDialog({
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Năm">
-            <input
-              className={fieldControlClass}
-              inputMode="numeric"
-              value={year}
-              maxLength={4}
-              placeholder="Ví dụ: 2025"
-              aria-invalid={yearInvalid || undefined}
-              disabled={busy || confirming}
-              onChange={event => setYear(event.target.value)}
+            <SelectField
+              ariaLabel="Năm"
+              value={year || 'NONE'}
+              options={[{ id: 'NONE', label: 'Không chọn năm' }, ...yearOptions]}
+              disabled={busy || confirming || yearsLoading || !!yearsError}
+              onChange={value => {
+                setYear(value === 'NONE' ? '' : value)
+                setRound('')
+              }}
             />
           </Field>
           <Field label="Đợt">
-            <input
-              className={fieldControlClass}
-              value={round}
-              maxLength={40}
-              placeholder="Ví dụ: mẫu, đợt 1"
-              disabled={busy || confirming}
-              onChange={event => setRound(event.target.value)}
+            <SelectField
+              ariaLabel="Đợt"
+              value={round || 'NONE'}
+              options={[{ id: 'NONE', label: year ? 'Không chọn đợt' : 'Chọn năm trước' }, ...roundOptions]}
+              disabled={busy || confirming || yearsLoading || !!yearsError || !year}
+              onChange={value => setRound(value === 'NONE' ? '' : value)}
             />
           </Field>
         </div>
         {yearInvalid && <Notice tone="danger">Năm phải là số từ 2000 đến 2100.</Notice>}
+        {yearsLoading && <Notice tone="info">Đang tải năm và đợt thi...</Notice>}
+        {yearsError && (
+          <Notice tone="danger">
+            Không thể tải năm và đợt thi: {yearsError}{' '}
+            <button type="button" className="underline" onClick={() => { setYearsLoading(true); setYearsError(''); setReloadYears(value => value + 1) }}>Thử lại</button>
+          </Notice>
+        )}
         {confirming && (
           <Notice tone="warning">
             AI sẽ đọc toàn bộ đề và Jev gán nhãn từng câu, việc này tốn token. Đề được xếp hàng và xử lý nền.

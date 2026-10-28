@@ -3,6 +3,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { ApiError } from '../../../lib/api'
 import { getErrorMessage } from '../../../lib/errors'
 import {
+  deleteBankSource,
   getBankLabelling,
   getBankSources,
   labelBankSource,
@@ -14,13 +15,14 @@ import {
 import Button from '../../console/button'
 import ConfirmDialog from '../../console/confirm-dialog'
 import DataTable from '../../console/data-table'
-import { Eye, FilePlus2, ListTree, RefreshCw } from '../../console/icons'
+import { Eye, FilePlus2, ListTree, Pencil, RefreshCw, Trash2 } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import Notice from '../../console/notice'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import Status, { type StatusTone } from '../../console/status'
 import type { ScheduleResourceStatus } from '../../../hooks/useScheduleResource'
 import BankImportDialog from './BankImportDialog'
+import BankSourceEditDialog from './BankSourceEditDialog'
 import BankReadingSkeleton from './BankReadingSkeleton'
 import { failureText } from './question-bank-labels'
 
@@ -55,6 +57,9 @@ export default function BankSourcesPanel({ readOnly, onFinished }: { readOnly: b
   const [reloading, setReloading] = useState<BankSource | null>(null)
   const [retryBusy, setRetryBusy] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [editing, setEditing] = useState<BankSource | null>(null)
+  const [removing, setRemoving] = useState<BankSource | null>(null)
+  const [removeBusy, setRemoveBusy] = useState(false)
   const [labelTarget, setLabelTarget] = useState<BankSource | null>(null)
   const [labelBusy, setLabelBusy] = useState(false)
   const [labelling, setLabelling] = useState<BankLabelling | null>(null)
@@ -172,7 +177,7 @@ export default function BankSourcesPanel({ readOnly, onFinished }: { readOnly: b
         id: 'actions',
         header: 'Thao tác',
         enableSorting: false,
-        meta: { className: 'w-20 text-right' },
+        meta: { className: 'w-32 text-right' },
         cell: ({ row }) => (
           <RowActions>
             {!readOnly && row.original.status === 'FAILED' && (
@@ -180,6 +185,12 @@ export default function BankSourcesPanel({ readOnly, onFinished }: { readOnly: b
             )}
             {!readOnly && row.original.status === 'DONE' && row.original.unlabelledCount > 0 && (
               <IconAction label="Gán nhãn" icon={ListTree} hover="success" onClick={() => askLabelling(row.original)} />
+            )}
+            {!readOnly && (
+              <IconAction label="Sửa thông tin" icon={Pencil} hover="info" onClick={() => setEditing(row.original)} />
+            )}
+            {!readOnly && !busy(row.original) && (
+              <IconAction label="Xóa đề" icon={Trash2} variant="danger" onClick={() => askRemoving(row.original)} />
             )}
             <IconAction label="Xem AI đọc đề" icon={Eye} onClick={() => setViewingId(row.original.id)} />
           </RowActions>
@@ -195,6 +206,28 @@ export default function BankSourcesPanel({ readOnly, onFinished }: { readOnly: b
     setActionError('')
     if (source.retryable) setRetrying(source)
     else setReloading(source)
+  }
+
+  function askRemoving(source: BankSource) {
+    setActionError('')
+    setRemoving(source)
+  }
+
+  async function confirmRemoving() {
+    if (!removing || removeBusy) return
+    setRemoveBusy(true)
+    try {
+      await deleteBankSource(removing.id)
+      if (viewingId === removing.id) setViewingId(null)
+      setRemoving(null)
+      refresh()
+      finished.current()
+    } catch (reason) {
+      setRemoving(null)
+      setActionError(getErrorMessage(reason))
+    } finally {
+      setRemoveBusy(false)
+    }
   }
 
   async function confirmLabelling() {
@@ -310,6 +343,31 @@ export default function BankSourcesPanel({ readOnly, onFinished }: { readOnly: b
           busyLabel="Đang gửi..."
           onCancel={() => setLabelTarget(null)}
           onConfirm={confirmLabelling}
+        />
+      )}
+
+      {editing && (
+        <BankSourceEditDialog
+          source={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null)
+            refresh()
+          }}
+        />
+      )}
+
+      {removing && (
+        <ConfirmDialog
+          title={`Xóa đề ${removing.title}?`}
+          description={`Xóa ${removing.questionCount} câu của đề cùng nhãn và file đã lưu. Đề đã chép vào bài kiểm tra thì không bị ảnh hưởng.`}
+          variant="danger"
+          cancelLabel="Hủy"
+          confirmLabel="Xóa"
+          busy={removeBusy}
+          busyLabel="Đang xóa..."
+          onCancel={() => setRemoving(null)}
+          onConfirm={confirmRemoving}
         />
       )}
 

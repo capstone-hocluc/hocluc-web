@@ -246,3 +246,25 @@ export async function importBankPaper(upload: BankPaperUpload): Promise<BankSour
   if (upload.key && upload.answerSource) body.set('answerSource', upload.answerSource)
   return requireData(await request<BankSource>(`${BASE}/sources`, { auth: true, method: 'POST', body, timeoutMs: 120_000 }))
 }
+
+export interface BankSourceDetails {
+  title: string
+  year: number | null
+  round: string | null
+}
+
+/** Corrects the details printed on a paper; its files and questions stay as they are. STAFF and above. */
+export async function updateBankSource(sourceId: string, details: BankSourceDetails): Promise<BankSource> {
+  return requireData(
+    await request<BankSource>(`${BASE}/sources/${encodeURIComponent(sourceId)}`, {
+      auth: true,
+      method: 'PATCH',
+      body: details,
+    })
+  )
+}
+
+/** Removes a paper with its questions and labels; refused while it is waiting or being read. STAFF and above. */
+export async function deleteBankSource(sourceId: string): Promise<void> {
+  await request<void>(`${BASE}/sources/${encodeURIComponent(sourceId)}`, { auth: true, method: 'DELETE' })
+}
