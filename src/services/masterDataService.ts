@@ -178,7 +178,11 @@ export class MasterDataImportRejected extends Error {
 const BASE = '/api/v1/admin/master-data'
 const versionPath = (id: string) => `${BASE}/versions/${encodeURIComponent(id)}`
 
-async function requireData<T>(path: string, fallback: string, options?: Parameters<typeof request<T>>[1]): Promise<T> {
+async function requireData<T>(
+  path: string,
+  fallback: string,
+  options?: Parameters<typeof request<T>>[1]
+): Promise<T> {
   const response = await request<T>(path, { auth: true, ...options })
   if (response.data === undefined || response.data === null) throw new Error(fallback)
   return response.data
@@ -209,7 +213,10 @@ export async function getVersionContent(versionId: string): Promise<MasterDataCo
 }
 
 export function getActiveCategories(): Promise<MasterDataCategory[]> {
-  return requireData('/api/v1/master-data/categories', 'Không thể tải danh sách môn có master data.')
+  return requireData(
+    '/api/v1/master-data/categories',
+    'Không thể tải danh sách môn có master data.'
+  )
 }
 
 export async function getActiveContent(categoryId: string): Promise<MasterDataContent> {
@@ -229,9 +236,13 @@ export async function getActiveContent(categoryId: string): Promise<MasterDataCo
 }
 
 export function activateVersion(versionId: string): Promise<MasterDataVersion> {
-  return requireData(`${versionPath(versionId)}/activate`, 'Không nhận được phiên bản vừa kích hoạt.', {
-    method: 'POST',
-  })
+  return requireData(
+    `${versionPath(versionId)}/activate`,
+    'Không nhận được phiên bản vừa kích hoạt.',
+    {
+      method: 'POST',
+    }
+  )
 }
 
 export const activateMasterDataVersion = activateVersion
@@ -243,8 +254,14 @@ export async function deleteDraftVersion(versionId: string): Promise<void> {
 export const deleteMasterDataDraft = deleteDraftVersion
 
 /** Copies a version into a new DRAFT, the only kind of version whose labels can be changed. */
-export function cloneVersion(versionId: string, body: { version: string; description: string | null }): Promise<MasterDataVersion> {
-  return requireData(`${versionPath(versionId)}/clone`, 'Không nhận được bản nháp vừa tạo.', { method: 'POST', body })
+export function cloneVersion(
+  versionId: string,
+  body: { version: string; description: string | null }
+): Promise<MasterDataVersion> {
+  return requireData(`${versionPath(versionId)}/clone`, 'Không nhận được bản nháp vừa tạo.', {
+    method: 'POST',
+    body,
+  })
 }
 
 export interface DomainBody {
@@ -317,6 +334,54 @@ export interface MappingBody {
   notes: string | null
 }
 
+/**
+ * One question pattern with its domain, skills, micro-skills and error codes, saved in one go.
+ * The server makes every code; a domain or skill is an existing one (by code) or a new one (by name).
+ */
+export interface PatternBundleBody {
+  /** Only for a subject with no version yet: the prefix its first draft starts with. */
+  codePrefix: string | null
+  domainCode: string | null
+  newDomainNameVi: string | null
+  nameVi: string
+  canonicalPrompt: string | null
+  stimulusKind: string | null
+  difficultyMin: DifficultyLevel | null
+  difficultyMax: DifficultyLevel | null
+  /** Exactly one PRIMARY. */
+  skills: {
+    skillCode: string | null
+    nameVi: string | null
+    role: 'PRIMARY' | 'SUPPORTING'
+    microSkills: { nameVi: string }[]
+  }[]
+  errorCodes: { nameVi: string; allDomains: boolean }[]
+}
+
+export interface PatternBundleResult {
+  versionId: string
+  version: string
+  draftCreated: boolean
+  domainCode: string
+  domainCreated: boolean
+  patternCode: string
+  newSkillCodes: string[]
+  newMicroSkillCodes: string[]
+  newErrorCodes: string[]
+}
+
+/** Saves into a draft, or into the subject's draft, which this save starts when the subject has no version. */
+export function savePatternBundle(
+  target: { versionId: string } | { categoryId: string },
+  body: PatternBundleBody
+): Promise<PatternBundleResult> {
+  const path =
+    'versionId' in target
+      ? `${versionPath(target.versionId)}/pattern-bundles`
+      : `${BASE}/categories/${encodeURIComponent(target.categoryId)}/pattern-bundles`
+  return requireData(path, 'Không nhận được dạng câu vừa lưu.', { method: 'POST', body })
+}
+
 /** What a draft holds, by the path segment of its endpoints. */
 export interface LabelBodies {
   domains: DomainBody
@@ -335,11 +400,21 @@ export function saveLabel<K extends keyof LabelBodies>(
   body: LabelBodies[K]
 ): Promise<unknown> {
   const path = `${versionPath(versionId)}/${segment}${id ? `/${encodeURIComponent(id)}` : ''}`
-  return requireData(path, 'Không nhận được dữ liệu vừa lưu.', { method: id ? 'PUT' : 'POST', body })
+  return requireData(path, 'Không nhận được dữ liệu vừa lưu.', {
+    method: id ? 'PUT' : 'POST',
+    body,
+  })
 }
 
-export async function deleteLabel(versionId: string, segment: keyof LabelBodies, id: string): Promise<void> {
-  await request<void>(`${versionPath(versionId)}/${segment}/${encodeURIComponent(id)}`, { auth: true, method: 'DELETE' })
+export async function deleteLabel(
+  versionId: string,
+  segment: keyof LabelBodies,
+  id: string
+): Promise<void> {
+  await request<void>(`${versionPath(versionId)}/${segment}/${encodeURIComponent(id)}`, {
+    auth: true,
+    method: 'DELETE',
+  })
 }
 
 export function getVersionDiff(versionId: string): Promise<VersionDiff> {
@@ -363,7 +438,11 @@ export async function importWorkbook(categoryId: string, file: File): Promise<Im
     return await uploadWorkbook(categoryId, file)
   } catch (error) {
     const report = reportOf(error)
-    if (report) throw new MasterDataImportRejected(error instanceof Error ? error.message : 'File không hợp lệ.', report)
+    if (report)
+      throw new MasterDataImportRejected(
+        error instanceof Error ? error.message : 'File không hợp lệ.',
+        report
+      )
     throw error
   }
 }

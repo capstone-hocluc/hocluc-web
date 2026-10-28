@@ -18,6 +18,7 @@ import {
   type Category,
 } from '../../../services/categoryService'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { getAdminCourses } from '../../../services/courseAdminService'
 import { crudError, unknownMutation } from './crud-errors'
 
 // A category cannot move under itself or its own descendants. The backend still enforces cycles and depth.
@@ -40,6 +41,14 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const rows = useMemo(() => resource.data ?? [], [resource.data])
+  const countsKey = resource.status === 'ready' ? `category-course-counts:${rows.map(row => row.id).join(',')}` : null
+  const counts = useScheduleResource(countsKey, async () => {
+    const results = await Promise.all(rows.map(async row => {
+      const page = await getAdminCourses({ categoryId: row.id, size: 1 })
+      return [row.id, page.totalElements] as const
+    }))
+    return Object.fromEntries(results) as Record<string, number>
+  })
   const changeParent = useCallback(
     async (category: Category, value: string) => {
       const parentId = value === 'NONE' ? null : value
@@ -130,6 +139,12 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           )
         },
       },
+      {
+        id: 'courseCount',
+        header: 'Số khóa học',
+        accessorFn: (category) => counts.data?.[category.id],
+        cell: ({ row }) => counts.data?.[row.original.id] ?? (counts.status === 'loading' ? 'Đang tải…' : '—'),
+      },
       { accessorKey: 'sortOrder', header: 'Thứ tự' },
       {
         id: 'status',
@@ -170,7 +185,7 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
           ]
         : []),
     ],
-    [readOnly, names, busy, rows, changeParent, quickEditId]
+    [readOnly, names, busy, rows, changeParent, quickEditId, counts.data, counts.status]
   )
   async function remove() {
     if (!deleting || busy) return
@@ -216,6 +231,11 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
       {error && (
         <Notice tone="danger">
           <span role="alert">{error}</span>
+        </Notice>
+      )}
+      {(counts.status === 'error' || counts.status === 'forbidden' || counts.status === 'not-found') && (
+        <Notice tone="danger">
+          Không thể tải số khóa học. <button type="button" className="underline" onClick={counts.reload}>Thử lại</button>
         </Notice>
       )}
       <ScheduleResourceState

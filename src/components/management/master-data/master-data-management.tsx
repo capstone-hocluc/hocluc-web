@@ -45,6 +45,7 @@ import MasterDataStructure, { MasterDataStructureSkeleton } from './master-data-
 import MasterDataEditorDialog, { type EditTarget } from './master-data-editor-dialog'
 import MasterDataDeleteDialog, { type DeleteTarget } from './master-data-delete-dialog'
 import MasterDataCloneDialog from './master-data-clone-dialog'
+import MasterDataPatternBundleDialog from './master-data-pattern-bundle-dialog'
 import { codePrefix } from './master-data-rules'
 
 interface SubjectOption {
@@ -149,6 +150,7 @@ export default function MasterDataManagement({
   const [editing, setEditing] = useState<EditTarget | null>(null)
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null)
   const [cloning, setCloning] = useState(false)
+  const [addingPattern, setAddingPattern] = useState(false)
   // The detail sheet steps aside while a form opened from it is up, and comes back after.
   const [parked, setParked] = useState<Selection[] | null>(null)
 
@@ -222,6 +224,10 @@ export default function MasterDataManagement({
   }
   const hasData = reader ? !!categoryId : versionList.length > 0
   const versionsLoading = !reader && versions.status !== 'ready'
+  // A subject with no version starts its first draft with the first pattern; one with versions
+  // adds to its draft, and copies the active version into a draft only when a person asks.
+  const canAddPattern =
+    !reader && !!categoryId && (isDraft || (!versionsLoading && versionList.length === 0))
 
   const historyColumns = useMemo<ColumnDef<MasterDataVersion>[]>(
     () => [
@@ -283,14 +289,25 @@ export default function MasterDataManagement({
         subtitle={
           reader
             ? 'Các lĩnh vực kiến thức, dạng câu, kỹ năng và lỗi sai thường gặp đang dùng để gắn nhãn bài học và câu hỏi.'
-            : 'Bộ nhãn của từng môn, nhập từ file Excel. Bản nháp chỉ được dùng sau khi kích hoạt.'
+            : 'Bộ nhãn của từng môn, nhập trên web hoặc từ file Excel. Bản nháp chỉ được dùng sau khi kích hoạt.'
         }
         action={
           !reader && (
-            <Button onClick={() => setImporting(true)} disabled={categories.status !== 'ready'}>
-              <Plus size={16} />
-              Nhập file Excel
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {canAddPattern && (
+                <Button onClick={() => setAddingPattern(true)}>
+                  <Plus size={16} />
+                  Thêm dạng câu
+                </Button>
+              )}
+              <Button
+                appearance={canAddPattern ? 'outline' : 'fill'}
+                onClick={() => setImporting(true)}
+                disabled={categories.status !== 'ready'}
+              >
+                Nhập file Excel
+              </Button>
+            </div>
           )
         }
       />
@@ -394,8 +411,16 @@ export default function MasterDataManagement({
             <div className="rounded-xl border border-dashed border-card-border px-5 py-10 text-center">
               <p className="text-sm font-medium text-text-primary">Môn này chưa có master data</p>
               <p className="mt-1 text-sm text-text-tertiary">
-                Nhập file Excel của môn (7 sheet) để tạo bản nháp đầu tiên.
+                Thêm dạng câu đầu tiên để tạo bản nháp, hoặc nhập file Excel của môn.
               </p>
+              {canAddPattern && (
+                <div className="mt-4 flex justify-center">
+                  <Button onClick={() => setAddingPattern(true)}>
+                    <Plus size={16} />
+                    Thêm dạng câu
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as MasterDataTab)}>
@@ -541,6 +566,35 @@ export default function MasterDataManagement({
             chooseVersion(draft.id)
             setNotice(`Đã tạo bản nháp v${draft.version}. Sửa xong thì so sánh và kích hoạt.`)
             versions.reload()
+          }}
+        />
+      )}
+
+      {addingPattern && categoryId && (
+        <MasterDataPatternBundleDialog
+          target={
+            isDraft && version
+              ? { versionId: version.id }
+              : {
+                  categoryId,
+                  categoryName: categories.data?.find((c) => c.id === categoryId)?.label ?? '',
+                }
+          }
+          content={isDraft ? shownContent : null}
+          onClose={() => setAddingPattern(false)}
+          onSaved={(result) => {
+            setAddingPattern(false)
+            setPickedVersion(result.versionId)
+            setTab('structure')
+            setStack([])
+            setError('')
+            setNotice(
+              result.draftCreated
+                ? `Đã thêm dạng câu ${result.patternCode} và tạo bản nháp v${result.version}. Thêm các dạng câu khác, rồi so sánh và kích hoạt.`
+                : `Đã thêm dạng câu ${result.patternCode}.`
+            )
+            versions.reload()
+            content.reload()
           }}
         />
       )}
