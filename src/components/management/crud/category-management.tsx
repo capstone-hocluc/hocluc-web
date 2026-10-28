@@ -20,6 +20,7 @@ import {
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourses } from '../../../services/courseAdminService'
 import { crudError, unknownMutation } from './crud-errors'
+import { stoppedLast } from '../../../lib/stopped-last'
 
 // A category cannot move under itself or its own descendants. The backend still enforces cycles and depth.
 function blockedParents(category: Category, rows: Category[]) {
@@ -40,7 +41,8 @@ export default function CategoryManagement({ readOnly = false }: { readOnly?: bo
   const [quickEditId, setQuickEditId] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
-  const rows = useMemo(() => resource.data ?? [], [resource.data])
+  // subjects no longer in use sink to the bottom
+  const rows = useMemo(() => stoppedLast(resource.data ?? [], (category) => !category.active), [resource.data])
   const countsKey = resource.status === 'ready' ? `category-course-counts:${rows.map(row => row.id).join(',')}` : null
   const counts = useScheduleResource(countsKey, async () => {
     const results = await Promise.all(rows.map(async row => {

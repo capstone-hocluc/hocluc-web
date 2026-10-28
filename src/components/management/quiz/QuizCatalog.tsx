@@ -10,6 +10,7 @@ import { FilterSelect } from '../../console/filter-toolbar'
 import { COURSE_QUIZ_TYPES, quizTypeLabel } from '../../../lib/quiz-types'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { describePublishProblems } from './publish-problems'
+import { stoppedLast } from '../../../lib/stopped-last'
 
 const labels = { DRAFT: 'Bản nháp', PUBLISHED: 'Đã xuất bản', ARCHIVED: 'Đã lưu trữ' }
 
@@ -51,7 +52,9 @@ export default function QuizCatalog({ items, status, errorMessage, onRetry, read
     try { sessionStorage.setItem(storageKey, JSON.stringify(next)) } catch { /* Optional persistence. */ }
   }
   const typeFilter = filters.type
-  const filteredItems = exam || typeFilter === 'ALL' ? items : items.filter(quiz => quiz.type === typeFilter)
+  // archived ones sink to the bottom
+  const filteredItems = stoppedLast(exam || typeFilter === 'ALL' ? items : items.filter(quiz => quiz.type === typeFilter),
+    quiz => quiz.status === 'ARCHIVED')
   const published = placement ? items.filter(quiz => quiz.status === 'PUBLISHED') : []
   const newestTime = Math.max(...published.map(quiz => Date.parse(quiz.createdAt ?? '')))
   const newest = published.filter(quiz => Date.parse(quiz.createdAt ?? '') === newestTime)
