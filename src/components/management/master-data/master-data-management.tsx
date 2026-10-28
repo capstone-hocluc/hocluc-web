@@ -320,18 +320,18 @@ export default function MasterDataManagement({
         emptyMessage={reader ? 'Chưa môn nào có master data đang dùng.' : 'Chưa có môn học.'}
         skeleton="detail"
       >
-        <div className="flex flex-col gap-5">
+        <ConsoleTabs value={categoryId ?? ''} onValueChange={chooseCategory}>
+          <ConsoleTabsList aria-label="Môn học">
+            {(categories.data ?? []).map((category) => (
+              <ConsoleTabsTrigger key={category.id} value={category.id}>
+                {category.label}
+              </ConsoleTabsTrigger>
+            ))}
+          </ConsoleTabsList>
+          {categoryId && <ConsoleTabsContent value={categoryId}>
           <Panel>
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-end gap-3">
-                <div className="w-full sm:w-72">
-                  <SelectField
-                    ariaLabel="Môn học"
-                    value={categoryId ?? undefined}
-                    onChange={chooseCategory}
-                    options={categories.data ?? []}
-                  />
-                </div>
                 {!reader && versionList.length > 0 && (
                   <div className="w-full sm:w-64">
                     <SelectField
@@ -489,7 +489,8 @@ export default function MasterDataManagement({
               )}
             </ConsoleTabs>
           )}
-        </div>
+          </ConsoleTabsContent>}
+        </ConsoleTabs>
       </ScheduleResourceState>
 
       {shownContent && (
