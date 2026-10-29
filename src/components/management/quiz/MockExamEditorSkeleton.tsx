@@ -49,7 +49,7 @@ function ExamWorkspaceSkeleton() {
           <Skeleton className="h-6 w-48" />
         </div>
         <div className="hidden flex-1 justify-center gap-3 lg:flex">
-          {[0, 1, 2].map(step => <Skeleton key={step} className="h-7 w-36 rounded-lg" />)}
+          {[0, 1].map(step => <Skeleton key={step} className="h-7 w-36 rounded-lg" />)}
         </div>
         <div className="ml-auto flex gap-2">
           <Skeleton className="h-10 w-16 rounded-lg" />
@@ -69,8 +69,8 @@ function ExamWorkspaceSkeleton() {
 }
 
 /** Placeholder with the editor's own layout while a saved exam loads: the full-window workspace for an exam, the in-page form with its questions for a quick quiz. */
-export default function MockExamEditorSkeleton({ pdf = true }: { pdf?: boolean }) {
-  if (pdf) return <ExamWorkspaceSkeleton />
+export default function MockExamEditorSkeleton({ workspace = true }: { workspace?: boolean }) {
+  if (workspace) return <ExamWorkspaceSkeleton />
   return (
     <section className="flex flex-col gap-4" aria-busy="true" aria-label="Đang tải đề thi">
       <header className="flex flex-col gap-1">

@@ -12,7 +12,6 @@
     "preview": "vite preview",
     "test:e2e:core-crud": "tsc --noEmit -p tsconfig.e2e.json && playwright test core-crud.spec.ts",
     "test:e2e:chat": "tsc --noEmit -p tsconfig.e2e.json && playwright test chat.spec.ts",
-    "test:e2e:exam-extraction": "tsc --noEmit -p tsconfig.e2e.json && playwright test exam-extraction.spec.ts",
     "test:e2e:quiz-permissions": "tsc --noEmit -p tsconfig.e2e.json && playwright test quiz-permissions.spec.ts",
     "test:e2e:placement": "tsc --noEmit -p tsconfig.e2e.json && playwright test placement.spec.ts",
     "test:e2e:landing": "tsc --noEmit -p tsconfig.e2e.json && playwright test landing.spec.ts"

@@ -20,13 +20,11 @@ import PageHeading from '../console/page-heading'
 import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
-  AdminBlueprints,
-  MentorOverview,
   MentorSolutionQueue,
   MentorStudents,
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
-import QuestionBankWorkspace from './question-bank/QuestionBankWorkspace'
+import QuestionBankScreen from './question-bank/QuestionBankScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
 import { buildNavSections, canWrite, findNavItem, isKnownPage, navLabel } from '../../lib/console-nav'
 
@@ -68,16 +66,14 @@ export function ManagementScreen({
       return (
         <>
           <RoleDashboardWelcome role={role} />
-          {role === 'MENTOR' ? (
-            <MentorOverview onNavigate={onNavigate} />
-          ) : role === 'MANAGER' ? (
+          {role === 'MANAGER' ? (
             <ManagerOverview onNavigate={onNavigate} />
-          ) : (
+          ) : role !== 'MENTOR' ? (
             <AdminOverview
               onNavigate={onNavigate}
               areaLabel={role === 'ADMINISTRATOR' ? 'quản trị' : 'vận hành'}
             />
-          )}
+          ) : null}
           <DashboardActions role={role} onNavigate={onNavigate} />
         </>
       )
@@ -98,11 +94,14 @@ export function ManagementScreen({
     case 'audit-log':
       return <AdminAuditLog />
     case 'question-bank':
-      return <QuestionBankWorkspace title={title} readOnly={readOnly} onBack={() => onNavigate('dashboard')} />
+      return (
+        <>
+          <PageHeading title={title} readOnly={readOnly} />
+          <QuestionBankScreen readOnly={readOnly} />
+        </>
+      )
     case 'taxonomy':
       return <MasterDataManagement title={title} reader={readOnly} />
-    case 'blueprints':
-      return <AdminBlueprints />
     case 'categories':
       return <CategoryManagement readOnly={readOnly} />
     case 'exam-years':

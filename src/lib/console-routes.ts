@@ -22,7 +22,7 @@ export function quizMenuPage(page: string): string {
 }
 
 export function isQuizPage(page: string): boolean {
-  return ['quizzes', 'mock-exams', 'placements', 'question-review', 'attempts'].includes(quizMenuPage(page))
+  return ['quizzes', 'mock-exams', 'placements', 'attempts'].includes(quizMenuPage(page))
 }
 
 /** Sidebar grouping only. quizMenuPage retains each tab's route and permission. */

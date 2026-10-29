@@ -6,7 +6,7 @@ import type { UserRole } from '../../../services/userService'
 import { ForbiddenPage } from '../../console/access-states'
 import { useConsoleFocused } from '../../console/console-focus'
 import Notice from '../../console/notice'
-import { QuestionReview, TeacherAttempts } from '../quiz-review-screens'
+import { TeacherAttempts } from '../quiz-review-screens'
 import QuizScreen from './QuizScreen'
 import MockExamScreen from './MockExamScreen'
 import QuizDetails from './QuizDetails'
@@ -32,7 +32,6 @@ function QuizPage({ role, page, readOnly, onNavigate }: {
   // A direct editor URL is denied before fetching or mounting any editor.
   if (readOnly && (creating || editing)) return <ForbiddenPage />
   if (viewing) return <QuizDetails quizId={viewing} expectedType={menu === 'placements' ? 'PLACEMENT' : undefined} onBack={() => onNavigate(menu)} />
-  if (menu === 'question-review') return <QuestionReview readOnly={readOnly} />
   if (menu === 'attempts') return <TeacherAttempts />
   const tabs = assessmentTabs.filter(tab => findNavItem(role, tab.page))
   const navigation = <TabsList aria-label="Loại bài kiểm tra" className="w-full gap-4 sm:gap-6">
@@ -43,10 +42,8 @@ function QuizPage({ role, page, readOnly, onNavigate }: {
       {notice && !workspaceOpen && <Notice role="status">{notice}</Notice>}
       {menu === 'mock-exams' || menu === 'placements'
         ? <MockExamScreen navigation={navigation} assessmentType={menu === 'placements' ? 'PLACEMENT' : 'EXAM'} readOnly={readOnly} startCreating={creating} initialEditorId={editing}
-            onOpenEditor={id => onNavigate(`${menu}-edit-${id}`)}
             onBack={() => onNavigate('dashboard')} onAction={setNotice} />
         : <QuizScreen navigation={navigation} course={{ id: courseId, name: 'Khóa học' }} readOnly={readOnly}
-            onOpenEditor={id => onNavigate(`quizzes-edit-${id}`)}
             startCreating={creating} initialEditorId={editing}
             onBack={() => onNavigate(courseId ? 'courses' : 'dashboard')} onAction={setNotice} />}
     </TabsContent>

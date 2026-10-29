@@ -1,20 +1,16 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
-  Clock3,
-  GraduationCap,
   MoreHorizontal,
 } from '../console/icons'
 import ListCard from '../console/list-card'
 import Page from './screen-page'
 import { text } from './screen-columns'
 import Status, { type StatusTone } from '../console/status'
-import StatCard from '../ui/StatCard'
 import { Progress } from '../tailgrids/core/progress'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
 import {
   AUDIT_LOG,
-  BLUEPRINTS,
   MENTOR_STUDENTS,
   SOLUTION_QUEUE,
   type ReviewStatus,
@@ -25,20 +21,6 @@ import {
 const REVIEW_LABELS: Record<ReviewStatus, string> = { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Từ chối' }
 const REVIEW_TONES: Record<ReviewStatus, StatusTone> = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
 
-function statusTone(status: string): StatusTone {
-  if (['Đang dùng', 'Đã thanh toán', 'Còn hạn'].includes(status)) return 'success'
-  if (['Chờ thanh toán', 'Sắp hết hạn'].includes(status)) return 'warning'
-  if (['Đã hủy', 'Hết hạn'].includes(status)) return 'danger'
-  return 'neutral' // includes 'Nháp', same grey as course drafts
-}
-
-const statusColumn = <T extends { status: string }>(): ColumnDef<T> => ({
-  id: 'status',
-  header: 'Trạng thái',
-  accessorKey: 'status',
-  cell: ({ row }) => <Status tone={statusTone(row.original.status)}>{row.original.status}</Status>,
-})
-
 const progressColumn = <T extends { progress: number }>(header: string): ColumnDef<T> => ({
   id: 'progress',
   header,
@@ -46,38 +28,11 @@ const progressColumn = <T extends { progress: number }>(header: string): ColumnD
   cell: ({ row }) => <Progress progress={row.original.progress} withLabel className="min-w-40" />,
 })
 
-type Blueprint = (typeof BLUEPRINTS)[number]
 type AuditEntry = (typeof AUDIT_LOG)[number]
 type MentorStudent = (typeof MENTOR_STUDENTS)[number]
 type SolutionItem = (typeof SOLUTION_QUEUE)[number]
 
 /* ---------- Admin ---------- */
-
-export function AdminBlueprints() {
-  const columns = useMemo<ColumnDef<Blueprint>[]>(
-    () => [
-      text<Blueprint>('name', 'Blueprint', 'font-medium text-text-primary'),
-      text<Blueprint>('type', 'Loại đề'),
-      text<Blueprint>('questions', 'Số câu'),
-      text<Blueprint>('minutes', 'Thời gian (phút)'),
-      text<Blueprint>('version', 'Phiên bản'),
-      statusColumn<Blueprint>(),
-    ],
-    []
-  )
-  return (
-    <Page title="Blueprint đề thi">
-      <ListCard
-        data={BLUEPRINTS}
-        columns={columns}
-        getRowKey={(row) => row.id}
-        searchPlaceholder="Tìm blueprint..."
-        searchText={(row) => `${row.name} ${row.type}`}
-        filter={{ ariaLabel: 'Lọc theo trạng thái', allLabel: 'Tất cả trạng thái', options: ['Đang dùng', 'Nháp'], get: (row) => row.status }}
-      />
-    </Page>
-  )
-}
 
 export function AdminAuditLog() {
   const columns = useMemo<ColumnDef<AuditEntry>[]>(
@@ -104,7 +59,7 @@ export function AdminAuditLog() {
   )
 }
 
-/* ---------- Duyệt: câu hỏi (staff, teacher) và lời giải AI (mentor) ---------- */
+/* ---------- Duyệt lời giải AI (mentor) ---------- */
 
 function ReviewMenu({ label, onChange }: { label: string; onChange: (status: ReviewStatus) => void }) {
   return (
@@ -142,25 +97,6 @@ const reviewStatusColumn = <T extends { status: ReviewStatus }>(): ColumnDef<T> 
 })
 
 /* ---------- Mentor ---------- */
-
-export function MentorOverview({ onNavigate }: { onNavigate: (page: string) => void }) {
-  const pending = SOLUTION_QUEUE.filter((item) => item.status === 'PENDING').length
-  const cards = [
-    { page: 'students', label: 'Học viên', value: MENTOR_STUDENTS.length, icon: GraduationCap, tone: 'success' as const },
-    { page: 'solution-queue', label: 'Lời giải chờ duyệt', value: pending, icon: Clock3, tone: 'warning' as const },
-  ]
-  return (
-    <section aria-label="Tình hình đồng hành">
-      <div className="grid gap-3 sm:grid-cols-3">
-        {cards.map(({ page, ...card }) => (
-          <button key={page} type="button" className="text-left" onClick={() => onNavigate(page)}>
-            <StatCard className="transition-colors hover:bg-background-gray-secondary" {...card} />
-          </button>
-        ))}
-      </div>
-    </section>
-  )
-}
 
 export function MentorStudents() {
   const columns = useMemo<ColumnDef<MentorStudent>[]>(

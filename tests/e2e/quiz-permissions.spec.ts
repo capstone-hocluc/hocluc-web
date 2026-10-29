@@ -188,18 +188,12 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
   })
 
-  test(`${role}: exam authoring and review use shared screens`, async ({ page }) => {
+  test(`${role}: exam authoring uses shared screens`, async ({ page }) => {
     const state = await installQuizFixture(page, role)
-    state.questions[0].needsReview = true; state.quizzes[0].needsReviewCount = 1
     await page.goto(`/console/${area}/mock-exams/new`)
     await expect(page.getByLabel('Tên đề thi thử', { exact: true })).toBeVisible()
     await select(page, 'Khóa học chính', 'Khóa được phân công')
     expect(state.requests.find(r => r.path === '/api/v1/admin/courses')?.query).toContain('type=MAIN')
-    await page.goto(`/console/${area}/question-review`)
-    await page.getByRole('button', { name: 'Thao tác duyệt câu hỏi' }).first().click()
-    await page.getByRole('menuitem', { name: 'Đánh dấu đã duyệt' }).click()
-    await expect(page.getByText('Không có câu hỏi nào chờ duyệt.')).toBeVisible()
-    expect(writes(state).some(r => r.path.endsWith('/questions/reviewed'))).toBe(true)
     expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
   })
 
@@ -303,7 +297,7 @@ for (const [type, reason, message] of [
 test('Teacher reads quiz/exam/questions/attempts with no write controls or write requests', async ({ page }) => {
   test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
-  state.quizzes[0].attemptCount = 1; state.quizzes[0].needsReviewCount = 1; state.questions[0].needsReview = true
+  state.quizzes[0].attemptCount = 1
   await page.goto('/console/teacher/quizzes')
   await expect(page.getByRole('heading', { name: 'Quiz được giao', exact: true })).toBeVisible()
   await expect(page.getByText('Quiz ngoài phân công', { exact: true })).toHaveCount(0)
@@ -314,9 +308,6 @@ test('Teacher reads quiz/exam/questions/attempts with no write controls or write
   await page.goto('/console/teacher/mock-exams')
   await expect(page.getByRole('heading', { name: 'Đề thi được giao', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Tạo đề|Chỉnh sửa|Xuất bản|Thao tác khác/ })).toHaveCount(0)
-  await page.goto('/console/teacher/question-review')
-  await expect(page.getByText('Câu hỏi được phân công', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Thao tác duyệt câu hỏi' })).toHaveCount(0)
   await page.goto('/console/teacher/attempts')
   await expect(page.getByText('Student QA', { exact: true })).toBeVisible()
   expect(writes(state)).toEqual([])

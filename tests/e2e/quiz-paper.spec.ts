@@ -30,7 +30,6 @@ test('the quiz reads as a printed paper: part title, shared passage, bold questi
               option('o8', 'D', 'Không đủ dữ kiện để kết luận về số học sinh của lớp học'),
             ], { groupId: 'group-1' }),
           ],
-          latestJob: null,
         },
       },
     })

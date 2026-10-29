@@ -12,9 +12,6 @@ import { ManagementScreen } from '../management/ManagementDashboard'
 import { ForbiddenPage } from '../console/access-states'
 import { buildNavSections, canAccessPage } from '../../lib/console-nav'
 
-// Old teacher URL for the question review page.
-const PAGE_ALIASES: Record<string, string> = { questions: 'question-review' }
-
 // Course sub-pages (quiz editor, assignments) belong to "Lớp của tôi".
 function menuPageOf(page: string) {
   if (isQuizPage(page)) return quizMenuPage(page)
@@ -31,7 +28,7 @@ function TeacherDashboard({
   logoutLoading = false,
   page: requestedPage = 'dashboard',
 }) {
-  const page = PAGE_ALIASES[requestedPage] ?? requestedPage
+  const page = requestedPage
   const quizCreateMode = page.startsWith('quiz-new-')
   const quizCourseId = quizCreateMode
     ? page.replace('quiz-new-', '')
@@ -101,7 +98,6 @@ function TeacherDashboard({
     'courses',
     'schedule',
     'availability',
-    'question-review',
     'attempts',
     'profile',
     'mock-exams',
