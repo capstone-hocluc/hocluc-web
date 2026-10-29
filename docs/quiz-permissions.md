@@ -23,7 +23,7 @@ Nguồn BE:
 
 ## Màn và đường dẫn
 
-Sidebar chỉ có một mục **Bài kiểm tra**, gồm các tab **Bài học / chương**, **Đánh giá đầu vào**, **Thi thử**. Tab đầu vào chỉ dành cho STAFF/MANAGER/ADMINISTRATOR; Teacher chỉ có hai tab đọc trong khóa được phân công. **Duyệt câu hỏi** vẫn là mục riêng. Mỗi tab giữ URL và kiểm tra quyền riêng; gom menu không cấp thêm quyền.
+Sidebar chỉ có một mục **Bài kiểm tra**, gồm các tab **Bài học / chương**, **Đánh giá đầu vào**, **Thi thử**. Tab đầu vào chỉ dành cho STAFF/MANAGER/ADMINISTRATOR; Teacher chỉ có hai tab đọc trong khóa được phân công. Mỗi tab giữ URL và kiểm tra quyền riêng; gom menu không cấp thêm quyền.
 
 Các tab tái sử dụng `QuizScreen`, `MockExamScreen` và `QuizCatalog`, cùng `Tabs` có sẵn. Nút tạo theo tab, editor không hiện thanh chuyển tab. Từ khóa và bộ lọc được giữ trong sessionStorage riêng theo tài khoản, active role, loại bài và khóa khi có; không lưu nội dung đề hoặc token vào bộ nhớ bộ lọc. Điều hướng console giữ tiền tố `/console`, URL cũ vẫn được chuẩn hóa.
 
@@ -32,13 +32,12 @@ Với area là `staff`, `manager`, `admin` hoặc `teacher`:
 - `/console/{area}/quizzes`: quiz nhanh/bài/chương, giữ loại quiz editor đang hỗ trợ.
 - `/console/{area}/mock-exams`: đề thi thử EXAM.
 - `/console/{area}/placements`: PLACEMENT độc lập với khóa; chỉ `staff`, `manager`, `admin`. Đường `/new`, `/{quizId}/edit` chỉ writer; Teacher bị chặn trước khi tải dữ liệu.
-- `/console/{area}/question-review`: ghi đối với writer, Teacher chỉ đọc câu chờ kiểm tra.
 - `/console/{area}/attempts`: bài làm và thống kê bằng màn dùng chung.
 - `/console/{area}/quizzes/{quizId}` và `/mock-exams/{quizId}`: đọc nội dung qua GET editor response, không mount form ghi.
 - `/console/{area}/quizzes/new`, `/quizzes/{quizId}/edit`, `/mock-exams/new`, `/mock-exams/{quizId}/edit`: chỉ writer được mở.
 - Teacher URL cũ `/console/teacher/my-courses/{courseId}/quiz` chỉ đọc; đường `/quiz/new` bị chặn.
 
-Không tạo bản sao màn theo role. Hai editor cũ được chuyển từ `components/teacher` sang `components/management/quiz`, giữ service và hành vi lưu/khóa/unknown outcome. QuestionReview và TeacherAttempts được dùng chung. Luồng Student không chuyển sang service authoring.
+Không tạo bản sao màn theo role. Hai editor cũ được chuyển từ `components/teacher` sang `components/management/quiz`, giữ service và hành vi lưu/khóa/unknown outcome. TeacherAttempts được dùng chung. Luồng Student không chuyển sang service authoring.
 
 ## Các lớp kiểm tra FE
 
@@ -80,7 +79,6 @@ Chưa chạy kiểm thử tích hợp trên BE/database thật. Cần môi trư�
 - App typecheck, e2e typecheck, ESLint các file ứng dụng thay đổi, production build và `git diff --check`: đạt. Build còn cảnh báo kích thước bundle trên 500 kB.
 - Bộ `quiz-permissions.spec.ts`: **20/20 đạt**, chạy trình duyệt với API fixture; đây không phải xác nhận BE thật hoạt động đúng.
 - Bộ CRUD đầy đủ chạy với `--max-failures=3`: 3 đạt, 3 lỗi, 22 chưa chạy. Các ca lỗi thuộc tạo SECTION, xuất bản khóa và cấu trúc MAIN, dừng khi tìm option/nút cũ. Đã kiểm tra `git show HEAD` của course editor/row actions: HEAD dùng nhãn `Khóa nhỏ` và quy trình `Gửi duyệt`/`Bán khóa`, khác selector `SECTION · Khóa nhỏ`/`Xuất bản` trong test. Không sửa nghiệp vụ khóa để đáp ứng test cũ.
-- Chạy riêng 3 regression Manager ngoài quiz: đơn hàng/ghi danh và nhóm học đạt; lịch học lỗi vì nhãn bản ghi trong dialog bị ẩn. Chưa xác định nguyên nhân gốc của lỗi lịch học; không kết luận toàn bộ regression đạt.
 - Để e2e typecheck chạy được, cập nhật fixture CRUD theo DTO hiện tại: thêm các trường reviewState/review metadata, bỏ phaseId cũ của course section và thêm sectionId/sectionTitle cho chapter. Không sửa test nghiệp vụ khóa hay mã sản phẩm các module đó.
 
 ## File triển khai
@@ -90,7 +88,7 @@ Chưa chạy kiểm thử tích hợp trên BE/database thật. Cần môi trư�
 - `src/services/quizCourseService.ts`, `src/components/teacher/TeacherCourses.tsx`: khóa được phân công và catalog authoring.
 - `src/components/management/quiz/QuizScreen.tsx`, `MockExamScreen.tsx`: chuyển hai màn/editor cũ `TeacherQuiz.tsx`/`TeacherMockExams.tsx` vào thư mục dùng chung; không nhân bản theo role.
 - `src/components/management/quiz/QuizConsoleScreen.tsx`, `QuizDetails.tsx`: boundary và phần xem tĩnh.
-- `src/components/management/quiz-review-screens.tsx`, `src/components/management/ManagementDashboard.tsx`, `src/components/teacher/TeacherDashboard.tsx`: dùng chung bài làm/thống kê/câu hỏi, kết nối dashboard.
+- `src/components/management/ManagementDashboard.tsx`, `src/components/teacher/TeacherDashboard.tsx`: dùng chung bài làm/thống kê, kết nối dashboard.
 - `tests/e2e/quiz-permissions.spec.ts`, `quiz-permissions-fixture.ts`, `core-crud-fixture.ts`, `tests/e2e/README.md`, `playwright.config.ts`, `package.json`: kiểm thử và lệnh chạy.
 
 Không sửa source BE hoặc các file assessment Student. `package-lock.json` và `docs/api-endpoints.md` có thay đổi sẵn trước lượt triển khai, được giữ nguyên. Chưa commit/push.
