@@ -1,7 +1,5 @@
 import type { UserRole } from '../services/userService'
 import {
-  BadgeCheck,
-  BarChart3,
   BookOpen,
   BookOpenCheck,
   CalendarDays,
@@ -9,14 +7,11 @@ import {
   ClipboardList,
   Clock3,
   FileQuestion,
-  FileText,
   GraduationCap,
   Layers3,
   LayoutDashboard,
-  ListChecks,
   ListTree,
   MailQuestion,
-  Settings,
   ShoppingCart,
   Sparkles,
   UserCog,
@@ -31,18 +26,9 @@ import { can, type Permission } from './permissions'
 // sidebar from here and the router refuses pages that are not listed for the role.
 // Like permissions.ts this is display logic only: the backend's @PreAuthorize rules decide.
 
-export type NavGroupId =
-  | 'overview'
-  | 'system'
-  | 'academic'
-  | 'content'
-  | 'teaching'
-  | 'operations'
-  | 'business'
-  | 'review'
-  | 'support'
+export type NavGroupId = 'overview' | 'training' | 'classes' | 'learners' | 'support' | 'system'
 
-export type NavBadgeKey = 'questionReview' | 'solutionQueue' | 'mentorAsk'
+export type NavBadgeKey = 'solutionQueue' | 'mentorAsk'
 
 export interface ConsoleNavItem {
   /** URL segment after /console/{area}/ and the key ManagementDashboard / TeacherDashboard render. */
@@ -68,103 +54,55 @@ export interface ConsoleNavItem {
 
 const GROUP_LABELS: Record<NavGroupId, string> = {
   overview: 'Tổng quan',
-  system: 'Hệ thống',
-  academic: 'Học thuật',
-  content: 'Khóa học & nội dung',
-  teaching: 'Giảng dạy',
-  operations: 'Vận hành lớp',
-  business: 'Học viên & kinh doanh',
-  review: 'Đánh giá & duyệt',
+  training: 'Đào tạo',
+  classes: 'Lớp học',
+  learners: 'Học viên & đơn hàng',
   support: 'Hỗ trợ',
+  system: 'Hệ thống',
 }
 
 const GROUP_ORDER: NavGroupId[] = [
   'overview',
-  'system',
-  'academic',
-  'content',
-  'teaching',
-  'operations',
-  'business',
-  'review',
+  'training',
+  'classes',
+  'learners',
   'support',
+  'system',
 ]
 
 const CONSOLE_NAV: ConsoleNavItem[] = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, group: 'overview' },
   {
-    page: 'reports',
-    label: 'Báo cáo',
-    icon: BarChart3,
-    group: 'overview',
-    permission: 'REPORT_READ',
-    soon: true,
+    page: 'categories',
+    label: 'Môn học',
+    icon: Layers3,
+    group: 'training',
+    permission: 'COURSE_READ',
+    writePermission: 'COURSE_WRITE',
+    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
   },
-
-  {
-    page: 'users',
-    label: 'Nhân sự & phân quyền',
-    icon: UserCog,
-    group: 'system',
-    permission: ['USER_MANAGE', 'USER_READ'],
-    writePermission: 'USER_MANAGE',
-  },
-  {
-    page: 'settings',
-    label: 'Cấu hình nghiệp vụ',
-    icon: Settings,
-    group: 'system',
-    permission: 'SETTINGS_MANAGE',
-    soon: true,
-  },
-  {
-    page: 'audit-log',
-    label: 'Nhật ký hoạt động',
-    icon: ClipboardList,
-    group: 'system',
-    permission: 'AUDIT_READ',
-  },
-
   {
     page: 'taxonomy',
     label: 'Master data',
     icon: ListTree,
-    group: 'academic',
+    group: 'training',
     permission: 'TAXONOMY_WRITE',
-  },
-  // Exam blueprints are business configuration, so they follow the settings permission.
-  {
-    page: 'blueprints',
-    label: 'Blueprint đề thi',
-    icon: FileText,
-    group: 'academic',
-    permission: 'SETTINGS_MANAGE',
-  },
-  {
-    page: 'categories',
-    label: 'Môn học',
-    icon: Layers3,
-    group: 'academic',
-    permission: 'COURSE_READ',
-    writePermission: 'COURSE_WRITE',
-    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
   },
   {
     page: 'exam-years',
     label: 'Năm thi & đợt thi',
     icon: CalendarDays,
-    group: 'academic',
+    group: 'training',
     permission: 'COURSE_READ',
     writePermission: 'COURSE_WRITE',
     roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
   },
-
   {
     page: 'courses',
     label: 'Khóa học',
     labels: { TEACHER: 'Lớp của tôi' },
     icon: BookOpen,
-    group: 'content',
+    group: 'training',
     permission: 'COURSE_READ',
     writePermission: 'COURSE_WRITE',
   },
@@ -172,16 +110,16 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     page: 'question-bank',
     label: 'Ngân hàng câu hỏi',
     icon: FileQuestion,
-    group: 'content',
+    group: 'training',
     permission: ['CONTENT_WRITE', 'QUIZ_READ'],
     // The BE lets STAFF and above correct a label; a teacher only browses.
-    writePermission: 'QUIZ_WRITE',
+    writePermission: 'BANK_AUTHOR',
   },
   {
     page: 'quizzes',
     label: 'Bài kiểm tra',
     icon: ClipboardCheck,
-    group: 'content',
+    group: 'training',
     permission: 'QUIZ_READ',
     writePermission: 'QUIZ_WRITE',
   },
@@ -190,37 +128,41 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     tabOf: 'quizzes',
     label: 'Đánh giá đầu vào',
     icon: ClipboardCheck,
-    group: 'content',
+    group: 'training',
     permission: 'QUIZ_WRITE',
     writePermission: 'QUIZ_WRITE',
     roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
   },
   {
-    page: 'question-review',
-    label: 'Duyệt câu hỏi',
-    labels: { TEACHER: 'Câu hỏi cần kiểm tra' },
-    icon: ListChecks,
-    group: 'content',
-    permission: 'QUIZ_READ',
-    writePermission: 'QUIZ_WRITE',
-    badgeKey: 'questionReview',
-  },
-  // Shared quiz screens follow BE quiz rights, independently of course/taxonomy writes.
-  {
     page: 'mock-exams',
     tabOf: 'quizzes',
     label: 'Bài thi thử',
     icon: ClipboardCheck,
-    group: 'content',
+    group: 'training',
     permission: 'QUIZ_READ',
     writePermission: 'QUIZ_WRITE',
   },
-
+  {
+    page: 'attempts',
+    label: 'Bài làm học viên',
+    icon: BookOpenCheck,
+    group: 'training',
+    permission: 'QUIZ_READ',
+  },
+  {
+    page: 'solution-queue',
+    label: 'Duyệt lời giải AI',
+    icon: Sparkles,
+    group: 'training',
+    permission: 'SOLUTION_APPROVE',
+    badgeKey: 'solutionQueue',
+    soon: true,
+  },
   {
     page: 'schedule',
     label: 'Lịch dạy',
     icon: CalendarDays,
-    group: 'teaching',
+    group: 'classes',
     permission: 'COURSE_READ',
     roles: ['TEACHER'],
   },
@@ -228,17 +170,15 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     page: 'availability',
     label: 'Giờ rảnh',
     icon: Clock3,
-    group: 'teaching',
+    group: 'classes',
     permission: 'COURSE_READ',
     roles: ['TEACHER'],
   },
-
-  // The teacher marks attendance inside "Lịch dạy"; the operations screens below are for staff.
   {
     page: 'schedules',
     label: 'Lịch học',
     icon: CalendarDays,
-    group: 'operations',
+    group: 'classes',
     permission: 'SCHEDULE_READ',
     writePermission: 'SCHEDULE_WRITE',
     roles: ['STAFF', 'MANAGER'],
@@ -247,24 +187,15 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     page: 'attendance',
     label: 'Điểm danh',
     icon: ClipboardCheck,
-    group: 'operations',
+    group: 'classes',
     permission: 'ATTENDANCE_WRITE',
     roles: ['STAFF'],
-  },
-
-  {
-    page: 'students',
-    label: 'Học viên',
-    icon: GraduationCap,
-    group: 'business',
-    permission: 'REVIEW_QUEUE_HANDLE',
-    roles: ['MENTOR'],
   },
   {
     page: 'learners',
     label: 'Học viên',
     icon: UserRound,
-    group: 'business',
+    group: 'learners',
     permission: ['USER_MANAGE', 'USER_READ'],
     writePermission: 'USER_MANAGE',
   },
@@ -272,7 +203,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     page: 'enrollments',
     label: 'Ghi danh',
     icon: GraduationCap,
-    group: 'business',
+    group: 'learners',
     permission: 'ENROLLMENT_READ',
     writePermission: 'ENROLLMENT_WRITE',
   },
@@ -280,35 +211,19 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     page: 'orders',
     label: 'Đơn hàng',
     icon: ShoppingCart,
-    group: 'business',
+    group: 'learners',
     permission: 'ORDER_READ',
     writePermission: 'ORDER_WRITE',
   },
-
   {
-    page: 'attempts',
-    label: 'Bài làm học viên',
-    icon: BookOpenCheck,
-    group: 'review',
-    permission: 'QUIZ_READ',
-  },
-  {
-    page: 'solution-queue',
-    label: 'Duyệt lời giải AI',
-    icon: Sparkles,
-    group: 'review',
-    permission: 'SOLUTION_APPROVE',
-    badgeKey: 'solutionQueue',
-  },
-  {
-    page: 'solutions',
-    label: 'Lời giải ngân hàng',
-    icon: BadgeCheck,
-    group: 'review',
-    permission: 'SOLUTION_APPROVE',
+    page: 'students',
+    label: 'Học viên',
+    icon: GraduationCap,
+    group: 'learners',
+    permission: 'REVIEW_QUEUE_HANDLE',
+    roles: ['MENTOR'],
     soon: true,
   },
-
   {
     page: 'chat',
     label: 'Hỏi Mentor',
@@ -336,6 +251,22 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     permission: 'SUPPORT_MONITOR',
     roles: ['MANAGER'],
     featureFlag: 'mentorAsk',
+  },
+  {
+    page: 'users',
+    label: 'Nhân sự & phân quyền',
+    icon: UserCog,
+    group: 'system',
+    permission: ['USER_MANAGE', 'USER_READ'],
+    writePermission: 'USER_MANAGE',
+  },
+  {
+    page: 'audit-log',
+    label: 'Nhật ký hoạt động',
+    icon: ClipboardList,
+    group: 'system',
+    permission: 'AUDIT_READ',
+    soon: true,
   },
 ]
 
@@ -385,8 +316,8 @@ export function buildNav(role: UserRole): ConsoleNavGroup[] {
   // The administrator works on the system first; for everyone else it is a side errand, so it goes last.
   const order =
     role === 'ADMINISTRATOR'
-      ? GROUP_ORDER
-      : [...GROUP_ORDER.filter((id) => id !== 'system'), 'system' as const]
+      ? ['system' as const, ...GROUP_ORDER.filter((id) => id !== 'system')]
+      : GROUP_ORDER
   return order
     .map((id) => ({
       id,
@@ -399,7 +330,7 @@ export function buildNav(role: UserRole): ConsoleNavGroup[] {
 /** Pending counts shown next to menu entries. Only queues that have data behind them get a number. */
 export function getNavBadges(role: UserRole): Partial<Record<NavBadgeKey, number>> {
   const badges: Partial<Record<NavBadgeKey, number>> = {}
-  if (can(role, 'SOLUTION_APPROVE')) {
+  if (buildNav(role).some((group) => group.items.some((item) => item.page === 'solution-queue'))) {
     badges.solutionQueue = SOLUTION_QUEUE.filter((item) => item.status === 'PENDING').length
   }
   return badges

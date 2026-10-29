@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 // These tests never call the live API: the browser routes every API request to a fixture.
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: ['core-crud.spec.ts', 'chat.spec.ts', 'landing.spec.ts', 'quiz-permissions.spec.ts', 'placement.spec.ts', 'purchase.spec.ts', 'lesson-labels.spec.ts', 'notifications.spec.ts', 'quiz-import.spec.ts', 'exam-extraction.spec.ts', 'auth-cookie.spec.ts', 'question-bank.spec.ts', 'master-data.spec.ts', 'quiz-paper.spec.ts'],
+  testMatch: ['core-crud.spec.ts', 'chat.spec.ts', 'landing.spec.ts', 'quiz-permissions.spec.ts', 'placement.spec.ts', 'purchase.spec.ts', 'lesson-labels.spec.ts', 'notifications.spec.ts', 'quiz-import.spec.ts', 'auth-cookie.spec.ts', 'question-bank.spec.ts', 'question-bank-authoring.spec.ts', 'question-bank-review.spec.ts', 'master-data.spec.ts', 'quiz-paper.spec.ts', 'console-nav.spec.ts'],
   fullyParallel: false,
   workers: 1,
   retries: 0,
