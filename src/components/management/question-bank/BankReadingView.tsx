@@ -241,7 +241,7 @@ export default function BankReadingView({
         <div
           ref={rowRef}
           style={{ '--left': `${100 - paperShare}fr`, '--right': `${paperShare}fr` } as CSSProperties}
-          className="grid min-w-0 gap-5 lg:h-[calc(100dvh-14rem)] lg:min-h-96 lg:grid-cols-[minmax(0,var(--left))_1.25rem_minmax(0,var(--right))] lg:gap-0"
+          className="grid min-w-0 gap-5 lg:h-[calc(100dvh-25rem)] lg:min-h-96 lg:grid-cols-[minmax(0,var(--left))_1.25rem_minmax(0,var(--right))] lg:gap-0"
         >
           <ConsoleTabs defaultValue="pipeline" className="flex min-h-0 min-w-0 flex-col">
             <ConsoleTabsList aria-label="Tiến trình và câu hỏi">

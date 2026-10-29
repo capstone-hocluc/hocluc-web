@@ -11,6 +11,8 @@ export type Permission =
   | 'CONTENT_WRITE'
   | 'QUIZ_READ'
   | 'QUIZ_WRITE'
+  | 'BANK_AUTHOR'
+  | 'BANK_REVIEW'
   | 'QUESTION_APPROVE'
   | 'SOLUTION_APPROVE'
   | 'REVIEW_QUEUE_HANDLE'
@@ -24,9 +26,7 @@ export type Permission =
   | 'ORDER_WRITE'
   | 'ENROLLMENT_READ'
   | 'ENROLLMENT_WRITE'
-  | 'REPORT_READ'
   | 'AUDIT_READ'
-  | 'SETTINGS_MANAGE'
   | 'SUPPORT_HANDLE'
   | 'SUPPORT_MONITOR'
 
@@ -36,6 +36,8 @@ const ALL_PERMISSIONS: Permission[] = [
   'CONTENT_WRITE',
   'QUIZ_READ',
   'QUIZ_WRITE',
+  'BANK_AUTHOR',
+  'BANK_REVIEW',
   'QUESTION_APPROVE',
   'SOLUTION_APPROVE',
   'REVIEW_QUEUE_HANDLE',
@@ -49,9 +51,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'ORDER_WRITE',
   'ENROLLMENT_READ',
   'ENROLLMENT_WRITE',
-  'REPORT_READ',
   'AUDIT_READ',
-  'SETTINGS_MANAGE',
   'SUPPORT_HANDLE',
   'SUPPORT_MONITOR',
 ]
@@ -60,6 +60,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   STUDENT: [],
   MENTOR: ['SOLUTION_APPROVE', 'REVIEW_QUEUE_HANDLE', 'SUPPORT_HANDLE'],
   TEACHER: [
+    'BANK_AUTHOR',
     'COURSE_READ',
     'QUIZ_READ',
     'CONTENT_WRITE',
@@ -69,6 +70,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'ATTENDANCE_WRITE',
   ],
   STAFF: [
+    'BANK_AUTHOR',
+    'BANK_REVIEW',
     'COURSE_READ',
     'QUIZ_READ',
     'QUIZ_WRITE',
@@ -88,6 +91,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   // Other modules retain the Manager read-only policy; quiz is the verified BE exception.
   MANAGER: [
+    'BANK_AUTHOR',
+    'BANK_REVIEW',
     'COURSE_READ',
     // Quiz authoring is explicitly allowed by TeacherQuizController + Actor.isStaff.
     // This does not grant writes to courses, taxonomy or other subject capabilities.
@@ -97,7 +102,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'USER_READ',
     'ORDER_READ',
     'ENROLLMENT_READ',
-    'REPORT_READ',
     'AUDIT_READ',
     'SUPPORT_MONITOR',
   ],

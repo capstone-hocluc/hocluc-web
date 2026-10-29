@@ -7,19 +7,23 @@ const label = {
 }
 const rows = [
   { id: 'q-1', sourceCode: '2021-mau', sourceTitle: 'Đề mẫu 2021', year: 2021, round: 'MAU', sourceNumber: 61,
-    text: 'Giải phương trình $x^2 - 5x + 6 = 0$.', hasFigure: false, hasFormula: true, answerSource: 'PUBLISHED_KEY', reviewNeeded: false, label },
+    text: 'Giải phương trình $x^2 - 5x + 6 = 0$.', hasFigure: false, hasFormula: true, answerSource: 'PUBLISHED_KEY', reviewNeeded: false, label,
+    status: 'APPROVED', categoryId: 'category-1' },
   { id: 'q-2', sourceCode: '2023-mau', sourceTitle: 'Đề mẫu 2023', year: 2023, round: 'MAU', sourceNumber: 65,
-    text: 'Biểu đồ cho biết điều gì?', hasFigure: true, hasFormula: false, answerSource: 'NONE', reviewNeeded: true, label: null },
+    text: 'Biểu đồ cho biết điều gì?', hasFigure: true, hasFormula: false, answerSource: 'NONE', reviewNeeded: true, label: null,
+    status: 'IN_REVIEW', categoryId: 'category-2' },
 ]
 const detail = {
   ...rows[0], passage: null, explanation: null, imageUrl: null, passageImageUrl: null, reviewNotes: null, extractConfidence: 0.97,
   options: [{ label: 'A', text: '2 và 3', correct: true }, { label: 'B', text: '1 và 6', correct: false }],
 }
 const stats = { total: 2, needsReview: 1, unlabelled: 1, byPart: { MA: 1 }, byYear: { 2023: 1, 2021: 1 },
-  byAnswerSource: { PUBLISHED_KEY: 1, REFERENCE_KEY: 0, NONE: 1 } }
+  byAnswerSource: { PUBLISHED_KEY: 1, REFERENCE_KEY: 0, NONE: 1 },
+  bySubject: [{ id: 'category-1', name: 'Toán học', count: 1 }, { id: 'category-2', name: 'Ngữ văn', count: 1 }] }
 const patterns = [
-  { code: 'MA.Q07', nameVi: 'Giải phương trình', domainCode: 'MA.D02', domainNameVi: 'Đại số', partCode: 'MA' },
-  { code: 'MA.Q08', nameVi: 'Bất phương trình', domainCode: 'MA.D02', domainNameVi: 'Đại số', partCode: 'MA' },
+  { code: 'MA.Q07', nameVi: 'Giải phương trình', domainCode: 'MA.D02', domainNameVi: 'Đại số', partCode: 'MA', categoryId: 'category-1' },
+  { code: 'MA.Q08', nameVi: 'Bất phương trình', domainCode: 'MA.D02', domainNameVi: 'Đại số', partCode: 'MA', categoryId: 'category-1' },
+  { code: 'NV.Q01', nameVi: 'Đọc hiểu', domainCode: 'NV.D01', domainNameVi: 'Đọc hiểu', partCode: 'TV', categoryId: 'category-2' },
 ]
 const page0 = (content: unknown[]) => ({ content, pageNumber: 0, pageSize: 20, totalElements: content.length, totalPages: 1, last: true })
 
@@ -107,15 +111,29 @@ async function install(page: Page, role: 'MANAGER' | 'TEACHER' | 'STAFF', source
     }
     if (url.pathname.endsWith('/q-1')) return ok(detail)
     if (url.pathname.endsWith('/questions')) {
-      const review = url.searchParams.get('needsReview') === 'true'
-      return ok(page0(review ? rows.filter(row => row.reviewNeeded) : rows))
+      const params = url.searchParams
+      if (params.get('reviewable') === 'true') return ok(page0(rows.filter(row => row.status === 'IN_REVIEW')))
+      const subject = params.get('subject')
+      const status = params.get('status')
+      const pattern = params.get('patternCode')
+      const unlabelled = params.get('unlabelled') === 'true'
+      const year = params.get('year')
+      const q = params.get('q')?.toLowerCase()
+      return ok(page0(rows.filter(row =>
+        (!subject || row.categoryId === subject) &&
+        (!status || row.status === status) &&
+        (!pattern || row.label?.patternCode === pattern) &&
+        (!unlabelled || !row.label) &&
+        (!year || row.year === Number(year)) &&
+        (!q || row.text.toLowerCase().includes(q))
+      )))
     }
     return route.fulfill({ status: 404, json: { success: false, status: 404, message: 'unmatched' } })
   })
   return { state, seen, relabelBody: () => relabelBody, upload: () => upload, retried: () => retried, streams: () => streams, labelled: () => labelled }
 }
 
-test('the bank lists questions with their labels and narrows to those needing review', async ({ page }) => {
+test('the bank lists questions with their labels and narrows by status', async ({ page }) => {
   const { state, seen } = await install(page, 'MANAGER')
   await page.goto('/console/manager/question-bank')
 
@@ -127,11 +145,115 @@ test('the bank lists questions with their labels and narrows to those needing re
   await expect(table.getByText('Chưa gán', { exact: true })).toBeVisible()
   await expect(page.getByText('2 câu', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Lọc theo tình trạng' }).click()
-  await page.getByRole('option', { name: 'Cần duyệt' }).click()
+  await page.getByRole('button', { name: /Lọc theo trạng thái$/ }).click()
+  await page.getByRole('option', { name: 'Chờ duyệt', exact: true }).click()
   await expect(page.getByText('1 câu', { exact: true })).toBeVisible()
   await expect(table.getByText('Toán học')).toBeHidden()
-  expect(seen.some(entry => entry.includes('needsReview=true'))).toBe(true)
+  expect(seen.some(entry => entry.includes('status=IN_REVIEW'))).toBe(true)
+  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+})
+
+const listParams = (seen: string[]) => {
+  const lists = seen.filter(entry => entry.startsWith('GET ') && entry.includes('/questions?'))
+  const last = lists[lists.length - 1]
+  return new URLSearchParams(last.slice(last.indexOf('?') + 1))
+}
+const subjectChips = (page: Page) => page.getByRole('group', { name: 'Lọc theo môn' })
+const patternFilter = (page: Page) => page.getByRole('button', { name: /Lọc theo dạng câu$/ })
+
+test('choosing a subject chip filters the list and offers only its patterns', async ({ page }) => {
+  const { state, seen } = await install(page, 'MANAGER')
+  await page.goto('/console/manager/question-bank')
+
+  const maths = subjectChips(page).getByRole('button', { name: 'Toán học (1)', exact: true })
+  await expect(maths).toHaveAttribute('aria-pressed', 'false')
+  await maths.click()
+  await expect(maths).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(() => listParams(seen).get('subject')).toBe('category-1')
+
+  const patterns = patternFilter(page)
+  await expect(patterns).toBeEnabled()
+  await patterns.click()
+  await expect(page.getByRole('option', { name: 'Giải phương trình', exact: true })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Bất phương trình', exact: true })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Đọc hiểu', exact: true })).toHaveCount(0)
+  await page.getByRole('option', { name: 'Giải phương trình', exact: true }).click()
+  await expect.poll(() => listParams(seen).get('patternCode')).toBe('MA.Q07')
+
+  const table = page.getByRole('table').filter({ hasText: 'Nội dung' })
+  await expect(table.getByRole('row', { name: /2021/ })).toBeVisible()
+  await expect(table.getByRole('row', { name: /Biểu đồ/ })).toHaveCount(0)
+  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+})
+
+test('choosing "Tất cả môn" disables the pattern filter and drops the pattern', async ({ page }) => {
+  const { state, seen } = await install(page, 'MANAGER')
+  await page.goto('/console/manager/question-bank')
+
+  await subjectChips(page).getByRole('button', { name: 'Toán học (1)', exact: true }).click()
+  const patterns = patternFilter(page)
+  await patterns.click()
+  await page.getByRole('option', { name: 'Bất phương trình', exact: true }).click()
+  await expect.poll(() => listParams(seen).get('patternCode')).toBe('MA.Q08')
+
+  const all = subjectChips(page).getByRole('button', { name: 'Tất cả môn (2)', exact: true })
+  await all.click()
+  await expect(all).toHaveAttribute('aria-pressed', 'true')
+  await expect(patterns).toBeDisabled()
+  await expect.poll(() => ({ subject: listParams(seen).get('subject'), patternCode: listParams(seen).get('patternCode') }))
+    .toEqual({ subject: null, patternCode: null })
+  await expect(page.getByRole('table').filter({ hasText: 'Nội dung' }).getByRole('row', { name: /Biểu đồ/ })).toBeVisible()
+  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+})
+
+test('"Bộ lọc khác" counts the active filters and "Xóa bộ lọc" clears everything', async ({ page }) => {
+  const { state, seen } = await install(page, 'MANAGER')
+  await page.goto('/console/manager/question-bank')
+
+  const other = page.getByRole('button', { name: /^Bộ lọc khác/ })
+  await expect(other).toHaveAccessibleName('Bộ lọc khác')
+  await expect(page.getByRole('button', { name: 'Xóa bộ lọc', exact: true })).toHaveCount(0)
+
+  await other.click()
+  await page.getByRole('button', { name: /Lọc theo năm$/ }).click()
+  await page.getByRole('option', { name: '2023', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Bộ lọc khác (1)', exact: true })).toBeVisible()
+  await expect.poll(() => listParams(seen).get('year')).toBe('2023')
+
+  await page.getByRole('button', { name: /Lọc câu của tôi$/ }).click()
+  await page.getByRole('option', { name: 'Câu của tôi', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Bộ lọc khác (2)', exact: true })).toBeVisible()
+  await expect.poll(() => listParams(seen).get('mine')).toBe('true')
+
+  await subjectChips(page).getByRole('button', { name: 'Toán học (1)', exact: true }).click()
+  const search = page.getByRole('searchbox', { name: 'Tìm trong nội dung câu hỏi' })
+  await search.fill('phương trình')
+  await search.press('Enter')
+  await expect.poll(() => listParams(seen).get('q')).toBe('phương trình')
+
+  await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Xóa bộ lọc', exact: true })).toHaveCount(0)
+  await expect(other).toHaveAccessibleName('Bộ lọc khác')
+  await expect(subjectChips(page).getByRole('button', { name: 'Tất cả môn (2)', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(search).toHaveValue('')
+  await expect.poll(() => {
+    const params = listParams(seen)
+    return [params.get('subject'), params.get('year'), params.get('mine'), params.get('q')]
+  }).toEqual([null, null, null, null])
+  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+})
+
+test('a question without a label leaves the Tin cậy cell empty', async ({ page }) => {
+  const { state } = await install(page, 'MANAGER')
+  await page.goto('/console/manager/question-bank')
+
+  const table = page.getByRole('table').filter({ hasText: 'Nội dung' })
+  await expect(table.getByRole('columnheader', { name: 'Tin cậy' })).toBeVisible()
+  const headers = await table.getByRole('columnheader').allInnerTexts()
+  const confidence = headers.findIndex(header => header.trim() === 'Tin cậy')
+  expect(confidence).toBeGreaterThanOrEqual(0)
+  await expect(table.getByRole('row', { name: /Biểu đồ/ }).getByRole('cell').nth(confidence)).not.toContainText('—')
+  await expect(table.getByRole('row', { name: /2021/ }).getByRole('cell').nth(confidence)).toContainText('0.93')
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 

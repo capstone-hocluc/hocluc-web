@@ -4,6 +4,7 @@ import { getErrorMessage } from '../../../lib/errors'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import {
   approveBankReading,
+  changeBankQuestionStatus,
   getBankQuestion,
   relabelBankQuestion,
   type BankPatternChoice,
@@ -17,7 +18,11 @@ import SearchSelectField from '../../console/search-select-field'
 import Status from '../../console/status'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import MathText from '../../ui/MathText'
+import BankReviewPanel from './BankReviewPanel'
 import {
+  BANK_STATUS_LABELS,
+  BANK_STATUS_TONES,
+  BANK_DIFFICULTY_LABELS,
   ANSWER_SOURCE_LABELS,
   ANSWER_SOURCE_TONES,
   confidenceText,
@@ -190,20 +195,66 @@ function QuestionBody({
   patterns,
   readOnly,
   onSaved,
+  onEdit,
+  legacyReadOnly,
 }: {
   question: BankQuestionDetail
   patterns: BankPatternChoice[]
   readOnly: boolean
   onSaved: () => void
+  onEdit: (id: string) => void
+  legacyReadOnly: boolean
 }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  async function transition(action: 'submit' | 'retire' | 'restore') {
+    setBusy(true)
+    setError('')
+    try {
+      await changeBankQuestionStatus(question.id, action)
+      onSaved()
+    } catch (reason) {
+      setError(getErrorMessage(reason))
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <div className="flex flex-col gap-5">
+      {error && <Notice tone="danger">{error}</Notice>}
+      <div className="flex flex-wrap items-center gap-2">
+        {question.status && <Status tone={BANK_STATUS_TONES[question.status]}>{BANK_STATUS_LABELS[question.status]}</Status>}
+        <span className="text-sm">Độ khó: {question.difficulty ? BANK_DIFFICULTY_LABELS[question.difficulty] : '—'}</span>
+        <span className="text-sm">Phiên bản: {question.headVersionNo}</span>
+        <span className="text-sm">Phiên bản đã duyệt: {question.approvedVersionNo ?? '—'}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {!readOnly && question.canEdit && (
+          <Button size="sm" onClick={() => onEdit(question.id)}>Sửa</Button>
+        )}
+        {!readOnly && question.canEdit && (question.status === 'DRAFT' || question.status === 'CHANGES_REQUESTED') && (
+          <Button size="sm" appearance="outline" disabled={busy} onClick={() => transition('submit')}>
+            Gửi duyệt
+          </Button>
+        )}
+        {question.canRetire && (
+          <Button size="sm" appearance="outline" disabled={busy} onClick={() => transition('retire')}>
+            Ngừng dùng
+          </Button>
+        )}
+        {question.canRestore && (
+          <Button size="sm" appearance="outline" disabled={busy} onClick={() => transition('restore')}>
+            Khôi phục
+          </Button>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <Status tone={ANSWER_SOURCE_TONES[question.answerSource]}>{ANSWER_SOURCE_LABELS[question.answerSource]}</Status>
         {question.hasFigure && <Status tone="neutral">Có hình</Status>}
       </div>
       {question.reviewNotes && <Notice tone="warning">{question.reviewNotes}</Notice>}
-      <ReviewPanel question={question} readOnly={readOnly} onSaved={onSaved} />
+      <ReviewPanel question={question} readOnly={legacyReadOnly} onSaved={onSaved} />
+      {question.canReview && <BankReviewPanel key={question.id} id={question.id} onSaved={onSaved} />}
       {question.passage && (
         <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4 text-sm">
           <p className="m-0 whitespace-pre-wrap break-words text-text-primary">
@@ -259,7 +310,7 @@ function QuestionBody({
           </p>
         </div>
       )}
-      <LabelPanel question={question} patterns={patterns} readOnly={readOnly} onSaved={onSaved} />
+      <LabelPanel question={question} patterns={patterns} readOnly={legacyReadOnly} onSaved={onSaved} />
     </div>
   )
 }
@@ -270,12 +321,16 @@ export default function QuestionBankDetail({
   readOnly,
   onClose,
   onChanged,
+  onEdit,
+  legacyReadOnly,
 }: {
   id: string | null
   patterns: BankPatternChoice[]
   readOnly: boolean
   onClose: () => void
   onChanged: () => void
+  onEdit: (id: string) => void
+  legacyReadOnly: boolean
 }) {
   const resource = useScheduleResource(id ? `bank-question:${id}` : null, () => getBankQuestion(id as string))
   const question = resource.data
@@ -291,6 +346,8 @@ export default function QuestionBankDetail({
           question={question}
           patterns={patterns}
           readOnly={readOnly}
+          onEdit={onEdit}
+          legacyReadOnly={legacyReadOnly}
           onSaved={() => {
             resource.reload()
             onChanged()

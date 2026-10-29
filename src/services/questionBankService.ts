@@ -1,4 +1,5 @@
 import { request, requestBlob } from '../lib/api'
+import type { TeacherQuestionType } from './teacherQuizService'
 import type { ExtractedGroup, ExtractedQuestion, ExtractedSection, QuestionReviewStatus } from './aiExtractionService'
 import type { BankIngestStage } from './bankReadingStream'
 
@@ -21,13 +22,29 @@ export interface BankLabel {
   labelSource: BankLabelSource
 }
 
+export type BankQuestionStatus = 'DRAFT' | 'IN_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'RETIRED'
+export type BankOrigin = 'INGEST' | 'QUIZ' | 'MANUAL' | 'AI'
+export type BankDifficulty = 'DE' | 'TB' | 'KHO'
+export interface BankScopes { administrator: boolean; authorSubjectIds: string[]; reviewerSubjectIds: string[] }
+export interface BankQuestionWrite {
+  question: { questionText: string; questionType: TeacherQuestionType; explanation: string | null; categoryId: string | null; options: Array<{ text: string; correct: boolean }> }
+  difficulty: BankDifficulty | null
+  changeNote: string | null
+}
+export interface BankVersion { versionNo: number; current: boolean; approved: boolean; text: string; passage: string | null; explanation: string | null; options: BankOption[]; createdByName: string | null; changeNote: string | null; createdAt: string }
+export interface BankEvent { action: string; actorName: string | null; comment: string | null; versionNo: number | null; createdAt: string }
+
 export interface BankQuestionRow {
+  status: BankQuestionStatus
+  origin: BankOrigin
+  difficulty: BankDifficulty | null
+  questionType: TeacherQuestionType
   id: string
-  sourceCode: string
-  sourceTitle: string
+  sourceCode: string | null
+  sourceTitle: string | null
   year: number | null
   round: string | null
-  sourceNumber: number
+  sourceNumber: number | null
   text: string
   hasFigure: boolean
   hasFormula: boolean
@@ -43,12 +60,25 @@ export interface BankOption {
 }
 
 export interface BankQuestionDetail {
+  status: BankQuestionStatus
+  origin: BankOrigin
+  difficulty: BankDifficulty | null
+  questionType: TeacherQuestionType
+  categoryId: string | null
+  categoryName: string | null
+  headVersionNo: number
+  approvedVersionNo: number | null
+  createdByName: string | null
+  canEdit: boolean
+  canReview: boolean
+  canRetire: boolean
+  canRestore: boolean
   id: string
-  sourceCode: string
-  sourceTitle: string
+  sourceCode: string | null
+  sourceTitle: string | null
   year: number | null
   round: string | null
-  sourceNumber: number
+  sourceNumber: number | null
   text: string
   passage: string | null
   explanation: string | null
@@ -106,6 +136,11 @@ export interface BankQuestionPage {
 }
 
 export interface BankQuestionQuery {
+  status?: BankQuestionStatus
+  origin?: BankOrigin
+  difficulty?: BankDifficulty
+  mine?: boolean
+  reviewable?: boolean
   q?: string
   /** A subject's id, or {@link NO_SUBJECT}. */
   subject?: string
@@ -294,4 +329,63 @@ export async function updateBankSource(sourceId: string, details: BankSourceDeta
 /** Removes a paper with its questions and labels; refused while it is waiting or being read. STAFF and above. */
 export async function deleteBankSource(sourceId: string): Promise<void> {
   await request<void>(`${BASE}/sources/${encodeURIComponent(sourceId)}`, { auth: true, method: 'DELETE' })
+}
+
+export interface BankBulkApproveResult {
+  approved: string[]
+  skipped: Array<{ id: string; reason: string }>
+}
+
+export async function getBankScopes(): Promise<BankScopes> {
+  return requireData(await request<BankScopes>(`${BASE}/me/scopes`, { auth: true }))
+}
+
+export async function createBankQuestion(body: BankQuestionWrite): Promise<BankQuestionDetail> {
+  return requireData(await request<BankQuestionDetail>(`${BASE}/questions`, {
+    auth: true,
+    method: 'POST',
+    body,
+  }))
+}
+
+export async function updateBankQuestion(
+  id: string,
+  body: BankQuestionWrite & { expectedVersionNo: number }
+): Promise<BankQuestionDetail> {
+  return requireData(await request<BankQuestionDetail>(`${BASE}/questions/${encodeURIComponent(id)}`, {
+    auth: true,
+    method: 'PUT',
+    body,
+  }))
+}
+
+export async function getBankVersions(id: string): Promise<BankVersion[]> {
+  return requireData(await request<BankVersion[]>(`${BASE}/questions/${encodeURIComponent(id)}/versions`, { auth: true }))
+}
+
+export async function getBankEvents(id: string): Promise<BankEvent[]> {
+  return requireData(await request<BankEvent[]>(`${BASE}/questions/${encodeURIComponent(id)}/events`, { auth: true }))
+}
+
+export async function changeBankQuestionStatus(
+  id: string,
+  action: 'submit' | 'approve' | 'request-changes' | 'retire' | 'restore',
+  comment: string | null = null
+): Promise<BankQuestionDetail> {
+  return requireData(await request<BankQuestionDetail>(`${BASE}/questions/${encodeURIComponent(id)}/${action}`, {
+    auth: true,
+    method: 'POST',
+    body: { comment },
+  }))
+}
+
+export async function bulkApproveBankQuestions(
+  questionIds: string[],
+  comment: string | null = null
+): Promise<BankBulkApproveResult> {
+  return requireData(await request<BankBulkApproveResult>(`${BASE}/questions/bulk-approve`, {
+    auth: true,
+    method: 'POST',
+    body: { questionIds, comment },
+  }))
 }
