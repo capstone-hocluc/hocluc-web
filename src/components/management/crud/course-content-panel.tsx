@@ -642,17 +642,17 @@ export default function CourseContentPanel({
             </div>
           ))}
         </div>
-        {!readOnly && (
-          <div className="mt-4 flex justify-center border-t border-card-border pt-3">
-            <IconAction
-              label="Thêm chương"
-              icon={Plus}
-              disabled={busy}
-              onClick={() => setChapterEditor({ chapter: null })}
-            />
-          </div>
-        )}
       </ScheduleResourceState>
+      {!readOnly && resource.status === 'ready' && (
+        <div className="mt-4 flex justify-center border-t border-card-border pt-3">
+          <IconAction
+            label="Thêm chương"
+            icon={Plus}
+            disabled={busy}
+            onClick={() => setChapterEditor({ chapter: null })}
+          />
+        </div>
+      )}
       {chapterEditor && (
         <ChapterEditorDialog
           courseId={courseId}
