@@ -17,6 +17,8 @@ import {
   ConsoleTabsTrigger,
 } from '../../console/tabs'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { can } from '../../../lib/permissions'
+import type { UserRole } from '../../../services/userService'
 import { getCategories, type Category } from '../../../services/categoryService'
 import {
   activateVersion,
@@ -25,6 +27,10 @@ import {
   getActiveContent,
   getVersionContent,
   getVersions,
+  reportOf,
+  validateVersion,
+  type MasterDataIssue,
+  type MasterDataReport,
   type MasterDataContent,
   type MasterDataVersion,
 } from '../../../services/masterDataService'
@@ -47,6 +53,7 @@ import MasterDataDeleteDialog, { type DeleteTarget } from './master-data-delete-
 import MasterDataCloneDialog from './master-data-clone-dialog'
 import MasterDataPatternBundleDialog from './master-data-pattern-bundle-dialog'
 import { codePrefix } from './master-data-rules'
+import ReportTable from './master-data-report-table'
 
 interface SubjectOption {
   id: string
@@ -80,6 +87,79 @@ function subjectTree(categories: Category[]): SubjectOption[] {
   ])
 }
 
+function ValidationCard({
+  status,
+  report,
+  errorMessage,
+  onRetry,
+  onSelect,
+}: {
+  status: string
+  report: MasterDataReport | null
+  errorMessage: string
+  onRetry: () => void
+  onSelect: (item: MasterDataIssue) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  if (status === 'loading' && !report) {
+    return (
+      <Panel>
+        <div role="status" aria-label="Đang kiểm tra bản nháp" className="animate-pulse space-y-3">
+          <div className="h-6 w-32 rounded bg-background-gray-secondary" />
+          {[0, 1, 2].map((row) => (
+            <div key={row} className="h-10 rounded bg-background-gray-secondary" />
+          ))}
+        </div>
+      </Panel>
+    )
+  }
+  if (!report) {
+    return (
+      <Notice tone="danger">
+        <span>{errorMessage || 'Không thể kiểm tra bản nháp.'}</span>
+        <Button appearance="outline" size="sm" onClick={onRetry}>
+          Thử lại
+        </Button>
+      </Notice>
+    )
+  }
+  const invalid = !report.valid || report.errors.length > 0
+  return (
+    <Panel>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Status tone={invalid ? 'danger' : 'success'}>
+            {invalid
+              ? `Chưa kích hoạt được: ${report.errors.length} lỗi, ${report.warnings.length} cảnh báo`
+              : `Hợp lệ${report.warnings.length ? ` · ${report.warnings.length} cảnh báo` : ''}`}
+          </Status>
+          {!invalid && report.warnings.length > 0 && (
+            <Button
+              appearance="outline"
+              size="sm"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? 'Ẩn cảnh báo' : 'Xem cảnh báo'}
+            </Button>
+          )}
+        </div>
+        {invalid && (
+          <ReportTable
+            items={report.errors}
+            warnings={report.warnings}
+            tone="danger"
+            onSelect={onSelect}
+          />
+        )}
+        {!invalid && expanded && report.warnings.length > 0 && (
+          <ReportTable items={report.warnings} tone="warning" onSelect={onSelect} />
+        )}
+      </div>
+    </Panel>
+  )
+}
+
 /**
  * Master data per subject: domains, question patterns, skills, micro-skills, mappings and error codes.
  * Staff import a workbook as a draft, compare it and activate it; teachers read the active version.
@@ -87,10 +167,13 @@ function subjectTree(categories: Category[]): SubjectOption[] {
 export default function MasterDataManagement({
   title,
   reader,
+  role,
 }: {
   title: string
   reader: boolean
+  role: UserRole
 }) {
+  const canActivate = can(role, 'TAXONOMY_ACTIVATE')
   const categories = useScheduleResource<SubjectOption[]>(
     reader ? 'md-subjects-active' : 'md-subjects',
     async () =>
@@ -119,6 +202,24 @@ export default function MasterDataManagement({
     [versions.data]
   )
   const version = versionList.find((v) => v.id === pickedVersion) ?? defaultVersion(versionList)
+
+  const isDraft = version?.status === 'DRAFT'
+  const validationKey = !reader && isDraft && version ? `md-validation:${version.id}` : null
+  const validation = useScheduleResource(validationKey, () => validateVersion(version!.id))
+  const [raceReport, setRaceReport] = useState<{ versionId: string; report: MasterDataReport } | null>(null)
+  const report = raceReport && raceReport.versionId === version?.id ? raceReport.report : validation.data
+  const activationBlocked = validation.status !== 'ready' || !report || !report.valid || report.errors.length > 0
+  const activationTitle = validation.status === 'loading'
+    ? 'Đang kiểm tra bản nháp'
+    : !report
+      ? 'Chưa kiểm tra được bản nháp'
+      : report.errors.length > 0
+        ? 'Còn lỗi, sửa trước khi kích hoạt'
+        : undefined
+  function recheckValidation() {
+    setRaceReport(null)
+    validation.reload()
+  }
 
   const contentKey = reader
     ? categoryId
@@ -165,6 +266,7 @@ export default function MasterDataManagement({
   }
 
   function chooseCategory(id: string) {
+    setRaceReport(null)
     setPickedCategory(id)
     setPickedVersion(null)
     setStack([])
@@ -173,6 +275,7 @@ export default function MasterDataManagement({
   }
 
   function chooseVersion(id: string) {
+    setRaceReport(null)
     setPickedVersion(id)
     setStack([])
     setError('')
@@ -180,7 +283,7 @@ export default function MasterDataManagement({
   }
 
   async function runConfirmed() {
-    if (!version || !confirm) return
+    if (!version || !confirm || (confirm === 'activate' && (!canActivate || activationBlocked))) return
     setBusy(true)
     setError('')
     try {
@@ -199,7 +302,11 @@ export default function MasterDataManagement({
       setComparing(false)
       versions.reload()
     } catch (err) {
-      setError(crudError(err))
+      const rejected = confirm === 'activate' ? reportOf(err) : null
+      if (rejected) {
+        setRaceReport({ versionId: version.id, report: rejected })
+        setComparing(false)
+      } else setError(crudError(err))
       setConfirm(null)
     } finally {
       setBusy(false)
@@ -207,7 +314,6 @@ export default function MasterDataManagement({
   }
 
   const tabs = reader ? TABLE_TABS.filter((t) => t.id !== 'mappings') : TABLE_TABS
-  const isDraft = version?.status === 'DRAFT'
   // Only a draft changes; the version in use is copied into one first.
   const actions = !reader && isDraft ? { onEdit: setEditing, onDelete: setDeleting } : undefined
   const sheetActions = actions && {
@@ -363,14 +469,25 @@ export default function MasterDataManagement({
                 )}
                 {isDraft && !reader && (
                   <div className="flex flex-wrap gap-2 sm:ml-auto">
+                    <Button appearance="outline" size="sm" onClick={recheckValidation}>
+                      Kiểm tra lại
+                    </Button>
                     <Button appearance="outline" size="sm" onClick={() => setComparing(true)}>
                       <Repeat2 size={14} />
                       So sánh
                     </Button>
-                    <Button size="sm" onClick={() => setConfirm('activate')}>
-                      <CheckCircle2 size={14} />
-                      Kích hoạt
-                    </Button>
+                    {canActivate && (
+                      <span title={activationTitle}>
+                        <Button
+                          size="sm"
+                          disabled={activationBlocked || busy}
+                          onClick={() => setConfirm('activate')}
+                        >
+                          <CheckCircle2 size={14} />
+                          Kích hoạt
+                        </Button>
+                      </span>
+                    )}
                     <Button
                       variant="danger"
                       appearance="outline"
@@ -390,6 +507,20 @@ export default function MasterDataManagement({
               )}
             </div>
           </Panel>
+
+          {isDraft && !reader && version && (
+            <ValidationCard
+              key={version.id}
+              status={validation.status}
+              report={report}
+              errorMessage={validation.errorMessage}
+              onRetry={recheckValidation}
+              onSelect={(item) => {
+                const selected = TABLE_TABS.find((entry) => entry.sheet === item.sheetName)
+                if (selected) setTab(selected.id)
+              }}
+            />
+          )}
 
           {notice && <Notice tone="info">{notice}</Notice>}
           {error && (
@@ -520,6 +651,7 @@ export default function MasterDataManagement({
             setNotice(outcome.notice ?? '')
             setError(outcome.warning ?? '')
             content.reload()
+            recheckValidation()
           }}
         />
       )}
@@ -549,6 +681,7 @@ export default function MasterDataManagement({
             setNotice(message)
             setError('')
             content.reload()
+            recheckValidation()
           }}
         />
       )}
@@ -596,6 +729,7 @@ export default function MasterDataManagement({
             )
             versions.reload()
             content.reload()
+            recheckValidation()
           }}
         />
       )}
@@ -622,13 +756,13 @@ export default function MasterDataManagement({
       {comparing && version && (
         <MasterDataDiffDialog
           version={version}
-          canActivate={isDraft}
+          canActivate={canActivate && isDraft && !activationBlocked}
           onActivate={() => setConfirm('activate')}
           onClose={() => setComparing(false)}
         />
       )}
 
-      {confirm && version && (
+      {confirm && version && (confirm !== 'activate' || canActivate) && (
         <ConfirmDialog
           title={
             confirm === 'activate'
@@ -637,7 +771,7 @@ export default function MasterDataManagement({
           }
           description={
             confirm === 'activate'
-              ? `Phiên bản đang dùng của ${version.categoryName} sẽ chuyển sang "Đã ngưng". Bài học và câu hỏi mới sẽ gắn nhãn theo phiên bản này. Nên xem "So sánh" trước.`
+              ? `Phiên bản đang dùng của ${version.categoryName} sẽ chuyển sang "Đã ngưng". Bài học và câu hỏi mới sẽ gắn nhãn theo phiên bản này. Nên xem "So sánh" trước.${report?.warnings.length ? ` Bản nháp còn ${report.warnings.length} cảnh báo.` : ''}`
               : 'Bản nháp và toàn bộ dữ liệu đã nhập của nó sẽ bị xóa. Không thể hoàn tác.'
           }
           cancelLabel="Hủy"

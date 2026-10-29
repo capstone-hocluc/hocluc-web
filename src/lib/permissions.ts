@@ -17,6 +17,7 @@ export type Permission =
   | 'SOLUTION_APPROVE'
   | 'REVIEW_QUEUE_HANDLE'
   | 'TAXONOMY_WRITE'
+  | 'TAXONOMY_ACTIVATE'
   | 'SCHEDULE_READ'
   | 'SCHEDULE_WRITE'
   | 'ATTENDANCE_WRITE'
@@ -42,6 +43,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'SOLUTION_APPROVE',
   'REVIEW_QUEUE_HANDLE',
   'TAXONOMY_WRITE',
+  'TAXONOMY_ACTIVATE',
   'SCHEDULE_READ',
   'SCHEDULE_WRITE',
   'ATTENDANCE_WRITE',
@@ -79,6 +81,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'CONTENT_WRITE',
     'QUESTION_APPROVE',
     'TAXONOMY_WRITE',
+    'TAXONOMY_ACTIVATE',
     'SCHEDULE_READ',
     'SCHEDULE_WRITE',
     'ATTENDANCE_WRITE',
@@ -91,6 +94,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   // Other modules retain the Manager read-only policy; quiz is the verified BE exception.
   MANAGER: [
+    'TAXONOMY_ACTIVATE',
     'BANK_AUTHOR',
     'BANK_REVIEW',
     'COURSE_READ',

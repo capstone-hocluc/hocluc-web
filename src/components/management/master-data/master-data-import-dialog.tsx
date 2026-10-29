@@ -8,37 +8,10 @@ import {
   importWorkbook,
   MasterDataImportRejected,
   type ImportResult,
-  type ValidationItem,
 } from '../../../services/masterDataService'
 import { crudError } from '../crud/crud-errors'
 import { TABLE_TABS } from './master-data-labels'
-
-function ReportTable({ items, tone }: { items: ValidationItem[]; tone: 'danger' | 'warning' }) {
-  return (
-    <div className="max-h-64 overflow-auto rounded-lg border border-card-border">
-      <table className="w-full text-left text-sm">
-        <thead className="sticky top-0 bg-background-gray-secondary text-xs text-text-tertiary">
-          <tr>
-            <th className="px-3 py-2 font-medium">Sheet</th>
-            <th className="px-3 py-2 font-medium">Dòng</th>
-            <th className="px-3 py-2 font-medium">Cột</th>
-            <th className="px-3 py-2 font-medium">Nội dung</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-card-border">
-          {items.map((item, index) => (
-            <tr key={index} className={tone === 'danger' ? 'text-danger' : 'text-text-primary'}>
-              <td className="px-3 py-2 whitespace-nowrap">{item.sheetName}</td>
-              <td className="px-3 py-2">{item.rowNumber || '—'}</td>
-              <td className="px-3 py-2 whitespace-nowrap">{item.columnName || '—'}</td>
-              <td className="px-3 py-2">{item.message}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
+import ReportTable from './master-data-report-table'
 
 /** Upload one subject's workbook; it becomes a DRAFT, or comes back with the backend's report. */
 export default function MasterDataImportDialog({

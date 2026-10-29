@@ -101,7 +101,7 @@ export function ManagementScreen({
         </>
       )
     case 'taxonomy':
-      return <MasterDataManagement title={title} reader={readOnly} />
+      return <MasterDataManagement title={title} reader={readOnly} role={role} />
     case 'categories':
       return <CategoryManagement readOnly={readOnly} />
     case 'exam-years':

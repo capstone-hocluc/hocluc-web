@@ -235,6 +235,10 @@ export async function getActiveContent(categoryId: string): Promise<MasterDataCo
   return { domains, patterns, skills, microSkills, mappings: [], errorCodes }
 }
 
+export function validateVersion(versionId: string): Promise<MasterDataReport> {
+  return requireData(`${versionPath(versionId)}/validation`, 'Không thể kiểm tra bản nháp.')
+}
+
 export function activateVersion(versionId: string): Promise<MasterDataVersion> {
   return requireData(
     `${versionPath(versionId)}/activate`,
