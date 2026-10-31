@@ -2,25 +2,42 @@ import { useCallback, useState } from 'react'
 import type { AiExamDraft, AiExamQuestion } from '../services/aiAssistantService'
 
 const BLANK_PARTS = [
-  'Phần 1. Tiếng Việt',
-  'Phần 2. Toán học',
-  'Phần 3. Giải quyết vấn đề',
+  { title: 'Tiếng Việt', code: '1.1', parentTitle: 'Phần 1. Sử dụng ngôn ngữ' },
+  { title: 'Tiếng Anh', code: '1.2', parentTitle: 'Phần 1. Sử dụng ngôn ngữ' },
+  { title: 'Phần 2. Toán học', code: null, parentTitle: null },
+  { title: 'Logic, phân tích số liệu', code: '3.1', parentTitle: 'Phần 3. Tư duy khoa học' },
+  { title: 'Suy luận khoa học', code: '3.2', parentTitle: 'Phần 3. Tư duy khoa học' },
 ]
 
 export function createBlankExamDraft(): AiExamDraft {
   return {
     id: crypto.randomUUID(),
     title: 'Đề thi mới',
-    durationMinutes: 90,
+    durationMinutes: 150,
     matrix: null,
-    parts: BLANK_PARTS.map((title) => ({
+    parts: BLANK_PARTS.map((part) => ({
       id: crypto.randomUUID(),
-      title,
+      ...part,
       targetCount: null,
     })),
     groups: [],
     questions: [],
   }
+}
+
+/** Numbers questions by part, so a part that starts at 61 keeps its 61–90 range on the paper. */
+export function questionNumbers(draft: AiExamDraft): Map<string, number> {
+  const numbers = new Map<string, number>()
+  let offset = 0
+  for (const part of draft.parts) {
+    const questions = draft.questions.filter((question) => question.partId === part.id)
+    questions.forEach((question, index) => numbers.set(question.id, offset + index + 1))
+    offset += part.targetCount ?? questions.length
+  }
+  draft.questions.forEach((question, index) => {
+    if (!numbers.has(question.id)) numbers.set(question.id, index + 1)
+  })
+  return numbers
 }
 
 export function useExamDraft(initial?: AiExamDraft) {

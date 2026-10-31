@@ -103,6 +103,10 @@ export interface AiExamQuestion {
 export interface AiExamPart {
   id: string
   title: string
+  /** The larger section this part belongs to; consecutive parts share a paper heading. */
+  parentTitle?: string | null
+  /** The "1.1" style label printed before a sub-part heading. */
+  code?: string | null
   /** Matrix target; only read while the draft has a matrix. */
   targetCount: number | null
 }

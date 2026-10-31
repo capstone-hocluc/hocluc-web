@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AiAssistantMessage } from '../../../services/aiAssistantService'
 import { Check, Copy } from '../../console/icons'
-import Notice from '../../console/notice'
 import ScrollArea from '../../ui/ScrollArea'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import AssistantMessage from './AssistantMessage'
@@ -10,13 +9,11 @@ import AiOrb from './AiOrb'
 export default function MessageThread({
   messages,
   pending,
-  demo = false,
   onRegenerate,
   onJumpToQuestion,
 }: {
   messages: readonly AiAssistantMessage[]
   pending: boolean
-  demo?: boolean
   onRegenerate: () => void
   onJumpToQuestion: (questionId: string) => void
 }) {
@@ -33,11 +30,6 @@ export default function MessageThread({
       className="w-full flex-1 min-h-0 pt-4 pb-10 [scrollbar-gutter:stable_both-edges] [mask-image:linear-gradient(to_bottom,transparent_0px,#000_24px,#000_calc(100%_-_32px),transparent_100%)]"
     >
       <div className="mx-auto w-full max-w-[960px] space-y-7 px-4">
-        {demo && (
-          <Notice tone="info">
-            Bản xem trước giao diện · hội thoại và đề dưới đây là dữ liệu mẫu.
-          </Notice>
-        )}
         {messages.map((message) =>
           message.role === 'user' ? (
             <UserMessage key={message.id} message={message} />

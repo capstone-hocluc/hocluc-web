@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import { useAiChat } from '../../../hooks/useAiChat'
-import { useExamDraft } from '../../../hooks/useExamDraft'
+import { questionNumbers, useExamDraft } from '../../../hooks/useExamDraft'
 import ThemeProvider from '../../common/ThemeProvider'
-import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
 import ChatPanel from './ChatPanel'
 import ExamOutline from './ExamOutline'
@@ -80,10 +79,7 @@ export default function AiAssistantScreen({
     []
   )
 
-  const numberOf = useMemo(
-    () => new Map(exam.draft.questions.map((question, index) => [question.id, index + 1])),
-    [exam.draft.questions]
-  )
+  const numberOf = useMemo(() => questionNumbers(exam.draft), [exam.draft])
 
   function jumpToQuestion(id: string) {
     setChatSheet(false)
@@ -128,7 +124,6 @@ export default function AiAssistantScreen({
 
   const chatPanelProps = {
     messages: chat.messages,
-    demo: chat.demo,
     mode: chat.mode,
     value: chat.value,
     pending: chat.pending,
@@ -170,11 +165,6 @@ export default function AiAssistantScreen({
 
           <main className="relative min-h-0 flex-1 overflow-y-auto bg-background-gray-secondary">
             <div className="mx-auto w-full max-w-[794px] px-3 py-5 sm:px-6 sm:py-8">
-              {chat.demo && (
-                <Notice tone="info" className="mb-4">
-                  Bản xem trước giao diện · các câu trên đề là dữ liệu mẫu.
-                </Notice>
-              )}
               <ExamPaper
                 draft={exam.draft}
                 numberOf={numberOf}

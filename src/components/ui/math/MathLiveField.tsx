@@ -68,6 +68,13 @@ export default function MathLiveField({
       }
       field.setAttribute('aria-label', initial.current.ariaLabel)
       field.setAttribute('placeholder', '\\text{Nhập công thức…}')
+      // The dialog's wrapper draws the single focus border; MathLive's own border and focus
+      // outline would sit inside it as a second ring.
+      field.style.border = 'none'
+      field.style.outline = 'none'
+      field.style.background = 'transparent'
+      field.style.borderRadius = '0'
+      field.style.fontSize = '1.25rem'
       field.style.minHeight = '2.75rem'
       field.setValue(initial.current.value)
       const current = field
@@ -98,7 +105,7 @@ export default function MathLiveField({
   }, [handleRef])
 
   return (
-    <div className="relative">
+    <div className="relative [&_math-field::part(menu-toggle)]:hidden">
       <div ref={host} className="min-h-11" />
       {!ready && (
         <div

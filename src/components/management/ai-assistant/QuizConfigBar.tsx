@@ -3,6 +3,7 @@ import { cn } from '../../../lib/cn'
 import SelectField from '../../console/select-field'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import { getCategories } from '../../../services/categoryService'
+import { getActiveCategories } from '../../../services/masterDataService'
 import { getBankSources } from '../../../services/questionBankService'
 import type { AiAssistantMode, AiDifficulty } from '../../../services/aiAssistantService'
 
@@ -49,12 +50,16 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
+const isGeneralSubject = (option: { label: string }) =>
+  option.label.trim().toLocaleLowerCase('vi') === 'chung'
+
 export default function QuizConfigBar({ mode }: { mode: Exclude<AiAssistantMode, 'ask'> }) {
   const [subjectsLoading, setSubjectsLoading] = useState(true)
   const [papersLoading, setPapersLoading] = useState(true)
   const [subjects, setSubjects] = useState(FALLBACK_SUBJECTS)
+  const [activeSubjectIds, setActiveSubjectIds] = useState<string[]>([])
   const [papers, setPapers] = useState(FALLBACK_PAPERS)
-  const [subject, setSubject] = useState(FALLBACK_SUBJECTS[0].id)
+  const [subject, setSubject] = useState('')
   const [paper, setPaper] = useState(FALLBACK_PAPERS[0].id)
   const [count, setCount] = useState(mode === 'compose' ? '5' : '20')
   const [difficulty, setDifficulty] = useState<AiDifficulty>('TB')
@@ -63,13 +68,14 @@ export default function QuizConfigBar({ mode }: { mode: Exclude<AiAssistantMode,
   useEffect(() => {
     if (mode !== 'compose') return
     let live = true
-    void getCategories()
-      .then((categories) => {
+    void Promise.all([getCategories(), getActiveCategories().catch(() => [])])
+      .then(([categories, active]) => {
         if (!live) return
         const options = categories
           .filter((category) => category.active)
           .map((category) => ({ id: category.id, label: category.name }))
         if (options.length > 0) setSubjects(options)
+        setActiveSubjectIds(active.map((category) => category.categoryId))
       })
       .catch(() => undefined)
       .finally(() => {
@@ -101,7 +107,13 @@ export default function QuizConfigBar({ mode }: { mode: Exclude<AiAssistantMode,
     }
   }, [mode])
 
-  const subjectValue = subjects.some((option) => option.id === subject) ? subject : (subjects[0]?.id ?? '')
+  const activeIds = new Set(activeSubjectIds)
+  const defaultSubject =
+    subjects.find((option) => activeIds.has(option.id) && !isGeneralSubject(option)) ??
+    subjects.find((option) => !isGeneralSubject(option))
+  const subjectValue = subjects.some((option) => option.id === subject)
+    ? subject
+    : (defaultSubject?.id ?? '')
   const paperValue = papers.some((option) => option.id === paper) ? paper : (papers[0]?.id ?? '')
   const counts = mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS
   const countValue = counts.some((option) => option.id === count) ? count : counts[0].id

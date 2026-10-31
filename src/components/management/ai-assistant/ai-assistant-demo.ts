@@ -18,12 +18,38 @@ const options = (texts: string[], correct: string): AiExamOption[] =>
 export const DEMO_EXAM_DRAFT: AiExamDraft = {
   id: 'demo-exam',
   title: 'Đề thi mới',
-  durationMinutes: 90,
-  matrix: { id: 'demo-matrix', name: 'Ma trận ĐGNL 2026' },
+  durationMinutes: 150,
+  matrix: { id: 'demo-matrix', name: 'Ma trận ĐGNL 2025' },
   parts: [
-    { id: 'demo-part-vn', title: 'Phần 1. Tiếng Việt', targetCount: 30 },
+    {
+      id: 'demo-part-vn',
+      title: 'Tiếng Việt',
+      code: '1.1',
+      parentTitle: 'Phần 1. Sử dụng ngôn ngữ',
+      targetCount: 30,
+    },
+    {
+      id: 'demo-part-en',
+      title: 'Tiếng Anh',
+      code: '1.2',
+      parentTitle: 'Phần 1. Sử dụng ngôn ngữ',
+      targetCount: 30,
+    },
     { id: 'demo-part-math', title: 'Phần 2. Toán học', targetCount: 30 },
-    { id: 'demo-part-problem', title: 'Phần 3. Giải quyết vấn đề', targetCount: 10 },
+    {
+      id: 'demo-part-problem',
+      title: 'Logic, phân tích số liệu',
+      code: '3.1',
+      parentTitle: 'Phần 3. Tư duy khoa học',
+      targetCount: 12,
+    },
+    {
+      id: 'demo-part-science',
+      title: 'Suy luận khoa học',
+      code: '3.2',
+      parentTitle: 'Phần 3. Tư duy khoa học',
+      targetCount: 18,
+    },
   ],
   groups: [
     {
