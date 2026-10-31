@@ -9,14 +9,12 @@ import { ComingSoonPage, ForbiddenPage, NotFoundPage } from '../console/access-s
 import AdminOverview from '../admin/AdminOverview'
 import UserManagement from '../admin/UserManagement'
 import ManagementCourseList from './ManagementCourseList'
-import CategoryManagement from './crud/category-management'
 import MasterDataManagement from './master-data/master-data-management'
 import ExamYearManagement from './crud/exam-year-management'
 import OrderManagement from './crud/order-management'
 import EnrollmentManagement from './crud/enrollment-management'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
-import PageHeading from '../console/page-heading'
 import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
@@ -26,7 +24,14 @@ import {
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
 import QuestionBankScreen from './question-bank/QuestionBankScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
-import { buildNavSections, canWrite, findNavItem, isKnownPage, navLabel } from '../../lib/console-nav'
+import {
+  buildNavSections,
+  canAccessPage,
+  canWrite,
+  findNavItem,
+  isKnownPage,
+  navLabel,
+} from '../../lib/console-nav'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
 const AttendanceManagementPage = lazy(
@@ -78,36 +83,26 @@ export function ManagementScreen({
         </>
       )
     case 'users':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <UserManagement audience="staff" readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
-        </>
-      )
+      return <UserManagement audience="staff" title={title} readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
     case 'learners':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <UserManagement audience="students" readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
-        </>
-      )
+      return <UserManagement audience="students" title={title} readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
     case 'audit-log':
       return <AdminAuditLog />
     case 'question-bank':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <QuestionBankScreen readOnly={readOnly} />
-        </>
-      )
+      return <QuestionBankScreen title={title} readOnly={readOnly} />
     case 'taxonomy':
       return <MasterDataManagement title={title} reader={readOnly} role={role} />
-    case 'categories':
-      return <CategoryManagement readOnly={readOnly} />
     case 'exam-years':
       return <ExamYearManagement readOnly={readOnly} title={title} />
+    // The old subject page is the same merged screen; its URL keeps working.
+    case 'categories':
     case 'courses':
-      return <ManagementCourseList readOnly={readOnly} title={title} />
+      return (
+        <ManagementCourseList
+          readOnly={readOnly}
+          title={navLabel(role, findNavItem(role, 'courses') ?? item)}
+        />
+      )
     case 'schedules':
       return (
         <Suspense fallback={<SchedulingPageFallback title={title} />}>
@@ -123,19 +118,11 @@ export function ManagementScreen({
     case 'students':
       return <MentorStudents />
     case 'enrollments':
-      return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          <EnrollmentManagement readOnly={readOnly} />
-        </>
-      )
+      return <EnrollmentManagement readOnly={readOnly} title={title} />
     case 'orders':
       return (
-        <>
-          <PageHeading title={title} readOnly={readOnly} />
-          {/* Confirming a payment by hand stays administrator-only, as on the backend. */}
-          <OrderManagement readOnly={readOnly} canConfirm={role === 'ADMINISTRATOR'} />
-        </>
+        // Confirming a payment by hand stays administrator-only, as on the backend.
+        <OrderManagement readOnly={readOnly} canConfirm={role === 'ADMINISTRATOR'} title={title} />
       )
     case 'solution-queue':
       return <MentorSolutionQueue />
@@ -183,6 +170,7 @@ function ManagementDashboard({
   conversationId,
   onSelectConversation,
 }: ManagementDashboardProps) {
+  // The assistant is its own full-screen workspace, outside the console chrome.
   return (
     <ConsoleShell
       sections={buildNavSections(role)}

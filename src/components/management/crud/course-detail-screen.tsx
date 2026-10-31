@@ -17,6 +17,7 @@ import ScheduleResourceState from '../../console/schedule/schedule-resource-stat
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import { ApiError } from '../../../lib/api'
+import { formatDuration } from '../../../lib/courseFormat'
 import {
   getAdminCourse,
   mutateCourse,
@@ -28,11 +29,13 @@ import { getContentSections } from '../../../services/contentSectionService'
 import type { ChapterAdmin } from '../../../services/chapterAdminService'
 import CoursePhasesPanel from './course-phases-panel'
 import CourseSectionsPanel from './course-sections-panel'
+import { assignSectionPhase } from '../../../services/courseAdminService'
 import CourseInstructorsPanel from './course-instructors-panel'
 import CourseContentPanel from './course-content-panel'
 import CourseOutcomesPanel from './course-outcomes-panel'
 import ContentSectionsPanel from './content-sections-panel'
 import CourseEditorDialog from './course-editor-dialog'
+import CourseCover from './course-cover'
 import CourseRejectDialog from './course-reject-dialog'
 import CourseStepper from './course-stepper'
 import { courseSteps, firstBlocker, type CourseStep, type CourseStepTab } from './course-steps'
@@ -46,6 +49,7 @@ import {
 } from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
 import { ACTION_COPY, runReviewAction, type ReviewAction } from './course-review-actions'
+import { examSessionLabel, formatExamDate } from './exam-year-labels'
 
 const dateTime = (value: string | null) =>
   value
@@ -280,18 +284,25 @@ export default function CourseDetailScreen({
         {course && (
           <>
             <Panel className="overflow-hidden">
-              <DetailHeader
-                title={course.title}
-                subtitle={[
-                  COURSE_TYPE_LABELS[course.courseType],
-                  course.categoryName ?? 'Chưa phân loại',
-                  course.paid
-                    ? `${new Intl.NumberFormat('vi-VN').format(course.price ?? 0)} đ`
-                    : 'Miễn phí',
-                ].join(' · ')}
-                actions={
-                  <>
-                    {course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' ? (
+              <div className="flex min-w-0 items-start gap-4">
+                <CourseCover
+                  imageUrl={course.imageUrl}
+                  title={course.title}
+                  categoryName={course.categoryName}
+                  className="w-24 shrink-0 text-2xl sm:w-28 sm:text-3xl"
+                />
+                <DetailHeader
+                  className="min-w-0 flex-1"
+                  title={course.title}
+                  subtitle={[
+                    COURSE_TYPE_LABELS[course.courseType],
+                    course.categoryName ?? 'Chưa phân loại',
+                    course.paid
+                      ? `${new Intl.NumberFormat('vi-VN').format(course.price ?? 0)} đ`
+                      : 'Miễn phí',
+                  ].join(' · ')}
+                  chips={
+                    course.status !== 'PUBLISHED' && course.reviewState !== 'NONE' ? (
                       <Status tone={REVIEW_STATE_TONES[course.reviewState]}>
                         {REVIEW_STATE_LABELS[course.reviewState]}
                       </Status>
@@ -299,17 +310,32 @@ export default function CourseDetailScreen({
                       <Status tone={COURSE_STATUS_TONES[course.status]}>
                         {COURSE_STATUS_LABELS[course.status]}
                       </Status>
-                    )}
-                    {primaryActions(course)}
-                  </>
-                }
-              />
-              {canAct && (
+                    )
+                  }
+                  actions={
+                    <>
+                      {!readOnly && (
+                        <Button
+                          appearance="outline"
+                          onClick={() => setEditing(true)}
+                          disabled={busy || !categories.data}
+                        >
+                          <Pencil size={16} />
+                          Sửa thông tin
+                        </Button>
+                      )}
+                      {primaryActions(course)}
+                    </>
+                  }
+                />
+              </div>
+              {/* A live course has finished the route; keep the steps only while something is left. */}
+              {canAct && course.status !== 'PUBLISHED' && (
                 <div className="mt-5 border-t border-card-border pt-3">
                   <CourseStepper steps={steps} onGo={goTo} />
                 </div>
               )}
-              {statusLine && (
+              {course.status !== 'PUBLISHED' && statusLine && (
                 <div
                   id={hint ? 'course-action-reason' : undefined}
                   className={cn(
@@ -325,6 +351,9 @@ export default function CourseDetailScreen({
                 </div>
               )}
             </Panel>
+            {course.status === 'PUBLISHED' && statusLine && (
+              <Notice tone="info">{statusLine.body}</Notice>
+            )}
 
             <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
               <ConsoleTabsList aria-label="Nội dung khóa học">
@@ -335,46 +364,43 @@ export default function CourseDetailScreen({
               </ConsoleTabsList>
 
               <ConsoleTabsContent value="overview">
-                <Panel
-                  title="Thông tin khóa"
-                  action={
-                    readOnly ? undefined : (
-                      <Button
-                        appearance="outline"
-                        onClick={() => setEditing(true)}
-                        disabled={busy || !categories.data}
-                      >
-                        <Pencil size={16} />
-                        Sửa thông tin
-                      </Button>
-                    )
-                  }
-                >
-                  <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                <Panel title="Thông tin khóa">
+                  <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
                     <div>
-                      <dt className="text-text-tertiary">Loại khóa</dt>
+                      <dt className="text-text-tertiary">Thời lượng dự kiến</dt>
                       <dd className="mt-1 font-medium text-text-primary">
-                        {COURSE_TYPE_LABELS[course.courseType]}
+                        {course.estimatedDurationMinutes
+                          ? formatDuration(course.estimatedDurationMinutes * 60)
+                          : 'Chưa nhập'}
                       </dd>
                     </div>
-                    <div>
-                      <dt className="text-text-tertiary">Môn học</dt>
-                      <dd className="mt-1 font-medium text-text-primary">
-                        {course.categoryName ?? 'Chưa phân loại'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-text-tertiary">Học phí</dt>
-                      <dd className="mt-1 font-medium text-text-primary">
-                        {course.paid
-                          ? new Intl.NumberFormat('vi-VN').format(course.price ?? 0) + ' đ'
-                          : 'Miễn phí'}
-                      </dd>
-                    </div>
+                    {(course.examSession || course.examSessionDate) && (
+                      <div>
+                        <dt className="text-text-tertiary">Đợt thi</dt>
+                        <dd className="mt-1 font-medium text-text-primary">
+                          {course.examSession
+                            ? examSessionLabel(course.examSession)
+                            : formatExamDate(course.examSessionDate)}
+                        </dd>
+                      </div>
+                    )}
+                    {course.accessMode === 'DAYS_FROM_PURCHASE' && (
+                      <div>
+                        <dt className="text-text-tertiary">Hạn dùng</dt>
+                        <dd className="mt-1 font-medium text-text-primary">
+                          {course.accessDays} ngày kể từ khi mua
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                   {course.shortIntroduction && (
-                    <p className="mt-4 max-w-prose text-sm text-text-tertiary">
+                    <p className="mt-4 max-w-prose text-sm text-text-secondary">
                       {course.shortIntroduction}
+                    </p>
+                  )}
+                  {course.description && course.description !== course.shortIntroduction && (
+                    <p className="mt-3 max-w-prose whitespace-pre-line text-sm text-text-secondary">
+                      {course.description}
                     </p>
                   )}
                 </Panel>
@@ -412,8 +438,10 @@ export default function CourseDetailScreen({
                 )}
                 <CourseContentPanel
                   courseId={course.id}
+                  categoryId={course.categoryId}
                   readOnly={readOnly}
                   title="Chương và bài học"
+                  publishedByDefault={course.status !== 'DRAFT'}
                   sections={sectionsResource.data ?? []}
                   onChapters={onChapters}
                   onChange={reloadContent}
@@ -423,6 +451,7 @@ export default function CourseDetailScreen({
               {isMain && (
                 <ConsoleTabsContent value="gifts">
                   <CourseSectionsPanel
+                    assignPhase={(linkId, phaseId) => run(() => assignSectionPhase(id, linkId, phaseId), 'Đã lưu thay đổi.')}
                     course={course}
                     readOnly={readOnly}
                     busy={busy}

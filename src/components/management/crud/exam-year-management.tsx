@@ -184,7 +184,6 @@ export default function ExamYearManagement({
     <section className="flex flex-col gap-5">
       <PageHeading
         title={title}
-        subtitle="Mỗi năm thi gồm các đợt thi (Đợt 1, Đợt 2). Khóa trọn bộ chọn đợt thi để lấy ngày thi."
         readOnly={readOnly}
         action={
           !readOnly && (
@@ -199,7 +198,7 @@ export default function ExamYearManagement({
               disabled={busy || resource.status !== 'ready'}
             >
               <Plus size={16} />
-              {managementTab === 'sessions' && selectedYear ? 'Thêm đợt thi' : 'Tạo năm thi'}
+              {managementTab === 'sessions' && selectedYear ? 'Thêm đợt thi' : 'Thêm năm thi'}
             </Button>
           )
         }

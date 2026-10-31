@@ -38,7 +38,8 @@ function TeacherDashboard({
   const assignmentCourseId = page.startsWith('assignments-')
     ? page.replace('assignments-', '')
     : null
-  const detailCourseId = quizCourseId || assignmentCourseId
+  const linkedCourseId = page === 'courses' ? new URLSearchParams(window.location.search).get('courseId') : null
+  const detailCourseId = quizCourseId || assignmentCourseId || linkedCourseId
   const [notice, setNotice] = useState('')
   const [view, setView] = useState(detailCourseId ? 'courses' : page)
   const [selectedCourse, setSelectedCourse] = useState(() =>

@@ -3,6 +3,7 @@ import type { Category } from '../../src/services/categoryService'
 import type { CourseAdmin } from '../../src/services/courseAdminService'
 import type { ChapterAdmin } from '../../src/services/chapterAdminService'
 import type { LessonAdmin } from '../../src/services/lessonAdminService'
+import type { LessonLabelsResponse } from '../../src/types/lessonLabels'
 import type {
   OrderAdminDetail,
   OrderPayment,
@@ -225,11 +226,13 @@ const sessionRecording = (
 const courseDetail = {
   id: IDS.main,
   title: 'MAIN Toán',
+  giftCount: 0,
   phases: [
     {
       id: IDS.phase1,
       name: 'Nền tảng',
       sequence: 1,
+      gifts: [],
       sections: [{ sectionCourseId: IDS.section, title: 'SECTION Đại số', sequence: 1, chapters: [] }],
     },
   ],
@@ -508,7 +511,14 @@ export async function installCrudFixture(
           title: child.title,
           status: child.status,
           sequence: current.sections.length + 1,
+          phaseId: (body.phaseId as string | null | undefined) ?? null,
         })
+        return answer(current)
+      }
+      if (parts[1] === 'sections' && parts[3] === 'phase' && method === 'PUT') {
+        const section = current.sections.find((item) => item.id === parts[2])
+        if (!section) return answer(null, 404, 'Gift link not found.')
+        section.phaseId = (body.phaseId as string | null | undefined) ?? null
         return answer(current)
       }
       if (parts[1] === 'instructors' && method === 'PUT') {
@@ -666,6 +676,35 @@ export async function installCrudFixture(
       return answer([])
     if (path.startsWith('/api/v1/courses/') && path.endsWith('/content-sections') && method === 'GET')
       return answer([])
+    // The content panel asks whether the actor labels this subject and reads every lesson's labels.
+    // These specs seed lessons with no labels, so both answers keep each row exactly as stored.
+    if (path === '/api/v1/question-bank/me/scopes' && method === 'GET')
+      return answer({ administrator: false, authorSubjectIds: [], reviewerSubjectIds: [] })
+    if (path.startsWith('/api/v1/authoring/lessons/') && path.endsWith('/labels') && method === 'GET') {
+      const lessonId = path.split('/')[4]
+      const chapterId = Object.keys(state.lessons).find((key) =>
+        state.lessons[key].some((item) => item.id === lessonId)
+      )
+      const chapter = state.chapters.find((item) => item.id === chapterId)
+      const lesson = chapterId ? state.lessons[chapterId].find((item) => item.id === lessonId) : undefined
+      return answer({
+        lessonId,
+        lessonTitle: lesson?.title ?? '',
+        chapterId: chapterId ?? '',
+        chapterTitle: chapter?.title ?? '',
+        subjectCategoryId: null,
+        subjectName: null,
+        labelSetVersion: null,
+        chapterDomainCodes: chapter?.domainCodes ?? [],
+        skills: [],
+        videos: [],
+        markers: [],
+        microSkillCodes: [],
+        domainCodes: [],
+        patternCodes: [],
+        prerequisiteSkillCodes: [],
+      } satisfies LessonLabelsResponse)
+    }
     if (path.startsWith('/api/v1/courses/') && path.includes('/chapters')) {
       const parts = path.split('/').slice(4)
       const courseId = parts[0]
@@ -683,6 +722,7 @@ export async function installCrudFixture(
             sectionId: null,
             sectionTitle: null,
             updatedAt: STAMP,
+            domainCodes: [],
           }
           state.chapters.push(chapter)
           return answer(chapter)

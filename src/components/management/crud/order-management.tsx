@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
+import PageHeading from '../../console/page-heading'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
@@ -28,9 +29,11 @@ const LIST_KEY = 'admin-orders'
 export default function OrderManagement({
   readOnly = false,
   canConfirm = false,
+  title,
 }: {
   readOnly?: boolean
   canConfirm?: boolean
+  title: string
 }) {
   const [query, setQuery] = useState<OrderQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
@@ -139,11 +142,7 @@ export default function OrderManagement({
 
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">
-          Đơn của học viên, kèm mọi lần thanh toán và dấu vết xử lý.
-        </p>
-      </div>
+      <PageHeading title={title} readOnly={readOnly} />
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
         <FilterToolbar>
           <form

@@ -8,9 +8,15 @@ import { saveAdminChapter, type ChapterAdmin } from '../../../services/chapterAd
 import type { ContentSection } from '../../../services/contentSectionService'
 import { getFieldErrors } from '../../../lib/errors'
 import { crudError, unknownMutation } from './crud-errors'
+import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { getActiveCategories, getActiveContent } from '../../../services/masterDataService'
+import { Skeleton } from '../../tailgrids/core/skeleton'
+import { Checkbox } from '../../tailgrids/core/checkbox'
 
 interface Props {
   courseId: string
+  categoryId?: string | null
+  canLabel: boolean
   chapter: ChapterAdmin | null
   /** The course's content sections; the choice is hidden when it has none. */
   sections?: ContentSection[]
@@ -22,12 +28,20 @@ interface Props {
 
 export default function ChapterEditorDialog({
   courseId,
+  categoryId = null,
+  canLabel,
   chapter,
   sections = [],
   defaultSectionId = null,
   onClose,
   onSaved,
 }: Props) {
+  const [domainCodes, setDomainCodes] = useState<string[]>(chapter?.domainCodes ?? [])
+  const active = useScheduleResource(canLabel && categoryId ? `chapter-domains:${categoryId}` : null, async () => {
+    const categories = await getActiveCategories()
+    if (!categories.some((item) => item.categoryId === categoryId)) return null
+    return getActiveContent(categoryId!)
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -44,6 +58,7 @@ export default function ChapterEditorDialog({
       await saveAdminChapter(courseId, chapter, {
         title: String(data.get('title') ?? '').trim(),
         description: String(data.get('description') ?? '').trim() || null,
+        ...(active.data ? { domainCodes } : {}),
         // Only a course with sections shows the choice; without it the chapter is left where it is.
         ...(sections.length
           ? sectionId
@@ -75,7 +90,7 @@ export default function ChapterEditorDialog({
           <Button appearance="outline" onClick={onClose} disabled={busy}>
             {uncertain ? 'Đóng và kiểm tra' : 'Hủy'}
           </Button>
-          <Button type="submit" disabled={busy || uncertain}>
+          <Button type="submit" disabled={busy || uncertain || (categoryId != null && active.status === 'loading')}>
             {busy ? 'Đang lưu...' : 'Lưu chương'}
           </Button>
         </>
@@ -127,6 +142,40 @@ export default function ChapterEditorDialog({
             className={textareaControlClass}
           />
         </Field>
+        {canLabel && (
+          // A group, not a Field: a <label> around the checkboxes would give every box the same name.
+          <fieldset className="flex min-w-0 flex-col gap-2">
+            <legend className="mb-2 text-sm font-medium text-text-primary">Domain</legend>
+            {active.status === 'loading' ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-6 w-full" />)}
+              </div>
+            ) : active.status === 'error' ? (
+              <Notice tone="danger">{active.errorMessage}</Notice>
+            ) : active.data ? (
+              <div className="grid max-h-64 gap-x-4 gap-y-2.5 overflow-y-auto rounded-lg border border-card-border p-3 sm:grid-cols-2">
+                {active.data.domains.map((domain) => (
+                  <Checkbox
+                    key={domain.code}
+                    className="items-start text-sm text-text-primary"
+                    isSelected={domainCodes.includes(domain.code)}
+                    isDisabled={busy}
+                    onChange={(checked) =>
+                      setDomainCodes((codes) => checked ? [...codes, domain.code] : codes.filter((code) => code !== domain.code))
+                    }
+                  >
+                    <span className="min-w-0 break-words">
+                      <span className="mr-1.5 font-mono text-xs text-text-tertiary">{domain.code}</span>
+                      {domain.nameVi}
+                    </span>
+                  </Checkbox>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-text-tertiary">Môn này chưa có master data đang dùng.</p>
+            )}
+          </fieldset>
+        )}
         {Object.entries(fieldErrors).map(([field, message]) => (
           <p key={field} role="alert" className="text-sm text-danger">
             {field}: {message}

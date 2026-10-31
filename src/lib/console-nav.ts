@@ -74,6 +74,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, group: 'overview' },
   {
     page: 'categories',
+    tabOf: 'courses',
     label: 'Môn học',
     icon: Layers3,
     group: 'training',
@@ -99,7 +100,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   },
   {
     page: 'courses',
-    label: 'Khóa học',
+    label: 'Môn học và khóa học',
     labels: { TEACHER: 'Lớp của tôi' },
     icon: BookOpen,
     group: 'training',
