@@ -12,6 +12,7 @@ import {
   type BankLabelling,
   type BankSource,
 } from '../../../services/questionBankService'
+import { examRoundLabel } from './exam-rounds'
 import Button from '../../console/button'
 import ConfirmDialog from '../../console/confirm-dialog'
 import DataTable from '../../console/data-table'
@@ -129,7 +130,7 @@ export default function BankSourcesPanel({ readOnly, onFinished }: { readOnly: b
           <div className="min-w-40">
             <strong className="block font-medium text-text-primary">{row.original.title}</strong>
             <span className="mt-1 block text-xs text-text-tertiary">
-              {[row.original.year, row.original.round].filter(Boolean).join(' · ') || row.original.code}
+              {[row.original.year, row.original.round && examRoundLabel(row.original.round)].filter(Boolean).join(' · ') || row.original.code}
             </span>
           </div>
         ),

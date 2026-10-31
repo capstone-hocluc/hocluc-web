@@ -147,6 +147,7 @@ export interface BankQuestionQuery {
   partCode?: string
   domainCode?: string
   patternCode?: string
+  primarySkillCode?: string
   year?: number
   answerSource?: BankAnswerSource
   needsReview?: boolean

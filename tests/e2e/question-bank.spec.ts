@@ -130,6 +130,10 @@ async function install(page: Page, role: 'MANAGER' | 'TEACHER' | 'STAFF', source
     }
     return route.fulfill({ status: 404, json: { success: false, status: 404, message: 'unmatched' } })
   })
+  // A labelled question reads its subject's active label set (for the taxonomy links) and the lessons
+  // that skill teaches. Empty answers keep the label names the question itself already carries.
+  await page.route('**/api/v1/master-data/**', route => route.fulfill({ json: { success: true, status: 200, data: [] } }))
+  await page.route('**/api/v1/authoring/lessons/by-label**', route => route.fulfill({ json: { success: true, status: 200, data: [] } }))
   return { state, seen, relabelBody: () => relabelBody, upload: () => upload, retried: () => retried, streams: () => streams, labelled: () => labelled }
 }
 

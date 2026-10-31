@@ -22,8 +22,9 @@ import {
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
 import Notice from '../../console/notice'
+import PageHeading from '../../console/page-heading'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
-import { AlertTriangle, Eye, FileQuestion, ListTree } from '../../console/icons'
+import { AlertTriangle, Eye, FileQuestion, ListTree, Plus } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import Status from '../../console/status'
@@ -102,10 +103,13 @@ function SubjectFilter({
   )
 }
 
-export default function QuestionBankScreen({ readOnly = false }: { readOnly?: boolean }) {
+export default function QuestionBankScreen({ readOnly = false, title }: { readOnly?: boolean; title: string }) {
   const { profile } = useCurrentUser()
   const legacyReadOnly = readOnly || !profile || !can(profile.role, 'QUIZ_WRITE')
-  const [query, setQuery] = useState<BankQuestionQuery>({ page: 0, size: 20 })
+  const [tab, setTab] = useState('questions')
+  const [query, setQuery] = useState<BankQuestionQuery>(() => ({
+    page: 0, size: 20, primarySkillCode: new URLSearchParams(window.location.search).get('primarySkillCode') || undefined,
+  }))
   const [search, setSearch] = useState('')
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -175,17 +179,12 @@ export default function QuestionBankScreen({ readOnly = false }: { readOnly?: bo
     () => [
       {
         id: 'source',
-        header: 'Câu',
+        header: 'Đề',
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="min-w-28">
-            <strong className="block font-medium text-text-primary">
-              {examName(row.original)}
-            </strong>
-            <span className="mt-1 block truncate text-xs text-text-tertiary">
-              {row.original.sourceTitle}
-            </span>
-          </div>
+          <span className="block min-w-28 truncate font-medium text-text-primary">
+            {row.original.sourceTitle ?? examName(row.original)}
+          </span>
         ),
       },
       {
@@ -303,219 +302,239 @@ export default function QuestionBankScreen({ readOnly = false }: { readOnly?: bo
     ? stats.data?.bySubject.find((subject) => (subject.id ?? NO_SUBJECT) === query.subject)?.count ?? 0
     : total
   const moreFilterCount = Number(query.year !== undefined) + Number(Boolean(query.answerSource)) + Number(Boolean(query.mine))
-  const hasFilters = Boolean(search || query.q || query.subject || query.status || query.difficulty || query.patternCode || query.unlabelled || moreFilterCount)
+  const hasFilters = Boolean(search || query.q || query.subject || query.status || query.difficulty || query.patternCode || query.primarySkillCode || query.unlabelled || moreFilterCount)
 
-  if (editor) return <BankQuestionEditorScreen id={editor.id} onBack={() => { setEditor(null); refreshLists() }} />
+  if (editor)
+    return (
+      <>
+        <PageHeading title={title} readOnly={readOnly} />
+        <BankQuestionEditorScreen id={editor.id} onBack={() => { setEditor(null); refreshLists() }} />
+      </>
+    )
+
+  const canAuthor = Boolean(
+    !readOnly && scopes.data && (scopes.data.administrator || scopes.data.authorSubjectIds.length > 0)
+  )
+  // The primary action follows the active tab: write on "Câu hỏi", review the selection on "Chờ duyệt".
+  const headingAction =
+    tab === 'questions' && canAuthor ? (
+      <Button onClick={() => setEditor({ id: null })}>
+        <Plus size={16} />
+        Soạn câu
+      </Button>
+    ) : tab === 'review' && canReview ? (
+      <Button disabled={!selected.length || bulkBusy} onClick={bulkApprove}>Duyệt đã chọn</Button>
+    ) : undefined
 
   return (
-    <ConsoleTabs defaultValue="questions">
-      <ConsoleTabsList aria-label="Ngân hàng câu hỏi">
-        <ConsoleTabsTrigger value="questions">Câu hỏi</ConsoleTabsTrigger>
-        {canReview && <ConsoleTabsTrigger value="review">Chờ duyệt</ConsoleTabsTrigger>}
-        <ConsoleTabsTrigger value="sources">Đề đã nạp</ConsoleTabsTrigger>
-      </ConsoleTabsList>
+    <>
+      <PageHeading title={title} readOnly={readOnly} action={headingAction} />
+      <ConsoleTabs value={tab} onValueChange={setTab}>
+        <ConsoleTabsList aria-label="Ngân hàng câu hỏi">
+          <ConsoleTabsTrigger value="questions">Câu hỏi</ConsoleTabsTrigger>
+          {canReview && <ConsoleTabsTrigger value="review">Chờ duyệt</ConsoleTabsTrigger>}
+          <ConsoleTabsTrigger value="sources">Đề đã nạp</ConsoleTabsTrigger>
+        </ConsoleTabsList>
 
-      {canReview && (
-        <ConsoleTabsContent value="review">
-          <div className="flex justify-end">
-            <Button disabled={!selected.length || bulkBusy} onClick={bulkApprove}>Duyệt đã chọn</Button>
-          </div>
-          {bulkError && <Notice tone="danger">{bulkError}</Notice>}
-          {bulkResult && (
-            <div className="flex flex-col gap-2">
-              <Notice>Đã duyệt {number.format(bulkResult.approved.length)} câu.</Notice>
-              {bulkResult.skipped.map((item) => (
-                <Notice key={item.id} tone="warning">{item.id}: {item.reason}</Notice>
-              ))}
+        {canReview && (
+          <ConsoleTabsContent value="review">
+            {bulkError && <Notice tone="danger">{bulkError}</Notice>}
+            {bulkResult && (
+              <div className="flex flex-col gap-2">
+                <Notice>Đã duyệt {number.format(bulkResult.approved.length)} câu.</Notice>
+                {bulkResult.skipped.map((item) => (
+                  <Notice key={item.id} tone="warning">{item.id}: {item.reason}</Notice>
+                ))}
+              </div>
+            )}
+            <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+              <SubjectFilter
+                options={subjectOptions}
+                value={reviewQuery.subject ?? 'ALL'}
+                loading={stats.status === 'loading' || stats.status === 'idle'}
+                onChange={(value) => {
+                  setSelected([])
+                  setReviewQuery((old) => ({ ...old, subject: value === 'ALL' ? undefined : value, page: 0 }))
+                }}
+              />
+              <ScheduleResourceState skeleton="table" inset status={reviewList.status} errorMessage={reviewList.errorMessage} onRetry={reviewList.reload}>
+                <DataTable
+                  columns={reviewColumns}
+                  data={reviewList.data?.content ?? []}
+                  getRowKey={(row) => row.id}
+                  onRowClick={(row) => setSelectedId(row.id)}
+                  emptyMessage="Không có câu hỏi chờ duyệt."
+                />
+                <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
+                  <p className="m-0 text-sm text-text-tertiary">{number.format(reviewList.data?.totalElements ?? 0)} câu</p>
+                  {(reviewList.data?.totalPages ?? 0) > 1 && (
+                    <Pagination
+                      currentPage={(reviewQuery.page ?? 0) + 1}
+                      totalPages={reviewList.data?.totalPages ?? 1}
+                      onPageChange={(page) => {
+                        setSelected([])
+                        setReviewQuery((old) => ({ ...old, page: page - 1 }))
+                      }}
+                      sideLayout="icon"
+                    />
+                  )}
+                </div>
+              </ScheduleResourceState>
+            </section>
+          </ConsoleTabsContent>
+        )}
+
+        <ConsoleTabsContent value="sources">
+          <BankSourcesPanel
+            readOnly={legacyReadOnly}
+            onFinished={() => {
+              list.reload()
+              stats.reload()
+              patterns.reload()
+            }}
+          />
+        </ConsoleTabsContent>
+
+        <ConsoleTabsContent value="questions">
+          {stats.status === 'loading' || stats.status === 'idle' ? (
+            <StatsSkeleton />
+          ) : stats.data ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <StatCard
+                label="Tổng số câu"
+                value={number.format(subjectTotal)}
+                icon={FileQuestion}
+              />
+              <StatCard
+                label="Cần duyệt (toàn bộ)"
+                value={number.format(stats.data.needsReview)}
+                icon={AlertTriangle}
+                tone="warning"
+              />
+              <StatCard
+                label="Chưa gán nhãn (toàn bộ)"
+                value={number.format(stats.data.unlabelled)}
+                icon={ListTree}
+                tone="danger"
+              />
             </div>
-          )}
+          ) : null}
+
           <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
             <SubjectFilter
               options={subjectOptions}
-              value={reviewQuery.subject ?? 'ALL'}
+              value={query.subject ?? 'ALL'}
               loading={stats.status === 'loading' || stats.status === 'idle'}
-              onChange={(value) => {
-                setSelected([])
-                setReviewQuery((old) => ({ ...old, subject: value === 'ALL' ? undefined : value, page: 0 }))
-              }}
+              onChange={(value) => setQuery((old) => ({
+                ...old, subject: value === 'ALL' ? undefined : value, patternCode: undefined, unlabelled: undefined, page: 0,
+              }))}
             />
-            <ScheduleResourceState skeleton="table" inset status={reviewList.status} errorMessage={reviewList.errorMessage} onRetry={reviewList.reload}>
+            <FilterToolbar className="justify-start">
+              {query.primarySkillCode && <span className="text-sm text-text-primary">Kỹ năng chính: {query.primarySkillCode}</span>}
+              <form
+                className="w-full sm:w-48 xl:flex-1 xl:min-w-40"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  setQuery((old) => ({ ...old, q: search.trim() || undefined, page: 0 }))
+                }}
+              >
+                <SearchInput
+                  ariaLabel="Tìm trong nội dung câu hỏi"
+                  placeholder="Tìm trong nội dung... (Enter để tìm)"
+                  maxLength={100}
+                  value={search}
+                  onChange={setSearch}
+                  className="sm:max-w-none"
+                />
+              </form>
+              <FilterGroup>
+                <FilterSelect ariaLabel="Lọc theo trạng thái" className="w-36 sm:w-36" value={query.status ?? 'ALL'} onChange={value => setQuery(old => ({ ...old, status: value === 'ALL' ? undefined : value as BankQuestionStatus, page: 0 }))} options={[{ id: 'ALL', label: 'Mọi trạng thái' }, ...Object.entries(BANK_STATUS_LABELS).map(([id, label]) => ({ id, label }))]} />
+                <FilterSelect
+                  ariaLabel="Lọc theo dạng câu"
+                  className="w-36 sm:w-40"
+                  value={query.unlabelled ? 'UNLABELLED' : query.patternCode ?? 'ALL'}
+                  disabled={!query.subject || patterns.status !== 'ready'}
+                  onChange={(value) => setQuery((old) => ({
+                    ...old,
+                    patternCode: value === 'ALL' || value === 'UNLABELLED' ? undefined : value,
+                    unlabelled: value === 'UNLABELLED' || undefined,
+                    page: 0,
+                  }))}
+                  options={[
+                    { id: 'ALL', label: 'Tất cả dạng câu' },
+                    { id: 'UNLABELLED', label: 'Chưa gán nhãn' },
+                    ...patternOptions.map((p) => ({ id: p.code, label: p.nameVi })),
+                  ]}
+                />
+                <FilterSelect ariaLabel="Lọc theo độ khó" className="w-36 sm:w-36" value={query.difficulty ?? 'ALL'} onChange={value => setQuery(old => ({ ...old, difficulty: value === 'ALL' ? undefined : value as BankDifficulty, page: 0 }))} options={[{ id: 'ALL', label: 'Mọi độ khó' }, ...Object.entries(BANK_DIFFICULTY_LABELS).map(([id, label]) => ({ id, label }))]} />
+                <Button appearance="outline" size="sm" aria-label={moreFilterCount ? `Bộ lọc khác (${moreFilterCount})` : 'Bộ lọc khác'} aria-expanded={moreFiltersOpen} aria-controls="bank-more-filters" onClick={() => setMoreFiltersOpen((open) => !open)}>
+                  Bộ lọc khác{moreFilterCount > 0 && <span className="rounded-full bg-background-gray-secondary px-1.5 text-xs">{moreFilterCount}</span>}
+                </Button>
+                {hasFilters && <Button appearance="ghost" size="sm" onClick={() => { setSearch(''); setQuery({ page: 0, size: 20 }) }}>Xóa bộ lọc</Button>}
+              </FilterGroup>
+            </FilterToolbar>
+            {moreFiltersOpen && <div id="bank-more-filters" className="flex flex-wrap gap-2 border-b border-card-border px-4 py-3">
+              <FilterSelect
+                ariaLabel="Lọc theo năm"
+                value={query.year === undefined ? 'ALL' : String(query.year)}
+                disabled={stats.status !== 'ready'}
+                className="w-36 sm:w-36"
+                onChange={(value) => setQuery((old) => ({ ...old, year: value === 'ALL' ? undefined : Number(value), page: 0 }))}
+                options={[{ id: 'ALL', label: 'Tất cả năm' }, ...years.map((year) => ({ id: year, label: year }))]}
+              />
+              <FilterSelect
+                ariaLabel="Lọc theo nguồn đáp án"
+                value={query.answerSource ?? 'ALL'}
+                onChange={(value) => setQuery((old) => ({ ...old, answerSource: value === 'ALL' ? undefined : value as BankAnswerSource, page: 0 }))}
+                options={[{ id: 'ALL', label: 'Mọi nguồn đáp án' }, ...BANK_ANSWER_SOURCES.map((id) => ({ id, label: ANSWER_SOURCE_LABELS[id] }))]}
+              />
+              <FilterSelect ariaLabel="Lọc câu của tôi" value={query.mine ? 'MINE' : 'ALL'} onChange={value => setQuery(old => ({ ...old, mine: value === 'MINE' ? true : undefined, page: 0 }))} options={[{ id: 'ALL', label: 'Mọi tác giả' }, { id: 'MINE', label: 'Câu của tôi' }]} />
+            </div>}
+            <ScheduleResourceState
+              skeleton="table"
+              inset
+              status={list.status}
+              errorMessage={list.errorMessage}
+              onRetry={list.reload}
+            >
               <DataTable
-                columns={reviewColumns}
-                data={reviewList.data?.content ?? []}
+                columns={columns}
+                data={list.data?.content ?? []}
                 getRowKey={(row) => row.id}
                 onRowClick={(row) => setSelectedId(row.id)}
-                emptyMessage="Không có câu hỏi chờ duyệt."
+                emptyMessage={
+                  total === 0 ? 'Ngân hàng chưa có câu hỏi nào.' : 'Không có câu hỏi phù hợp.'
+                }
               />
               <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
-                <p className="m-0 text-sm text-text-tertiary">{number.format(reviewList.data?.totalElements ?? 0)} câu</p>
-                {(reviewList.data?.totalPages ?? 0) > 1 && (
+                <p className="m-0 text-sm text-text-tertiary">
+                  {number.format(list.data?.totalElements ?? 0)} câu
+                </p>
+                {(list.data?.totalPages ?? 0) > 1 && (
                   <Pagination
-                    currentPage={(reviewQuery.page ?? 0) + 1}
-                    totalPages={reviewList.data?.totalPages ?? 1}
-                    onPageChange={(page) => {
-                      setSelected([])
-                      setReviewQuery((old) => ({ ...old, page: page - 1 }))
-                    }}
+                    currentPage={(query.page ?? 0) + 1}
+                    totalPages={list.data?.totalPages ?? 1}
+                    onPageChange={(page) => setQuery((old) => ({ ...old, page: page - 1 }))}
                     sideLayout="icon"
                   />
                 )}
               </div>
             </ScheduleResourceState>
           </section>
+
         </ConsoleTabsContent>
-      )}
-
-      <ConsoleTabsContent value="sources">
-        <BankSourcesPanel
-          readOnly={legacyReadOnly}
-          onFinished={() => {
-            list.reload()
-            stats.reload()
-            patterns.reload()
-          }}
-        />
-      </ConsoleTabsContent>
-
-      <ConsoleTabsContent value="questions">
-        {!readOnly && scopes.data && (scopes.data.administrator || scopes.data.authorSubjectIds.length > 0) && <div className="flex justify-end"><Button onClick={() => setEditor({ id: null })}>Soạn câu</Button></div>}
-        {stats.status === 'loading' || stats.status === 'idle' ? (
-          <StatsSkeleton />
-        ) : stats.data ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <StatCard
-              label="Tổng số câu"
-              value={number.format(subjectTotal)}
-              icon={FileQuestion}
-            />
-            <StatCard
-              label="Cần duyệt (toàn bộ)"
-              value={number.format(stats.data.needsReview)}
-              icon={AlertTriangle}
-              tone="warning"
-            />
-            <StatCard
-              label="Chưa gán nhãn (toàn bộ)"
-              value={number.format(stats.data.unlabelled)}
-              icon={ListTree}
-              tone="danger"
-            />
-          </div>
-        ) : null}
-
-        <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-          <SubjectFilter
-            options={subjectOptions}
-            value={query.subject ?? 'ALL'}
-            loading={stats.status === 'loading' || stats.status === 'idle'}
-            onChange={(value) => setQuery((old) => ({
-              ...old, subject: value === 'ALL' ? undefined : value, patternCode: undefined, unlabelled: undefined, page: 0,
-            }))}
+        <QuestionBankDetail
+            id={selectedId}
+            patterns={patternList}
+            readOnly={readOnly}
+            legacyReadOnly={legacyReadOnly}
+            onClose={() => setSelectedId(null)}
+            onEdit={(id) => { setSelectedId(null); setEditor({ id }) }}
+            onChanged={() => {
+              refreshLists()
+            }}
           />
-          <FilterToolbar className="justify-start">
-            <form
-              className="w-full sm:w-48 xl:flex-1 xl:min-w-40"
-              onSubmit={(event) => {
-                event.preventDefault()
-                setQuery((old) => ({ ...old, q: search.trim() || undefined, page: 0 }))
-              }}
-            >
-              <SearchInput
-                ariaLabel="Tìm trong nội dung câu hỏi"
-                placeholder="Tìm trong nội dung... (Enter để tìm)"
-                maxLength={100}
-                value={search}
-                onChange={setSearch}
-                className="sm:max-w-none"
-              />
-            </form>
-            <FilterGroup>
-              <FilterSelect ariaLabel="Lọc theo trạng thái" className="w-36 sm:w-36" value={query.status ?? 'ALL'} onChange={value => setQuery(old => ({ ...old, status: value === 'ALL' ? undefined : value as BankQuestionStatus, page: 0 }))} options={[{ id: 'ALL', label: 'Mọi trạng thái' }, ...Object.entries(BANK_STATUS_LABELS).map(([id, label]) => ({ id, label }))]} />
-              <FilterSelect
-                ariaLabel="Lọc theo dạng câu"
-                className="w-36 sm:w-40"
-                value={query.unlabelled ? 'UNLABELLED' : query.patternCode ?? 'ALL'}
-                disabled={!query.subject || patterns.status !== 'ready'}
-                onChange={(value) => setQuery((old) => ({
-                  ...old,
-                  patternCode: value === 'ALL' || value === 'UNLABELLED' ? undefined : value,
-                  unlabelled: value === 'UNLABELLED' || undefined,
-                  page: 0,
-                }))}
-                options={[
-                  { id: 'ALL', label: 'Tất cả dạng câu' },
-                  { id: 'UNLABELLED', label: 'Chưa gán nhãn' },
-                  ...patternOptions.map((p) => ({ id: p.code, label: p.nameVi })),
-                ]}
-              />
-              <FilterSelect ariaLabel="Lọc theo độ khó" className="w-36 sm:w-36" value={query.difficulty ?? 'ALL'} onChange={value => setQuery(old => ({ ...old, difficulty: value === 'ALL' ? undefined : value as BankDifficulty, page: 0 }))} options={[{ id: 'ALL', label: 'Mọi độ khó' }, ...Object.entries(BANK_DIFFICULTY_LABELS).map(([id, label]) => ({ id, label }))]} />
-              <Button appearance="outline" size="sm" aria-label={moreFilterCount ? `Bộ lọc khác (${moreFilterCount})` : 'Bộ lọc khác'} aria-expanded={moreFiltersOpen} aria-controls="bank-more-filters" onClick={() => setMoreFiltersOpen((open) => !open)}>
-                Bộ lọc khác{moreFilterCount > 0 && <span className="rounded-full bg-background-gray-secondary px-1.5 text-xs">{moreFilterCount}</span>}
-              </Button>
-              {hasFilters && <Button appearance="ghost" size="sm" onClick={() => { setSearch(''); setQuery({ page: 0, size: 20 }) }}>Xóa bộ lọc</Button>}
-            </FilterGroup>
-          </FilterToolbar>
-          {moreFiltersOpen && <div id="bank-more-filters" className="flex flex-wrap gap-2 border-b border-card-border px-4 py-3">
-            <FilterSelect
-              ariaLabel="Lọc theo năm"
-              value={query.year === undefined ? 'ALL' : String(query.year)}
-              disabled={stats.status !== 'ready'}
-              className="w-36 sm:w-36"
-              onChange={(value) => setQuery((old) => ({ ...old, year: value === 'ALL' ? undefined : Number(value), page: 0 }))}
-              options={[{ id: 'ALL', label: 'Tất cả năm' }, ...years.map((year) => ({ id: year, label: year }))]}
-            />
-            <FilterSelect
-              ariaLabel="Lọc theo nguồn đáp án"
-              value={query.answerSource ?? 'ALL'}
-              onChange={(value) => setQuery((old) => ({ ...old, answerSource: value === 'ALL' ? undefined : value as BankAnswerSource, page: 0 }))}
-              options={[{ id: 'ALL', label: 'Mọi nguồn đáp án' }, ...BANK_ANSWER_SOURCES.map((id) => ({ id, label: ANSWER_SOURCE_LABELS[id] }))]}
-            />
-            <FilterSelect ariaLabel="Lọc câu của tôi" value={query.mine ? 'MINE' : 'ALL'} onChange={value => setQuery(old => ({ ...old, mine: value === 'MINE' ? true : undefined, page: 0 }))} options={[{ id: 'ALL', label: 'Mọi tác giả' }, { id: 'MINE', label: 'Câu của tôi' }]} />
-          </div>}
-          <ScheduleResourceState
-            skeleton="table"
-            inset
-            status={list.status}
-            errorMessage={list.errorMessage}
-            onRetry={list.reload}
-          >
-            <DataTable
-              columns={columns}
-              data={list.data?.content ?? []}
-              getRowKey={(row) => row.id}
-              onRowClick={(row) => setSelectedId(row.id)}
-              emptyMessage={
-                total === 0 ? 'Ngân hàng chưa có câu hỏi nào.' : 'Không có câu hỏi phù hợp.'
-              }
-            />
-            <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
-              <p className="m-0 text-sm text-text-tertiary">
-                {number.format(list.data?.totalElements ?? 0)} câu
-              </p>
-              {(list.data?.totalPages ?? 0) > 1 && (
-                <Pagination
-                  currentPage={(query.page ?? 0) + 1}
-                  totalPages={list.data?.totalPages ?? 1}
-                  onPageChange={(page) => setQuery((old) => ({ ...old, page: page - 1 }))}
-                  sideLayout="icon"
-                />
-              )}
-            </div>
-          </ScheduleResourceState>
-        </section>
-
-      </ConsoleTabsContent>
-      <QuestionBankDetail
-          id={selectedId}
-          patterns={patternList}
-          readOnly={readOnly}
-          legacyReadOnly={legacyReadOnly}
-          onClose={() => setSelectedId(null)}
-          onEdit={(id) => { setSelectedId(null); setEditor({ id }) }}
-          onChanged={() => {
-            refreshLists()
-          }}
-        />
-    </ConsoleTabs>
+      </ConsoleTabs>
+    </>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getErrorMessage } from '../../../lib/errors'
 import { getAdminExamYears, type ExamYear } from '../../../services/examYearService'
+import { examRoundOptions } from './exam-rounds'
 import { importBankPaper, type BankAnswerSource, type BankSource } from '../../../services/questionBankService'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
@@ -52,11 +53,7 @@ export default function BankImportDialog({
   const selectedYear = years.find(item => String(item.examYear) === year)
   const yearOptions = years.map(item => ({ id: String(item.examYear), label: item.name }))
   if (year && !yearOptions.some(item => item.id === year)) yearOptions.push({ id: year, label: year })
-  const roundOptions = (selectedYear?.sessions ?? []).map(session => ({
-    id: `DOT_${session.roundNo}`,
-    label: session.name,
-  }))
-  if (round && !roundOptions.some(item => item.id === round)) roundOptions.push({ id: round, label: round })
+  const roundOptions = examRoundOptions(selectedYear?.sessions ?? [], round)
 
   const yearValue = year.trim() ? Number(year) : undefined
   const yearInvalid = yearValue !== undefined && (!Number.isInteger(yearValue) || yearValue < 2000 || yearValue > 2100)

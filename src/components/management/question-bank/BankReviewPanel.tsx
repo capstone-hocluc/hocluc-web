@@ -115,10 +115,8 @@ export default function BankReviewPanel({ id, onSaved }: { id: string; onSaved: 
         </div>
       ) : versions.data ? (
         head ? (
-          <div className={approved ? 'grid gap-4 sm:grid-cols-2' : 'grid gap-4'}>
-            {approved && <VersionCard version={approved} other={head} title="Bản đã duyệt" />}
-            <VersionCard version={head} other={approved} title="Bản chờ duyệt" />
-          </div>
+          // The paper above already shows the version under review; only the approved one is shown, to compare against.
+          approved ? <VersionCard version={approved} other={head} title="Bản đã duyệt" /> : null
         ) : (
           <Notice tone="danger">Không tìm thấy phiên bản hiện tại.</Notice>
         )
