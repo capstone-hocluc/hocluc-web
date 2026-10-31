@@ -2,10 +2,10 @@ import { useState, type ReactNode } from 'react'
 import { Plus, X } from '../../console/icons'
 import Button from '../../console/button'
 import DropdownField from '../../console/dropdown-field'
-import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import { Checkbox } from '../../tailgrids/core/checkbox'
 import { RadioGroup, RadioGroupMark } from '../../ui/RadioGroup'
 import { cn } from '../../../lib/cn'
+import FormulaTextarea from '../../ui/math/FormulaTextarea'
 import MathText from '../../ui/MathText'
 import { CHOICE_TYPES, QUESTION_TYPE_OPTIONS, type QuestionDraft } from './question-draft'
 
@@ -67,10 +67,12 @@ export default function QuestionEditor({
           )}
         <span className="grid size-6 shrink-0 place-items-center rounded-md bg-badge-blue-background text-xs font-medium text-primary">{letter}</span>
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <input
-            className={`${fieldControlClass} min-w-0`}
+          <FormulaTextarea
+            multiline={false}
+            ariaLabel={'Lựa chọn ' + letter}
+            className="min-w-0"
             value={option.text}
-            onChange={(event) => onChange({ options: value.options.map((item, index) => index === optionIndex ? { ...item, text: event.target.value } : item) })}
+            onValueChange={(text) => onChange({ options: value.options.map((item, index) => index === optionIndex ? { ...item, text } : item) })}
             placeholder={'Lựa chọn ' + letter}
             disabled={disabled || busy}
           />
@@ -93,17 +95,19 @@ export default function QuestionEditor({
     <>
       <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
         Nội dung câu hỏi
-        <textarea
-          aria-label="Nội dung câu hỏi"
-          className={`${textareaControlClass} min-h-11! resize-none field-sizing-content`}
+        <FormulaTextarea
+          ariaLabel="Nội dung câu hỏi"
+          className="min-h-11! resize-none field-sizing-content"
           value={value.questionText}
-          onChange={(event) => onChange({ questionText: event.target.value })}
+          onValueChange={(questionText) => onChange({ questionText })}
           placeholder="Nhập nội dung câu hỏi"
           disabled={disabled || busy}
         />
         <FormulaPreview text={value.questionText} />
       </label>
 
+      {(showType || showCategory || showDifficulty) && (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {showType && (
         <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
           Loại câu hỏi
@@ -138,6 +142,8 @@ export default function QuestionEditor({
             onChange={(difficulty) => onChange({ difficulty })} />
         </label>
       )}
+      </div>
+      )}
 
       {isChoice ? (
         <>
@@ -163,10 +169,11 @@ export default function QuestionEditor({
           {explaining ? (
             <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
               Giải thích
-              <textarea
-                className={`${textareaControlClass} min-h-11! resize-none field-sizing-content`}
+              <FormulaTextarea
+                ariaLabel="Giải thích"
+                className="min-h-11! resize-none field-sizing-content"
                 value={value.explanation}
-                onChange={(event) => onChange({ explanation: event.target.value })}
+                onValueChange={(explanation) => onChange({ explanation })}
                 placeholder="Giải thích vì sao đáp án này đúng"
                 disabled={disabled || busy}
               />
@@ -181,10 +188,10 @@ export default function QuestionEditor({
       ) : (
         <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
           Đáp án / hướng dẫn chấm
-          <textarea
-            className={textareaControlClass}
+          <FormulaTextarea
+            ariaLabel="Đáp án / hướng dẫn chấm"
             value={value.explanation}
-            onChange={(event) => onChange({ explanation: event.target.value })}
+            onValueChange={(explanation) => onChange({ explanation })}
             placeholder="Nhập đáp án gợi ý hoặc tiêu chí chấm điểm"
             disabled={disabled || busy}
           />
