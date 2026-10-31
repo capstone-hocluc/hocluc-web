@@ -9,8 +9,10 @@ import QuizConsoleScreen from '../management/quiz/QuizConsoleScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
 import { DashboardActions, RoleDashboardWelcome } from '../common/DashboardWelcome'
 import { ManagementScreen } from '../management/ManagementDashboard'
+import AiAssistantScreen from '../management/ai-assistant/AiAssistantScreen'
 import { ForbiddenPage } from '../console/access-states'
 import { buildNavSections, canAccessPage } from '../../lib/console-nav'
+import { roleHome } from '../../lib/role-home'
 
 // Course sub-pages (quiz editor, assignments) belong to "Lớp của tôi".
 function menuPageOf(page: string) {
@@ -103,6 +105,11 @@ function TeacherDashboard({
     'profile',
     'mock-exams',
   ]
+  if (allowed && menuPageOf(view) === 'ai-assistant') {
+    return (
+      <AiAssistantScreen onBack={() => navigate('dashboard')} backHref={roleHome('TEACHER')} />
+    )
+  }
   return (
     <ConsoleShell
       sections={sections}

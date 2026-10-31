@@ -117,6 +117,14 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     writePermission: 'BANK_AUTHOR',
   },
   {
+    page: 'ai-assistant',
+    label: 'Trợ lý AI',
+    icon: Sparkles,
+    group: 'training',
+    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER'],
+  },
+  {
     page: 'quizzes',
     label: 'Bài kiểm tra',
     icon: ClipboardCheck,

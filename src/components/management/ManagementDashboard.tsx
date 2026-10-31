@@ -23,6 +23,7 @@ import {
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
 import QuestionBankScreen from './question-bank/QuestionBankScreen'
+import AiAssistantScreen from './ai-assistant/AiAssistantScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
 import {
   buildNavSections,
@@ -32,6 +33,7 @@ import {
   isKnownPage,
   navLabel,
 } from '../../lib/console-nav'
+import { roleHome } from '../../lib/role-home'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
 const AttendanceManagementPage = lazy(
@@ -171,6 +173,15 @@ function ManagementDashboard({
   onSelectConversation,
 }: ManagementDashboardProps) {
   // The assistant is its own full-screen workspace, outside the console chrome.
+  if (page === 'ai-assistant' && canAccessPage(role, page)) {
+    return (
+      <AiAssistantScreen
+        onBack={() => onNavigate('dashboard')}
+        backHref={roleHome(role)}
+      />
+    )
+  }
+
   return (
     <ConsoleShell
       sections={buildNavSections(role)}
