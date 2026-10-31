@@ -16,7 +16,8 @@ interface CourseStudyPageProps {
   courseId: string
   onBackToMyCourses: () => void
   onViewCourseInfo: () => void
-  onOpenLesson: (lessonId: string) => void
+  onOpenLesson: (lessonId: string, courseId?: string) => void
+  onOpenGiftStudy: (courseId: string) => void
   onOpenQuiz: (quizId: string) => void
   onOpenCourse: (course: Course) => void
   onEditProfile: () => void
@@ -44,6 +45,7 @@ function CourseStudyPage({
   onBackToMyCourses,
   onViewCourseInfo,
   onOpenLesson,
+  onOpenGiftStudy,
   onOpenQuiz,
   onOpenCourse,
   onEditProfile,
@@ -134,6 +136,8 @@ function CourseStudyPage({
             <StudyCurriculum
               phases={study.phases}
               currentLessonId={study.continueLessonId}
+              currentCourseId={study.continueSectionCourseId}
+              onOpenGiftStudy={onOpenGiftStudy}
               onOpenLesson={onOpenLesson}
               onOpenQuiz={onOpenQuiz}
             />

@@ -10,7 +10,8 @@ import MascotState from '../../common/MascotState'
 import LessonRow from './LessonRow'
 import QuizRow from './QuizRow'
 import { bySequence } from '../../../lib/sequence'
-import { lessonContainsId } from './studyUtils'
+import { studentRoutes } from '../../../lib/studentRoutes'
+import { formatStudyPercent, lessonContainsId } from './studyUtils'
 
 function clampPercent(value?: number) {
   return Math.max(0, Math.min(100, value ?? 0))
@@ -18,6 +19,8 @@ function clampPercent(value?: number) {
 
 interface CurriculumHandlers {
   currentLessonId: string | null
+  currentCourseId: string | null
+  onOpenGiftStudy: (courseId: string) => void
   onOpenLesson: (lessonId: string) => void
   onOpenQuiz: (quizId: string) => void
 }
@@ -69,7 +72,7 @@ function SectionBlock({
 
   return (
     <AccordionItem
-      value={section.sectionCourseId}
+      value={section.contentSectionId ?? section.sectionCourseId}
       className="rounded-2xl border border-line bg-surface-tint p-4 max-[640px]:p-3"
     >
       <AccordionTrigger>
@@ -80,7 +83,7 @@ function SectionBlock({
             {section.completedLessonCount}/{section.lessonCount} bài học
           </span>
         </span>
-        <span className="text-sm font-bold whitespace-nowrap text-primary-text">{percent}%</span>
+        <span className="text-sm font-bold whitespace-nowrap text-primary-text">{formatStudyPercent(percent)}</span>
       </AccordionTrigger>
       <Progress value={percent} size="sm" className="mt-3" aria-label={section.title} />
       <AccordionContent>
@@ -98,57 +101,51 @@ function SectionBlock({
   )
 }
 
-function PhaseBlock({
-  phase,
-  index,
-  ...handlers
-}: CurriculumHandlers & { phase: CourseStudyPhase; index: number }) {
+function PhaseContents({ phase, ...handlers }: CurriculumHandlers & { phase: CourseStudyPhase }) {
   const sections = bySequence(phase.sections)
-  const currentSectionId = sections.find((section) =>
+  const currentSection = sections.find((section) =>
     section.chapters.some((chapter) => lessonContainsId(chapter, handlers.currentLessonId))
-  )?.sectionCourseId
-
-  // Derived from the sections' real lesson counts - the API has no phase-level figure.
-  const totalLessons = sections.reduce((sum, section) => sum + (section.lessonCount ?? 0), 0)
-  const doneLessons = sections.reduce(
-    (sum, section) => sum + (section.completedLessonCount ?? 0),
-    0
   )
-  const percent =
-    totalLessons > 0 ? clampPercent(Math.round((doneLessons / totalLessons) * 100)) : 0
-
+  const initialSection = currentSection ?? sections[0]
   return (
-    <AccordionItem
-      value={phase.id}
-      className="rounded-2xl border border-line-card bg-surface p-5 shadow-card max-[640px]:p-3.5"
-    >
-      <AccordionTrigger>
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="inline-flex items-center gap-2.5 text-xl font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-lg">
-            <b className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm font-bold text-primary-text">
-              {String(index + 1).padStart(2, '0')}
-            </b>
-            {phase.name}
-          </span>
-          {phase.description && (
-            <span className="text-sm font-semibold text-text-secondary">{phase.description}</span>
-          )}
-        </span>
-        <span className="text-base font-bold whitespace-nowrap text-primary-text">{percent}%</span>
-      </AccordionTrigger>
-      <Progress value={percent} className="mt-3.5" aria-label={phase.name} />
-      <AccordionContent>
+    <div className="flex flex-col gap-3 pt-3">
+      {sections.length > 0 && (
         <Accordion
           type="multiple"
-          defaultValue={[currentSectionId ?? sections[0]?.sectionCourseId].filter(Boolean)}
-          className="flex flex-col gap-2.5 pt-3"
+          defaultValue={initialSection ? [initialSection.contentSectionId ?? initialSection.sectionCourseId] : []}
+          className="flex flex-col gap-2.5"
         >
           {sections.map((section) => (
-            <SectionBlock key={section.sectionCourseId} section={section} {...handlers} />
+            <SectionBlock key={section.contentSectionId ?? section.sectionCourseId} section={section} {...handlers} />
           ))}
         </Accordion>
-      </AccordionContent>
-    </AccordionItem>
+      )}
+      {phase.gifts.map((gift) => (
+        <div
+          key={gift.courseId}
+          className={`min-w-0 rounded-xl border p-4 ${
+            handlers.currentLessonId && gift.courseId === handlers.currentCourseId
+              ? 'border-transparent bg-surface-brand'
+              : 'border-line bg-surface-tint'
+          }`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="min-w-0 break-words font-semibold text-text-heading">{gift.title}</h3>
+            <span className="text-sm font-bold text-primary-text">{formatStudyPercent(gift.progressPercentage)}</span>
+          </div>
+          <Progress value={clampPercent(gift.progressPercentage ?? 0)} size="sm" className="mt-3" aria-label={gift.title} />
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span>{gift.completedLessonCount}/{gift.lessonCount} bài học</span>
+            <a href={studentRoutes.courseStudy(gift.courseId)} className="font-semibold text-primary-text underline" onClick={(event) => {
+              if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+                event.preventDefault()
+                handlers.onOpenGiftStudy(gift.courseId)
+              }
+            }}>Vào học</a>
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -156,36 +153,56 @@ interface StudyCurriculumProps extends CurriculumHandlers {
   phases: CourseStudyPhase[]
 }
 
-// Phase > section > chapter > lesson/quiz. Each level is a Radix Accordion;
-// the phase / section / chapter holding the current lesson (else the first)
-// starts open, the rest collapsed.
 function StudyCurriculum({ phases, ...handlers }: StudyCurriculumProps) {
   const sortedPhases = bySequence(phases)
-  const currentPhaseId = sortedPhases.find((phase) =>
+  const named = sortedPhases.filter((phase) => phase.id !== null)
+  const unphased = sortedPhases.find((phase) => phase.id === null)
+  const currentPhase = named.find((phase) =>
     phase.sections.some((section) =>
       section.chapters.some((chapter) => lessonContainsId(chapter, handlers.currentLessonId))
-    )
-  )?.id
+    ) ||
+    (handlers.currentLessonId && phase.gifts.some((gift) => gift.courseId === handlers.currentCourseId))
+  )
+  const initialPhaseId = currentPhase?.id ?? named[0]?.id
 
   if (sortedPhases.length === 0) {
-    return (
-      <MascotState
-        title="Nội dung khóa học đang được cập nhật"
-        message="Nội dung học sẽ sớm xuất hiện tại đây."
-      />
-    )
+    return <MascotState title="Nội dung khóa học đang được cập nhật" message="Nội dung học sẽ sớm xuất hiện tại đây." />
   }
 
   return (
-    <Accordion
-      type="multiple"
-      defaultValue={[currentPhaseId ?? sortedPhases[0].id]}
-      className="flex flex-col gap-3"
-    >
-      {sortedPhases.map((phase, index) => (
-        <PhaseBlock key={phase.id} phase={phase} index={index} {...handlers} />
-      ))}
-    </Accordion>
+    <div className="flex min-w-0 flex-col gap-3">
+      {named.length > 0 && (
+        <Accordion type="multiple" defaultValue={initialPhaseId ? [initialPhaseId] : []} className="flex flex-col gap-3">
+          {named.map((phase, index) => (
+            <AccordionItem key={phase.id} value={phase.id!} className="rounded-2xl border border-line-card bg-surface p-5 shadow-card max-[640px]:p-3.5">
+              <AccordionTrigger>
+                <span className="inline-flex min-w-0 flex-1 items-center gap-2.5 text-xl font-bold text-text-heading">
+                  <b className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm text-primary-text">{String(index + 1).padStart(2, '0')}</b>
+                  {phase.name}
+                </span>
+                <span className="text-base font-bold text-primary-text">{formatStudyPercent(phase.progressPercentage)}</span>
+              </AccordionTrigger>
+              <Progress value={clampPercent(phase.progressPercentage)} className="mt-3.5" aria-label={phase.name ?? 'Giai đoạn'} />
+              <AccordionContent><PhaseContents phase={phase} {...handlers} /></AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
+      {unphased && (
+        <section className="min-w-0">
+          {named.length > 0 && (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-text-heading">Xuyên suốt lộ trình</h2>
+                <span className="font-bold text-primary-text">{formatStudyPercent(unphased.progressPercentage)}</span>
+              </div>
+              <Progress value={clampPercent(unphased.progressPercentage)} className="mt-3" aria-label="Xuyên suốt lộ trình" />
+            </>
+          )}
+          <PhaseContents phase={unphased} {...handlers} />
+        </section>
+      )}
+    </div>
   )
 }
 

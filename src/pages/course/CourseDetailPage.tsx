@@ -3,10 +3,8 @@ import CourseAbout from '../../components/course/CourseAbout'
 import {
   ownChapters,
   parseDescription,
-  roadmapStages,
   shortCourseName,
   weeksBetween,
-  type RoadmapStage,
 } from '../../components/course/course-detail-content'
 import AuthLink from '../../components/landing-page/AuthLink'
 import Icon from '../../components/landing-page/Icon'
@@ -26,6 +24,7 @@ import { addCartItem } from '../../services/cartService'
 import {
   getCourseDetail,
   type CourseChapter,
+  type CoursePhase,
   type CourseDetail,
   type CourseOutcomeView,
   type GiftCourse,
@@ -79,27 +78,18 @@ function Outcomes({ outcomes }: { outcomes: CourseOutcomeView[] }) {
   )
 }
 
-function Roadmap({ stages }: { stages: RoadmapStage[] }) {
-  const phases = stages.filter((stage) => stage.id !== 'throughout').length
+function Roadmap({ phases }: { phases: CoursePhase[] }) {
   return (
     <section className="cd-block" aria-labelledby="cd-roadmap-title">
-      <h2 id="cd-roadmap-title">Lộ trình {phases} giai đoạn</h2>
+      <h2 id="cd-roadmap-title">Lộ trình học</h2>
       <ol className="cd-stages">
-        {stages.map((stage, index) => (
-          <li key={stage.id} className="cd-stage">
-            <span className="cd-stage-mark" aria-hidden="true">
-              {stage.id === 'throughout' ? <Icon name="rotate-ccw" /> : index + 1}
-            </span>
+        {phases.map((phase, index) => (
+          <li key={phase.id ?? 'unphased'} className="cd-stage">
+            <span className="cd-stage-mark" aria-hidden="true">{phase.id ? index + 1 : <Icon name="rotate-ccw" />}</span>
             <div className="cd-stage-body">
-              <h3>{stage.name}</h3>
-              {stage.note && <p>{stage.note}</p>}
-              {stage.gifts.length > 0 && (
-                <ul className="cd-gifts">
-                  {stage.gifts.map((gift) => (
-                    <GiftCard key={gift.courseId} gift={gift} />
-                  ))}
-                </ul>
-              )}
+              <h3>{phase.name ?? 'Xuyên suốt lộ trình'}</h3>
+              {phase.sections.flatMap((section) => section.chapters).map((chapter) => <p key={chapter.id}>{chapter.title}</p>)}
+              {phase.gifts.length > 0 && <ul className="cd-gifts">{phase.gifts.map((gift) => <GiftCard key={gift.courseId} gift={gift} />)}</ul>}
             </div>
           </li>
         ))}
@@ -229,8 +219,9 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
 
   const view = useMemo(() => {
     if (!course) return null
-    const gifts = course.gifts ?? []
-    const stages = roadmapStages(course.phases ?? [], gifts)
+    const phases = [...(course.phases ?? [])].sort((a, b) => (a.sequence ?? Infinity) - (b.sequence ?? Infinity))
+    const gifts = phases.flatMap((phase) => phase.gifts)
+    const stages = phases.some((phase) => phase.id) ? phases : null
     // The roadmap section tells the stages, so the description's own roadmap paragraph is dropped.
     const about = parseDescription(course.description).filter(
       (block) => !(stages && block.heading?.startsWith('Lộ trình'))
@@ -342,6 +333,12 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             </dd>
                           </div>
                         )}
+                        {course.estimatedDurationMinutes ? (
+                          <div>
+                            <dt>Thời lượng</dt>
+                            <dd>{formatDuration(course.estimatedDurationMinutes * 60)}</dd>
+                          </div>
+                        ) : null}
                         {view.weeks && (
                           <div>
                             <dt>Thời gian học</dt>
@@ -368,7 +365,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                     {course.outcomes && course.outcomes.length > 0 && <Outcomes outcomes={course.outcomes} />}
 
                     {view.stages ? (
-                      <Roadmap stages={view.stages} />
+                      <Roadmap phases={view.stages} />
                     ) : (
                       view.gifts.length > 0 && (
                         <section className="cd-block" aria-labelledby="cd-gifts-title">

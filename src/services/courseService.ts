@@ -83,22 +83,25 @@ export interface CourseSection {
 }
 
 export interface CoursePhase {
-  id: string
-  name: string
-  description?: string
-  sequence?: number
+  id: string | null
+  name: string | null
+  description?: string | null
+  sequence?: number | null
+  gifts: GiftCourse[]
   sections: CourseSection[]
 }
 
 /** A SECTION course given with a MAIN course; it is studied as a course of its own. */
 export interface GiftCourse {
   courseId: string
+  phaseId: string | null
   title: string
   description?: string
   categoryId?: string
   categoryName?: string
   chapterCount: number
   lessonCount: number
+  completedLessonCount: number
   progressPercentage?: number | null
 }
 
@@ -128,6 +131,8 @@ export interface CourseDetail {
   targetExam?: string
   paid?: boolean
   price?: number
+  /** Study time the author states, in minutes. */
+  estimatedDurationMinutes?: number | null
   purchased?: boolean
   inCart?: boolean
   phaseCount?: number
@@ -137,7 +142,7 @@ export interface CourseDetail {
   quizCount?: number
   totalDurationSeconds?: number
   phases?: CoursePhase[]
-  gifts?: GiftCourse[]
+  giftCount: number
   /** What a student can do once the course is done (absent on older backends). */
   outcomes?: CourseOutcomeView[]
 }
@@ -224,6 +229,7 @@ export interface CourseStudyChapter {
 }
 
 export interface CourseStudySection {
+  contentSectionId: string | null
   sectionCourseId: string
   title: string
   categoryId?: string | null
@@ -236,10 +242,14 @@ export interface CourseStudySection {
 }
 
 export interface CourseStudyPhase {
-  id: string
-  name: string
+  id: string | null
+  name: string | null
   description?: string | null
-  sequence: number
+  sequence: number | null
+  lessonCount: number
+  completedLessonCount: number
+  progressPercentage: number
+  gifts: GiftCourse[]
   sections: CourseStudySection[]
 }
 

@@ -89,7 +89,8 @@ function StudentRoutes({
             courseId={route.courseId}
             onBackToMyCourses={() => navigate(studentRoutes.courses())}
             onViewCourseInfo={() => navigate(`/courses/${encodeURIComponent(route.courseId)}`)}
-            onOpenLesson={(lessonId) => navigate(studentRoutes.lesson(route.courseId, lessonId))}
+            onOpenLesson={(lessonId, lessonCourseId) => navigate(studentRoutes.lesson(lessonCourseId ?? route.courseId, lessonId))}
+            onOpenGiftStudy={(giftId) => navigate(studentRoutes.courseStudy(giftId))}
             onOpenQuiz={(quizId) => navigate(studentRoutes.quiz(quizId))}
             onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
             onEditProfile={() => navigate(studentRoutes.profile('student'))}
