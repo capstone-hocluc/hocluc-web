@@ -319,50 +319,52 @@ export default function SchedulingPage({ role }: Props) {
 
   return (
     <div className="space-y-5">
-      <PageHeading title="Lịch học" readOnly={role === 'MANAGER'} />
-
-      <div className="flex flex-wrap justify-end gap-2">
-        {role === 'STAFF' && (
-          <Button
-            appearance="outline"
-           
-            disabled={!activeCourseId || courses.status !== 'ready' || teacherResource.status !== 'ready' || !teachers.length || mutationBusy || attendancePanelState.busy}
-            title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch.' : undefined}
-            onClick={() => runWithUnsavedActionGuard(() => {
-              setMutationError('')
-              setSelectedItem(null)
-              setScheduleEditor('create')
-            })}
-          >
-            <CalendarPlus size={16} />
-            {scheduleCreateLoading ? 'Đang tải dữ liệu…' : 'Tạo lịch đơn'}
-          </Button>
-        )}
-        {role === 'STAFF' && (
-          <Button
-            appearance="outline"
-           
-            disabled={!activeCourseId || recurringCreateButtonReason !== '' || mutationBusy || attendancePanelState.busy}
-            title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch lặp.' : recurringCreateButtonReason || undefined}
-            onClick={() => runWithUnsavedActionGuard(() => {
-              setMutationError('')
-              setSelectedItem(null)
-              setRecurringEditor('create')
-            })}
-          >
-            <CalendarPlus size={16} />
-            Tạo lịch lặp
-          </Button>
-        )}
-        <Button appearance="ghost" size="icon" aria-label="Tải lại lịch" onClick={() => {
-          runWithUnsavedActionGuard(() => {
-            setSelectedItem(null)
-            calendar.reload()
-          })
-        }} disabled={mutationBusy || attendancePanelState.busy}>
-          <RefreshCw size={17} />
-        </Button>
-      </div>
+      <PageHeading
+        title="Lịch học"
+        readOnly={role === 'MANAGER'}
+        action={
+          <>
+            {role === 'STAFF' && (
+              <Button
+                appearance="outline"
+                disabled={!activeCourseId || courses.status !== 'ready' || teacherResource.status !== 'ready' || !teachers.length || mutationBusy || attendancePanelState.busy}
+                title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch.' : undefined}
+                onClick={() => runWithUnsavedActionGuard(() => {
+                  setMutationError('')
+                  setSelectedItem(null)
+                  setScheduleEditor('create')
+                })}
+              >
+                <CalendarPlus size={16} />
+                {scheduleCreateLoading ? 'Đang tải dữ liệu…' : 'Tạo lịch đơn'}
+              </Button>
+            )}
+            {role === 'STAFF' && (
+              <Button
+                appearance="outline"
+                disabled={!activeCourseId || recurringCreateButtonReason !== '' || mutationBusy || attendancePanelState.busy}
+                title={!activeCourseId ? 'Chọn khóa học trước khi tạo lịch lặp.' : recurringCreateButtonReason || undefined}
+                onClick={() => runWithUnsavedActionGuard(() => {
+                  setMutationError('')
+                  setSelectedItem(null)
+                  setRecurringEditor('create')
+                })}
+              >
+                <CalendarPlus size={16} />
+                Tạo lịch lặp
+              </Button>
+            )}
+            <Button appearance="ghost" size="icon" aria-label="Tải lại lịch" onClick={() => {
+              runWithUnsavedActionGuard(() => {
+                setSelectedItem(null)
+                calendar.reload()
+              })
+            }} disabled={mutationBusy || attendancePanelState.busy}>
+              <RefreshCw size={17} />
+            </Button>
+          </>
+        }
+      />
       {(attendancePanelState.busy || mutationBusy) && (
         <Notice tone="info">Đang lưu…</Notice>
       )}
