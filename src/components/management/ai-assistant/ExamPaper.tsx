@@ -3,6 +3,7 @@ import MathText from '../../ui/MathText'
 import PaperBrand from '../quiz/PaperBrand'
 import { sharedHeading } from '../quiz/paper-layout'
 import '../quiz/quiz-paper.css'
+import ExamFigure from './ExamFigure'
 import ExamQuestionCard from './ExamQuestionCard'
 import type {
   ExamPaper as ExamPaperModel,
@@ -124,6 +125,10 @@ export default function ExamPaper({
                           <MathText>{block.group.passage}</MathText>
                         </p>
                       )}
+                      <ExamFigure
+                        src={block.group.passageImageUrl}
+                        alt={`Hình minh hoạ ngữ liệu câu ${numbers[0]}`}
+                      />
                       {block.questions.map(card)}
                     </div>
                   )

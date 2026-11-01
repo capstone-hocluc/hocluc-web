@@ -60,6 +60,12 @@ export interface ExamPaperQuestion {
   options: ExamPaperOption[]
   explanation: string
   difficulty: AiDifficulty
+  patternCode: string | null
+  patternName: string | null
+  /** The bank paper a reused question came from. */
+  sourceTitle: string | null
+  imageUrl: string | null
+  passageImageUrl: string | null
   source: 'ai' | 'bank' | 'manual'
   /** False while the teacher has not accepted an AI or bank question yet. */
   kept: boolean
@@ -84,6 +90,7 @@ export interface ExamPaperGroup {
   partId: string
   instruction: string | null
   passage: string | null
+  passageImageUrl: string | null
 }
 
 export interface ExamPaper {
@@ -157,6 +164,12 @@ export function buildPaper(
   title: string
 ): ExamPaper {
   const format = record?.examFormat ?? 'VACT_2025'
+  // The exam format's own headings stay as written; partName only names a part the format does not know.
+  const partNames = new Map<string, string>()
+  for (const item of items) {
+    const name = item.question.partName?.trim()
+    if (name && !partNames.has(item.sectionCode)) partNames.set(item.sectionCode, name)
+  }
   const parts = [...layoutParts(format)]
   const known = new Set(parts.map((part) => part.id))
 
@@ -165,7 +178,7 @@ export function buildPaper(
     known.add(item.sectionCode)
     parts.push({
       id: item.sectionCode,
-      title: item.sectionCode,
+      title: partNames.get(item.sectionCode) ?? item.sectionCode,
       code: null,
       parentTitle: null,
       firstNumber: null,
@@ -175,12 +188,19 @@ export function buildPaper(
 
   const groupMap = new Map<string, ExamPaperGroup>()
   for (const item of items) {
-    if (!item.groupKey || groupMap.has(item.groupKey)) continue
+    if (!item.groupKey) continue
+    const passageImageUrl = item.question.passageImageUrl?.trim() || null
+    const group = groupMap.get(item.groupKey)
+    if (group) {
+      if (!group.passageImageUrl && passageImageUrl) group.passageImageUrl = passageImageUrl
+      continue
+    }
     groupMap.set(item.groupKey, {
       id: item.groupKey,
       partId: item.sectionCode,
       instruction: null,
       passage: item.question.passage?.trim() ? item.question.passage : null,
+      passageImageUrl,
     })
   }
 
@@ -199,6 +219,11 @@ export function buildPaper(
       options: optionsOf(item),
       explanation: item.question.explanation ?? '',
       difficulty: difficultyOf(item.question.difficulty),
+      patternCode: item.question.patternCode?.trim() || null,
+      patternName: item.question.patternName?.trim() || null,
+      sourceTitle: item.question.sourceTitle?.trim() || null,
+      imageUrl: item.question.imageUrl?.trim() || null,
+      passageImageUrl: item.question.passageImageUrl?.trim() || null,
       source: item.source === 'AI' ? 'ai' : item.source === 'BANK' ? 'bank' : 'manual',
       kept: item.kept,
       needsReview: item.checkResult?.needsReview === true,

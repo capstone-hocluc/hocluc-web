@@ -38,7 +38,10 @@ interface Draft {
 }
 
 const question = (text: string, difficulty = 'TB') => ({
+  partCode: 'P2',
+  partName: '2. Toán học',
   patternCode: 'MA.Q07',
+  patternName: 'Đọc hiểu đồ thị',
   difficulty,
   questionType: 'SINGLE_CHOICE',
   hasFigure: false,
@@ -50,6 +53,16 @@ const question = (text: string, difficulty = 'TB') => ({
     { label: 'A', text: 'Đáp án đúng', correct: true },
     { label: 'B', text: 'Đáp án sai', correct: false },
   ],
+})
+
+/** A question the backend reused from a bank paper, figure and all. */
+const bankQuestion = (text: string, imageUrl: string | null) => ({
+  ...question(text),
+  hasFigure: Boolean(imageUrl),
+  sourceQuestionId: 'bank-q-1',
+  sourceTitle: 'Đề minh hoạ 2024',
+  imageUrl,
+  passageImageUrl: null,
 })
 
 const item = (
@@ -70,6 +83,19 @@ const item = (
   checkResult: check,
   createdAt: stamp,
   updatedAt: stamp,
+})
+
+const bankItem = (
+  conversationId: string,
+  id: string,
+  position: number,
+  text: string,
+  imageUrl: string | null
+): DraftItem => ({
+  ...item(conversationId, id, position, text),
+  question: bankQuestion(text, imageUrl),
+  source: 'BANK',
+  kept: true,
 })
 
 const emptyDraft = (conversation: Conversation): Draft => ({
@@ -136,6 +162,8 @@ interface AiFixtureOptions {
   drafts?: Record<string, Draft>
   /** A compose run that never ends until the test cancels it. */
   endless?: boolean
+  /** The text of the `answer` event an ask run publishes, instead of its usual error. */
+  askAnswer?: string
 }
 
 async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options: AiFixtureOptions = {}) {
@@ -240,6 +268,21 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
     }
 
     if (action === 'stream') {
+      // The answer is persisted like the server does, so the post-run refresh keeps it.
+      if (state.posted && state.mode === 'ask' && options.askAnswer) {
+        const messages = state.messages.get(conversationId) ?? []
+        if (!messages.some((message) => message.id === 'assistant-ask-1')) {
+          messages.push({
+            id: 'assistant-ask-1',
+            conversationId,
+            role: 'ASSISTANT',
+            mode: 'ask',
+            content: options.askAnswer,
+            createdAt: stamp,
+          })
+          state.messages.set(conversationId, messages)
+        }
+      }
       // Until the message is posted there is nothing to replay; the client reconnects
       // after two seconds, by which time the scripted run is ready.
       const body =
@@ -248,7 +291,12 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
           : state.cancelled
             ? sse(['end', { status: 'CANCELLED', written: 0 }])
             : state.mode === 'ask'
-              ? sse(...askStream)
+              ? options.askAnswer
+                ? sse(
+                    ['answer', { messageId: 'assistant-ask-1', text: options.askAnswer }],
+                    ['end', { status: 'DONE' }]
+                  )
+                : sse(...askStream)
               : options.endless
                 ? sse(['tool', { tool: 'soan-cau-hoi', arguments: { section: 'P2' } }])
                 : composeStream(conversationId)
@@ -370,6 +418,81 @@ test('a compose run streams its stages and items into the paper', async ({ page 
   })
 })
 
+test('an AI-written question shows its pattern by name', async ({ page }) => {
+  await installAiFixture(page)
+  await openAssistant(page)
+  await sendCompose(page)
+
+  const first = page.locator('#exam-question-item-1')
+  await expect(first.getByText('Đọc hiểu đồ thị', { exact: true })).toBeVisible()
+  await expect(first.getByText('MA.Q07', { exact: true })).toHaveCount(0)
+})
+
+test('a reused bank question shows its source and figure', async ({ page }) => {
+  const figure =
+    'data:image/svg+xml;charset=utf-8,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120"><rect width="240" height="120" fill="#e2e8f0"/><text x="120" y="66" text-anchor="middle" font-family="serif" font-size="18">Hình 1</text></svg>'
+    )
+  const saved: Conversation = {
+    id: 'conv-9',
+    title: 'Đề có hình',
+    subjectId: 'category-1',
+    mode: 'compose',
+    createdAt: stamp,
+    updatedAt: stamp,
+  }
+  await installAiFixture(page, 'MANAGER', {
+    conversations: [saved],
+    drafts: {
+      'conv-9': {
+        draft: { id: 'draft-conv-9', conversationId: 'conv-9', name: 'Đề có hình', examFormat: 'VACT_2025', status: 'DRAFT' },
+        items: [bankItem('conv-9', 'bank-1', 1, 'Đọc biểu đồ nhiệt độ theo tháng.', figure)],
+      },
+    },
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant')
+
+  const card = page.locator('#exam-question-bank-1')
+  await expect(card.getByText('Từ ngân hàng: Đề minh hoạ 2024', { exact: true })).toBeVisible()
+  const image = card.getByRole('img', { name: 'Hình minh hoạ câu 61' })
+  await expect(image).toBeVisible()
+  await expect(image).toHaveAttribute('src', figure)
+  await expect(
+    page
+      .getByRole('article', { name: 'Đề thi' })
+      .getByRole('heading', { name: 'Phần 2. Toán học', exact: true })
+  ).toBeVisible()
+  await page.screenshot({ path: '.playwright-mcp/tv/ai-assistant-figure-1440.png' })
+})
+
+test('a figure that fails to load is not shown', async ({ page }) => {
+  const saved: Conversation = {
+    id: 'conv-9',
+    title: 'Đề có hình lỗi',
+    subjectId: 'category-1',
+    mode: 'compose',
+    createdAt: stamp,
+    updatedAt: stamp,
+  }
+  await installAiFixture(page, 'MANAGER', {
+    conversations: [saved],
+    drafts: {
+      'conv-9': {
+        draft: { id: 'draft-conv-9', conversationId: 'conv-9', name: 'Đề có hình lỗi', examFormat: 'VACT_2025', status: 'DRAFT' },
+        items: [bankItem('conv-9', 'bank-1', 1, 'Đọc biểu đồ độ ẩm theo tháng.', '/missing-ai13-figure.png')],
+      },
+    },
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant')
+
+  const card = page.locator('#exam-question-bank-1')
+  await expect(card.getByText('Từ ngân hàng: Đề minh hoạ 2024', { exact: true })).toBeVisible()
+  await expect(card.getByRole('img', { name: 'Hình minh hoạ câu 61' })).toHaveCount(0)
+})
+
 test('keeping and dropping an AI question each call the draft API', async ({ page }) => {
   const { state } = await installAiFixture(page)
   await openAssistant(page)
@@ -432,6 +555,19 @@ test('an ask run that fails shows the error inside the thread', async ({ page })
   await expect(page.getByText('Máy chủ không xử lý được câu hỏi.')).toBeVisible()
   expect(state.requests.find((entry) => entry.method === 'POST' && entry.path.endsWith('/messages'))?.body)
     .toMatchObject({ content: 'Đạo hàm là gì?', mode: 'ask' })
+})
+
+test('an ask run shows the answer text sent in the answer event', async ({ page }) => {
+  const answer = 'Đạo hàm là tốc độ thay đổi tức thời của hàm số tại một điểm.'
+  await installAiFixture(page, 'MANAGER', { askAnswer: answer })
+  await openAssistant(page)
+
+  await page.getByRole('button', { name: 'Chế độ trả lời' }).click()
+  await page.getByRole('option', { name: /Hỏi đáp/ }).click()
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Đạo hàm là gì?')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText(answer, { exact: true })).toBeVisible({ timeout: 15_000 })
 })
 
 test('opening a saved conversation loads its messages, title and paper', async ({ page }) => {

@@ -57,7 +57,10 @@ export interface AiQuestionOption {
 
 /** A question as the AI writes it, and as the draft item stores it. */
 export interface AiDraftQuestion {
+  partCode?: string | null
+  partName?: string | null
   patternCode?: string | null
+  patternName?: string | null
   difficulty?: AiDifficulty | string | null
   questionType?: string | null
   hasFigure?: boolean | null
@@ -67,6 +70,12 @@ export interface AiDraftQuestion {
   explanation?: string | null
   options?: AiQuestionOption[] | null
   sourceQuestionId?: string | null
+  /** Set on a question reused from the bank: the paper it came from. */
+  sourceTitle?: string | null
+  /** Signed URL of the question figure, present on a reused bank question that has one. */
+  imageUrl?: string | null
+  /** Signed URL of the figure of the shared passage. */
+  passageImageUrl?: string | null
 }
 
 export interface AiCheckResult {

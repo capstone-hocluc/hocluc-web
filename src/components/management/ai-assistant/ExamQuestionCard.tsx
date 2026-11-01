@@ -8,6 +8,7 @@ import FormulaTextarea from '../../ui/math/FormulaTextarea'
 import MathText from '../../ui/MathText'
 import { optionColumns } from '../quiz/paper-layout'
 import type { ExamPaperOption, ExamPaperQuestion } from './exam-format'
+import ExamFigure from './ExamFigure'
 
 const AI_TAG =
   'ml-1 inline-block rounded border border-[#1e3a8a]/30 px-1 align-middle font-sans text-[8pt] font-bold tracking-wider text-[#1e3a8a]'
@@ -43,6 +44,9 @@ export default function ExamQuestionCard({
   onKeep,
   onMove,
 }: ExamQuestionCardProps) {
+  const pattern = question.patternName ?? question.patternCode
+  const bankSource = question.source === 'bank' ? question.sourceTitle : null
+
   return (
     <div
       id={`exam-question-${question.id}`}
@@ -75,6 +79,7 @@ export default function ExamQuestionCard({
                 </span>
               )}
             </p>
+            <ExamFigure src={question.imageUrl} alt={`Hình minh hoạ câu ${number}`} />
             {question.options.length > 0 && (
               <ol className="quiz-paper-options" data-columns={optionColumns(question.options)}>
                 {question.options.map((option) => (
@@ -98,6 +103,8 @@ export default function ExamQuestionCard({
             )}
             {question.source !== 'manual' && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 font-sans text-text-secondary print:hidden">
+                {bankSource && <Status tone="neutral">Từ ngân hàng: {bankSource}</Status>}
+                {pattern && <Status tone="neutral">{pattern}</Status>}
                 {question.kept ? (
                   <>
                     <Status tone="success">Đã giữ</Status>
