@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { cn } from '../../../lib/cn'
-import type { AiTraceStage, AiTraceState } from '../../../services/aiAssistantService'
+import type { AiTraceStage, AiTraceState } from './exam-format'
 import {
   CheckCircle2,
   ChevronDown,

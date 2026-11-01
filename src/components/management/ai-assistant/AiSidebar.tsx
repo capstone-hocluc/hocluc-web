@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
 import { cn } from '../../../lib/cn'
-import type { AiAssistantConversation } from '../../../services/aiAssistantService'
-import Logo from '../../common/Logo'
+import type { AiConversation } from '../../../services/aiAssistantService'
 import Button from '../../console/button'
-import { SidebarExpandedIcon } from '../../console/layout/sidebar-icons'
-import { ArrowLeft, Search, Sparkles, SquarePen } from '../../console/icons'
+import { Check, Pencil, Search, SquarePen, Trash2, X } from '../../console/icons'
+import { Skeleton } from '../../tailgrids/core/skeleton'
 import ScrollArea from '../../ui/ScrollArea'
 
 const dayMonthFormat = new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' })
@@ -33,27 +32,31 @@ function dayGroup(iso: string) {
 }
 
 interface AiSidebarProps {
-  conversations: readonly AiAssistantConversation[]
+  conversations: readonly AiConversation[]
   activeId: string | null
+  loading: boolean
   onSelect: (id: string) => void
   onNew: () => void
-  onBack: () => void
-  backHref: string
-  onCollapse?: () => void
+  onRename: (id: string, title: string) => void
+  onDelete: (id: string) => void
+  onClose: () => void
   className?: string
 }
 
 export default function AiSidebar({
   conversations,
   activeId,
+  loading,
   onSelect,
   onNew,
-  onBack,
-  backHref,
-  onCollapse,
+  onRename,
+  onDelete,
+  onClose,
   className = '',
 }: AiSidebarProps) {
   const [query, setQuery] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
 
   const groups = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase('vi')
@@ -61,7 +64,7 @@ export default function AiSidebar({
       ? conversations.filter((item) => item.title.toLocaleLowerCase('vi').includes(needle))
       : conversations
     const ordered = [...matched].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    const sections: { label: string; items: AiAssistantConversation[] }[] = []
+    const sections: { label: string; items: AiConversation[] }[] = []
     for (const item of ordered) {
       const label = dayGroup(item.updatedAt)
       const section = sections.at(-1)
@@ -71,50 +74,34 @@ export default function AiSidebar({
     return sections
   }, [conversations, query])
 
+  function commitRename() {
+    if (!editingId) return
+    const next = editingTitle.trim()
+    if (next) onRename(editingId, next)
+    setEditingId(null)
+  }
+
   return (
     <aside
-      aria-label="Thanh bên trợ lý AI"
-      className={cn('h-dvh flex-col bg-card-background', className)}
+      aria-label="Cuộc trò chuyện trợ lý AI"
+      className={cn('h-full flex-col bg-card-background', className)}
     >
-      <div className="flex h-14 shrink-0 items-center gap-1 border-b border-card-border px-3">
-        <a
-          href={backHref}
-          onClick={(event) => {
-            event.preventDefault()
-            onBack()
-          }}
-          title="Về bảng điều khiển"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1.5 text-text-primary transition-colors hover:bg-background-gray-secondary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
-        >
-          <ArrowLeft size={17} strokeWidth={1.7} className="shrink-0 text-icon-tertiary" />
-          <Logo size={22} markOnly />
-          <span className="min-w-0 truncate text-sm font-bold">Học Lực</span>
-        </a>
-        {onCollapse && (
-          <button
-            type="button"
-            onClick={onCollapse}
-            aria-label="Thu gọn thanh bên"
-            title="Thu gọn thanh bên"
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
-          >
-            <SidebarExpandedIcon />
-          </button>
-        )}
-      </div>
-
-      <div className="px-2 pt-3">
+      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border-secondary px-3">
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">
+          Cuộc trò chuyện
+        </span>
         <button
           type="button"
-          aria-current="page"
-          className="flex w-full items-center gap-3 rounded-lg bg-sidebar-navigation-nav-item-nav-hover-background px-3 py-2 text-left text-sm font-semibold text-primary-text"
+          onClick={onClose}
+          aria-label="Đóng cuộc trò chuyện"
+          title="Đóng"
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
         >
-          <Sparkles size={18} strokeWidth={1.7} aria-hidden />
-          <span className="min-w-0 flex-1 truncate">Trợ lý AI</span>
+          <X size={17} strokeWidth={1.7} />
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col px-2 pt-5">
+      <div className="flex min-h-0 flex-1 flex-col px-2 pt-3">
         <h2 className="flex items-center justify-between px-2 pb-2 text-xs font-semibold tracking-wide text-text-tertiary uppercase">
           Cuộc trò chuyện
           <span className="font-medium tabular-nums">{conversations.length}</span>
@@ -136,53 +123,133 @@ export default function AiSidebar({
           />
         </label>
         <ScrollArea className="min-h-0 flex-1 pb-2 [mask-image:linear-gradient(to_bottom,#000_calc(100%_-_16px),transparent)]">
-          {groups.length === 0 && (
+          {loading && (
+            <div aria-hidden className="space-y-1.5 px-2 pt-1">
+              <Skeleton className="h-8 w-full rounded-lg" />
+              <Skeleton className="h-8 w-11/12 rounded-lg" />
+              <Skeleton className="h-8 w-full rounded-lg" />
+            </div>
+          )}
+          {!loading && groups.length === 0 && (
             <p className="px-2 py-2 text-xs leading-5 text-text-tertiary">
               Không có cuộc trò chuyện phù hợp.
             </p>
           )}
-          {groups.map((group) => (
-            <div key={group.label} className="mb-3">
-              <h3 className="px-2 py-1 text-[11px] font-semibold tracking-wide text-text-tertiary uppercase">
-                {group.label}
-              </h3>
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = item.id === activeId
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      aria-current={active ? 'page' : undefined}
-                      onClick={() => onSelect(item.id)}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors focus-visible:ring-2 focus-visible:ring-input-primary-focus-border',
-                        active
-                          ? 'bg-sidebar-navigation-nav-item-nav-hover-background font-medium text-primary-text'
-                          : 'text-text-secondary hover:bg-background-gray-secondary hover:text-text-primary'
-                      )}
-                    >
-                      <span
-                        aria-hidden
+          {!loading &&
+            groups.map((group) => (
+              <div key={group.label} className="mb-3">
+                <h3 className="px-2 py-1 text-[11px] font-semibold tracking-wide text-text-tertiary uppercase">
+                  {group.label}
+                </h3>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const active = item.id === activeId
+                    if (editingId === item.id) {
+                      return (
+                        <form
+                          key={item.id}
+                          onSubmit={(event) => {
+                            event.preventDefault()
+                            commitRename()
+                          }}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1"
+                        >
+                          <input
+                            autoFocus
+                            value={editingTitle}
+                            onChange={(event) => setEditingTitle(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Escape') setEditingId(null)
+                            }}
+                            aria-label="Tên cuộc trò chuyện"
+                            className="h-7 min-w-0 flex-1 rounded-md border border-input-primary-focus-border bg-input-background px-2 text-[13px] text-text-primary outline-none"
+                          />
+                          <button
+                            type="submit"
+                            aria-label="Lưu tên"
+                            title="Lưu tên"
+                            className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-primary-text hover:bg-background-gray-secondary"
+                          >
+                            <Check size={13} strokeWidth={2} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            aria-label="Huỷ đổi tên"
+                            title="Huỷ"
+                            className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-icon-tertiary hover:bg-background-gray-secondary hover:text-text-primary"
+                          >
+                            <X size={13} strokeWidth={2} />
+                          </button>
+                        </form>
+                      )
+                    }
+                    return (
+                      <div
+                        key={item.id}
                         className={cn(
-                          'size-2 shrink-0 rounded-full border',
-                          active ? 'border-primary-text' : 'border-icon-tertiary'
+                          'group/item flex items-center gap-0.5 rounded-lg pr-1 transition-colors',
+                          active
+                            ? 'bg-sidebar-navigation-nav-item-nav-hover-background'
+                            : 'hover:bg-background-gray-secondary'
                         )}
-                      />
-                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                      <time
-                        className="shrink-0 text-[11px] text-text-tertiary"
-                        dateTime={item.updatedAt}
-                        title={new Date(item.updatedAt).toLocaleString('vi-VN')}
                       >
-                        {relativeTime(item.updatedAt)}
-                      </time>
-                    </button>
-                  )
-                })}
+                        <button
+                          type="button"
+                          aria-current={active ? 'page' : undefined}
+                          onClick={() => onSelect(item.id)}
+                          className={cn(
+                            'flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors focus-visible:ring-2 focus-visible:ring-input-primary-focus-border',
+                            active
+                              ? 'font-medium text-primary-text'
+                              : 'text-text-secondary hover:text-text-primary'
+                          )}
+                        >
+                          <span
+                            aria-hidden
+                            className={cn(
+                              'size-2 shrink-0 rounded-full border',
+                              active ? 'border-primary-text' : 'border-icon-tertiary'
+                            )}
+                          />
+                          <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                          <time
+                            className="shrink-0 text-[11px] text-text-tertiary group-hover/item:hidden"
+                            dateTime={item.updatedAt}
+                            title={new Date(item.updatedAt).toLocaleString('vi-VN')}
+                          >
+                            {relativeTime(item.updatedAt)}
+                          </time>
+                        </button>
+                        <span className="hidden shrink-0 items-center group-hover/item:flex focus-within:flex">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingId(item.id)
+                              setEditingTitle(item.title)
+                            }}
+                            aria-label={`Đổi tên ${item.title}`}
+                            title="Đổi tên"
+                            className="inline-flex size-6 items-center justify-center rounded-md text-icon-tertiary transition-colors hover:bg-card-background hover:text-text-primary"
+                          >
+                            <Pencil size={13} strokeWidth={1.8} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDelete(item.id)}
+                            aria-label={`Xoá ${item.title}`}
+                            title="Xoá"
+                            className="inline-flex size-6 items-center justify-center rounded-md text-icon-tertiary transition-colors hover:bg-card-background hover:text-badge-error-text"
+                          >
+                            <Trash2 size={13} strokeWidth={1.8} />
+                          </button>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </ScrollArea>
       </div>
 

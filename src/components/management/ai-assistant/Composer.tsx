@@ -14,6 +14,9 @@ import {
   type LucideIcon,
 } from '../../console/icons'
 import Button from '../../console/button'
+import Notice from '../../console/notice'
+import type { SelectOption } from '../../console/select-field'
+import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import QuizConfigBar from './QuizConfigBar'
 
 const MODES: {
@@ -55,6 +58,19 @@ interface ComposerProps {
   busy: boolean
   onStop: () => void
   hasMessages: boolean
+  notice: string | null
+  onDismissNotice: () => void
+  settings: AiComposeSettings
+  onSettingsChange: (patch: Partial<AiComposeSettings>) => void
+  subjects: SelectOption[]
+  subjectsLoading: boolean
+  subjectsError: string | null
+  onReloadSubjects: () => void
+  papers: SelectOption[]
+  papersLoading: boolean
+  papersError: string | null
+  onReloadPapers: () => void
+  subjectLocked: boolean
 }
 
 export default function Composer({
@@ -66,10 +82,25 @@ export default function Composer({
   busy,
   onStop,
   hasMessages,
+  notice,
+  onDismissNotice,
+  settings,
+  onSettingsChange,
+  subjects,
+  subjectsLoading,
+  subjectsError,
+  onReloadSubjects,
+  papers,
+  papersLoading,
+  papersError,
+  onReloadPapers,
+  subjectLocked,
 }: ComposerProps) {
   const active = MODES.find((item) => item.id === mode) ?? MODES[0]
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const canSend = Boolean(value.trim()) && !busy
+  const missingConfig =
+    mode !== 'ask' && (!settings.subjectId || (mode === 'mock-exam' && !settings.bankSourceId))
+  const canSend = Boolean(value.trim()) && !busy && !missingConfig
 
   useEffect(() => {
     const element = textareaRef.current
@@ -85,7 +116,30 @@ export default function Composer({
         hasMessages ? 'max-w-[960px] pt-1 pb-5' : 'max-w-[768px] pb-5'
       )}
     >
-      {mode !== 'ask' && <QuizConfigBar mode={mode} />}
+      {notice && (
+        <Notice tone="danger" className="mb-2.5">
+          {notice}
+          <Button size="sm" appearance="outline" onClick={onDismissNotice}>
+            Đóng
+          </Button>
+        </Notice>
+      )}
+      {mode !== 'ask' && (
+        <QuizConfigBar
+          mode={mode}
+          settings={settings}
+          onChange={onSettingsChange}
+          subjects={subjects}
+          subjectsLoading={subjectsLoading}
+          subjectsError={subjectsError ?? ''}
+          onReloadSubjects={onReloadSubjects}
+          papers={papers}
+          papersLoading={papersLoading}
+          papersError={papersError ?? ''}
+          onReloadPapers={onReloadPapers}
+          subjectLocked={subjectLocked}
+        />
+      )}
       <div className="relative">
         <form
           onSubmit={(event) => {
@@ -126,7 +180,7 @@ export default function Composer({
             <Button
               type={busy ? 'button' : 'submit'}
               onClick={busy ? onStop : undefined}
-              disabled={!busy && !value.trim()}
+              disabled={!busy && (!value.trim() || missingConfig)}
               aria-label={busy ? 'Dừng tạo câu trả lời' : 'Gửi tin nhắn'}
               title={busy ? 'Dừng tạo câu trả lời' : 'Gửi tin nhắn'}
               size="icon"

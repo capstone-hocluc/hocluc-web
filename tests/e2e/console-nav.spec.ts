@@ -23,7 +23,7 @@ const AREA: Record<MenuRole, string> = {
 const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
   MANAGER: [
     { label: 'Tổng quan', items: ['Tổng quan'] },
-    { label: 'Đào tạo', items: ['Môn học', 'Năm thi & đợt thi', 'Khóa học', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
+    { label: 'Đào tạo', items: ['Năm thi & đợt thi', 'Môn học và khóa học', 'Ngân hàng câu hỏi', 'Trợ lý AI', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Lớp học', items: ['Lịch học'] },
     { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng'] },
     { label: 'Hỗ trợ', items: ['Giám sát hỗ trợ'] },
@@ -31,7 +31,7 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
   ],
   STAFF: [
     { label: 'Tổng quan', items: ['Tổng quan'] },
-    { label: 'Đào tạo', items: ['Môn học', 'Master data', 'Năm thi & đợt thi', 'Khóa học', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
+    { label: 'Đào tạo', items: ['Master data', 'Năm thi & đợt thi', 'Môn học và khóa học', 'Ngân hàng câu hỏi', 'Trợ lý AI', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Lớp học', items: ['Lịch học', 'Điểm danh'] },
     { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng'] },
     { label: 'Hỗ trợ', items: ['Phân công Mentor'] },
@@ -39,7 +39,7 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
   ],
   TEACHER: [
     { label: 'Tổng quan', items: ['Tổng quan'] },
-    { label: 'Đào tạo', items: ['Master data', 'Lớp của tôi', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
+    { label: 'Đào tạo', items: ['Master data', 'Lớp của tôi', 'Ngân hàng câu hỏi', 'Trợ lý AI', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Lớp học', items: ['Lịch dạy', 'Giờ rảnh'] },
   ],
   MENTOR: [
@@ -50,7 +50,7 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
   ADMINISTRATOR: [
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
     { label: 'Tổng quan', items: ['Tổng quan'] },
-    { label: 'Đào tạo', items: ['Môn học', 'Master data', 'Năm thi & đợt thi', 'Khóa học', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
+    { label: 'Đào tạo', items: ['Master data', 'Năm thi & đợt thi', 'Môn học và khóa học', 'Ngân hàng câu hỏi', 'Trợ lý AI', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng'] },
     { label: 'Hỗ trợ', items: ['Phân công Mentor'] },
   ],

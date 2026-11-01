@@ -1,30 +1,32 @@
-import type {
-  AiExamDraft,
-  AiExamGroup,
-  AiExamPart,
-  AiExamQuestion,
-} from '../../../services/aiAssistantService'
+import type { AiDraftQuestion } from '../../../services/aiAssistantService'
 import MathText from '../../ui/MathText'
 import PaperBrand from '../quiz/PaperBrand'
 import { sharedHeading } from '../quiz/paper-layout'
 import '../quiz/quiz-paper.css'
 import ExamQuestionCard from './ExamQuestionCard'
+import type {
+  ExamPaper as ExamPaperModel,
+  ExamPaperGroup,
+  ExamPaperPart,
+  ExamPaperQuestion,
+} from './exam-format'
 
 interface ExamPaperProps {
-  draft: AiExamDraft
+  paper: ExamPaperModel
   numberOf: Map<string, number>
   editingId: string | null
   focusedId: string | null
   onStartEdit: (id: string) => void
   onStopEdit: () => void
-  onSave: (id: string, patch: Pick<AiExamQuestion, 'prompt' | 'options' | 'explanation'>) => void
+  onSave: (id: string, patch: Pick<AiDraftQuestion, 'text' | 'options' | 'explanation'>) => void
   onDelete: (id: string) => void
-  onAccept: (id: string) => void
+  onKeep: (id: string, kept: boolean) => void
   onMove: (sourceId: string, targetId: string) => void
+  onAdd: (partId: string) => void
 }
 
 export default function ExamPaper({
-  draft,
+  paper,
   numberOf,
   editingId,
   focusedId,
@@ -32,29 +34,27 @@ export default function ExamPaper({
   onStopEdit,
   onSave,
   onDelete,
-  onAccept,
+  onKeep,
   onMove,
+  onAdd,
 }: ExamPaperProps) {
-  const groups = new Map(draft.groups.map((group) => [group.id, group]))
-  const targetTotal = draft.matrix
-    ? draft.parts.reduce((sum, part) => sum + (part.targetCount ?? 0), 0)
-    : 0
+  const groups = new Map(paper.groups.map((group) => [group.id, group]))
   const meta = [
-    draft.durationMinutes ? `Thời gian làm bài: ${draft.durationMinutes} phút` : null,
-    `${targetTotal || draft.questions.length} câu`,
+    paper.durationMinutes ? `Thời gian làm bài: ${paper.durationMinutes} phút` : null,
+    `${paper.questions.length} câu`,
   ]
     .filter(Boolean)
     .join(' · ')
 
-  const sections: Array<{ parentTitle: string | null; parts: AiExamPart[] }> = []
-  for (const part of draft.parts) {
+  const sections: Array<{ parentTitle: string | null; parts: ExamPaperPart[] }> = []
+  for (const part of paper.parts) {
     const parentTitle = part.parentTitle ?? null
     const last = sections[sections.length - 1]
     if (last && last.parentTitle === parentTitle) last.parts.push(part)
     else sections.push({ parentTitle, parts: [part] })
   }
 
-  function card(question: AiExamQuestion) {
+  function card(question: ExamPaperQuestion) {
     const number = numberOf.get(question.id) ?? 1
     return (
       <ExamQuestionCard
@@ -67,7 +67,7 @@ export default function ExamPaper({
         onStopEdit={onStopEdit}
         onSave={(patch) => onSave(question.id, patch)}
         onDelete={() => onDelete(question.id)}
-        onAccept={() => onAccept(question.id)}
+        onKeep={(kept) => onKeep(question.id, kept)}
         onMove={onMove}
       />
     )
@@ -76,15 +76,15 @@ export default function ExamPaper({
   return (
     <article className="quiz-paper" aria-label="Đề thi">
       <PaperBrand content="own" />
-      <h1>{draft.title}</h1>
+      <h1>{paper.title}</h1>
       <p className="quiz-paper-meta">{meta}</p>
 
       {sections.map((section) => (
         <section key={section.parentTitle ?? section.parts[0].id}>
           {section.parentTitle && <h2>{section.parentTitle}</h2>}
           {section.parts.map((part) => {
-            const questions = draft.questions.filter((question) => question.partId === part.id)
-            const blocks: Array<{ group: AiExamGroup | null; questions: AiExamQuestion[] }> = []
+            const questions = paper.questions.filter((question) => question.partId === part.id)
+            const blocks: Array<{ group: ExamPaperGroup | null; questions: ExamPaperQuestion[] }> = []
             for (const question of questions) {
               const group = question.groupId ? groups.get(question.groupId) ?? null : null
               const last = blocks[blocks.length - 1]
@@ -95,7 +95,16 @@ export default function ExamPaper({
 
             return (
               <div key={part.id}>
-                {section.parentTitle ? <h3>{heading}</h3> : <h2>{part.title}</h2>}
+                <div className="flex items-end justify-between gap-3">
+                  {section.parentTitle ? <h3>{heading}</h3> : <h2>{part.title}</h2>}
+                  <button
+                    type="button"
+                    onClick={() => onAdd(part.id)}
+                    className="mb-1 shrink-0 rounded-lg border border-card-border bg-card-background px-2 py-1 font-sans text-xs font-medium text-text-secondary transition-colors hover:text-text-primary print:hidden"
+                  >
+                    Thêm câu
+                  </button>
+                </div>
                 {questions.length === 0 && (
                   <p className="text-[10pt] text-[#475569] italic">Chưa có câu hỏi.</p>
                 )}

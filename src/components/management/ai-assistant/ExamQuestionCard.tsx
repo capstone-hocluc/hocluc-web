@@ -1,25 +1,33 @@
 import { useState } from 'react'
 import { cn } from '../../../lib/cn'
-import type { AiExamOption, AiExamQuestion } from '../../../services/aiAssistantService'
+import type { AiDraftQuestion } from '../../../services/aiAssistantService'
 import Button from '../../console/button'
+import Status from '../../console/status'
 import { Check, GripVertical, Pencil, Trash2, X, type LucideIcon } from '../../console/icons'
 import FormulaTextarea from '../../ui/math/FormulaTextarea'
 import MathText from '../../ui/MathText'
 import { optionColumns } from '../quiz/paper-layout'
+import type { ExamPaperOption, ExamPaperQuestion } from './exam-format'
 
 const AI_TAG =
   'ml-1 inline-block rounded border border-[#1e3a8a]/30 px-1 align-middle font-sans text-[8pt] font-bold tracking-wider text-[#1e3a8a]'
 
+const SOURCE_LABEL = {
+  ai: 'AI',
+  bank: 'Ngân hàng',
+  manual: 'Tự soạn',
+} as const
+
 interface ExamQuestionCardProps {
-  question: AiExamQuestion
+  question: ExamPaperQuestion
   number: number
   focused: boolean
   editing: boolean
   onStartEdit: () => void
   onStopEdit: () => void
-  onSave: (patch: Pick<AiExamQuestion, 'prompt' | 'options' | 'explanation'>) => void
+  onSave: (patch: Pick<AiDraftQuestion, 'text' | 'options' | 'explanation'>) => void
   onDelete: () => void
-  onAccept: () => void
+  onKeep: (kept: boolean) => void
   onMove: (sourceId: string, targetId: string) => void
 }
 
@@ -32,7 +40,7 @@ export default function ExamQuestionCard({
   onStopEdit,
   onSave,
   onDelete,
-  onAccept,
+  onKeep,
   onMove,
 }: ExamQuestionCardProps) {
   return (
@@ -61,9 +69,9 @@ export default function ExamQuestionCard({
           <>
             <p className="quiz-paper-stem">
               <strong>Câu {number}:</strong> <MathText>{question.prompt}</MathText>
-              {question.source === 'ai' && (
-                <span className={AI_TAG} title="Câu do AI soạn">
-                  AI
+              {question.source !== 'manual' && (
+                <span className={AI_TAG} title={`Nguồn: ${SOURCE_LABEL[question.source]}`}>
+                  {SOURCE_LABEL[question.source]}
                 </span>
               )}
             </p>
@@ -76,16 +84,34 @@ export default function ExamQuestionCard({
                 ))}
               </ol>
             )}
-            {question.source === 'ai' && !question.accepted && (
+            {question.needsReview && (
+              <div className="mt-2 flex flex-wrap items-start gap-2 font-sans print:hidden">
+                <Status tone="warning">Cần duyệt</Status>
+                {question.reasons.length > 0 && (
+                  <ul className="min-w-0 flex-1 space-y-0.5 text-xs leading-5 text-text-secondary">
+                    {question.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {question.source !== 'manual' && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 font-sans text-text-secondary print:hidden">
-                <Button size="sm" appearance="outline" onClick={onAccept}>
-                  <Check size={13} />
-                  Giữ
-                </Button>
-                <Button size="sm" appearance="ghost" variant="danger" onClick={onDelete}>
-                  <X size={13} />
-                  Bỏ
-                </Button>
+                {question.kept ? (
+                  <>
+                    <Status tone="success">Đã giữ</Status>
+                    <Button size="sm" appearance="ghost" onClick={() => onKeep(false)}>
+                      <X size={13} />
+                      Bỏ
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" appearance="outline" onClick={() => onKeep(true)}>
+                    <Check size={13} />
+                    Giữ
+                  </Button>
+                )}
               </div>
             )}
           </>
@@ -144,12 +170,12 @@ function QuestionFields({
   onSave,
 }: {
   number: number
-  question: AiExamQuestion
+  question: ExamPaperQuestion
   onCancel: () => void
-  onSave: (patch: Pick<AiExamQuestion, 'prompt' | 'options' | 'explanation'>) => void
+  onSave: (patch: Pick<AiDraftQuestion, 'text' | 'options' | 'explanation'>) => void
 }) {
   const [prompt, setPrompt] = useState(question.prompt)
-  const [options, setOptions] = useState(question.options)
+  const [options, setOptions] = useState<ExamPaperOption[]>(question.options)
   const [explanation, setExplanation] = useState(question.explanation)
 
   function markCorrect(id: string) {
@@ -176,7 +202,7 @@ function QuestionFields({
 
       <div className="mt-3 flex flex-col gap-2">
         <span className="text-xs font-semibold text-text-secondary">Lựa chọn và đáp án đúng</span>
-        {options.map((option: AiExamOption) => (
+        {options.map((option) => (
           <div
             key={option.id}
             className="flex min-w-0 items-start gap-2 rounded-lg border border-card-border p-2"
@@ -222,7 +248,13 @@ function QuestionFields({
         <Button
           size="sm"
           disabled={!prompt.trim()}
-          onClick={() => onSave({ prompt: prompt.trim(), options, explanation })}
+          onClick={() =>
+            onSave({
+              text: prompt.trim(),
+              options: options.map(({ label, text, correct }) => ({ label, text, correct })),
+              explanation,
+            })
+          }
         >
           Lưu
         </Button>

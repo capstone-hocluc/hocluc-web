@@ -6,13 +6,15 @@ import {
   ChevronDown,
   Copy,
   RotateCcw,
+  XCircle,
   type LucideIcon,
 } from '../../console/icons'
 import Button from '../../console/button'
-import type { AiAssistantMessage, AiAssistantMode } from '../../../services/aiAssistantService'
+import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import AiMarkdown from './AiMarkdown'
 import AiOrb from './AiOrb'
 import StageTrace from './StageTrace'
+import type { AiChatMessage } from './exam-format'
 
 const MODE_LABEL: Record<AiAssistantMode, string> = {
   ask: 'Hỏi đáp',
@@ -25,7 +27,7 @@ export default function AssistantMessage({
   onRegenerate,
   onJumpToQuestion,
 }: {
-  message: AiAssistantMessage
+  message: AiChatMessage
   onRegenerate: () => void
   onJumpToQuestion: (questionId: string) => void
 }) {
@@ -33,7 +35,7 @@ export default function AssistantMessage({
   const [traceOpen, setTraceOpen] = useState(false)
   const hasStages = Boolean(message.stages?.length)
   const hasTrace = Boolean(message.trace?.length)
-  const addedIds = message.addedQuestionIds ?? []
+  const addedIds = message.addedItemIds ?? []
 
   async function copy() {
     try {
@@ -47,8 +49,17 @@ export default function AssistantMessage({
 
   const statusInner = (
     <>
-      <AiOrb />
-      <span>Trợ lý AI đã phản hồi</span>
+      {message.error ? (
+        <>
+          <XCircle size={15} strokeWidth={1.8} className="shrink-0 text-badge-error-text" aria-hidden />
+          <span className="text-badge-error-text">Trợ lý AI báo lỗi</span>
+        </>
+      ) : (
+        <>
+          <AiOrb />
+          <span>Trợ lý AI đã phản hồi</span>
+        </>
+      )}
       {message.mode && message.mode !== 'ask' && (
         <span className="text-xs font-medium text-text-tertiary/80">
           · {MODE_LABEL[message.mode]}
@@ -95,7 +106,7 @@ export default function AssistantMessage({
       {!hasStages && hasTrace && traceOpen && (
         <ol className="mb-4 ml-[7px] space-y-1.5 border-l border-card-border pl-3">
           {message.trace!.map((step, index) => (
-            <li key={step} className="flex gap-2 text-xs leading-5 text-text-tertiary">
+            <li key={`${index}-${step}`} className="flex gap-2 text-xs leading-5 text-text-tertiary">
               <span className="text-text-secondary">{index + 1}.</span>
               <span>{step}</span>
             </li>
@@ -103,9 +114,16 @@ export default function AssistantMessage({
         </ol>
       )}
 
-      <div className="text-[16px] leading-[1.75] text-text-primary">
-        <AiMarkdown content={message.body} />
-      </div>
+      {message.body && (
+        <div
+          className={cn(
+            'text-[16px] leading-[1.75]',
+            message.error ? 'text-badge-error-text' : 'text-text-primary'
+          )}
+        >
+          <AiMarkdown content={message.body} />
+        </div>
+      )}
 
       {hasStages && <StageTrace stages={message.stages!} />}
 
@@ -115,7 +133,6 @@ export default function AssistantMessage({
             <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-badge-success-text" aria-hidden />
             <p className="min-w-0 flex-1 text-sm font-medium text-text-primary">
               Đã thêm {addedIds.length} câu vào đề
-              {message.addedPartTitle ? ` · ${message.addedPartTitle}` : ''}
             </p>
           </div>
           <Button
@@ -130,12 +147,16 @@ export default function AssistantMessage({
       )}
 
       <div className="mt-3 flex items-center gap-1">
-        <ActionButton
-          icon={copied ? Check : Copy}
-          label={copied ? 'Đã sao chép' : 'Sao chép câu trả lời'}
-          onClick={() => void copy()}
-        />
-        <ActionButton icon={RotateCcw} label="Tạo lại câu trả lời" onClick={onRegenerate} />
+        {message.body && (
+          <ActionButton
+            icon={copied ? Check : Copy}
+            label={copied ? 'Đã sao chép' : 'Sao chép câu trả lời'}
+            onClick={() => void copy()}
+          />
+        )}
+        {!message.error && (
+          <ActionButton icon={RotateCcw} label="Tạo lại câu trả lời" onClick={onRegenerate} />
+        )}
       </div>
     </article>
   )

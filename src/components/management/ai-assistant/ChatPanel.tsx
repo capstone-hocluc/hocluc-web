@@ -1,27 +1,40 @@
 import { cn } from '../../../lib/cn'
-import type {
-  AiAssistantMessage,
-  AiAssistantMode,
-} from '../../../services/aiAssistantService'
-import Logo from '../../common/Logo'
-import Button from '../../console/button'
-import { ChevronLeft, Eye, Sparkles, SquarePen, X } from '../../console/icons'
+import type { AiAssistantMode } from '../../../services/aiAssistantService'
+import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
+import type { SelectOption } from '../../console/select-field'
+import { ChevronLeft, Sparkles, SquarePen, X } from '../../console/icons'
 import Composer from './Composer'
 import MessageThread from './MessageThread'
 import StarterSuggestions from './StarterSuggestions'
+import type { AiChatMessage, AiTraceStage } from './exam-format'
 
 interface ChatPanelProps {
-  messages: readonly AiAssistantMessage[]
+  messages: readonly AiChatMessage[]
   mode: AiAssistantMode
   value: string
   pending: boolean
+  stages: readonly AiTraceStage[]
+  trace: readonly string[]
+  loading: boolean
   greeting: string
+  notice: string | null
+  onDismissNotice: () => void
+  settings: AiComposeSettings
+  onSettingsChange: (patch: Partial<AiComposeSettings>) => void
+  subjects: SelectOption[]
+  subjectsLoading: boolean
+  subjectsError: string | null
+  onReloadSubjects: () => void
+  papers: SelectOption[]
+  papersLoading: boolean
+  papersError: string | null
+  onReloadPapers: () => void
+  subjectLocked: boolean
   onModeChange: (mode: AiAssistantMode) => void
   onValueChange: (value: string) => void
   onSend: () => void
   onStop: () => void
   onRegenerate: () => void
-  onLoadDemo: () => void
   onStartNew: () => void
   onPickPrompt: (mode: AiAssistantMode, prompt: string) => void
   onJumpToQuestion: (questionId: string) => void
@@ -35,13 +48,28 @@ export default function ChatPanel({
   mode,
   value,
   pending,
+  stages,
+  trace,
+  loading,
   greeting,
+  notice,
+  onDismissNotice,
+  settings,
+  onSettingsChange,
+  subjects,
+  subjectsLoading,
+  subjectsError,
+  onReloadSubjects,
+  papers,
+  papersLoading,
+  papersError,
+  onReloadPapers,
+  subjectLocked,
   onModeChange,
   onValueChange,
   onSend,
   onStop,
   onRegenerate,
-  onLoadDemo,
   onStartNew,
   onPickPrompt,
   onJumpToQuestion,
@@ -93,23 +121,21 @@ export default function ChatPanel({
         </div>
       </header>
 
-      {hasMessages ? (
+      {hasMessages || loading ? (
         <MessageThread
           messages={messages}
           pending={pending}
+          stages={stages}
+          trace={trace}
+          loading={loading}
           onRegenerate={onRegenerate}
           onJumpToQuestion={onJumpToQuestion}
         />
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5 text-center">
-          <Logo size={32} markOnly />
-          <h2 className="mt-3 text-2xl leading-tight font-extrabold tracking-[-0.02em] text-text-primary">
+          <h2 className="text-2xl leading-tight font-extrabold tracking-[-0.02em] text-text-primary">
             {greeting}
           </h2>
-          <Button appearance="outline" size="sm" className="mt-5" onClick={onLoadDemo}>
-            <Eye size={15} />
-            Xem bản demo
-          </Button>
         </div>
       )}
 
@@ -122,6 +148,19 @@ export default function ChatPanel({
         busy={pending}
         onStop={onStop}
         hasMessages={hasMessages}
+        notice={notice}
+        onDismissNotice={onDismissNotice}
+        settings={settings}
+        onSettingsChange={onSettingsChange}
+        subjects={subjects}
+        subjectsLoading={subjectsLoading}
+        subjectsError={subjectsError}
+        onReloadSubjects={onReloadSubjects}
+        papers={papers}
+        papersLoading={papersLoading}
+        papersError={papersError}
+        onReloadPapers={onReloadPapers}
+        subjectLocked={subjectLocked}
       />
 
       {!hasMessages && (

@@ -1,31 +1,43 @@
 import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
-import { ArrowLeft, FileText, List, Sparkles } from '../../console/icons'
-import Status from '../../console/status'
+import { ArrowLeft, Clock, List, Sparkles, SquarePen } from '../../console/icons'
 
 interface ExamTopBarProps {
   title: string
-  dirty: boolean
+  editable: boolean
   onTitleChange: (title: string) => void
   onBack: () => void
   backHref: string
+  conversationsOpen: boolean
+  onToggleConversations: () => void
   chatOpen: boolean
   onToggleChat: () => void
   outlineOpen: boolean
   onToggleOutline: () => void
+  onNew: () => void
 }
 
 export default function ExamTopBar({
   title,
-  dirty,
+  editable,
   onTitleChange,
   onBack,
   backHref,
+  conversationsOpen,
+  onToggleConversations,
   chatOpen,
   onToggleChat,
   outlineOpen,
   onToggleOutline,
+  onNew,
 }: ExamTopBarProps) {
+  function commitTitle(value: string) {
+    if (!editable) return
+    const next = value.trim()
+    if (!next || next === title) return
+    onTitleChange(next)
+  }
+
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-1.5 border-b border-card-border bg-card-background px-2 sm:px-3">
       <a
@@ -44,29 +56,48 @@ export default function ExamTopBar({
       <span aria-hidden className="hidden h-5 w-px shrink-0 bg-card-border sm:block" />
 
       <input
-        value={title}
-        onChange={(event) => onTitleChange(event.target.value)}
+        key={title}
+        defaultValue={title}
+        disabled={!editable}
+        onBlur={(event) => commitTitle(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+          }
+          if (event.key === 'Escape') {
+            event.currentTarget.value = title
+            event.currentTarget.blur()
+          }
+        }}
         aria-label="Tên đề thi"
         placeholder="Đề thi mới"
-        className="h-9 min-w-0 max-w-[380px] flex-1 rounded-lg border border-transparent bg-transparent px-2 text-sm font-semibold text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:bg-background-gray-secondary focus:border-input-primary-focus-border focus:bg-input-background"
+        className="h-9 min-w-0 max-w-[380px] flex-1 rounded-lg border border-transparent bg-transparent px-2 text-sm font-semibold text-text-primary outline-none transition-colors placeholder:text-text-tertiary hover:bg-background-gray-secondary focus:border-input-primary-focus-border focus:bg-input-background disabled:hover:bg-transparent"
       />
-      <span className="hidden shrink-0 text-xs text-text-tertiary md:inline">
-        {dirty ? 'Chưa lưu' : 'Bản nháp'}
-      </span>
-      <Status tone="info" className="hidden lg:inline-flex">
-        Bản xem trước giao diện
-      </Status>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         <Button
-          appearance="outline"
+          appearance={conversationsOpen ? 'outline' : 'ghost'}
           size="sm"
-          disabled
-          title="Chưa nối máy chủ"
+          aria-pressed={conversationsOpen}
+          onClick={onToggleConversations}
+          title="Cuộc trò chuyện"
+          className={cn(
+            conversationsOpen && 'border-primary-text/30 bg-badge-primary-background text-primary-text'
+          )}
+        >
+          <Clock size={15} />
+          <span className="hidden md:inline">Cuộc trò chuyện</span>
+        </Button>
+        <Button
+          appearance="ghost"
+          size="sm"
+          onClick={onNew}
+          title="Đề mới"
           className="hidden sm:inline-flex"
         >
-          <FileText size={15} />
-          Xuất đề
+          <SquarePen size={15} />
+          <span className="hidden md:inline">Đề mới</span>
         </Button>
         <Button
           appearance={chatOpen ? 'outline' : 'ghost'}

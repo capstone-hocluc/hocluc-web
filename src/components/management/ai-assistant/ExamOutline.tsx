@@ -1,10 +1,10 @@
 import { cn } from '../../../lib/cn'
-import type { AiExamDraft, AiExamPart } from '../../../services/aiAssistantService'
 import { ChevronRight, X } from '../../console/icons'
 import ScrollArea from '../../ui/ScrollArea'
+import type { ExamPaper as ExamPaperModel, ExamPaperPart } from './exam-format'
 
 interface ExamOutlineProps {
-  draft: AiExamDraft
+  paper: ExamPaperModel
   numberOf: Map<string, number>
   onJump: (questionId: string) => void
   onCollapse?: () => void
@@ -13,15 +13,15 @@ interface ExamOutlineProps {
 }
 
 export default function ExamOutline({
-  draft,
+  paper,
   numberOf,
   onJump,
   onCollapse,
   onClose,
   className = '',
 }: ExamOutlineProps) {
-  const sections: Array<{ parentTitle: string | null; parts: AiExamPart[] }> = []
-  for (const part of draft.parts) {
+  const sections: Array<{ parentTitle: string | null; parts: ExamPaperPart[] }> = []
+  for (const part of paper.parts) {
     const parentTitle = part.parentTitle ?? null
     const last = sections[sections.length - 1]
     if (last && last.parentTitle === parentTitle) last.parts.push(part)
@@ -32,9 +32,6 @@ export default function ExamOutline({
     <aside aria-label="Mục lục đề thi" className={cn('flex-col bg-card-background', className)}>
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border-secondary px-3">
         <span className="text-sm font-semibold text-text-primary">Mục lục</span>
-        {draft.matrix && (
-          <span className="min-w-0 truncate text-[11px] text-text-tertiary">{draft.matrix.name}</span>
-        )}
         <div className="ml-auto flex shrink-0 items-center">
           {onCollapse && (
             <button
@@ -75,7 +72,7 @@ export default function ExamOutline({
               )}
               <div className={cn(section.parentTitle && 'mt-2 space-y-3')}>
                 {section.parts.map((part) => {
-                  const questions = draft.questions.filter((question) => question.partId === part.id)
+                  const questions = paper.questions.filter((question) => question.partId === part.id)
                   return (
                     <div key={part.id}>
                       <div className="flex items-start justify-between gap-2">
@@ -83,7 +80,7 @@ export default function ExamOutline({
                           {part.title}
                         </h3>
                         <span className="shrink-0 text-[11px] leading-5 tabular-nums text-text-tertiary">
-                          {draft.matrix && part.targetCount !== null
+                          {part.targetCount !== null
                             ? `${questions.length}/${part.targetCount}`
                             : questions.length}
                         </span>
