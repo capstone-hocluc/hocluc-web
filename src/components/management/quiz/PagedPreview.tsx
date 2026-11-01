@@ -84,16 +84,17 @@ export default function PagedPreview({
 
   return (
     <div className="relative">
-      {/* what the pages are cut from: laid out off screen, at the width of an A4 page */}
+      {/* what the pages are cut from: laid out off screen, at the width of an A4 page. Paged.js empties the root it is
+          given of its children, so the paper sits inside a plain wrapper that is handed over instead of itself. */}
       <div ref={source} aria-hidden className="pointer-events-none absolute top-0 -left-[10000px] w-[210mm] opacity-0">
-        {children}
+        <div>{children}</div>
       </div>
       {made?.failed && made.version === version && <Notice tone="danger">Không chia được trang. Đề vẫn xem được ở dạng một tờ liền.</Notice>}
       {!ready && !(made?.failed && made.version === version) && <PagedSkeleton />}
       <div
         ref={target}
         aria-label={label}
-        className={ready ? 'paged-preview-pages paper-print-root' : 'paged-preview-pages paper-print-root hidden'}
+        className={ready ? 'paged-preview-pages paper-print-root' : 'paged-preview-pages paper-print-root invisible absolute inset-x-0 top-0'}
       />
       {ready && <p className="m-0 mt-2 text-center text-xs text-text-tertiary">{made.pages} trang A4</p>}
     </div>

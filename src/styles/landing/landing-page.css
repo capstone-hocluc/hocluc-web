@@ -2442,6 +2442,13 @@
   }
 }
 
+/* Signed in, the cart, account and menu buttons no longer fit beside the wordmark on a narrow phone. */
+@media (max-width: 480px) {
+  .landing-page .logo hocluc-logo::part(wordmark) {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .landing-page .header,
   .landing-page .hero-slide,
