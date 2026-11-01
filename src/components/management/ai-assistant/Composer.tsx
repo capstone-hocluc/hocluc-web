@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
+import { Gallery, Paperclip2 } from '@tailgrids/icons'
 import { cn } from '../../../lib/cn'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import {
@@ -7,8 +8,7 @@ import {
   ChevronDown,
   ClipboardList,
   FileCheck2,
-  Plus,
-  Shapes,
+  Filter,
   Sparkles,
   Square,
   type LucideIcon,
@@ -18,6 +18,39 @@ import Notice from '../../console/notice'
 import type { SelectOption } from '../../console/select-field'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import QuizConfigBar from './QuizConfigBar'
+import { COMPOSE_COUNTS, DIFFICULTIES, MOCK_COUNTS } from './quiz-config-options'
+
+/**
+ * Closes a floating menu on a click outside `root` or on Escape. Spread the returned handler on `root`: inside
+ * the chat sheet the sheet takes Escape and stops it before the document, so the menu answers it there first.
+ */
+function useDismiss(open: boolean, setOpen: (open: boolean) => void, root: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: MouseEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, setOpen, root])
+
+  return (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Escape' || !open) return
+    event.stopPropagation()
+    setOpen(false)
+    // Focus may have been inside the menu, which is about to unmount: hand it back to the chip.
+    root.current?.querySelector('button')?.focus()
+  }
+}
+
+const EXAM_PLACEHOLDER = 'Nhập yêu cầu tạo, sửa, giải đề thi…'
 
 const MODES: {
   id: AiAssistantMode
@@ -37,17 +70,24 @@ const MODES: {
     id: 'compose',
     label: 'Soạn câu hỏi',
     description: 'Tạo câu hỏi mới theo cấu hình',
-    placeholder: 'Mô tả câu hỏi cần soạn: chủ đề, mức độ, dạng câu…',
+    placeholder: EXAM_PLACEHOLDER,
     icon: ClipboardList,
   },
   {
     id: 'mock-exam',
     label: 'Mô phỏng đề',
     description: 'Lấy câu hỏi từ ngân hàng đề có sẵn',
-    placeholder: 'Chọn đề mẫu rồi mô tả cấu trúc đề cần tạo…',
+    placeholder: EXAM_PLACEHOLDER,
     icon: FileCheck2,
   },
 ]
+
+// Chips of the composer; below 20rem of composer width the mode chip keeps only its icon.
+const CHIP =
+  'inline-flex h-8 min-w-0 items-center gap-1 rounded-lg px-1.5 text-[12.5px] font-medium whitespace-nowrap transition-colors hover:bg-background-gray-secondary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border'
+// The menus open upwards over the composer, as wide as it is (capped), aligned to its right edge.
+const MENU =
+  'absolute right-0 bottom-full left-0 z-50 mb-2 ml-auto rounded-xl border border-card-border bg-card-background shadow-card-hover'
 
 interface ComposerProps {
   mode: AiAssistantMode
@@ -71,6 +111,8 @@ interface ComposerProps {
   papersError: string | null
   onReloadPapers: () => void
   subjectLocked: boolean
+  /** Lets the panel focus the message box, e.g. after a starter card filled it. */
+  inputRef?: RefObject<HTMLTextAreaElement | null>
 }
 
 export default function Composer({
@@ -95,9 +137,11 @@ export default function Composer({
   papersError,
   onReloadPapers,
   subjectLocked,
+  inputRef,
 }: ComposerProps) {
   const active = MODES.find((item) => item.id === mode) ?? MODES[0]
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const ownRef = useRef<HTMLTextAreaElement>(null)
+  const textareaRef = inputRef ?? ownRef
   const missingConfig =
     mode !== 'ask' && (!settings.subjectId || (mode === 'mock-exam' && !settings.bankSourceId))
   const canSend = Boolean(value.trim()) && !busy && !missingConfig
@@ -107,48 +151,28 @@ export default function Composer({
     if (!element) return
     element.style.height = 'auto'
     element.style.height = `${Math.min(element.scrollHeight, 200)}px`
-  }, [value])
+  }, [value, textareaRef])
 
   return (
-    <div
-      className={cn(
-        'relative mx-auto w-full shrink-0 px-6',
-        hasMessages ? 'max-w-[960px] pt-1 pb-5' : 'max-w-[768px] pb-5'
-      )}
-    >
+    <div className="w-full shrink-0">
       {notice && (
-        <Notice tone="danger" className="mb-2.5">
+        <Notice tone="danger" className="mb-2">
           {notice}
           <Button size="sm" appearance="outline" onClick={onDismissNotice}>
             Đóng
           </Button>
         </Notice>
       )}
-      {mode !== 'ask' && (
-        <QuizConfigBar
-          mode={mode}
-          settings={settings}
-          onChange={onSettingsChange}
-          subjects={subjects}
-          subjectsLoading={subjectsLoading}
-          subjectsError={subjectsError ?? ''}
-          onReloadSubjects={onReloadSubjects}
-          papers={papers}
-          papersLoading={papersLoading}
-          papersError={papersError ?? ''}
-          onReloadPapers={onReloadPapers}
-          subjectLocked={subjectLocked}
-        />
-      )}
+      {/* The chip menus position against this box, so they never overflow a narrow panel. */}
       <div className="relative">
         <form
           onSubmit={(event) => {
             event.preventDefault()
             if (!busy) onSend()
           }}
-          className="relative z-10 rounded-xl border border-card-border bg-card-background shadow-card-soft transition-[border-color,box-shadow] focus-within:border-input-primary-focus-border focus-within:shadow-card"
+          className="@container rounded-xl border border-card-border bg-card-background shadow-card-soft transition-[border-color,box-shadow] focus-within:border-input-primary-focus-border focus-within:shadow-card"
         >
-          <div className="px-4 pt-3.5 pb-2">
+          <div className="px-3 pt-3 pb-1">
             <textarea
               ref={textareaRef}
               aria-label="Tin nhắn cho trợ lý AI"
@@ -162,28 +186,62 @@ export default function Composer({
                 }
               }}
               placeholder={active.placeholder}
-              style={{ minHeight: hasMessages ? 28 : 64 }}
-              className="block w-full resize-none overflow-hidden bg-transparent text-[15.5px] leading-[1.6] text-text-primary outline-none placeholder:text-input-placeholder-text"
+              style={{ minHeight: hasMessages ? 24 : 48 }}
+              className="block w-full resize-none overflow-hidden bg-transparent text-sm leading-6 text-text-primary outline-none placeholder:text-input-placeholder-text"
             />
           </div>
-          <div className="flex items-center justify-between gap-2 px-3 pt-0.5 pb-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled
-              aria-label="Đính kèm tệp (chưa hỗ trợ)"
-              title="Đính kèm tệp (chưa hỗ trợ)"
-              className="size-8 text-icon-tertiary"
-            >
-              <Plus size={17} strokeWidth={1.7} />
-            </Button>
+          <div className="flex min-w-0 items-center gap-1.5 px-2 pb-2">
+            <div className="flex shrink-0 items-center gap-0.5">
+              <Button
+                appearance="ghost"
+                size="icon"
+                disabled
+                aria-label="Thêm ảnh vào yêu cầu"
+                title="Sắp có"
+                className="size-8 text-icon-tertiary"
+              >
+                <Gallery size={17} aria-hidden />
+              </Button>
+              <Button
+                appearance="ghost"
+                size="icon"
+                disabled
+                aria-label="Đính kèm tệp (chưa hỗ trợ)"
+                title="Đính kèm tệp (chưa hỗ trợ)"
+                className="size-8 text-icon-tertiary"
+              >
+                <Paperclip2 size={17} aria-hidden />
+              </Button>
+            </div>
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
+              <ModeMenu mode={mode} onModeChange={onModeChange} />
+              {mode !== 'ask' && (
+                <SettingsMenu
+                  summary={settingsSummary(mode, settings, subjects)}
+                  missing={missingConfig}
+                  hasError={Boolean(subjectsError || (mode === 'mock-exam' && papersError))}
+                >
+                  <QuizConfigBar
+                    mode={mode}
+                    settings={settings}
+                    onChange={onSettingsChange}
+                    subjects={subjects}
+                    subjectsLoading={subjectsLoading}
+                    subjectsError={subjectsError ?? ''}
+                    onReloadSubjects={onReloadSubjects}
+                    subjectLocked={subjectLocked}
+                  />
+                </SettingsMenu>
+              )}
+            </div>
             <Button
               type={busy ? 'button' : 'submit'}
               onClick={busy ? onStop : undefined}
               disabled={!busy && (!value.trim() || missingConfig)}
               aria-label={busy ? 'Dừng tạo câu trả lời' : 'Gửi tin nhắn'}
-              title={busy ? 'Dừng tạo câu trả lời' : 'Gửi tin nhắn'}
+              title={busy ? 'Dừng tạo câu trả lời' : 'Gửi (Enter)'}
               size="icon"
+              shape="pill"
               className="size-8 shrink-0"
             >
               {busy ? (
@@ -194,16 +252,6 @@ export default function Composer({
             </Button>
           </div>
         </form>
-
-        <div className="relative -mt-5 rounded-xl border border-card-border bg-background-gray-secondary px-2 pt-[23px] pb-1">
-          <div className="flex items-center gap-0.5">
-            <ModeMenu
-              mode={mode}
-              onModeChange={onModeChange}
-              placement={hasMessages ? 'up' : 'down'}
-            />
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -212,67 +260,38 @@ export default function Composer({
 function ModeMenu({
   mode,
   onModeChange,
-  placement,
 }: {
   mode: AiAssistantMode
   onModeChange: (mode: AiAssistantMode) => void
-  placement: 'up' | 'down'
 }) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const active = MODES.find((item) => item.id === mode) ?? MODES[0]
-
-  useEffect(() => {
-    if (!open) return
-    const onPointerDown = (event: MouseEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false)
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
+  const ActiveIcon = active.icon
+  const onEscape = useDismiss(open, setOpen, root)
 
   return (
-    <div ref={root} className="relative flex min-w-0">
+    <div ref={root} onKeyDown={onEscape} className="flex min-w-0 shrink-0">
       <button
         type="button"
         aria-expanded={open}
         aria-label="Chế độ trả lời"
+        title={`Chế độ trả lời: ${active.label}`}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium text-text-secondary transition-colors hover:bg-card-background hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
+        className={cn(CHIP, mode === 'ask' ? 'text-text-secondary' : 'text-primary-text')}
       >
-        <Shapes size={14} strokeWidth={1.7} aria-hidden />
-        <span>Chế độ</span>
-        <span
-          className={cn(
-            'max-w-[150px] truncate',
-            mode === 'ask' ? 'text-text-tertiary' : 'text-primary-text'
-          )}
-        >
-          {active.label}
-        </span>
+        <ActiveIcon size={14} strokeWidth={1.7} aria-hidden className="shrink-0" />
+        {/* Ask has no settings chip beside it, so its label always fits. */}
+        <span className={cn('min-w-0 truncate', mode !== 'ask' && '@max-xs:hidden')}>{active.label}</span>
         <ChevronDown
-          size={13}
+          size={12}
           strokeWidth={1.8}
           aria-hidden
           className={cn('shrink-0 text-icon-tertiary transition-transform', open && 'rotate-180')}
         />
       </button>
       {open && (
-        <div
-          role="listbox"
-          aria-label="Chế độ trả lời"
-          className={cn(
-            'absolute left-0 z-50 w-[328px] max-w-[calc(100vw-2rem)] rounded-xl border border-card-border bg-card-background p-1.5 shadow-card-hover',
-            placement === 'up' ? 'bottom-full mb-2' : 'top-full mt-2'
-          )}
-        >
+        <div role="listbox" aria-label="Chế độ trả lời" className={cn(MENU, 'max-w-[328px] p-1.5')}>
           {MODES.map((item) => {
             const Icon = item.icon
             const selected = item.id === mode
@@ -315,6 +334,69 @@ function ModeMenu({
               </button>
             )
           })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const labelOf = (options: readonly SelectOption[], id: string) =>
+  options.find((option) => option.id === id)?.label
+
+/**
+ * One line telling the current compose settings, e.g. "Toán học · 5 câu · Trung bình". The bank paper of
+ * "Mô phỏng đề" is left out: the sources block above the composer already shows it.
+ */
+function settingsSummary(
+  mode: Exclude<AiAssistantMode, 'ask'>,
+  settings: AiComposeSettings,
+  subjects: SelectOption[]
+) {
+  const count = labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount))
+  const difficulty = mode === 'compose' ? labelOf(DIFFICULTIES, settings.difficulty) : undefined
+  return [labelOf(subjects, settings.subjectId), count, difficulty].filter(Boolean).join(' · ')
+}
+
+/** The compose settings folded into one chip of the composer; the full settings open above it. */
+function SettingsMenu({
+  summary,
+  missing,
+  hasError,
+  children,
+}: {
+  summary: string
+  missing: boolean
+  hasError: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  const onEscape = useDismiss(open, setOpen, root)
+  const attention = missing || hasError
+
+  return (
+    <div ref={root} onKeyDown={onEscape} className="flex min-w-0 shrink">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label="Cấu hình đề"
+        title={summary || 'Cấu hình đề'}
+        onClick={() => setOpen((value) => !value)}
+        className={cn(CHIP, attention ? 'text-danger' : 'text-text-secondary hover:text-text-primary')}
+      >
+        <Filter size={14} strokeWidth={1.7} aria-hidden className="shrink-0 @max-xs:hidden" />
+        <span className="min-w-0 truncate">{missing ? 'Chọn cấu hình đề' : summary || 'Cấu hình đề'}</span>
+        <ChevronDown
+          size={12}
+          strokeWidth={1.8}
+          aria-hidden
+          className={cn('shrink-0 text-icon-tertiary transition-transform', open && 'rotate-180')}
+        />
+      </button>
+      {open && (
+        // The selects inside portal their option lists into this box, so picking one is not a click outside.
+        <div role="dialog" aria-label="Cấu hình đề" data-select-portal="" className={cn(MENU, 'max-w-[360px] p-2')}>
+          {children}
         </div>
       )}
     </div>
