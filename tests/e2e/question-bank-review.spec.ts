@@ -126,6 +126,10 @@ async function install(page: Page, role: 'STAFF' | 'TEACHER') {
       json: { success: false, status: 404, message: 'unmatched' },
     })
   })
+  // The detail panel reads the subject's active label set for its taxonomy links.
+  await page.route('**/api/v1/master-data/**', route =>
+    route.fulfill({ json: { success: true, status: 200, data: [] } })
+  )
   return { state, calls }
 }
 
@@ -148,7 +152,9 @@ test('reviewer compares versions, requests changes and approves selected questio
   await reviewTab.getByText('Nội dung q-1').click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: 'Bản đã duyệt' })).toBeVisible()
-  await expect(dialog.getByRole('heading', { name: 'Bản chờ duyệt' })).toBeVisible()
+  // The approved card marks what differs from the version under review shown above.
+  await expect(dialog.getByText('Nội dung đã thay đổi:')).toBeVisible()
+  await expect(dialog.getByText('Nội dung cũ')).toBeVisible()
   const requestChanges = page.getByRole('button', { name: 'Yêu cầu sửa' })
   await expect(requestChanges).toBeDisabled()
   await page.getByLabel('Nhận xét').fill('Cần sửa đáp án')

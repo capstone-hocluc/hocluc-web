@@ -309,7 +309,8 @@ test('Teacher reads quiz/exam/questions/attempts with no write controls or write
   await expect(page.getByRole('heading', { name: 'Đề thi được giao', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Tạo đề|Chỉnh sửa|Xuất bản|Thao tác khác/ })).toHaveCount(0)
   await page.goto('/console/teacher/attempts')
-  await expect(page.getByText('Student QA', { exact: true })).toBeVisible()
+  // the attempts screen loads its rows after the console chunk, which is slow when the whole suite runs
+  await expect(page.getByText('Student QA', { exact: true })).toBeVisible({ timeout: 20_000 })
   expect(writes(state)).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
@@ -327,6 +328,8 @@ test('Teacher course list uses BE assignment scope and the course quiz shortcut 
 })
 
 test('Teacher direct editor URLs, including the legacy URL, fail before mounting editors', async ({ page }) => {
+  // five full page loads, each fetching every dev module through the fixture's route
+  test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
   for (const url of ['/console/teacher/quizzes/new', `/console/teacher/quizzes/${QUIZ_IDS.quiz}/edit`,
     '/console/teacher/mock-exams/new', `/console/teacher/mock-exams/${QUIZ_IDS.exam}/edit`,

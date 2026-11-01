@@ -9,6 +9,8 @@ const question = (id: string, sequence: number, text: string, options: ReturnTyp
 })
 
 test('the quiz reads as a printed paper: part title, shared passage, bold question numbers, options laid out by length', async ({ page }) => {
+  // Paged.js cuts the paper into A4 pages in the browser, after loading its own chunk.
+  test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
   await page.route(`**/api/v1/teacher/quizzes/${QUIZ_IDS.quiz}`, async route => {
     if (route.request().method() !== 'GET') return route.fallback()
@@ -39,7 +41,7 @@ test('the quiz reads as a printed paper: part title, shared passage, bold questi
   await page.getByRole('tab', { name: 'Bản in' }).click()
 
   const paper = page.getByRole('article', { name: 'Bản in bài kiểm tra' })
-  await expect(paper.getByRole('heading', { name: 'Quiz được giao' })).toBeVisible()
+  await expect(paper.getByRole('heading', { name: 'Quiz được giao' })).toBeVisible({ timeout: 30_000 })
   await expect(paper.getByText('Thời gian làm bài: 150 phút · 2 câu')).toBeVisible()
   await expect(paper.getByRole('heading', { name: 'Phần 2. Toán học' })).toBeVisible()
   await expect(paper.getByText('Dựa vào thông tin dưới đây để trả lời câu 2')).toBeVisible()

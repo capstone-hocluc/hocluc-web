@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Locator } from '@playwright/test'
-import { IDS, installCrudFixture, fixtureProblems, STAMP } from './core-crud-fixture'
+import { IDS, installCrudFixture, fixtureProblems, pinBeforeFixtureSession, STAMP } from './core-crud-fixture'
 
 async function selectOption(scope: Page | Locator, page: Page, label: string, option: string) {
   await scope.getByRole('button', { name: new RegExp(label) }).click()
@@ -18,15 +18,14 @@ test.afterEach(async ({ page }) => {
 test('category edit preserves metadata and sends stale-edit token', async ({ page }) => {
   const state = await installCrudFixture(page)
   await page.goto('/staff/categories')
-  await page
-    .getByRole('row', { name: /^Toán / })
-    .getByRole('button', { name: 'Sửa', exact: true })
-    .click()
+  const rail = page.getByRole('navigation', { name: 'Môn học' })
+  await rail.getByRole('button', { name: /^Toán/ }).click()
+  await page.getByRole('button', { name: 'Sửa môn', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Sửa môn học', exact: true })
   await dialog.getByLabel('Tên môn học', { exact: true }).fill('Toán cập nhật')
   await dialog.getByRole('button', { name: 'Lưu môn học', exact: true }).click()
   await expect(dialog).toBeHidden()
-  await expect(page.getByRole('row', { name: /^Toán cập nhật / })).toBeVisible()
+  await expect(rail.getByRole('button', { name: /^Toán cập nhật/ })).toBeVisible()
   const saved = state.requests.find((r) => r.method === 'PUT' && r.path.endsWith(IDS.root))!
   expect(saved.body).toMatchObject({
     name: 'Toán cập nhật',
@@ -62,7 +61,9 @@ test('category creation and unknown mutation prevent blind retries', async ({ pa
   } finally {
     releaseRead()
   }
-  await expect(page.getByRole('row', { name: /^Vật lý / })).toBeVisible()
+  await expect(
+    page.getByRole('navigation', { name: 'Môn học' }).getByRole('button', { name: /^Vật lý/ })
+  ).toBeVisible()
   expect(
     state.requests.filter((r) => r.method === 'GET' && r.path === '/api/v1/categories').length
   ).toBeGreaterThan(getsBeforeClose)
@@ -73,9 +74,10 @@ test('stale category edit keeps input and does not automatically resend', async 
   const state = await installCrudFixture(page)
   await page.goto('/staff/categories')
   await page
-    .getByRole('row', { name: /^Toán / })
-    .getByRole('button', { name: 'Sửa', exact: true })
+    .getByRole('navigation', { name: 'Môn học' })
+    .getByRole('button', { name: /^Toán/ })
     .click()
+  await page.getByRole('button', { name: 'Sửa môn', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Sửa môn học', exact: true })
   await dialog.getByLabel('Tên môn học', { exact: true }).fill('Nội dung chưa lưu')
   state.failNext = 'conflict'
@@ -189,17 +191,17 @@ test('MAIN structure uses parent-scoped phase, gift and teacher IDs', async ({ p
 test('category delete confirms the chosen leaf and keeps its parent', async ({ page }) => {
   const state = await installCrudFixture(page)
   await page.goto('/staff/categories')
-  await page
-    .getByRole('row', { name: /^Đại số / })
-    .getByRole('button', { name: 'Xóa', exact: true })
-    .click()
+  const rail = page.getByRole('navigation', { name: 'Môn học' })
+  await rail.getByRole('button', { name: 'Mở môn con của Toán' }).click()
+  await rail.getByRole('button', { name: /^Đại số/ }).click()
+  await page.getByRole('button', { name: 'Xóa', exact: true }).click()
   const confirmation = page
     .getByRole('dialog')
     .filter({ has: page.getByRole('heading', { name: 'Xóa môn học?', exact: true }) })
   await confirmation.getByRole('button', { name: 'Xóa môn học', exact: true }).click()
   await expect(confirmation).toBeHidden()
-  await expect(page.getByRole('row', { name: /^Toán / })).toBeVisible()
-  await expect(page.getByRole('row', { name: /^Đại số / })).toHaveCount(0)
+  await expect(rail.getByRole('button', { name: /^Toán/ })).toBeVisible()
+  await expect(rail.getByRole('button', { name: /^Đại số/ })).toHaveCount(0)
   expect(state.requests.filter((r) => r.method === 'DELETE')).toEqual([
     { path: `/api/v1/categories/${IDS.child}`, method: 'DELETE', body: {} },
   ])
@@ -231,9 +233,10 @@ test('manager has read-only category/course detail on a narrow viewport', async 
   const state = await installCrudFixture(page, 'MANAGER')
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/manager/categories')
-  await expect(page.getByRole('row', { name: /^Toán / })).toBeVisible()
+  // Narrow screens replace the subject rail with one select; managers cannot reach its actions.
+  await expect(page.getByRole('button', { name: /Môn học/ })).toContainText('Tất cả môn')
   await expect(page.getByRole('button', { name: 'Tạo môn học', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Sửa môn', exact: true })).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true
   )
@@ -536,6 +539,7 @@ test('staff edits a recurring series and only the untouched sessions follow the 
 
 test('staff edits then deletes a class-session recording', async ({ page }) => {
   const state = await installCrudFixture(page)
+  await pinBeforeFixtureSession(page)
   await page.goto('/staff/schedules')
   await page
     .getByRole('button', { name: 'Xem chi tiết Lớp lặp Toán - Buổi 1', exact: true })
@@ -599,6 +603,7 @@ test('manager reads the schedule console and its recordings without mutating', a
   // Match the staff schedule test's existing lazy-module readiness budget, not a fixed 5s wait.
   test.setTimeout(120_000)
   const state = await installCrudFixture(page, 'MANAGER')
+  await pinBeforeFixtureSession(page)
   await page.goto('/manager/schedules')
   await expect(page.getByText('Lớp lặp Toán', { exact: true })).toBeVisible({ timeout: 90_000 })
   await page

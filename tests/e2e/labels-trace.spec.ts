@@ -208,10 +208,10 @@ test('question label facts link to their taxonomy records and the lessons are de
   await installLabelsTrace(page)
   await page.goto(`/console/${area}/question-bank`)
   await page
-    .getByRole('row', { name: /2024 · câu 1/ })
+    .getByRole('row', { name: /Đề Ngữ văn 2024/ })
     .getByRole('button', { name: 'Chi tiết' })
     .click()
-  const dialog = page.getByRole('dialog', { name: '2024 · câu 1' })
+  const dialog = page.getByRole('dialog', { name: 'Tiếng Việt · Đề Ngữ văn 2024 · Câu 1' })
 
   await expect(dialog.getByRole('link', { name: 'TV.D01 · Đọc hiểu' })).toHaveAttribute(
     'href',
@@ -239,10 +239,10 @@ test('a question whose primary skill teaches no lesson says so', async ({ page }
   await installLabelsTrace(page)
   await page.goto(`/console/${area}/question-bank`)
   await page
-    .getByRole('row', { name: /2024 · câu 2/ })
+    .getByRole('row', { name: /Đề Ngữ văn 2025/ })
     .getByRole('button', { name: 'Chi tiết' })
     .click()
-  const dialog = page.getByRole('dialog', { name: '2024 · câu 2' })
+  const dialog = page.getByRole('dialog', { name: 'Tiếng Việt · Đề Ngữ văn 2025 · Câu 2' })
   await expect(dialog.getByRole('heading', { name: 'Bài học dạy kỹ năng này' })).toBeVisible()
   await expect(dialog.getByText('Chưa có bài học', { exact: true })).toBeVisible()
 })
@@ -256,10 +256,9 @@ test('taxonomy deep links open the subject, related lessons, questions and chapt
   await page.goto(
     `/console/${area}/taxonomy?categoryId=${LABEL_IDS.subject}&kind=skills&code=TV.S02`
   )
-  await expect(page.getByRole('tab', { name: 'Ngữ văn', exact: true })).toHaveAttribute(
-    'aria-selected',
-    'true'
-  )
+  await expect(
+    page.getByRole('navigation', { name: 'Môn học' }).getByRole('button', { name: 'Ngữ văn' })
+  ).toHaveAttribute('aria-current', 'true')
   await expect(page.getByRole('button', { name: 'v1.0 · Đang dùng' })).toBeVisible()
 
   const sheet = page.getByRole('dialog', { name: 'Kỹ năng' })
@@ -294,8 +293,8 @@ test('taxonomy deep links open the subject, related lessons, questions and chapt
   await expect(page.getByText('Kỹ năng chính: TV.S02', { exact: true })).toBeVisible({
     timeout: 20_000,
   })
-  await expect(page.getByRole('row', { name: /2024 · câu 1/ })).toBeVisible()
-  await expect(page.getByRole('row', { name: /2024 · câu 2/ })).toHaveCount(0)
+  await expect(page.getByRole('row', { name: /Đề Ngữ văn 2024/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Đề Ngữ văn 2025/ })).toHaveCount(0)
   expect(
     fixture
       .api()
@@ -326,10 +325,10 @@ test('the label dialog and the question detail fit a 390px viewport', async ({ p
 
   await page.goto(`/console/${area}/question-bank`)
   await page
-    .getByRole('row', { name: /2024 · câu 1/ })
+    .getByRole('row', { name: /Đề Ngữ văn 2024/ })
     .getByRole('button', { name: 'Chi tiết' })
     .click()
-  const detail = page.getByRole('dialog', { name: '2024 · câu 1' })
+  const detail = page.getByRole('dialog', { name: 'Tiếng Việt · Đề Ngữ văn 2024 · Câu 1' })
   await expect(
     detail.getByRole('link', { name: 'Ngữ văn 12 › Đọc hiểu › Bài đọc 1' })
   ).toBeVisible()

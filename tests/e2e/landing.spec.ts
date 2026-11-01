@@ -22,6 +22,18 @@ const respond = (route: Route, data: unknown = []) =>
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/**', (route) => respond(route))
+  // The placement guard waits for the cookie session; a guest's refresh is a plain 401. It is sent with
+  // credentials, so the mock has to allow them or the browser turns it into a connection error.
+  await page.route('**/api/v1/auth/refresh', (route) =>
+    route.fulfill({
+      status: 401,
+      json: { success: false },
+      headers: {
+        'access-control-allow-origin': 'http://127.0.0.1:5192',
+        'access-control-allow-credentials': 'true',
+      },
+    })
+  )
 })
 
 test('desktop hierarchy, anchors and empty state at common PC widths', async ({ page }) => {

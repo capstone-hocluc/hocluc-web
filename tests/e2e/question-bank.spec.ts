@@ -26,6 +26,10 @@ const patterns = [
   { code: 'NV.Q01', nameVi: 'Đọc hiểu', domainCode: 'NV.D01', domainNameVi: 'Đọc hiểu', partCode: 'TV', categoryId: 'category-2' },
 ]
 const page0 = (content: unknown[]) => ({ content, pageNumber: 0, pageSize: 20, totalElements: content.length, totalPages: 1, last: true })
+const examYear2021 = {
+  id: 'exam-year-2021', assessmentType: 'TN_THPT', examYear: 2021, name: 'Năm thi 2021',
+  status: 'ACTIVE', note: null, updatedAt: '2026-10-17T00:00:00Z', sessions: [],
+}
 
 type Source = Record<string, unknown> & { status: string }
 const source = (status: string, questionCount = 0): Source => ({
@@ -134,6 +138,8 @@ async function install(page: Page, role: 'MANAGER' | 'TEACHER' | 'STAFF', source
   // that skill teaches. Empty answers keep the label names the question itself already carries.
   await page.route('**/api/v1/master-data/**', route => route.fulfill({ json: { success: true, status: 200, data: [] } }))
   await page.route('**/api/v1/authoring/lessons/by-label**', route => route.fulfill({ json: { success: true, status: 200, data: [] } }))
+  // The import dialog offers the years the admin has configured, not a free-text year.
+  await page.route('**/api/v1/admin/exam-years', route => route.fulfill({ json: { success: true, status: 200, data: [examYear2021] } }))
   return { state, seen, relabelBody: () => relabelBody, upload: () => upload, retried: () => retried, streams: () => streams, labelled: () => labelled }
 }
 
@@ -268,8 +274,9 @@ test('a manager corrects a label and the screen asks the server to set the chose
   await page.getByRole('row', { name: /2021/ }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByText('2 và 3')).toBeVisible()
-  await expect(dialog.getByText('Jev gán')).toBeVisible()
+  await expect(dialog.getByText('Jev · 0.93')).toBeVisible()
 
+  await dialog.getByRole('button', { name: 'Sửa nhãn' }).click()
   await dialog.getByRole('button', { name: 'Dạng câu đúng' }).click()
   await page.getByRole('option', { name: /Bất phương trình/ }).click()
   await dialog.getByRole('button', { name: 'Lưu nhãn' }).click()
@@ -303,7 +310,8 @@ test('staff upload a paper after confirming the AI cost and follow it until it i
   const dialog = page.getByRole('dialog')
   await dialog.getByLabel('File đề (PDF)').setInputFiles({ name: 'de-2021.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') })
   await dialog.getByLabel('File đáp án').setInputFiles({ name: 'dap-an.txt', mimeType: 'text/plain', buffer: Buffer.from('1A 2B') })
-  await dialog.getByLabel('Năm').fill('2021')
+  await dialog.getByRole('button', { name: / Năm$/ }).click()
+  await page.getByRole('option', { name: 'Năm thi 2021', exact: true }).click()
   await dialog.getByRole('button', { name: 'Tiếp tục' }).click()
   await expect(dialog.getByText(/tốn token/)).toBeVisible()
   expect(fixture.upload()).toBeNull()
@@ -342,19 +350,21 @@ test('the reading view streams what the AI writes onto the page and lights the p
   await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
 
   const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
-  await expect(view.getByRole('img', { name: 'Trang 1 của đề' })).toBeVisible()
-  await expect(view.getByRole('button', { name: 'Câu 2, AI đang viết' })).toBeVisible()
-  await expect(view.getByRole('button', { name: 'Câu 1, AI đã đọc' })).toBeVisible()
-  const paper = view.getByLabel('Đề gốc')
+  // the reading view is a lazy chunk fetched on first open; the paper then waits for the stored reading
+  await expect(view).toBeVisible({ timeout: 15_000 })
+  const paper = view.getByRole('article', { name: 'Bản đề AI đọc được' })
+  await expect(paper).toBeVisible()
+  // question 2 is the one being written: it is the question followed, and it says who is writing it
+  await expect(paper.getByRole('button', { name: 'Câu 2' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(paper.getByRole('button', { name: 'Câu 2' }).getByText('Luna đang viết')).toBeVisible()
   await expect(paper.getByText('Tính 2 + 2 bằng')).toBeVisible()
   await expect(paper.getByText('Giải x + 1 = 3')).toBeVisible()
+  const steps = view.getByRole('list', { name: 'Các bước nạp đề' })
+  await expect(steps.getByRole('listitem').filter({ hasText: 'Cấu trúc' })).toContainText('Xong')
+  await expect(steps.getByRole('listitem').filter({ hasText: 'Câu hỏi' })).toContainText('Đang làm')
   const pipeline = view.getByLabel('Pipeline nạp đề')
-  await expect(pipeline.getByText('Đọc cấu trúc đề')).toBeVisible()
   await expect(pipeline.getByText('Phần 1 · câu 1–2')).toBeVisible()
-  await expect(pipeline.getByText('Gán nhãn bằng Jev')).toBeVisible()
   await expect(view.getByText('Đã kết nối, đang theo dõi AI đọc đề')).toBeVisible()
-  await view.getByRole('button', { name: 'Hiện chữ AI viết' }).click()
-  await expect(paper.getByText('Tính 2 + 2 bằng')).toHaveCount(0)
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
@@ -374,7 +384,9 @@ test('a stream that ends is not opened again, and the end is told in the log', a
   const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
   await expect(view.getByText('Nạp đề xong')).toBeVisible()
   await expect(view.getByText('AI viết xong Phần 1 · câu 1–2: 2 câu')).toBeVisible()
-  await expect(view.getByText('2/2 câu')).toBeVisible()
+  // every question of the paper was labelled, as the label step shows
+  const steps = view.getByRole('list', { name: 'Các bước nạp đề' })
+  await expect(steps.getByRole('listitem').filter({ hasText: 'Gán nhãn' })).toContainText('2/2')
   // in development React opens it twice (the first is dropped at once); what matters is that it is not opened again
   const opened = fixture.streams()
   await page.waitForTimeout(3000)
@@ -391,7 +403,7 @@ test('without the stream the reading view falls back to asking now and then', as
 
   const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
   await expect(view.getByText(/đang cập nhật 4 giây một lần/)).toBeVisible()
-  await expect(view.getByRole('button', { name: 'Câu 1, AI đã đọc' })).toBeVisible()
+  await expect(view.getByRole('article', { name: 'Bản đề AI đọc được' }).getByRole('button', { name: 'Câu 1' })).toBeVisible()
   const opened = fixture.streams()
   await page.waitForTimeout(3000)
   expect(fixture.streams()).toBe(opened)
@@ -426,7 +438,7 @@ test('a failed paper loaded before its files were kept opens the upload with its
 
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByRole('heading', { name: 'Nạp lại đề Đề mẫu 2021' })).toBeVisible()
-  await expect(dialog.getByLabel('Năm')).toHaveValue('2021')
+  await expect(dialog.getByRole('button', { name: / Năm$/ })).toContainText('Năm thi 2021')
   await expect(dialog.getByLabel('Tên đề')).toHaveValue('Đề mẫu 2021')
   await dialog.getByLabel('File đề (PDF)').setInputFiles({ name: 'de.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') })
   await dialog.getByRole('button', { name: 'Tiếp tục' }).click()
@@ -514,16 +526,14 @@ test('without the PDF the paper is shown as HTML from what the AI read, a questi
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('a paper with its PDF can be seen as the page or as HTML', async ({ page }) => {
+test('a paper with its PDF is shown as HTML from what the AI read', async ({ page }) => {
   const { state } = await install(page, 'STAFF', () => [source('DONE', 1)], () => reading('DONE', [readQuestion(1, 'Giải phương trình')]))
   await page.goto('/console/staff/question-bank')
   await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
   await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
 
-  await expect(page.getByRole('img', { name: 'Trang 1 của đề' })).toBeVisible()
-  await page.getByRole('button', { name: 'Bản HTML' }).click()
-  await expect(page.getByRole('article', { name: 'Bản đề AI đọc được' }).getByText('Giải phương trình')).toBeVisible()
-  await page.getByRole('button', { name: 'Trang gốc' }).click()
-  await expect(page.getByRole('img', { name: 'Trang 1 của đề' })).toBeVisible()
+  const paper = page.getByRole('article', { name: 'Bản đề AI đọc được' })
+  await expect(paper.getByText('Giải phương trình')).toBeVisible()
+  await expect(page.getByRole('img', { name: 'Trang 1 của đề' })).toHaveCount(0)
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })

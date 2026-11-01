@@ -157,6 +157,11 @@ const fixtureDate = new Intl.DateTimeFormat('en-CA', {
 const instantOnLocalDate = (dateIso: string, hour: number, minute = 0) =>
   `${dateIso}T${pad(hour)}:${pad(minute)}:00+07:00`
 
+/** The fixture's class session starts at 18:00 today; pin the page clock to that morning so it has not begun. */
+export async function pinBeforeFixtureSession(page: Page) {
+  await page.clock.setFixedTime(new Date(instantOnLocalDate(fixtureDate, 9)))
+}
+
 const classSession = (overrides: Partial<ClassSessionResponse> = {}): ClassSessionResponse => ({
   id: IDS.session,
   recurringClassId: IDS.recurring,
@@ -536,6 +541,10 @@ export async function installCrudFixture(
     }
     const nextId = (prefix: string) =>
       `${prefix}-0000-0000-0000-${String(++state.sequence).padStart(12, '0')}`
+    if (path.startsWith('/api/v1/admin/users/') && path.endsWith('/scopes')) {
+      if (method === 'GET') return answer({ scopes: [] })
+      return answer({ scopes: (body.scopes as unknown[]) ?? [] })
+    }
     const pageOf = (content: unknown[]) => ({
       content,
       pageNumber: 0,
