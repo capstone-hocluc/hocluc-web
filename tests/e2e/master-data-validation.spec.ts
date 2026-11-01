@@ -226,7 +226,7 @@ test('a teacher sees the validation card but not the activate button', async ({ 
   const { state, calls, validationRequests } = await installMasterData(page, { role: 'TEACHER' })
   await page.goto('/console/teacher/taxonomy')
 
-  await expect(page.getByRole('heading', { name: 'Master data' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Khung đề thi' })).toBeVisible()
   await expect(page.getByText('Hợp lệ', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Kiểm tra lại' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'So sánh' })).toBeVisible()

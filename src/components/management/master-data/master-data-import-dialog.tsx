@@ -71,7 +71,7 @@ export default function MasterDataImportDialog({
       onClose={onClose}
       dismissable={!busy}
       maxWidth={720}
-      title="Nhập master data từ Excel"
+      title="Nhập khung đề thi từ Excel"
       description="File được kiểm tra đủ 7 sheet trước khi lưu. File hợp lệ thành bản nháp, chưa ảnh hưởng bài học và câu hỏi cho tới khi kích hoạt."
       footer={footer}
     >

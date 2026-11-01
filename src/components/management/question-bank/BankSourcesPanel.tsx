@@ -337,7 +337,7 @@ export default function BankSourcesPanel({ readOnly, onFinished }: { readOnly: b
       {labelTarget && (
         <ConfirmDialog
           title={`Gán nhãn đề ${labelTarget.title}?`}
-          description={`Jev gán nhãn ${labelTarget.unlabelledCount} câu chưa có nhãn theo Master Data đang dùng. Đề không bị đọc lại; Jev tốn ít token.`}
+          description={`Jev gán nhãn ${labelTarget.unlabelledCount} câu chưa có nhãn theo khung đề thi đang dùng. Đề không bị đọc lại; Jev tốn ít token.`}
           cancelLabel="Hủy"
           confirmLabel="Gán nhãn"
           busy={labelBusy}

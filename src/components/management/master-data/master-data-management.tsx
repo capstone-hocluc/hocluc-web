@@ -453,7 +453,7 @@ export default function MasterDataManagement({
         errorMessage={categories.errorMessage}
         onRetry={categories.reload}
         empty={!categories.data?.length}
-        emptyMessage={reader ? 'Chưa môn nào có master data đang dùng.' : 'Chưa có môn học.'}
+        emptyMessage={reader ? 'Chưa môn nào có khung đề thi đang dùng.' : 'Chưa có môn học.'}
         skeleton="detail"
       >
         <div className="flex flex-col gap-2 md:hidden">
@@ -584,7 +584,7 @@ export default function MasterDataManagement({
               </ScheduleResourceState>
             ) : !hasData ? (
               <div className="rounded-xl border border-dashed border-card-border px-5 py-10 text-center">
-                <p className="text-sm font-medium text-text-primary">Môn này chưa có master data</p>
+                <p className="text-sm font-medium text-text-primary">Môn này chưa có khung đề thi</p>
                 <p className="mt-1 text-sm text-text-tertiary">
                   Thêm dạng câu đầu tiên để tạo bản nháp, hoặc nhập file Excel của môn.
                 </p>
@@ -600,7 +600,7 @@ export default function MasterDataManagement({
             ) : (
               <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as MasterDataTab)}>
                 <ConsoleTabsList
-                  aria-label="Bảng master data"
+                  aria-label="Bảng khung đề thi"
                   className="max-sm:flex-wrap max-sm:overflow-visible"
                 >
                   <ConsoleTabsTrigger value="structure" className="px-3">

@@ -52,7 +52,7 @@ const reportTable = (scope: Page | Locator) =>
 test('staff import a workbook as a draft and activate it', async ({ page }) => {
   const { state, calls } = await install(page, 'ok')
   await page.goto('/console/staff/taxonomy')
-  await expect(page.getByText('Môn này chưa có master data', { exact: true })).toBeVisible()
+  await expect(page.getByText('Môn này chưa có khung đề thi', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Nhập file Excel' }).click()
   const dialog = page.getByRole('dialog')

@@ -183,7 +183,7 @@ export default function CourseOutcomesPanel({
           {!resource.data?.length ? (
             <p className="text-sm text-text-tertiary">
               Chưa có chuẩn đầu ra. Mỗi chuẩn đầu ra nói học sinh làm được gì sau khóa, và gắn với
-              kỹ năng trong master data để sau này đo mức đạt.
+              kỹ năng trong khung đề thi để sau này đo mức đạt.
             </p>
           ) : (
             <ul className="divide-y divide-card-border">

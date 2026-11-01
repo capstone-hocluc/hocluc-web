@@ -122,7 +122,7 @@ test('a labeler without an active label set sees no domain choices and sends non
   await expect(chapterRow(page).getByText('TV.D01', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Sửa chương Đọc hiểu' }).click()
   const dialog = page.getByRole('dialog', { name: 'Sửa chương' })
-  await expect(dialog.getByText('Môn này chưa có master data đang dùng.', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('Môn này chưa có khung đề thi đang dùng.', { exact: true })).toBeVisible()
   await expect(dialog.getByRole('checkbox')).toHaveCount(0)
   await dialog.getByRole('button', { name: 'Lưu chương' }).click()
   await expect(dialog).toBeHidden()

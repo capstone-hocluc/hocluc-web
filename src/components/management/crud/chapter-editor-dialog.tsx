@@ -172,7 +172,7 @@ export default function ChapterEditorDialog({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-text-tertiary">Môn này chưa có master data đang dùng.</p>
+              <p className="text-sm text-text-tertiary">Môn này chưa có khung đề thi đang dùng.</p>
             )}
           </fieldset>
         )}

@@ -183,7 +183,7 @@ export default function MasterDataScreen({ readOnly = false }: { readOnly?: bool
             columns={columns}
             data={versions.data ?? []}
             getRowKey={row => row.id}
-            emptyMessage="Môn học này chưa có Master Data."
+            emptyMessage="Môn học này chưa có khung đề thi."
           />
         </ScheduleResourceState>
       </section>

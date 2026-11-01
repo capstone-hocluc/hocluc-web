@@ -14,7 +14,7 @@ const SAMPLES: {
 }[] = [
   {
     tone: 'default',
-    title: 'Có phiên bản master data mới.',
+    title: 'Có phiên bản khung đề thi mới.',
     body: 'Bản v1.1 vừa được kích hoạt. Các bài học mới sẽ dùng phân loại của bản này.',
     action: 'Xem thay đổi',
   },

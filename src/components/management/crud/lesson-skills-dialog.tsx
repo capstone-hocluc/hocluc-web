@@ -63,7 +63,7 @@ function SkillsForm({ labels, skills, onClose, onSaved }: {
       <div className="flex flex-col gap-3">
         {error && <Notice tone="danger">{error}</Notice>}
         {skills.length === 0 ? (
-          <p className="text-sm text-text-tertiary">Môn này chưa có master data đang dùng.</p>
+          <p className="text-sm text-text-tertiary">Môn này chưa có khung đề thi đang dùng.</p>
         ) : domains.length === 0 ? (
           <p className="text-sm text-text-tertiary">Chương chưa gắn domain nên mọi kỹ năng của môn đều chọn được.</p>
         ) : null}

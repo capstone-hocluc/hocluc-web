@@ -191,7 +191,7 @@ async function requireData<T>(
 export function getVersions(categoryId: string): Promise<MasterDataVersion[]> {
   return requireData(
     `${BASE}/versions?categoryId=${encodeURIComponent(categoryId)}`,
-    'Không thể tải các phiên bản master data.'
+    'Không thể tải các phiên bản khung đề thi.'
   )
 }
 
@@ -200,7 +200,7 @@ export const getMasterDataVersions = getVersions
 
 export async function getVersionContent(versionId: string): Promise<MasterDataContent> {
   const part = <T>(name: string) =>
-    requireData<T[]>(`${versionPath(versionId)}/${name}`, 'Không thể tải dữ liệu master data.')
+    requireData<T[]>(`${versionPath(versionId)}/${name}`, 'Không thể tải dữ liệu khung đề thi.')
   const [domains, patterns, skills, microSkills, mappings, errorCodes] = await Promise.all([
     part<MdDomain>('domains'),
     part<MdPattern>('patterns'),
@@ -215,7 +215,7 @@ export async function getVersionContent(versionId: string): Promise<MasterDataCo
 export function getActiveCategories(): Promise<MasterDataCategory[]> {
   return requireData(
     '/api/v1/master-data/categories',
-    'Không thể tải danh sách môn có master data.'
+    'Không thể tải danh sách môn có khung đề thi.'
   )
 }
 
@@ -223,7 +223,7 @@ export async function getActiveContent(categoryId: string): Promise<MasterDataCo
   const part = <T>(name: string) =>
     requireData<T[]>(
       `/api/v1/master-data/${name}?categoryId=${encodeURIComponent(categoryId)}`,
-      'Không thể tải dữ liệu master data.'
+      'Không thể tải dữ liệu khung đề thi.'
     )
   const [domains, patterns, skills, microSkills, errorCodes] = await Promise.all([
     part<MdDomain>('domains'),

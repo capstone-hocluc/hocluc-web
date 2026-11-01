@@ -47,7 +47,7 @@ export default function MasterDataImportDialog({
     <ConsoleDialog
       open
       onClose={onClose}
-      title="Nhập Master Data"
+      title="Nhập khung đề thi"
       maxWidth={640}
       dismissable={!busy}
       onSubmit={submit}

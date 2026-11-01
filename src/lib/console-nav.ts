@@ -84,7 +84,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   },
   {
     page: 'taxonomy',
-    label: 'Master data',
+    label: 'Khung đề thi',
     icon: ListTree,
     group: 'training',
     permission: 'TAXONOMY_WRITE',
