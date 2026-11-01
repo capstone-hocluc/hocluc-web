@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type katex from 'katex'
+import { splitFormulas as split, type Piece } from './math-split'
 
 type Katex = typeof katex
 
@@ -14,23 +15,6 @@ function loadKatex() {
     import('katex/dist/katex.min.css'),
   ]).then(([module]) => module.default)
   return katexLoad
-}
-
-// `$$…$$` is a display formula; `$…$` an inline one that must start and end on a non-space, so "5$ và 6$" stays text.
-const FORMULA = /(?<!\\)\$\$([\s\S]+?)\$\$|(?<!\\)\$(?=[^\s$])((?:\\.|[^$\\\n])*?)(?<=\S)\$/g
-
-type Piece = { text: string } | { formula: string; display: boolean }
-
-function split(text: string): Piece[] {
-  const pieces: Piece[] = []
-  let last = 0
-  for (const match of text.matchAll(FORMULA)) {
-    if (match.index > last) pieces.push({ text: text.slice(last, match.index) })
-    pieces.push({ formula: match[1] ?? match[2], display: match[1] !== undefined })
-    last = match.index + match[0].length
-  }
-  if (last < text.length) pieces.push({ text: text.slice(last) })
-  return pieces.map((piece) => 'text' in piece ? { text: piece.text.replaceAll('\\$', '$') } : piece)
 }
 
 function Formulas({ pieces }: { pieces: Piece[] }) {

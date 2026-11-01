@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -12,7 +12,11 @@ interface AiMarkdownProps {
   className?: string
 }
 
-export default function AiMarkdown({
+// Parsing markdown and typesetting KaTeX is the costly part of a chat render; the props are plain
+// values, so a parent re-render (e.g. while a panel divider is dragged) skips it.
+export default memo(AiMarkdown)
+
+function AiMarkdown({
   content,
   variant = 'body',
   className = '',
