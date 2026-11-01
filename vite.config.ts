@@ -40,14 +40,19 @@ export function createAppConfig({ command, mode, isPreview }: ConfigEnv): UserCo
   return {
     plugins: [react(), tailwindcss(), mathliveFonts()],
     define: { 'import.meta.env.VITE_DEV_API_PROXY': JSON.stringify(String(useProxy)) },
-    // Keep the browser on the FE origin so the BE's SameSite=Lax cookie works locally.
-    // changeOrigin changes Host only; do not rewrite Origin or disable TLS verification.
-    server: useProxy ? {
-      proxy: {
-        '/api/v1': { target, changeOrigin: true },
-        '/ws/chat': { target, changeOrigin: true, ws: true },
-      },
-    } : undefined,
+    server: {
+      // Playwright and the QA scripts write traces and screenshots inside the repo while a run
+      // is going; watching them makes the dev server churn on files no page imports.
+      watch: { ignored: ['**/.pi/**', '**/test-results/**', '**/playwright-report/**', '**/.playwright-mcp/**'] },
+      // Keep the browser on the FE origin so the BE's SameSite=Lax cookie works locally.
+      // changeOrigin changes Host only; do not rewrite Origin or disable TLS verification.
+      ...(useProxy && {
+        proxy: {
+          '/api/v1': { target, changeOrigin: true },
+          '/ws/chat': { target, changeOrigin: true, ws: true },
+        },
+      }),
+    },
   }
 }
 
