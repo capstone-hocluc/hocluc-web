@@ -223,8 +223,14 @@ export function useAiAssistant() {
   const [papers, setPapers] = useState<SelectOption[]>([])
   const [papersLoading, setPapersLoading] = useState(false)
   const [papersError, setPapersError] = useState<string | null>(null)
+  const [creatingConversation, setCreatingConversation] = useState(false)
+  /** The conversation this page created last for a new exam (its document takes over what the exam held). */
+  const [createdConversationId, setCreatedConversationId] = useState<string | null>(null)
 
   const activeIdRef = useRef<string | null>(null)
+  const creationRef = useRef<{ generation: number; promise: Promise<string | null> } | null>(null)
+  /** Bumped whenever the teacher opens another exam or a new one; a creation from before is then not adopted. */
+  const generationRef = useRef(0)
   const conversationsRef = useRef<AiConversation[]>([])
   const messagesRef = useRef<AiChatMessage[]>([])
   const draftRef = useRef<AiDraftResponse | null>(null)
@@ -565,6 +571,7 @@ export function useAiAssistant() {
 
   const loadConversation = useCallback(
     async (conversationId: string) => {
+      generationRef.current += 1
       stopStream()
       clearRunTimer()
       sendingRef.current = false
@@ -742,6 +749,51 @@ export function useAiAssistant() {
     [activeConversation?.subjectId, mode, settings]
   )
 
+  /**
+   * The open exam's conversation, created when the exam has none yet (the first AI request, or the first edit of a
+   * new exam's document). Calls made while one is being created share it. Resolves to null when the teacher opened
+   * another exam meanwhile: the conversation is then left in the list and nothing is moved into it. Rejects when the
+   * conversation cannot be created.
+   */
+  const ensureConversation = useCallback(
+    (title: string): Promise<string | null> => {
+      if (activeIdRef.current) return Promise.resolve(activeIdRef.current)
+      const generation = generationRef.current
+      if (creationRef.current?.generation === generation) return creationRef.current.promise
+      // The teacher is working on this new exam: loading the list must not open another one over it.
+      autoSelectRef.current = false
+      const creation = (async () => {
+        setCreatingConversation(true)
+        try {
+          const conversation = await createAiConversation({
+            title,
+            ...(settings.subjectId ? { subjectId: settings.subjectId } : {}),
+          })
+          updateConversations([conversation, ...conversationsRef.current])
+          if (generationRef.current !== generation || activeIdRef.current) return null
+          activeIdRef.current = conversation.id
+          setActiveId(conversation.id)
+          setCreatedConversationId(conversation.id)
+          updateMessages([])
+          updateDraft(null)
+          if (conversation.subjectId) {
+            setSettings((previous) => ({ ...previous, subjectId: conversation.subjectId! }))
+          }
+          await refreshDraft(conversation.id)
+          return conversation.id
+        } finally {
+          if (creationRef.current?.promise === creation) {
+            creationRef.current = null
+            setCreatingConversation(false)
+          }
+        }
+      })()
+      creationRef.current = { generation, promise: creation }
+      return creation
+    },
+    [refreshDraft, settings.subjectId, updateConversations, updateDraft, updateMessages]
+  )
+
   const startRun = useCallback(
     async (text: string, runMode: AiAssistantMode = mode) => {
       if (sendingRef.current || runRef.current) return
@@ -756,23 +808,14 @@ export function useAiAssistant() {
 
       try {
         let conversationId = activeIdRef.current
-        let conversation = conversationsRef.current.find((item) => item.id === conversationId)
         if (!conversationId) {
-          conversation = await createAiConversation({
-            title: titleFromText(text),
-            ...(settings.subjectId ? { subjectId: settings.subjectId } : {}),
-          })
-          conversationId = conversation.id
-          activeIdRef.current = conversationId
-          setActiveId(conversationId)
-          autoSelectRef.current = false
-          updateConversations([conversation, ...conversationsRef.current])
-          updateMessages([])
-          updateDraft(null)
-          if (conversation.subjectId) {
-            setSettings((previous) => ({ ...previous, subjectId: conversation!.subjectId! }))
+          conversationId = await ensureConversation(titleFromText(text))
+          // The teacher opened another exam while this one was being created: the request is dropped.
+          if (!conversationId) {
+            sendingRef.current = false
+            setSending(false)
+            return
           }
-          await refreshDraft(conversationId)
         }
 
         updateMessages([
@@ -858,12 +901,11 @@ export function useAiAssistant() {
       beginStream,
       buildConfig,
       clearRunTimer,
+      ensureConversation,
       mode,
       refreshDraft,
       refreshMessages,
-      settings.subjectId,
       stopStream,
-      updateConversations,
       updateDraft,
       updateMessages,
       updateRun,
@@ -912,6 +954,7 @@ export function useAiAssistant() {
   }, [finishRun])
 
   const startNew = useCallback(() => {
+    generationRef.current += 1
     stopStream()
     clearRunTimer()
     autoSelectRef.current = false
@@ -1159,6 +1202,8 @@ export function useAiAssistant() {
     value,
     running,
     sending,
+    creatingConversation,
+    createdConversationId,
     cancelling,
     saving,
     notice,
@@ -1178,6 +1223,7 @@ export function useAiAssistant() {
     send,
     regenerate,
     cancel,
+    ensureConversation,
     startNew,
     selectConversation,
     renameConversation,

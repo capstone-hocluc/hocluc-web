@@ -1,0 +1,261 @@
+/* The exam paper is printed matter: white sheets, black ink, Times New Roman, in light and dark themes alike. */
+
+/* Print layout: A4 sheets (sizes must match PAGE in pagination.ts) stacked behind one editable flow. */
+.exam-doc-pages {
+  --exam-doc-page-gap: 24px;
+  --exam-doc-page-pitch: calc(297mm + var(--exam-doc-page-gap));
+  position: relative;
+  width: 210mm;
+  overflow-anchor: none;
+}
+
+.exam-doc-page {
+  position: absolute;
+  left: 0;
+  box-sizing: border-box;
+  width: 210mm;
+  height: 297mm;
+  background: #fff;
+  border: 1px solid rgb(15 23 42 / 0.08);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.08);
+}
+
+.exam-doc-sheet {
+  position: relative;
+  box-sizing: border-box;
+  width: 210mm;
+  padding: 2cm 1.5cm 2cm 2cm;
+  color: #111;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5pt;
+  line-height: 1.5;
+}
+
+/* flow-root: the first block's top margin stays inside, so the editor's top is the first sheet's content top. */
+.exam-doc-content {
+  position: relative;
+  display: flow-root;
+  outline: none;
+  text-align: justify;
+  word-break: break-word;
+}
+
+/* Spacer before a block that starts the next sheet: the rest of the sheet, its bottom margin, the gap, the next top margin. */
+.exam-doc-content > .exam-doc-page-gap {
+  display: block;
+  margin: 0;
+  pointer-events: none;
+}
+
+.exam-doc-measuring .exam-doc-page-gap {
+  display: none !important;
+}
+
+.exam-doc-content > * + * {
+  margin-top: 0.25em;
+}
+
+.exam-doc-content p {
+  margin: 0;
+}
+
+.exam-doc-content h1 {
+  font-size: 15pt;
+  font-weight: 700;
+  margin: 0 0 0.25em;
+}
+
+.exam-doc-content h2 {
+  font-size: 12.5pt;
+  font-weight: 700;
+  margin: 0.8em 0 0.3em;
+}
+
+.exam-doc-content h3 {
+  font-size: 11.5pt;
+  font-weight: 700;
+  margin: 0.6em 0 0.25em;
+}
+
+.exam-doc-content ul,
+.exam-doc-content ol {
+  margin: 0.25em 0;
+  padding-left: 1.27cm;
+}
+
+.exam-doc-content ul {
+  list-style: disc;
+}
+
+.exam-doc-content ol {
+  list-style: decimal;
+}
+
+.exam-doc-content a {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.exam-doc-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.4em auto;
+}
+
+.exam-doc-content img.ProseMirror-selectednode {
+  outline: 2px solid #2563eb;
+}
+
+.exam-doc-content table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0.5em 0;
+}
+
+.exam-doc-content th,
+.exam-doc-content td {
+  position: relative;
+  border: 1px solid #111;
+  padding: 2px 6px;
+  vertical-align: top;
+}
+
+.exam-doc-content th {
+  font-weight: 700;
+}
+
+.exam-doc-content .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(37 99 235 / 0.12);
+  pointer-events: none;
+}
+
+.exam-doc-content .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: 0;
+  width: 4px;
+  background: #2563eb;
+  pointer-events: none;
+}
+
+.exam-doc-content.resize-cursor {
+  cursor: col-resize;
+}
+
+.exam-doc-boxed {
+  border: 1px solid currentColor;
+  padding: 0 4px;
+}
+
+/* A forced page break takes no room (the next block starts the next sheet); a small label marks it. */
+.exam-doc-content > .exam-doc-page-break {
+  display: flow-root;
+  position: relative;
+  height: 0;
+  margin: 0;
+}
+
+.exam-doc-content > .exam-doc-page-break::after {
+  content: 'Ngắt trang';
+  position: absolute;
+  top: 2px;
+  right: 0;
+  padding: 0 4px;
+  border-radius: 3px;
+  color: #94a3b8;
+  font: 10px/14px ui-sans-serif, system-ui, sans-serif;
+  cursor: default;
+}
+
+.exam-doc-content > .exam-doc-page-break.ProseMirror-selectednode::after {
+  background: rgb(37 99 235 / 0.12);
+  color: #1d4ed8;
+}
+
+.exam-doc-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+/* Printing: only the sheets, one per A4 page with the same margins, broken where the screen breaks them. */
+@page exam-doc {
+  size: A4;
+  margin: 2cm 1.5cm 2cm 2cm;
+}
+
+@media print {
+  /* The screen fills the window and scrolls inside panels; every box around the paper goes back to normal flow. */
+  *:has(.exam-doc-paper) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: none !important;
+  }
+
+  /* Everything beside the paper is chrome (header, toolbar, panels, status bar, popovers); none of it prints. */
+  *:has(.exam-doc-paper) > :not(:has(.exam-doc-paper), .exam-doc-paper),
+  [data-exam-doc-chrome] {
+    display: none !important;
+  }
+
+  .exam-doc-paper {
+    page: exam-doc;
+    zoom: 1 !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .exam-doc-pages,
+  .exam-doc-sheet {
+    width: auto;
+    min-height: 0 !important;
+    padding: 0;
+  }
+
+  .exam-doc-page,
+  .exam-doc-content > .exam-doc-page-gap {
+    display: none !important;
+  }
+
+  .exam-doc-content > .exam-doc-page-gap + *,
+  .exam-doc-content > .exam-doc-page-break + * {
+    break-before: page;
+    margin-top: 0 !important;
+  }
+
+  /* A margin collapsing through from the first child would push the block below the top margin; the screen absorbs it. */
+  .exam-doc-content > .exam-doc-page-gap + * > :first-child {
+    margin-top: 0 !important;
+  }
+
+  .exam-doc-content > .exam-doc-page-break::after,
+  .exam-doc-content p.is-editor-empty:first-child::before {
+    content: none;
+  }
+
+  .exam-doc-content .selectedCell::after,
+  .exam-doc-content .column-resize-handle,
+  .exam-doc-content .ProseMirror-gapcursor {
+    display: none;
+  }
+
+  .exam-doc-content img.ProseMirror-selectednode {
+    outline: none;
+  }
+}

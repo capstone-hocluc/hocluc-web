@@ -1,5 +1,6 @@
+import type { CSSProperties } from 'react'
 import { cn } from '../../../lib/cn'
-import { ChevronRight, X } from '../../console/icons'
+import { ChevronLeft, X } from '../../console/icons'
 import ScrollArea from '../../ui/ScrollArea'
 import type { ExamPaper as ExamPaperModel, ExamPaperPart } from './exam-format'
 
@@ -10,6 +11,7 @@ interface ExamOutlineProps {
   onCollapse?: () => void
   onClose?: () => void
   className?: string
+  style?: CSSProperties
 }
 
 export default function ExamOutline({
@@ -19,6 +21,7 @@ export default function ExamOutline({
   onCollapse,
   onClose,
   className = '',
+  style,
 }: ExamOutlineProps) {
   const sections: Array<{ parentTitle: string | null; parts: ExamPaperPart[] }> = []
   for (const part of paper.parts) {
@@ -29,7 +32,7 @@ export default function ExamOutline({
   }
 
   return (
-    <aside aria-label="Mục lục đề thi" className={cn('flex-col bg-card-background', className)}>
+    <aside aria-label="Mục lục đề thi" className={cn('flex-col bg-card-background', className)} style={style}>
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border-secondary px-3">
         <span className="text-sm font-semibold text-text-primary">Mục lục</span>
         <div className="ml-auto flex shrink-0 items-center">
@@ -41,7 +44,7 @@ export default function ExamOutline({
               title="Thu gọn mục lục"
               className="inline-flex size-8 items-center justify-center rounded-lg text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
             >
-              <ChevronRight size={17} strokeWidth={1.7} />
+              <ChevronLeft size={17} strokeWidth={1.7} />
             </button>
           )}
           {onClose && (

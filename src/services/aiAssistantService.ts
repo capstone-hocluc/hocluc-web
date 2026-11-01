@@ -270,6 +270,38 @@ export async function getAiDraft(conversationId: string): Promise<AiDraftRespons
   )
 }
 
+export type AiDocumentMode = 'STRUCTURED' | 'FREE'
+
+/** The editor document of a conversation: Tiptap JSON plus the version the next save must name. */
+export interface AiDocument {
+  mode: AiDocumentMode
+  content: Record<string, unknown> | null
+  version: number
+  updatedAt: string | null
+}
+
+export async function getAiDocument(conversationId: string): Promise<AiDocument> {
+  return requireData(
+    await request<AiDocument>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/document`, { auth: true }),
+    'Không tải được tài liệu đề.'
+  )
+}
+
+/** Saves over `version`; a newer save from elsewhere is a 409 `ApiError` whose `data` is that newer document. */
+export async function saveAiDocument(
+  conversationId: string,
+  body: { mode: AiDocumentMode; content: Record<string, unknown>; version: number }
+): Promise<AiDocument> {
+  return requireData(
+    await request<AiDocument>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/document`, {
+      auth: true,
+      method: 'PUT',
+      body,
+    }),
+    'Không lưu được tài liệu đề.'
+  )
+}
+
 export async function updateAiDraftQuestion(
   conversationId: string,
   itemId: string,
