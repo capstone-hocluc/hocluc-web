@@ -9,7 +9,8 @@ interface StartDialogProps {
   open: boolean
   domains: Domain[]
   onClose: () => void
-  onViewDomain: (domainId: string) => void
+  /** Opens the courses of the recommended subject (domain ids are the catalog's subject keys). */
+  onViewSubject: (subjectKey: string) => void
 }
 
 type Level = (typeof startDialogOptions.levels)[number]['value']
@@ -22,7 +23,7 @@ function pickModule(domain: Domain, level: Level): CourseModule {
   return domain.modules[0]
 }
 
-function StartDialog({ open, domains, onClose, onViewDomain }: StartDialogProps) {
+function StartDialog({ open, domains, onClose, onViewSubject }: StartDialogProps) {
   const [domainId, setDomainId] = useState<string>(startDialogOptions.defaultDomain)
   const [level, setLevel] = useState<Level>(startDialogOptions.levels[0].value)
   const [recommended, setRecommended] = useState<{ domain: Domain; module: CourseModule } | null>(
@@ -101,9 +102,9 @@ function StartDialog({ open, domains, onClose, onViewDomain }: StartDialogProps)
                 type="button"
                 className="btn btn-secondary btn-small"
                 id="view-recommended"
-                onClick={() => onViewDomain(recommended.domain.id)}
+                onClick={() => onViewSubject(recommended.domain.id)}
               >
-                Xem học phần của nhóm <Icon name="arrow-right" />
+                Xem khóa học môn này <Icon name="arrow-right" />
               </button>
             </>
           )}

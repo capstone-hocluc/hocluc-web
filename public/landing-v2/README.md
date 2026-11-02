@@ -4,28 +4,35 @@ The landing page is a React page, not a static HTML file:
 
 - Page: `src/pages/LandingPage.tsx`
 - Section components, dialogs and hooks: `src/components/landing-page/`
-- Copy, courses, FAQ, hero slides and sample questions: `src/data/landing-content.ts`
+- Copy, courses, FAQ, hero slides and the calculator app intro: `src/data/landing-content.ts`
 - Styles: `src/styles/landing/landing-page.css`, scoped under `.landing-page` so nothing leaks into other routes
 
 This folder only holds the images and fonts the page (and a few student pages) load by URL, so the same
 paths can later be replaced by uploaded images. `landingHero.slides` in `landing-content.ts` is the list of
-hero images; each entry is `{ id, src, alt, label }`.
+hero images; each entry is `{ id, src, alt, label, caption }`.
 
 ## Artwork and licences
 
-Hero scenes show Mai and Nam in three situations: taking a V-ACT practice test, writing and solving maths
-together, and receiving hints from the cloud, star and robot AI avatars. They are brand illustrations, not
-product screenshots or real students. The four subject illustrations (Vietnamese, English, Logic, Science)
-and the owl on the Mathematics card remain in use.
+The hero photos (`hero-classroom-v3`, `hero-home-study-v3`, `hero-mock-exam-v3`) and the support photo
+(`mentor-session-v3`, cropped to leave out a laptop logo) were generated with Canva's image generator in
+November 2026: Vietnamese grade-12 students in school uniform and áo dài, in a public school classroom, at
+home and in a mock exam. They are illustrations, not real students. Each comes as a 1536 px and an 800 px
+WebP for `srcSet`.
 
-Avatar silhouettes are adapted from the MathTutor `bot-avatars` package under the MIT licence
-(`assets/bot-avatars-LICENSE.txt`). UI icons are Lucide (ISC, `assets/icons/LICENSE`).
+The subject illustrations and character avatars (star, robot, owl, Mai, Nam) are no longer used on the home
+page; `mai-avatar-interaction.webp` is still used on the course page. UI icons are Lucide (ISC,
+`assets/icons/LICENSE`). Avatar silhouettes are adapted from the MathTutor `bot-avatars` package under the
+MIT licence (`assets/bot-avatars-LICENSE.txt`).
 
 ## Fonts
 
 Nunito 400, 700, 800 and 900 in `assets/fonts`, from Google Fonts. All Vietnamese glyphs (U+1EA0–U+1EF9)
 are present. SIL Open Font License in `assets/fonts/OFL.txt`.
 
-## Calculator
+## Student app
 
-The calculator section links to the official CASIO ClassPad.net emulator; nothing is embedded.
+`assets/app/app-home.webp` and `assets/app/app-calculator.webp` are 2x renders (780 × 1688) of two screens
+of the "HocLuc — App học sinh" design canvas: the home screen and the CW-880 calculator. They show the
+design's example data, not a real student's. The home page shows them on phones drawn with Tailwind
+(`StudentAppSection.tsx`). The app is not released, so the section has no download link. Keep other
+calculator makers' names and branding out of these screens.

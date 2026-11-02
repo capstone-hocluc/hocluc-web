@@ -11,7 +11,7 @@ export function PublicHeader() {
   useLearnerTheme()
   return (
     <div className="landing-page public-chrome">
-      <LandingSprite characters={false} />
+      <LandingSprite />
       <LandingHeader onLanding={false} />
     </div>
   )

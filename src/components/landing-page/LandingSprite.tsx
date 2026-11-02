@@ -1,7 +1,6 @@
-// Inline SVG sprite used by <Icon /> and the subject artwork on the catalog cards.
+// Inline SVG sprite used by <Icon />.
 // Icon paths are Lucide (ISC License, https://lucide.dev); see public/landing-v2/assets/icons/LICENSE.
-// Pages outside the landing only need the icons, so they skip the character artwork.
-function LandingSprite({ characters = true }: { characters?: boolean }) {
+function LandingSprite() {
   return (
     <svg className="symbol-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
@@ -140,42 +139,10 @@ function LandingSprite({ characters = true }: { characters?: boolean }) {
           <path d="M16 7h6v6" />
           <path d="m22 7-8.5 8.5-5-5L2 17" />
         </symbol>
-        {characters && (
-          <>
-            <symbol id="lp-mai-english" viewBox="0 0 240 240">
-              <image
-                href="/landing-v2/assets/mai-english-v1.webp"
-                width="240"
-                height="240"
-                preserveAspectRatio="xMidYMid meet"
-              />
-            </symbol>
-            <symbol id="lp-nam-analysis" viewBox="0 0 240 240">
-              <image
-                href="/landing-v2/assets/nam-analysis-v1.webp"
-                width="240"
-                height="240"
-                preserveAspectRatio="xMidYMid meet"
-              />
-            </symbol>
-            <symbol id="lp-bot" viewBox="0 0 240 240">
-              <image
-                href="/landing-v2/assets/robot-science-v2.webp"
-                width="240"
-                height="240"
-                preserveAspectRatio="xMidYMid meet"
-              />
-            </symbol>
-            <symbol id="lp-star" viewBox="0 0 240 240">
-              <image
-                href="/landing-v2/assets/star-reading-v2.webp"
-                width="240"
-                height="240"
-                preserveAspectRatio="xMidYMid meet"
-              />
-            </symbol>
-          </>
-        )}
+        <symbol id="lp-ui-smartphone" viewBox="0 0 24 24">
+          <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+          <path d="M12 18h.01" />
+        </symbol>
       </defs>
     </svg>
   )

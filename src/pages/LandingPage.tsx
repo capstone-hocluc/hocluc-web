@@ -1,18 +1,15 @@
 import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import CatalogSection from '../components/landing-page/CatalogSection'
+import CourseCatalogSection, { ROADMAP_TAB } from '../components/landing-page/CourseCatalogSection'
 import DetailDialog, { type LandingDetail } from '../components/landing-page/DetailDialog'
 import ExamIntroSection from '../components/landing-page/ExamIntroSection'
-import CoursesSection from '../components/landing-page/CoursesSection'
 import { useScrollReveal } from '../components/landing-page/use-scroll-reveal'
 import HeroSection from '../components/landing-page/HeroSection'
 import JourneySection from '../components/landing-page/JourneySection'
 import LandingHeader from '../components/landing-page/LandingHeader'
 import LandingSprite from '../components/landing-page/LandingSprite'
-import SampleLessonSection, {
-  type SampleLessonHandle,
-} from '../components/landing-page/SampleLessonSection'
 import StartDialog from '../components/landing-page/StartDialog'
+import StudentAppSection from '../components/landing-page/StudentAppSection'
 import {
   LearningSupportSection,
   ClosingCtaSection,
@@ -24,22 +21,29 @@ import {
   examIntro,
   landingHero,
   practiceOperations,
-  sampleQuestions,
 } from '../data/landing-content'
 import { useLearnerTheme } from '../hooks/useLearnerTheme'
 import '../styles/landing/landing-page.css'
 
+function scrollToSection(id: string) {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth' })
+}
+
+// A course shop first: the hero, then the catalog by subject, then the calculator app; everything
+// that explains how studying works follows below.
 function LandingPage() {
   useLearnerTheme()
   const [detail, setDetail] = useState<LandingDetail | null>(null)
   const [startOpen, setStartOpen] = useState(false)
-  const lessonRef = useRef<SampleLessonHandle>(null)
+  const [courseTab, setCourseTab] = useState(ROADMAP_TAB)
   const rootRef = useRef<HTMLDivElement>(null)
   useScrollReveal(rootRef)
 
-  const openDomain = (domainId: string) => {
-    const domain = domains.find((item) => item.id === domainId)
-    if (domain) setDetail({ kind: 'domain', domain })
+  // Opens one subject's courses from anywhere on the page.
+  const showSubject = (subjectKey: string) => {
+    setCourseTab(subjectKey)
+    scrollToSection('khoa-hoc')
   }
 
   const openOperation = (operationId: string) => {
@@ -47,19 +51,10 @@ function LandingPage() {
     if (operation) setDetail({ kind: 'operation', operation })
   }
 
-  const viewRecommendedDomain = (domainId: string) => {
-    setStartOpen(false)
-    openDomain(domainId)
-  }
-
-  // Close the modal first so the page behind it is no longer inert, then bring the sample lesson into view.
-  const tryLesson = () => {
-    flushSync(() => setDetail(null))
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    document
-      .getElementById('hoc-thu')
-      ?.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth' })
-    lessonRef.current?.focusLesson()
+  // Close the modal first so the page behind it is no longer inert, then move to the courses.
+  const viewRecommendedSubject = (subjectKey: string) => {
+    flushSync(() => setStartOpen(false))
+    showSubject(subjectKey)
   }
 
   return (
@@ -71,9 +66,8 @@ function LandingPage() {
       <LandingHeader />
       <main id="main">
         <HeroSection hero={landingHero} />
-        <CatalogSection domains={domains} onOpenDomain={openDomain} />
-        <CoursesSection />
-        <SampleLessonSection ref={lessonRef} questions={sampleQuestions} />
+        <CourseCatalogSection activeTab={courseTab} onTabChange={setCourseTab} />
+        <StudentAppSection />
         <JourneySection onStart={() => setStartOpen(true)} onOpenOperation={openOperation} />
         <LearningSupportSection />
         <ExamIntroSection exam={examIntro} />
@@ -81,12 +75,12 @@ function LandingPage() {
         <ClosingCtaSection />
       </main>
       <LandingFooter />
-      <DetailDialog detail={detail} onClose={() => setDetail(null)} onTryLesson={tryLesson} />
+      <DetailDialog detail={detail} onClose={() => setDetail(null)} />
       <StartDialog
         open={startOpen}
         domains={domains}
         onClose={() => setStartOpen(false)}
-        onViewDomain={viewRecommendedDomain}
+        onViewSubject={viewRecommendedSubject}
       />
     </div>
   )

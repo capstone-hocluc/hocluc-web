@@ -1,57 +1,94 @@
-import { calculatorLink, closingCta, faq, landingFooterNav } from '../../data/landing-content'
+import { closingCta, faq, landingFooterNav } from '../../data/landing-content'
 import Icon from './Icon'
 import LandingLogo from './LandingLogo'
 import AuthLink from './AuthLink'
 import LandingLink from './LandingLink'
 
+// Icon tile and title shared by the three ways to get help. The title is an h3 for the first two, so
+// it needs `!` to beat the landing's element rule for h3.
+const supportTile =
+  'grid size-11 shrink-0 place-items-center rounded-xl bg-(--blue-soft) text-(--blue-text)'
+const supportTitle = 'text-[1.125rem]! leading-snug!'
+
+// Where learners can get help understanding a lesson. The photo sits left at desktop width through grid
+// placement, so the heading still comes first for a screen reader and on a phone.
 export function LearningSupportSection() {
   return (
-    <section className="section support-section" id="ho-tro" aria-labelledby="support-title">
-      <div className="container support-layout">
-        <div className="support-intro">
-          <span className="eyebrow">Hỗ trợ khi học</span>
-          <h2 id="support-title">
-            Có thêm cách
-            <br />
-            để hiểu bài.
-          </h2>
-          <p>Khám phá hình thức hỗ trợ dành cho học viên trong thông tin từng khóa học.</p>
+    <section
+      className="section support-section bg-(--soft)"
+      id="ho-tro"
+      aria-labelledby="support-title"
+    >
+      <div className="container support-layout grid gap-8 lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:gap-x-16 xl:gap-x-24">
+        <h2 id="support-title" className="lg:col-start-2 lg:row-start-1">
+          Có thêm cách
+          <br />
+          để hiểu bài.
+        </h2>
+
+        {/* The image fills its box instead of sizing it, so at desktop width the photo takes the height of
+            the heading and the list beside it. */}
+        <div className="relative aspect-[16/10] overflow-hidden rounded-3xl shadow-[0_30px_60px_-36px_rgba(11,35,72,0.5)] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:aspect-auto">
+          <img
+            src="/landing-v2/assets/mentor-session-v3.webp"
+            srcSet="/landing-v2/assets/mentor-session-v3-800.webp 800w, /landing-v2/assets/mentor-session-v3.webp 1365w"
+            sizes="(max-width: 1023px) 100vw, 580px"
+            alt="Cô giáo hướng dẫn một nam sinh giải bài toán bên bàn học"
+            width={1365}
+            height={1024}
+            loading="lazy"
+            className="absolute inset-0 size-full object-cover"
+          />
         </div>
-        <div className="support-items">
-          <article>
-            <Icon name="languages" />
-            <div>
-              <h3>Trao đổi cùng Mentor</h3>
-              <p>
-                Trao đổi những phần chưa hiểu trong quá trình học. Quyền hỗ trợ theo khóa học bạn
-                tham gia.
+
+        <ul className="support-items flex flex-col divide-y divide-(--line) overflow-hidden rounded-3xl bg-white ring-1 ring-(--line) lg:col-start-2 lg:row-start-2">
+          <li className="flex items-start gap-4 p-5 sm:p-6">
+            <span className={supportTile}>
+              <Icon name="message-circle" />
+            </span>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <h3 className={supportTitle}>Trao đổi cùng Mentor</h3>
+              <p className="text-[0.9375rem] leading-relaxed">
+                Trao đổi những phần chưa hiểu trong quá trình học. Quyền hỗ trợ tùy khóa học, xem
+                trong thông tin từng khóa.
               </p>
             </div>
-          </article>
-          <article>
-            <Icon name="book-open" />
-            <div>
-              <h3>Khám phá cùng gia sư AI</h3>
-              <p>
+          </li>
+          <li className="flex items-start gap-4 p-5 sm:p-6">
+            <span className={supportTile}>
+              <Icon name="sparkles" />
+            </span>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <h3 className={supportTitle}>Khám phá cùng gia sư AI</h3>
+              <p className="text-[0.9375rem] leading-relaxed">
                 Dành cho học viên có khóa đã mua còn hiệu lực. Xem điều kiện sử dụng trong tài khoản
                 học tập.
               </p>
             </div>
-          </article>
-          <a
-            className="calculator-link"
-            href={calculatorLink.href}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Icon name="calculator" />
-            <span>
-              Luyện thao tác máy tính với ClassPad.net
-              <small>Công cụ bên ngoài · Mở trong tab mới</small>
-            </span>
-            <Icon name="arrow-up-right" />
-          </a>
-        </div>
+          </li>
+          <li>
+            <a
+              className="group flex items-center gap-4 rounded-b-3xl p-5 transition-colors hover:bg-(--soft) focus-visible:-outline-offset-4! sm:p-6"
+              href="#ung-dung"
+            >
+              <span className={supportTile}>
+                <Icon name="smartphone" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+                <span className="text-[1.125rem] leading-snug font-semibold tracking-[-0.02em] text-(--ink)">
+                  Học trên ứng dụng HocLuc
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-(--blue-soft) px-2.5 py-0.5 text-[0.8125rem] font-semibold text-(--blue-text)">
+                  <span aria-hidden="true" className="size-1.5 rounded-full bg-(--blue)" />
+                  Đang phát triển
+                </span>
+              </span>
+              <span className="text-(--blue-text) transition-transform duration-200 group-hover:translate-x-1">
+                <Icon name="arrow-right" />
+              </span>
+            </a>
+          </li>
+        </ul>
       </div>
     </section>
   )
@@ -94,7 +131,6 @@ export function ClosingCtaSection() {
             <br />
             bắt đầu từ hôm nay.
           </h2>
-          <p>Chọn một khóa học, thử một câu hỏi.</p>
         </div>
         <div className="closing-cta-actions">
           <AuthLink mode="signup" className="btn btn-primary">
