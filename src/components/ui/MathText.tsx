@@ -1,21 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import type katex from 'katex'
+import { loadKatex, type Katex } from './katex-loader'
 import { splitFormulas as split, type Piece } from './math-split'
-
-type Katex = typeof katex
-
-let katexLoad: Promise<Katex> | null = null
-
-/** KaTeX and its fonts are fetched the first time a text with a formula is shown, never for plain text. */
-function loadKatex() {
-  katexLoad ??= Promise.all([
-    import('katex'),
-    // mhchem adds the `\ce{…}` macro the chemistry formula tab saves; other formulas render as before.
-    import('katex/contrib/mhchem'),
-    import('katex/dist/katex.min.css'),
-  ]).then(([module]) => module.default)
-  return katexLoad
-}
 
 function Formulas({ pieces }: { pieces: Piece[] }) {
   const [katex, setKatex] = useState<Katex | null>(null)

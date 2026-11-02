@@ -3,7 +3,7 @@ import { cn } from '../../../lib/cn'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import type { SelectOption } from '../../console/select-field'
-import { ChevronRight, RotateCcw, Sparkles, X } from '../../console/icons'
+import { ChevronRight, Clock, Sparkles, SquarePen, X } from '../../console/icons'
 import AssistantSources from './chat/AssistantSources'
 import Composer from './Composer'
 import MessageThread from './MessageThread'
@@ -30,23 +30,21 @@ interface ChatPanelProps {
   onDismissNotice: () => void
   settings: AiComposeSettings
   onSettingsChange: (patch: Partial<AiComposeSettings>) => void
-  subjects: SelectOption[]
-  subjectsLoading: boolean
-  subjectsError: string | null
-  onReloadSubjects: () => void
   papers: SelectOption[]
   papersLoading: boolean
   papersError: string | null
   onReloadPapers: () => void
-  subjectLocked: boolean
   onModeChange: (mode: AiAssistantMode) => void
   onValueChange: (value: string) => void
   onSend: () => void
   onStop: () => void
   onRegenerate: () => void
   onStartNew: () => void
+  conversationsOpen: boolean
+  onOpenConversations: () => void
   onPickPrompt: (mode: AiAssistantMode, prompt: string) => void
-  onJumpToQuestion: (questionId: string) => void
+  /** Downloads the exam on the sheet: a Word file, or the print dialog to save it as PDF. */
+  onDownload: (format: 'docx' | 'pdf') => void
   onCollapse?: () => void
   onClose?: () => void
   className?: string
@@ -66,23 +64,20 @@ export default function ChatPanel({
   onDismissNotice,
   settings,
   onSettingsChange,
-  subjects,
-  subjectsLoading,
-  subjectsError,
-  onReloadSubjects,
   papers,
   papersLoading,
   papersError,
   onReloadPapers,
-  subjectLocked,
   onModeChange,
   onValueChange,
   onSend,
   onStop,
   onRegenerate,
   onStartNew,
+  conversationsOpen,
+  onOpenConversations,
   onPickPrompt,
-  onJumpToQuestion,
+  onDownload,
   onCollapse,
   onClose,
   className = '',
@@ -111,13 +106,23 @@ export default function ChatPanel({
         <div className="ml-auto flex shrink-0 items-center">
           <button
             type="button"
-            onClick={onStartNew}
-            disabled={!hasMessages}
-            aria-label="Làm mới đoạn chat"
-            title="Làm mới đoạn chat"
+            onClick={onOpenConversations}
+            aria-haspopup="dialog"
+            aria-expanded={conversationsOpen}
+            aria-label="Cuộc trò chuyện"
+            title="Cuộc trò chuyện"
             className={ICON_BUTTON}
           >
-            <RotateCcw size={16} />
+            <Clock size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={onStartNew}
+            aria-label="Cuộc trò chuyện mới"
+            title="Cuộc trò chuyện mới"
+            className={ICON_BUTTON}
+          >
+            <SquarePen size={16} />
           </button>
           {onCollapse && (
             <button
@@ -158,7 +163,7 @@ export default function ChatPanel({
           trace={trace}
           loading={loading}
           onRegenerate={onRegenerate}
-          onJumpToQuestion={onJumpToQuestion}
+          onDownload={onDownload}
         />
       )}
 
@@ -188,15 +193,10 @@ export default function ChatPanel({
           onDismissNotice={onDismissNotice}
           settings={settings}
           onSettingsChange={onSettingsChange}
-          subjects={subjects}
-          subjectsLoading={subjectsLoading}
-          subjectsError={subjectsError}
-          onReloadSubjects={onReloadSubjects}
           papers={papers}
           papersLoading={papersLoading}
           papersError={papersError}
           onReloadPapers={onReloadPapers}
-          subjectLocked={subjectLocked}
           inputRef={input}
         />
         <p className="text-center text-[11px] leading-4 text-text-tertiary">

@@ -5,10 +5,12 @@ import {
   CheckCircle2,
   ChevronDown,
   Copy,
+  FileText,
   RotateCcw,
   XCircle,
   type LucideIcon,
 } from '../../console/icons'
+import { FileFormatPdf } from '@tailgrids/icons'
 import Button from '../../console/button'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import AiMarkdown from './AiMarkdown'
@@ -25,17 +27,19 @@ const MODE_LABEL: Record<AiAssistantMode, string> = {
 export default function AssistantMessage({
   message,
   onRegenerate,
-  onJumpToQuestion,
+  onDownload,
 }: {
   message: AiChatMessage
   onRegenerate: () => void
-  onJumpToQuestion: (questionId: string) => void
+  onDownload: (format: 'docx' | 'pdf') => void
 }) {
   const [copied, setCopied] = useState(false)
   const [traceOpen, setTraceOpen] = useState(false)
   const hasStages = Boolean(message.stages?.length)
   const hasTrace = Boolean(message.trace?.length)
   const addedIds = message.addedItemIds ?? []
+  // A compose or mock-exam answer that finished (not an error): its exam is ready to take away.
+  const composed = !message.error && (message.mode === 'compose' || message.mode === 'mock-exam')
 
   async function copy() {
     try {
@@ -127,22 +131,28 @@ export default function AssistantMessage({
 
       {hasStages && <StageTrace stages={message.stages!} />}
 
-      {addedIds.length > 0 && (
+      {/* A finished exam is one step from the teacher's hands: the questions are already on the sheet beside, so the
+          card offers the files rather than a jump to them. */}
+      {composed && (
         <div className="mt-4 rounded-xl border border-card-border bg-card-background p-3">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-badge-success-text" aria-hidden />
-            <p className="min-w-0 flex-1 text-sm font-medium text-text-primary">
-              Đã thêm {addedIds.length} câu vào đề
-            </p>
+          {addedIds.length > 0 && (
+            <div className="mb-2.5 flex items-start gap-2">
+              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-badge-success-text" aria-hidden />
+              <p className="min-w-0 flex-1 text-sm font-medium text-text-primary">
+                Đã thêm {addedIds.length} câu vào đề
+              </p>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" appearance="outline" onClick={() => onDownload('docx')}>
+              <FileText size={15} aria-hidden />
+              Tải Word
+            </Button>
+            <Button size="sm" appearance="outline" onClick={() => onDownload('pdf')}>
+              <FileFormatPdf aria-hidden className="size-[15px]" />
+              Tải PDF
+            </Button>
           </div>
-          <Button
-            size="sm"
-            appearance="outline"
-            className="mt-2.5"
-            onClick={() => onJumpToQuestion(addedIds[0])}
-          >
-            Xem trong đề
-          </Button>
         </div>
       )}
 

@@ -4,6 +4,7 @@ import PaperBrand from '../quiz/PaperBrand'
 import { sharedHeading } from '../quiz/paper-layout'
 import '../quiz/quiz-paper.css'
 import ExamFigure from './ExamFigure'
+import { chartAlt, chartImageSrc } from '../exam-doc/chart-svg'
 import ExamQuestionCard from './ExamQuestionCard'
 import type {
   ExamPaper as ExamPaperModel,
@@ -129,6 +130,9 @@ export default function ExamPaper({
                         src={block.group.passageImageUrl}
                         alt={`Hình minh hoạ ngữ liệu câu ${numbers[0]}`}
                       />
+                      {block.group.chart && (
+                        <ExamFigure src={chartImageSrc(block.group.chart)} alt={chartAlt(block.group.chart)} />
+                      )}
                       {block.questions.map(card)}
                     </div>
                   )

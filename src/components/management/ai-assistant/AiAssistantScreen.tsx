@@ -23,10 +23,15 @@ import DocToolbar from '../exam-doc/DocToolbar'
 import LeftPanel from '../exam-doc/LeftPanel'
 import StatusBar from '../exam-doc/StatusBar'
 import TemplateLibrary from '../exam-doc/templates/TemplateLibrary'
-import { questionsToBlocks } from '../exam-doc/draft-to-doc'
+import { parentHeadingText, partHeadings, questionsToBlocks } from '../exam-doc/draft-to-doc'
 import { scrollToPos } from '../exam-doc/doc-outline'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
-import { deliveredItems, findTagged, questionInsertPos } from '../exam-doc/exam-tags'
+import { deliveredItems, findTagged, partHeadingPlace, questionInsertPos } from '../exam-doc/exam-tags'
+import { refreshChartImages } from '../exam-doc/chart-refresh'
+import { downloadDocument } from '../exam-doc/export'
+import { liveDraftView } from '../exam-doc/live-draft'
+import { useFollowWriting } from '../exam-doc/use-follow-writing'
+import { liveDraftKey } from '../exam-doc/nodes/live-draft-widget'
 import { useDocEditor } from '../exam-doc/use-doc-editor'
 import { useExamDocument } from '../exam-doc/use-exam-document'
 import VariantBanner from '../exam-doc/variants/VariantBanner'
@@ -132,7 +137,13 @@ export default function AiAssistantScreen({
     const fresh = ai.paper.questions.filter((question) => !delivered.has(question.id))
     if (fresh.length === 0) return
     const tr = editor.state.tr
+    const partOrder = ai.paper.parts.map((part) => part.id)
     for (const question of fresh) {
+      const part = ai.paper.parts.find((item) => item.id === question.partId)
+      if (part && findTagged(tr.doc, 'examPart', part.id) === null) {
+        const place = partHeadingPlace(tr.doc, part.id, partOrder, parentHeadingText(part))
+        tr.insert(place.pos, partHeadings(part, place.parentShown).map((block) => editor.schema.nodeFromJSON(block)))
+      }
       const shownGroups = new Set<string>()
       if (question.groupId && findTagged(tr.doc, 'examGroup', question.groupId) !== null) shownGroups.add(question.groupId)
       const nodes = questionsToBlocks(ai.paper, [question], { shownGroups }).map((block) =>
@@ -143,6 +154,36 @@ export default function AiAssistantScreen({
     }
     tr.setDocAttribute('deliveredItems', [...delivered]).setMeta('addToHistory', false)
     editor.view.dispatch(tr)
+  }, [ai.paper, ai.draftLoading, examDoc.loading, editor])
+
+  // The question the AI is writing shows on the sheet where it will land, word by word, until the checked question
+  // replaces it. Only a decoration changes: nothing is saved and nothing goes into undo.
+  const liveDraft = ai.liveDraft
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return
+    const shown = liveDraft ? { partId: liveDraft.section, view: liveDraftView(liveDraft.text) } : null
+    editor.view.dispatch(editor.state.tr.setMeta(liveDraftKey, shown).setMeta('addToHistory', false))
+  }, [editor, liveDraft])
+
+  // While the AI writes, the sheet follows it; the teacher scrolling lets go, and a button picks it up again.
+  const sheetScroller = useRef<HTMLElement>(null)
+  const followTarget = liveDraft
+    ? '[data-live-draft]'
+    : ai.lastItemId
+      ? `[data-exam-item="${CSS.escape(ai.lastItemId)}"]`
+      : null
+  const writing = useFollowWriting(
+    sheetScroller,
+    ai.running && examDoc.mode === 'FREE' && !variants.activeDoc,
+    followTarget,
+    `${ai.lastItemId ?? ''}:${liveDraft?.text.length ?? 0}`
+  )
+
+  // Charts are drawn again from their data when an exam opens, so one saved with an older drawing looks current.
+  useEffect(() => {
+    // A refreshed drawing is saved like an edit, once; later opens find it current and change nothing.
+    if (!editor || examDoc.loading || ai.draftLoading) return
+    refreshChartImages(editor, ai.paper)
   }, [ai.paper, ai.draftLoading, examDoc.loading, editor])
 
   const showVariants = useCallback((open: boolean) => {
@@ -231,6 +272,15 @@ export default function AiAssistantScreen({
 
   const numberOf = useMemo(() => questionNumbers(ai.paper), [ai.paper])
 
+  /** The finished exam from the chat: a Word file, or PDF through the print dialog (the sheet prints as A4 pages). */
+  function downloadExam(format: 'docx' | 'pdf') {
+    if (format === 'pdf') {
+      window.setTimeout(() => window.print(), 0)
+      return
+    }
+    if (editor) void downloadDocument(editor, 'docx', variants.activeVariant ?? null)
+  }
+
   function jumpToQuestion(id: string) {
     setChatSheet(false)
     setOutlineSheet(false)
@@ -299,23 +349,24 @@ export default function AiAssistantScreen({
     settings: ai.settings,
     onSettingsChange: (patch: Partial<AiComposeSettings>) =>
       ai.setSettings((previous) => ({ ...previous, ...patch })),
-    subjects: ai.subjects,
-    subjectsLoading: ai.subjectsLoading,
-    subjectsError: ai.subjectsError,
-    onReloadSubjects: ai.reloadSubjects,
     papers: ai.papers,
     papersLoading: ai.papersLoading,
     papersError: ai.papersError,
     onReloadPapers: ai.reloadPapers,
-    subjectLocked: ai.subjectLocked,
     onModeChange: ai.setMode,
     onValueChange: ai.setValue,
     onSend: ai.send,
     onStop: ai.cancel,
     onRegenerate: ai.regenerate,
     onStartNew: startNew,
+    conversationsOpen,
+    // On a narrow screen the chat is itself a sheet; it gives way to the list.
+    onOpenConversations: () => {
+      setChatSheet(false)
+      setConversationsOpen(true)
+    },
     onPickPrompt: pickPrompt,
-    onJumpToQuestion: jumpToQuestion,
+    onDownload: downloadExam,
   }
 
   return (
@@ -330,8 +381,6 @@ export default function AiAssistantScreen({
           }}
           onBack={onBack}
           backHref={backHref}
-          conversationsOpen={conversationsOpen}
-          onToggleConversations={() => setConversationsOpen((open) => !open)}
           chatOpen={chatOpen || chatSheet}
           onToggleChat={toggleChat}
           outlineOpen={outlineOpen || outlineSheet}
@@ -385,7 +434,10 @@ export default function AiAssistantScreen({
 
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <VariantBanner />
-          <main className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-background-gray-secondary [scrollbar-gutter:stable]">
+          <main
+            ref={sheetScroller}
+            className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-background-gray-secondary [scrollbar-gutter:stable]"
+          >
             {examDoc.mode === 'FREE' || shownEditor !== editor ? (
               examDoc.loadError && examDoc.loading ? (
                 <div className="mx-auto max-w-[560px] px-4 py-10">
@@ -439,6 +491,19 @@ export default function AiAssistantScreen({
                 />
               )}
             </div>
+            )}
+            {/* Shown once the teacher scrolled away from the writing; it stays at the bottom of the sheet's view. */}
+            {ai.running && !writing.following && examDoc.mode === 'FREE' && !variants.activeDoc && (
+              <div className="pointer-events-none sticky bottom-5 z-20 flex justify-center">
+                <button
+                  type="button"
+                  onClick={writing.follow}
+                  className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-button-primary-background px-4 py-2 text-sm font-semibold text-button-primary-text shadow-card-hover transition-colors hover:bg-button-primary-hover-background focus-visible:ring-4 focus-visible:ring-button-primary-focus-ring"
+                >
+                  <span aria-hidden className="size-2 rounded-full bg-current motion-safe:animate-pulse" />
+                  Theo dõi AI đang viết
+                </button>
+              </div>
             )}
           </main>
           </div>

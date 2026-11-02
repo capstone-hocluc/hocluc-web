@@ -14,7 +14,7 @@ export default function MessageThread({
   trace,
   loading,
   onRegenerate,
-  onJumpToQuestion,
+  onDownload,
 }: {
   messages: readonly AiChatMessage[]
   pending: boolean
@@ -22,7 +22,8 @@ export default function MessageThread({
   trace: readonly string[]
   loading: boolean
   onRegenerate: () => void
-  onJumpToQuestion: (questionId: string) => void
+  /** Downloads the exam on the sheet: a Word file, or the print dialog to save it as PDF. */
+  onDownload: (format: 'docx' | 'pdf') => void
 }) {
   const scroll = useRef<HTMLDivElement>(null)
 
@@ -58,7 +59,7 @@ export default function MessageThread({
                 key={message.id}
                 message={message}
                 onRegenerate={onRegenerate}
-                onJumpToQuestion={onJumpToQuestion}
+                onDownload={onDownload}
               />
             )
           )

@@ -70,7 +70,8 @@ const MODES: {
     id: 'compose',
     label: 'Soạn câu hỏi',
     description: 'Tạo câu hỏi mới theo cấu hình',
-    placeholder: EXAM_PLACEHOLDER,
+    // The subjects come from the request's own words, so the hint shows naming one.
+    placeholder: 'Ví dụ: Soạn 10 câu Toán mức trung bình, kèm lời giải…',
     icon: ClipboardList,
   },
   {
@@ -102,15 +103,10 @@ interface ComposerProps {
   onDismissNotice: () => void
   settings: AiComposeSettings
   onSettingsChange: (patch: Partial<AiComposeSettings>) => void
-  subjects: SelectOption[]
-  subjectsLoading: boolean
-  subjectsError: string | null
-  onReloadSubjects: () => void
   papers: SelectOption[]
   papersLoading: boolean
   papersError: string | null
   onReloadPapers: () => void
-  subjectLocked: boolean
   /** Lets the panel focus the message box, e.g. after a starter card filled it. */
   inputRef?: RefObject<HTMLTextAreaElement | null>
 }
@@ -128,22 +124,16 @@ export default function Composer({
   onDismissNotice,
   settings,
   onSettingsChange,
-  subjects,
-  subjectsLoading,
-  subjectsError,
-  onReloadSubjects,
   papers,
   papersLoading,
   papersError,
   onReloadPapers,
-  subjectLocked,
   inputRef,
 }: ComposerProps) {
   const active = MODES.find((item) => item.id === mode) ?? MODES[0]
   const ownRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef ?? ownRef
-  const missingConfig =
-    mode !== 'ask' && (!settings.subjectId || (mode === 'mock-exam' && !settings.bankSourceId))
+  const missingConfig = mode === 'mock-exam' && !settings.bankSourceId
   const canSend = Boolean(value.trim()) && !busy && !missingConfig
 
   useEffect(() => {
@@ -217,19 +207,14 @@ export default function Composer({
               <ModeMenu mode={mode} onModeChange={onModeChange} />
               {mode !== 'ask' && (
                 <SettingsMenu
-                  summary={settingsSummary(mode, settings, subjects)}
+                  summary={settingsSummary(mode, settings)}
                   missing={missingConfig}
-                  hasError={Boolean(subjectsError || (mode === 'mock-exam' && papersError))}
+                  hasError={Boolean(mode === 'mock-exam' && papersError)}
                 >
                   <QuizConfigBar
                     mode={mode}
                     settings={settings}
                     onChange={onSettingsChange}
-                    subjects={subjects}
-                    subjectsLoading={subjectsLoading}
-                    subjectsError={subjectsError ?? ''}
-                    onReloadSubjects={onReloadSubjects}
-                    subjectLocked={subjectLocked}
                   />
                 </SettingsMenu>
               )}
@@ -242,10 +227,15 @@ export default function Composer({
               title={busy ? 'Dừng tạo câu trả lời' : 'Gửi (Enter)'}
               size="icon"
               shape="pill"
-              className="size-8 shrink-0"
+              // The shared button sizes every icon to 20px and rings it on any focus: here the stop square stays a
+              // small glyph and the ring shows for keyboard focus only (a click on Gửi would otherwise keep it).
+              className={cn(
+                'size-8 shrink-0 focus:ring-0 focus-visible:ring-2',
+                busy ? '[&>svg]:size-3.5' : '[&>svg]:size-4'
+              )}
             >
               {busy ? (
-                <Square size={10} strokeWidth={2.6} fill="currentColor" />
+                <Square strokeWidth={0} fill="currentColor" />
               ) : (
                 <ArrowUp size={16} strokeWidth={2.2} />
               )}
@@ -344,17 +334,16 @@ const labelOf = (options: readonly SelectOption[], id: string) =>
   options.find((option) => option.id === id)?.label
 
 /**
- * One line telling the current compose settings, e.g. "Toán học · 5 câu · Trung bình". The bank paper of
+ * One line telling the current compose settings, e.g. "5 câu · Trung bình". The bank paper of
  * "Mô phỏng đề" is left out: the sources block above the composer already shows it.
  */
 function settingsSummary(
   mode: Exclude<AiAssistantMode, 'ask'>,
-  settings: AiComposeSettings,
-  subjects: SelectOption[]
+  settings: AiComposeSettings
 ) {
   const count = labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount))
   const difficulty = mode === 'compose' ? labelOf(DIFFICULTIES, settings.difficulty) : undefined
-  return [labelOf(subjects, settings.subjectId), count, difficulty].filter(Boolean).join(' · ')
+  return [count, difficulty].filter(Boolean).join(' · ')
 }
 
 /** The compose settings folded into one chip of the composer; the full settings open above it. */

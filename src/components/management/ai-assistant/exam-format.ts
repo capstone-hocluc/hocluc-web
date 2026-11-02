@@ -1,6 +1,7 @@
 import type {
   AiAgentStep,
   AiAssistantMode,
+  AiChart,
   AiCheckResult,
   AiDifficulty,
   AiDraftItem,
@@ -66,6 +67,8 @@ export interface ExamPaperQuestion {
   sourceTitle: string | null
   imageUrl: string | null
   passageImageUrl: string | null
+  /** A chart drawn from the AI's data, shown under the question. */
+  chart: AiChart | null
   source: 'ai' | 'bank' | 'manual'
   /** False while the teacher has not accepted an AI or bank question yet. */
   kept: boolean
@@ -91,6 +94,8 @@ export interface ExamPaperGroup {
   instruction: string | null
   passage: string | null
   passageImageUrl: string | null
+  /** The chart of the shared passage, shown under it. */
+  chart: AiChart | null
 }
 
 export interface ExamPaper {
@@ -146,15 +151,25 @@ function reviewReasons(check: AiCheckResult | null | undefined): string[] {
   return [...new Set(values.filter((reason): reason is string => Boolean(reason?.trim())))]
 }
 
+/** An option's words without a label the AI repeated in them ("A. 2019, 2021" under label A, printed "A. A. …"). */
+function withoutLabel(text: string, label: string) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const stripped = text.trim().replace(new RegExp(`^${escaped}\\s*[.):]\\s*`, 'i'), '')
+  return stripped || text.trim()
+}
+
 function optionsOf(item: AiDraftItem) {
   return (item.question.options ?? [])
     .filter((option) => option && typeof option.label === 'string')
-    .map((option, index) => ({
-      id: `${item.id}-${option.label || index}`,
-      label: option.label || String.fromCharCode(65 + index),
-      text: option.text ?? '',
-      correct: option.correct === true,
-    }))
+    .map((option, index) => {
+      const label = option.label || String.fromCharCode(65 + index)
+      return {
+        id: `${item.id}-${option.label || index}`,
+        label,
+        text: withoutLabel(option.text ?? '', label),
+        correct: option.correct === true,
+      }
+    })
 }
 
 /** The draft the backend stores, as the A4 paper prints it. */
@@ -190,9 +205,11 @@ export function buildPaper(
   for (const item of items) {
     if (!item.groupKey) continue
     const passageImageUrl = item.question.passageImageUrl?.trim() || null
+    const passageChart = item.question.passageChart ?? null
     const group = groupMap.get(item.groupKey)
     if (group) {
       if (!group.passageImageUrl && passageImageUrl) group.passageImageUrl = passageImageUrl
+      if (!group.chart && passageChart) group.chart = passageChart
       continue
     }
     groupMap.set(item.groupKey, {
@@ -201,6 +218,7 @@ export function buildPaper(
       instruction: null,
       passage: item.question.passage?.trim() ? item.question.passage : null,
       passageImageUrl,
+      chart: passageChart,
     })
   }
 
@@ -224,6 +242,7 @@ export function buildPaper(
       sourceTitle: item.question.sourceTitle?.trim() || null,
       imageUrl: item.question.imageUrl?.trim() || null,
       passageImageUrl: item.question.passageImageUrl?.trim() || null,
+      chart: item.question.chart ?? null,
       source: item.source === 'AI' ? 'ai' : item.source === 'BANK' ? 'bank' : 'manual',
       kept: item.kept,
       needsReview: item.checkResult?.needsReview === true,
@@ -241,27 +260,22 @@ export function buildPaper(
   }
 }
 
-/** Numbers questions by part, so a part that starts at 61 keeps its 61–90 range on the paper. */
+/**
+ * Numbers the questions 1, 2, 3… part after part. A paper holding only some parts (ten Toán questions) starts at
+ * Câu 1 instead of at the part's place in the full format; a full paper gets the same numbers either way.
+ */
 export function questionNumbers(paper: ExamPaper): Map<string, number> {
   const numbers = new Map<string, number>()
   let next = 1
   for (const part of paper.parts) {
-    const questions = paper.questions
+    paper.questions
       .filter((question) => question.partId === part.id)
       .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
-    questions.forEach((question, index) => {
-      const number =
-        part.firstNumber !== null
-          ? part.firstNumber + (question.position > 0 ? question.position - 1 : index)
-          : next
-      numbers.set(question.id, number)
-      next = Math.max(next, number + 1)
-    })
-    if (part.firstNumber !== null) next = Math.max(next, part.firstNumber + (part.targetCount ?? 0))
+      .forEach((question) => numbers.set(question.id, next++))
   }
-  paper.questions.forEach((question, index) => {
-    if (!numbers.has(question.id)) numbers.set(question.id, index + 1)
-  })
+  for (const question of paper.questions) {
+    if (!numbers.has(question.id)) numbers.set(question.id, next++)
+  }
   return numbers
 }
 

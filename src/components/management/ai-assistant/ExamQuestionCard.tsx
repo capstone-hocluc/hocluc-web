@@ -9,6 +9,7 @@ import MathText from '../../ui/MathText'
 import { optionColumns } from '../quiz/paper-layout'
 import type { ExamPaperOption, ExamPaperQuestion } from './exam-format'
 import ExamFigure from './ExamFigure'
+import { chartAlt, chartImageSrc } from '../exam-doc/chart-svg'
 
 const AI_TAG =
   'ml-1 inline-block rounded border border-[#1e3a8a]/30 px-1 align-middle font-sans text-[8pt] font-bold tracking-wider text-[#1e3a8a]'
@@ -80,6 +81,7 @@ export default function ExamQuestionCard({
               )}
             </p>
             <ExamFigure src={question.imageUrl} alt={`Hình minh hoạ câu ${number}`} />
+            {question.chart && <ExamFigure src={chartImageSrc(question.chart)} alt={chartAlt(question.chart)} />}
             {question.options.length > 0 && (
               <ol className="quiz-paper-options" data-columns={optionColumns(question.options)}>
                 {question.options.map((option) => (

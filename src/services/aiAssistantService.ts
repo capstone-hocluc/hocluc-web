@@ -76,6 +76,20 @@ export interface AiDraftQuestion {
   imageUrl?: string | null
   /** Signed URL of the figure of the shared passage. */
   passageImageUrl?: string | null
+  /** A chart the AI drew data for, shown with the question (Tư duy khoa học). */
+  chart?: AiChart | null
+  /** The chart of the shared passage; every question of the group carries it. */
+  passageChart?: AiChart | null
+}
+
+/** Chart data as the server checked it: a bar, line or pie chart over labelled categories. */
+export interface AiChart {
+  type: 'bar' | 'line' | 'pie'
+  title?: string
+  xLabel?: string
+  yLabel?: string
+  categories: string[]
+  series: { name: string; values: number[] }[]
 }
 
 export interface AiCheckResult {
@@ -116,9 +130,19 @@ export interface AiExamDraftRecord {
   updatedAt?: string
 }
 
+/** A compose run still queued or going when the draft was read. */
+export interface AiActiveRun {
+  mode: 'compose' | 'mock-exam'
+  status: 'PENDING' | 'RUNNING'
+  progress: string | null
+  /** The conversation's last event before the run began: following the stream from it replays this run only. */
+  afterEventId: string
+}
+
 export interface AiDraftResponse {
   draft: AiExamDraftRecord
   items: AiDraftItem[]
+  run?: AiActiveRun | null
 }
 
 export interface AiSendConfig {
@@ -180,6 +204,21 @@ export type AiStreamEvent =
         check?: AiCheckResult | null
       }
     }
+  | {
+      /** Words of the unit (a question or a passage group) the AI is writing, sent as they come. */
+      type: 'draft'
+      data: {
+        unit: number
+        section: string
+        positions: number[]
+        groupKey?: string | null
+        attempt: number
+        /** The text written since the previous draft event of the unit. */
+        text: string
+        /** A new attempt: what was shown of the unit so far is dropped. */
+        reset?: boolean
+      }
+    }
   | { type: 'answer'; data: { messageId: string; text: string } }
   | {
       type: 'end'
@@ -193,7 +232,7 @@ export type AiStreamEvent =
   | { type: 'error'; data: { message: string } }
 
 const BASE = '/api/v1/ai-assistant'
-const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'item', 'answer', 'end', 'error'])
+const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'item', 'answer', 'end', 'error'])
 const MAX_RETRIES = 5
 const RETRY_MS = 2000
 

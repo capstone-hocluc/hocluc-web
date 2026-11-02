@@ -1,7 +1,6 @@
 import { Extension, Mark, Node, isNodeActive, mergeAttributes, type CommandProps } from '@tiptap/core'
 import { NodeSelection } from '@tiptap/pm/state'
-import { ReactNodeViewRenderer } from '@tiptap/react'
-import MathNodeView from './MathNodeView'
+import { MathView } from './nodes/math-view'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -183,7 +182,8 @@ export const MathNode = Node.create<MathOptions>({
     ['span', mergeAttributes(HTMLAttributes, { 'data-math': '', 'data-latex': node.attrs.latex }), node.attrs.display ? `$$${node.attrs.latex}$$` : `$${node.attrs.latex}$`],
   renderText: ({ node }) => (node.attrs.display ? `$$${node.attrs.latex}$$` : `$${node.attrs.latex}$`),
   addNodeView() {
-    return ReactNodeViewRenderer(MathNodeView)
+    const onEdit = this.options.onEdit
+    return ({ node, view, getPos }) => new MathView(node, view, getPos, onEdit)
   },
   addKeyboardShortcuts() {
     const edit = () => {

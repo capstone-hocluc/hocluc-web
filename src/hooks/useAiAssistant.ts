@@ -26,8 +26,6 @@ import {
   type AiSendConfig,
   type AiStreamEvent,
 } from '../services/aiAssistantService'
-import { getCategories } from '../services/categoryService'
-import { getActiveCategories } from '../services/masterDataService'
 import { getBankSources } from '../services/questionBankService'
 import type { SelectOption } from '../components/console/select-field'
 import {
@@ -40,9 +38,10 @@ import {
   type AiTraceItem,
   type AiTraceStage,
 } from '../components/management/ai-assistant/exam-format'
+import { liveDraftTail, liveDraftView, type LiveDraft } from '../components/management/exam-doc/live-draft'
 
+/** Compose settings. No subject: the request names it, and one naming none is for the whole format. */
 export interface AiComposeSettings {
-  subjectId: string
   examFormat: AiExamFormat
   questionCount: number | 'full'
   difficulty: AiDifficulty
@@ -51,7 +50,6 @@ export interface AiComposeSettings {
 }
 
 const DEFAULT_SETTINGS: AiComposeSettings = {
-  subjectId: '',
   examFormat: 'VACT_2025',
   questionCount: 5,
   difficulty: 'TB',
@@ -69,6 +67,8 @@ interface AiRun {
   trace: string[]
   itemIds: string[]
   knownAssistantIds: string[]
+  /** The unit the AI is writing right now, as far as its words have come. */
+  draft: LiveDraft | null
 }
 
 interface StreamHandle {
@@ -150,20 +150,23 @@ function addTraceItem(stages: AiTraceStage[], item: AiTraceItem): AiTraceStage[]
   )
 }
 
+/** What each tool the assistant calls does, in the teacher's words; its raw arguments (ids, JSON) stay hidden. */
+const TOOL_LABELS: Record<string, string> = {
+  get_exam_format: 'Xem cấu trúc đề',
+  list_patterns: 'Xem các dạng câu của môn',
+  get_pattern: 'Đọc yêu cầu của dạng câu',
+  matrix_stats: 'Đếm câu có sẵn trong ngân hàng',
+  search_bank_questions: 'Tìm câu mẫu trong ngân hàng',
+}
+
+/** A tool call as one plain line: what it did, and at most a short readable hint (a difficulty, a query). */
 function toolLine(data: { tool: string; arguments?: unknown }) {
-  const raw = data.arguments
-  let detail = ''
-  if (typeof raw === 'string') detail = raw
-  else if (raw && typeof raw === 'object') {
-    try {
-      detail = JSON.stringify(raw)
-    } catch {
-      detail = ''
-    }
-  }
-  detail = detail.replace(/\s+/g, ' ').trim()
-  if (detail.length > 90) detail = `${detail.slice(0, 89)}…`
-  return { label: data.tool || 'Công cụ', detail: detail || undefined }
+  const args = (data.arguments && typeof data.arguments === 'object' ? data.arguments : {}) as Record<string, unknown>
+  const label = TOOL_LABELS[data.tool] ?? (data.tool ? 'Tra cứu dữ liệu' : 'Công cụ')
+  const difficulty = typeof args.difficulty === 'string' ? DIFFICULTY_LABELS[args.difficulty as AiDifficulty] : undefined
+  const query = typeof args.query === 'string' ? args.query.trim() : ''
+  const detail = difficulty ? `mức ${difficulty.toLowerCase()}` : query ? (query.length > 60 ? `${query.slice(0, 59)}…` : query) : undefined
+  return { label, detail }
 }
 
 function mapMessage(message: AiMessage): AiChatMessage {
@@ -217,9 +220,6 @@ export function useAiAssistant() {
   const [saving, setSaving] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [settings, setSettings] = useState<AiComposeSettings>(DEFAULT_SETTINGS)
-  const [subjects, setSubjects] = useState<SelectOption[]>([])
-  const [subjectsLoading, setSubjectsLoading] = useState(true)
-  const [subjectsError, setSubjectsError] = useState<string | null>(null)
   const [papers, setPapers] = useState<SelectOption[]>([])
   const [papersLoading, setPapersLoading] = useState(false)
   const [papersError, setPapersError] = useState<string | null>(null)
@@ -243,6 +243,9 @@ export function useAiAssistant() {
   const autoSelectRef = useRef(true)
   const papersTriedRef = useRef(false)
   const cancelRequestedRef = useRef(false)
+  /** Questions streamed in since the last paint; they reach the draft (and the document) together. */
+  const pendingItemsRef = useRef<AiDraftItem[]>([])
+  const itemFlushRef = useRef<number | null>(null)
 
   const updateConversations = useCallback((next: AiConversation[]) => {
     conversationsRef.current = next
@@ -264,6 +267,25 @@ export function useAiAssistant() {
     setRun(next)
   }, [])
 
+  /**
+   * Puts the streamed questions waiting in the buffer into the draft in one update. A long exam streams a question every
+   * few seconds, and a reload replays dozens at once; one paper rebuild and one document insert per batch keeps the page
+   * responsive.
+   */
+  const flushItems = useCallback(() => {
+    if (itemFlushRef.current !== null) {
+      window.clearTimeout(itemFlushRef.current)
+      itemFlushRef.current = null
+    }
+    const batch = pendingItemsRef.current
+    pendingItemsRef.current = []
+    const current = draftRef.current
+    if (batch.length === 0 || !current) return
+    const byId = new Map(current.items.map((entry) => [entry.id, entry]))
+    for (const entry of batch) byId.set(entry.id, entry)
+    updateDraft({ ...current, items: [...byId.values()] })
+  }, [updateDraft])
+
   const clearRunTimer = useCallback(() => {
     if (runTimerRef.current !== null) {
       window.clearTimeout(runTimerRef.current)
@@ -276,6 +298,12 @@ export function useAiAssistant() {
   }, [])
 
   const stopStream = useCallback(() => {
+    // Questions still waiting for a paint belong to the run being left; they must not land in another exam.
+    pendingItemsRef.current = []
+    if (itemFlushRef.current !== null) {
+      window.clearTimeout(itemFlushRef.current)
+      itemFlushRef.current = null
+    }
     const handle = streamRef.current
     if (!handle) return
     streamRef.current = null
@@ -311,6 +339,7 @@ export function useAiAssistant() {
   const finishRun = useCallback(
     async (event: AiStreamEvent, conversationId: string) => {
       const finished = runRef.current
+      flushItems()
       clearRunTimer()
       stopStream()
       setCancelling(false)
@@ -370,7 +399,7 @@ export function useAiAssistant() {
         },
       ])
     },
-    [clearRunTimer, refreshDraft, refreshMessages, stopStream, updateMessages, updateRun]
+    [clearRunTimer, flushItems, refreshDraft, refreshMessages, stopStream, updateMessages, updateRun]
   )
 
   const applyEvent = useCallback(
@@ -439,16 +468,47 @@ export function useAiAssistant() {
           })
           return
         }
+        case 'draft': {
+          // The words of the unit being written; a new unit or a new attempt starts over.
+          const previous = current.draft
+          const continuing = previous !== null && previous.unit === event.data.unit && !event.data.reset
+          const draft: LiveDraft = {
+            unit: event.data.unit,
+            section: event.data.section,
+            positions: event.data.positions,
+            text: (continuing ? previous.text : '') + event.data.text,
+          }
+          const tail = liveDraftTail(liveDraftView(draft.text))
+          const stages = finishBefore(current.stages, 'write')
+          const items = (stages.find((stage) => stage.id === 'write')?.items ?? []).filter((entry) => entry.id !== 'draft')
+          updateRun({
+            ...current,
+            draft,
+            stages: withStage(stages, 'write', {
+              state: 'running',
+              items: tail ? [...items, { id: 'draft', label: 'Đang viết', detail: tail, state: 'running' }] : items,
+            }),
+          })
+          return
+        }
         case 'item': {
           const item = mapStreamItem(event.data)
-          const currentDraft = draftRef.current
-          if (currentDraft) {
-            const items = currentDraft.items.some((entry) => entry.id === item.id)
-              ? currentDraft.items.map((entry) => (entry.id === item.id ? item : entry))
-              : [...currentDraft.items, item]
-            updateDraft({ ...currentDraft, items })
-          }
-          updateRun({ ...current, itemIds: [...new Set([...current.itemIds, item.id])] })
+          pendingItemsRef.current.push(item)
+          itemFlushRef.current ??= window.setTimeout(flushItems, 250)
+          // The checked question replaces the words shown while it was being written.
+          const written = current.draft?.positions.includes(event.data.position) ?? false
+          updateRun({
+            ...current,
+            itemIds: [...new Set([...current.itemIds, item.id])],
+            ...(written
+              ? {
+                  draft: null,
+                  stages: current.stages.map((stage) =>
+                    stage.id === 'write' ? { ...stage, items: (stage.items ?? []).filter((entry) => entry.id !== 'draft') } : stage
+                  ),
+                }
+              : {}),
+          })
           return
         }
         case 'answer': {
@@ -491,17 +551,42 @@ export function useAiAssistant() {
         }
       }
     },
-    [finishRun, updateDraft, updateMessages, updateRun]
+    [finishRun, flushItems, updateMessages, updateRun]
   )
 
-  /** Opens the stream and waits until the replay of older events is over, so nothing from a past run leaks in. */
+  /**
+   * Gives up on a run that has gone quiet: no event for this long (an answer: 2 minutes, an exam: 10). It is armed
+   * again by every event, so a full 120-question exam that keeps reporting is followed to its end.
+   */
+  const armRunTimer = useCallback(
+    (conversationId: string, runMode: AiAssistantMode) => {
+      if (runTimerRef.current !== null) window.clearTimeout(runTimerRef.current)
+      runTimerRef.current = window.setTimeout(() => {
+        runTimerRef.current = null
+        if (runRef.current && activeIdRef.current === conversationId) {
+          setNotice('Máy chủ chưa báo xong. Kết quả sẽ được tải lại.')
+          void refreshMessages(conversationId)
+          void refreshDraft(conversationId)
+          updateRun(null)
+          stopStream()
+        }
+      }, runMode === 'ask' ? 120_000 : 600_000)
+    },
+    [refreshDraft, refreshMessages, stopStream, updateRun]
+  )
+
+  /**
+   * Opens the stream and waits until the replay of older events is over, so nothing from a past run leaks in.
+   * esumeFrom follows a run already going (the page was opened or reloaded during it): the stream starts right
+   * before that run, so every event it replays is the run's own and is shown.
+   */
   const beginStream = useCallback(
-    (conversationId: string): Promise<void> => {
+    (conversationId: string, resumeFrom?: string): Promise<void> => {
       stopStream()
       const handle: StreamHandle = {
         controller: new AbortController(),
         conversationId,
-        syncing: true,
+        syncing: resumeFrom === undefined,
         opened: false,
         dead: false,
         syncResolve: null,
@@ -536,8 +621,9 @@ export function useAiAssistant() {
       const sync = new Promise<void>((resolve) => {
         handle.syncResolve = resolve
       })
-      const cursor = cursorsRef.current.get(conversationId) ?? null
-      handle.hardTimer = window.setTimeout(finishSync, 10_000)
+      const cursor = resumeFrom ?? cursorsRef.current.get(conversationId) ?? null
+      if (resumeFrom === undefined) handle.hardTimer = window.setTimeout(finishSync, 10_000)
+      else handle.syncResolve?.()
 
       void followAiConversation(conversationId, {
         after: cursor,
@@ -554,6 +640,7 @@ export function useAiAssistant() {
             return
           }
           if (handle.dead || activeIdRef.current !== conversationId) return
+          if (runRef.current) armRunTimer(conversationId, runRef.current.mode)
           applyEvent(event)
         },
       }).catch((error) => {
@@ -566,7 +653,7 @@ export function useAiAssistant() {
 
       return sync
     },
-    [applyEvent, stopStream]
+    [applyEvent, armRunTimer, stopStream]
   )
 
   const loadConversation = useCallback(
@@ -581,9 +668,6 @@ export function useAiAssistant() {
       activeIdRef.current = conversationId
       setActiveId(conversationId)
       const conversation = conversationsRef.current.find((item) => item.id === conversationId)
-      if (conversation?.subjectId) {
-        setSettings((previous) => ({ ...previous, subjectId: conversation.subjectId! }))
-      }
       const conversationMode = normalizeMode(conversation?.mode)
       if (conversationMode) setMode(conversationMode)
       updateMessages([])
@@ -598,13 +682,32 @@ export function useAiAssistant() {
         if (activeIdRef.current !== conversationId) return
         updateMessages(serverMessages.map(mapMessage))
         updateDraft(draftResponse)
+        // A run still going (the page was reloaded, or the exam opened during it) is followed again from its start,
+        // so its stages, tool calls and new questions keep showing and it can be stopped.
+        const active = draftResponse.run
+        if (active && !runRef.current) {
+          updateRun({
+            mode: active.mode,
+            messageId: null,
+            jobId: null,
+            stages: initialStages(active.mode),
+            trace: [],
+            itemIds: [],
+            knownAssistantIds: messagesRef.current
+              .filter((message) => message.role === 'assistant')
+              .map((message) => message.id),
+            draft: null,
+          })
+          void beginStream(conversationId, active.afterEventId)
+          armRunTimer(conversationId, active.mode)
+        }
       } catch (error) {
         if (activeIdRef.current === conversationId) setNotice(errorMessage(error))
       } finally {
         if (activeIdRef.current === conversationId) setDraftLoading(false)
       }
     },
-    [clearRunTimer, stopStream, updateDraft, updateMessages, updateRun]
+    [armRunTimer, beginStream, clearRunTimer, stopStream, updateDraft, updateMessages, updateRun]
   )
 
   const loadConversations = useCallback(async () => {
@@ -621,39 +724,6 @@ export function useAiAssistant() {
       setConversationsLoading(false)
     }
   }, [loadConversation, updateConversations])
-
-  const loadSubjects = useCallback(async () => {
-    setSubjectsLoading(true)
-    setSubjectsError(null)
-    try {
-      const [categories, active] = await Promise.all([
-        getCategories(),
-        getActiveCategories().catch(() => []),
-      ])
-      const activeIds = new Set(active.map((item) => item.categoryId))
-      const options = categories
-        .filter((category) => category.active)
-        .map((category) => ({ id: category.id, label: category.name }))
-      setSubjects(options)
-      if (options.length === 0) {
-        setSubjectsError('Chưa có môn học đang dùng.')
-        return
-      }
-      const preferred =
-        options.find(
-          (option) => activeIds.has(option.id) && option.label.trim().toLocaleLowerCase('vi') !== 'chung'
-        ) ??
-        options.find((option) => option.label.trim().toLocaleLowerCase('vi') !== 'chung') ??
-        options[0]
-      setSettings((previous) =>
-        previous.subjectId ? previous : { ...previous, subjectId: preferred.id }
-      )
-    } catch (error) {
-      setSubjectsError(errorMessage(error))
-    } finally {
-      setSubjectsLoading(false)
-    }
-  }, [])
 
   const loadPapers = useCallback(async () => {
     papersTriedRef.current = true
@@ -688,8 +758,7 @@ export function useAiAssistant() {
     // The first fetch starts the request lifecycle; its loading flags drive the skeletons.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadConversations()
-    void loadSubjects()
-  }, [loadConversations, loadSubjects])
+  }, [loadConversations])
 
   useEffect(() => {
     // Same lifecycle, started the first time the teacher picks a bank-based mode.
@@ -729,9 +798,7 @@ export function useAiAssistant() {
   const buildConfig = useCallback(
     (text: string): AiSendConfig | undefined => {
       if (mode === 'ask') return undefined
-      const subjectId = activeConversation?.subjectId || settings.subjectId || undefined
       return {
-        subjectId,
         examFormat: settings.examFormat,
         questionCount: settings.questionCount === 'full' ? 'full' : settings.questionCount,
         difficultyMix: {
@@ -746,7 +813,7 @@ export function useAiAssistant() {
           : {}),
       }
     },
-    [activeConversation?.subjectId, mode, settings]
+    [mode, settings]
   )
 
   /**
@@ -765,10 +832,7 @@ export function useAiAssistant() {
       const creation = (async () => {
         setCreatingConversation(true)
         try {
-          const conversation = await createAiConversation({
-            title,
-            ...(settings.subjectId ? { subjectId: settings.subjectId } : {}),
-          })
+          const conversation = await createAiConversation({ title })
           updateConversations([conversation, ...conversationsRef.current])
           if (generationRef.current !== generation || activeIdRef.current) return null
           activeIdRef.current = conversation.id
@@ -776,9 +840,6 @@ export function useAiAssistant() {
           setCreatedConversationId(conversation.id)
           updateMessages([])
           updateDraft(null)
-          if (conversation.subjectId) {
-            setSettings((previous) => ({ ...previous, subjectId: conversation.subjectId! }))
-          }
           await refreshDraft(conversation.id)
           return conversation.id
         } finally {
@@ -791,7 +852,7 @@ export function useAiAssistant() {
       creationRef.current = { generation, promise: creation }
       return creation
     },
-    [refreshDraft, settings.subjectId, updateConversations, updateDraft, updateMessages]
+    [refreshDraft, updateConversations, updateDraft, updateMessages]
   )
 
   const startRun = useCallback(
@@ -835,6 +896,7 @@ export function useAiAssistant() {
           trace: [],
           itemIds: [],
           knownAssistantIds,
+          draft: null,
         }
         updateRun(initialRun)
         if (runMode !== 'ask' && draftRef.current) {
@@ -864,16 +926,7 @@ export function useAiAssistant() {
           cancelRequestedRef.current = false
           void cancelAiRun(conversationId)
         }
-        clearRunTimer()
-        runTimerRef.current = window.setTimeout(() => {
-          if (runRef.current && activeIdRef.current === conversationId) {
-            setNotice('Máy chủ chưa báo xong. Kết quả sẽ được tải lại.')
-            void refreshMessages(conversationId)
-            void refreshDraft(conversationId)
-            updateRun(null)
-            stopStream()
-          }
-        }, runMode === 'ask' ? 120_000 : 600_000)
+        armRunTimer(conversationId, runMode)
       } catch (error) {
         stopStream()
         clearRunTimer()
@@ -898,13 +951,12 @@ export function useAiAssistant() {
       }
     },
     [
+      armRunTimer,
       beginStream,
       buildConfig,
       clearRunTimer,
       ensureConversation,
       mode,
-      refreshDraft,
-      refreshMessages,
       stopStream,
       updateDraft,
       updateMessages,
@@ -1185,7 +1237,6 @@ export function useAiAssistant() {
     [updateDraft]
   )
 
-  const subjectLocked = Boolean(activeConversation?.subjectId)
   const running = Boolean(run) || sending
   const canStop = Boolean(activeConversation) && running
 
@@ -1208,13 +1259,9 @@ export function useAiAssistant() {
     saving,
     notice,
     settings,
-    subjects,
-    subjectsLoading,
-    subjectsError,
     papers,
     papersLoading,
     papersError,
-    subjectLocked,
     canStop,
     setMode,
     setValue,
@@ -1229,7 +1276,6 @@ export function useAiAssistant() {
     renameConversation,
     deleteConversation,
     reloadConversations: loadConversations,
-    reloadSubjects: loadSubjects,
     reloadPapers: loadPapers,
     updateQuestion,
     toggleKeep,
@@ -1237,6 +1283,10 @@ export function useAiAssistant() {
     moveItem,
     addManual,
     stages: run?.stages ?? [],
+    /** The unit the AI is writing now, shown on the sheet until its checked question arrives. */
+    liveDraft: run?.draft ?? null,
+    /** The question this run added last, for following the writing on the sheet. */
+    lastItemId: run?.itemIds.at(-1) ?? null,
     trace: run?.trace ?? [],
   }
 }

@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   Check,
-  Clock,
   Layers,
   List,
   LoaderCircle,
@@ -23,8 +22,6 @@ interface DocHeaderProps {
   onTitleChange: (title: string) => void
   onBack: () => void
   backHref: string
-  conversationsOpen: boolean
-  onToggleConversations: () => void
   chatOpen: boolean
   onToggleChat: () => void
   outlineOpen: boolean
@@ -70,8 +67,6 @@ export default function DocHeader({
   onTitleChange,
   onBack,
   backHref,
-  conversationsOpen,
-  onToggleConversations,
   chatOpen,
   onToggleChat,
   outlineOpen,
@@ -99,10 +94,9 @@ export default function DocHeader({
         }}
         aria-label="Về bảng điều khiển"
         title="Về bảng điều khiển"
-        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2 text-sm text-text-secondary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
+        className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
       >
-        <ArrowLeft size={17} strokeWidth={1.7} className="shrink-0 text-icon-tertiary" />
-        <span className="hidden xl:inline">Bảng điều khiển</span>
+        <ArrowLeft size={17} strokeWidth={1.7} className="shrink-0" />
       </a>
       <span aria-hidden className="hidden h-6 w-px shrink-0 bg-card-border sm:block" />
       <img
@@ -151,18 +145,6 @@ export default function DocHeader({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        <Button
-          appearance={conversationsOpen ? 'outline' : 'ghost'}
-          size="sm"
-          aria-pressed={conversationsOpen}
-          onClick={onToggleConversations}
-          aria-label="Cuộc trò chuyện"
-          title="Cuộc trò chuyện"
-          className={cn(conversationsOpen && PRESSED_CLASS)}
-        >
-          <Clock size={15} />
-          <span className="hidden lg:inline">Cuộc trò chuyện</span>
-        </Button>
         <Button
           appearance="ghost"
           size="sm"

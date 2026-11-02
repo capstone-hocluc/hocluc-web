@@ -74,6 +74,38 @@ export function questionInsertPos(doc: ProseMirrorNode, partId: string): number 
   return at(stop)
 }
 
+/**
+ * Where the heading of a part the document lacks goes, keeping the parts in paper order (`partOrder`): before the
+ * first later part the document has - before that part's section heading too, unless the new part shares that
+ * section (`parentText`) - or else just before the end of the questions. `parentShown` tells whether the document
+ * already has the new part's section heading.
+ */
+export function partHeadingPlace(
+  doc: ProseMirrorNode,
+  partId: string,
+  partOrder: readonly string[],
+  parentText: string | null
+): { pos: number; parentShown: boolean } {
+  const blocks: Array<{ node: ProseMirrorNode; pos: number }> = []
+  doc.forEach((node, pos) => blocks.push({ node, pos }))
+  const end = blocks.findIndex(({ node }) => endsQuestions(node))
+  const stop = end === -1 ? blocks.length : end
+  const isSection = (node: ProseMirrorNode, text: string | null) =>
+    text !== null && node.type.name === 'heading' && !node.attrs.examPart && node.textContent.trim() === text
+  const parentShown = blocks.slice(0, stop).some(({ node }) => isSection(node, parentText))
+  const later = new Set(partOrder.slice(partOrder.indexOf(partId) + 1))
+  let index = blocks.findIndex(({ node }, at) => at < stop && later.has(String(node.attrs.examPart ?? '')))
+  if (index === -1) index = stop
+  else {
+    const before = blocks[index - 1]?.node
+    const ownSection = before && isSection(before, parentText)
+    if (before && !ownSection && before.type.name === 'heading' && !before.attrs.examPart && Number(before.attrs.level) === 2) {
+      index--
+    }
+  }
+  return { pos: index < blocks.length ? blocks[index].pos : doc.content.size, parentShown }
+}
+
 /** Position of the top-level block tagged with `attr` = `value`, or null. */
 export function findTagged(doc: ProseMirrorNode, attr: 'examPart' | 'examGroup' | 'examItem', value: string): number | null {
   let found: number | null = null

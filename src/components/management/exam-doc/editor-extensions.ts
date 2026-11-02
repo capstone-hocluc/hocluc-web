@@ -9,6 +9,7 @@ import Image from '@tiptap/extension-image'
 import { Placeholder } from '@tiptap/extensions'
 import { Boxed, Indent, LineSpacing, MathNode, PageBreak, type MathOptions } from './extensions'
 import { ExamTags } from './exam-tags'
+import { LiveDraftWidget } from './nodes/live-draft-widget'
 import { EXAM_NODES } from './nodes'
 import { ExamPagination } from './pagination'
 
@@ -46,6 +47,7 @@ export function examDocExtensions({ onEditFormula, onPages }: ExamDocExtensionOp
     PageBreak,
     MathNode.configure({ onEdit: onEditFormula }),
     ExamTags,
+    LiveDraftWidget,
     ExamPagination.configure({ onPages }),
     ...EXAM_NODES,
   ]
