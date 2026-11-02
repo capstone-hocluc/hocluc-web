@@ -27,7 +27,8 @@ Friendly, encouraging, and clear. The experience should make serious preparation
 - Show a clear next step for learners.
 - Connect each subject with practical ways to learn and practice.
 - Make progress feel approachable and achievable.
-- Use student illustrations to support learning, not compete with it. Keep the owl only on the Math & Quantitative Reasoning card in “Bạn muốn bắt đầu từ đâu?”.
+- Lead with the courses: the home page opens on the catalog by subject, explanations come after it.
+- Use photos of Vietnamese students and the calculator app's own screens to support learning, not compete with it; no mascots or generic stock scenes.
 
 ## Accessibility & Inclusion
 

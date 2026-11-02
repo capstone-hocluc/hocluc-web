@@ -49,11 +49,7 @@ export default function LandingCourseCard({ course, preview = false }: { course:
               </>
             )}
           </div>
-          {preview ? (
-            <a className="text-link" href="#hoc-thu">
-              Thử bài học mẫu <Icon name="arrow-right" />
-            </a>
-          ) : (
+          {!preview && (
             <LandingLink className="text-link" href={href}>
               {course.purchased ? 'Vào học' : 'Xem chi tiết'} <Icon name="arrow-right" />
               <span className="sr-only"> {course.title}</span>

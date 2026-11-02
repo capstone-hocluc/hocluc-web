@@ -425,7 +425,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                   </div>
                   <div className="closing-cta-actions">
                     <AuthLink className="btn btn-primary">
-                      {landingHero.primaryCta} <Icon name="arrow-right" />
+                      {landingHero.assessmentCta} <Icon name="arrow-right" />
                     </AuthLink>
                     <LandingLink className="btn btn-secondary" href="/courses">
                       Xem khóa học khác

@@ -136,11 +136,7 @@ function CourseCatalogPage() {
                     <Icon name="book-open" />
                     <div>
                       <h3>Khóa học đang được cập nhật</h3>
-                      <p>Trong lúc chờ, thử một câu hỏi và khám phá cách học cùng Học Lực.</p>
                     </div>
-                    <LandingLink className="btn btn-secondary" href="/#hoc-thu">
-                      Thử một bài học <Icon name="arrow-right" />
-                    </LandingLink>
                   </div>
                 )}
                 {status === 'ready' && sorted.length > 0 && (
@@ -162,13 +158,10 @@ function CourseCatalogPage() {
                 <h2 id="catalog-help-title">Chưa biết chọn lộ trình nào?</h2>
                 <p>Làm bài đánh giá miễn phí để biết phần nào cần ôn trước, rồi chọn lộ trình vừa sức.</p>
               </div>
-              <div className="closing-cta-actions">
+              <div className="closing-cta-actions grid-cols-1!">
                 <AuthLink className="btn btn-primary">
-                  {landingHero.primaryCta} <Icon name="arrow-right" />
+                  {landingHero.assessmentCta} <Icon name="arrow-right" />
                 </AuthLink>
-                <LandingLink className="btn btn-secondary" href="/#hoc-thu">
-                  Thử một bài học
-                </LandingLink>
               </div>
             </div>
           </section>

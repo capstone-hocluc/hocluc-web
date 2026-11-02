@@ -3,16 +3,11 @@ import { useLayoutEffect, type RefObject } from 'react'
 // Blocks that fade in as they enter the viewport. Only containers without their own
 // transform/transition belong here, so hover effects on inner cards stay intact.
 const REVEAL_TARGETS = [
-  '.subjects-heading',
-  '.subject-list',
-  '.subject-preview',
   '.section-heading',
-  '.lesson',
-  '.feature-copy',
+  '.app-preview > *',
   '.journey-step',
   '.practice-compact',
-  '.support-intro',
-  '.support-items > *',
+  '.support-layout > *',
   '.exam-layout > *',
   '.faq-intro',
   '.faq-list details',

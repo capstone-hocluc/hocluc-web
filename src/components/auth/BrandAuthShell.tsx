@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { ArrowLeft, X } from '../console/icons'
 import LandingLogo from '../landing-page/LandingLogo'
 import ThemeToggle from '../ui/ThemeToggle'
+import { isAuthSwapRunning } from './swap-auth-form'
 import '../../styles/auth/auth-brand.css'
 
 interface BrandAuthShellProps {
@@ -27,6 +28,46 @@ export default function BrandAuthShell({
   theme = 'light',
 }: BrandAuthShellProps) {
   const management = context === 'management'
+  // The learner dialog over the public pages is just the form: logo, title, fields.
+  if (variant === 'dialog' && !management)
+    return (
+      <Dialog.Root open onOpenChange={(open) => !open && onBack()}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="hl-brand-auth brand-auth-overlay">
+            <Dialog.Content
+              className={`brand-auth-card is-compact ${className}`}
+              aria-describedby={undefined}
+              // A click during the login/signup swap lands on the page root under the animation.
+              onPointerDownOutside={(event) => {
+                if (isAuthSwapRunning()) event.preventDefault()
+              }}
+              onOpenAutoFocus={(event) => {
+                const input =
+                  event.currentTarget instanceof HTMLElement
+                    ? event.currentTarget.querySelector<HTMLInputElement>('input')
+                    : null
+                if (input) {
+                  event.preventDefault()
+                  input.focus({ preventScroll: true })
+                }
+              }}
+            >
+              <Dialog.Title className="brand-auth-sr-only">Tài khoản Học Lực</Dialog.Title>
+              <Dialog.Close className="brand-auth-close" aria-label="Đóng">
+                <X size={20} aria-hidden="true" />
+              </Dialog.Close>
+              <section className="brand-auth-form-panel">
+                <div className="brand-auth-compact-logo">
+                  <LandingLogo size={26} />
+                </div>
+                {children}
+              </section>
+            </Dialog.Content>
+          </Dialog.Overlay>
+        </Dialog.Portal>
+      </Dialog.Root>
+    )
+
   const body = (
     <>
       <aside className="brand-auth-story" aria-label="Học Lực">

@@ -20,6 +20,7 @@
   padding: var(--s6);
   overflow-y: auto;
   background: color-mix(in srgb, var(--ink) 36%, transparent);
+  backdrop-filter: blur(4px);
 }
 .hl-brand-auth.brand-auth-page {
   display: grid;
@@ -308,10 +309,6 @@
   font-size: inherit;
   font-weight: 600;
 }
-.hl-brand-auth .hl-auth-staff {
-  margin-top: 0;
-  font-size: var(--small);
-}
 .hl-brand-auth .hl-auth-input.has-error {
   border-color: var(--error);
   box-shadow: none;
@@ -440,6 +437,153 @@
 .hl-brand-auth .brand-auth-alternate:hover {
   background: var(--blue-soft);
 }
+/* Learner dialog: one narrow column with the logo above the form, no story panel. */
+.hl-brand-auth .brand-auth-card.is-compact {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(100%, 440px);
+  animation: brand-auth-in 240ms var(--ease) both;
+}
+.hl-brand-auth .brand-auth-card.is-compact .brand-auth-form-panel {
+  padding: var(--s8) var(--s8) var(--s6);
+}
+.hl-brand-auth .brand-auth-card.is-compact .brand-auth-compact-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--s6);
+}
+.hl-brand-auth .brand-auth-card.is-compact .hl-auth-heading {
+  text-align: center;
+  margin-bottom: var(--s4);
+}
+.hl-brand-auth .brand-auth-card.is-compact .hl-auth-heading h1 {
+  margin-bottom: var(--s2);
+  font-size: 1.5rem;
+}
+.hl-brand-auth .brand-auth-card.is-compact .hl-auth-divider {
+  margin-block: var(--s4);
+}
+/* Signup puts two fields on a row (AuthPage), so its card is wider instead of taller. */
+.hl-brand-auth .brand-auth-card.is-compact.is-signup {
+  width: min(100%, 600px);
+  max-width: none;
+}
+.hl-brand-auth .hl-auth-swap .hl-auth-label .hl-auth-error {
+  margin-top: 0;
+}
+
+/* Login ⇄ signup swap (swap-auth-form.ts). While the html element carries data-auth-swap, the card
+   and the parts inside it run in a view transition and the page behind stays live. The card is
+   painted on its morphing group so its corners and shadow never stretch; the two forms keep their
+   own size and slide past each other in the direction of the swap. */
+:root[data-auth-swap] {
+  view-transition-name: none;
+}
+:root[data-auth-swap] .hl-brand-auth .brand-auth-card.is-compact {
+  view-transition-name: auth-card;
+}
+:root[data-auth-swap] .hl-brand-auth .brand-auth-card.is-compact .brand-auth-compact-logo {
+  view-transition-name: auth-logo;
+  view-transition-group: nearest;
+}
+:root[data-auth-swap] .hl-brand-auth .brand-auth-card.is-compact .brand-auth-close {
+  view-transition-name: auth-close;
+  view-transition-group: nearest;
+}
+:root[data-auth-swap] .hl-brand-auth .brand-auth-card.is-compact .hl-auth-swap {
+  view-transition-name: auth-form;
+  view-transition-group: nearest;
+}
+:root[data-auth-swap]::view-transition-group(*) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-auth-swap]::view-transition-group(auth-card) {
+  overflow: clip;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 64px rgb(11 35 72 / 20%);
+}
+/* Snapshots keep their own size, centred in the morphing box, so nothing stretches as the card
+   changes width (the logo row and the form are as wide as the card). Auto margins cannot centre a
+   snapshot wider than its box, hence the half-width shift. */
+:root[data-auth-swap]::view-transition-old(*),
+:root[data-auth-swap]::view-transition-new(*) {
+  inset-inline: 50% auto;
+  translate: -50% 0;
+  width: auto;
+  height: auto;
+}
+:root[data-auth-swap]::view-transition-old(auth-card),
+:root[data-auth-swap]::view-transition-new(auth-card) {
+  animation: none;
+  opacity: 0;
+}
+/* The old form is gone before the new one shows, so the two never read as one blurred form. */
+:root[data-auth-swap]::view-transition-old(auth-form),
+:root[data-auth-swap]::view-transition-new(auth-form) {
+  mix-blend-mode: normal;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-auth-swap]::view-transition-old(auth-form) {
+  animation-name: auth-form-out;
+  animation-duration: 260ms;
+}
+:root[data-auth-swap]::view-transition-new(auth-form) {
+  animation-name: auth-form-in;
+  animation-duration: 420ms;
+}
+:root[data-auth-swap='back']::view-transition-old(auth-form) {
+  animation-name: auth-form-out-back;
+}
+:root[data-auth-swap='back']::view-transition-new(auth-form) {
+  animation-name: auth-form-in-back;
+}
+@keyframes auth-form-out {
+  45% {
+    opacity: 0;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+@keyframes auth-form-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  20% {
+    opacity: 0;
+  }
+}
+@keyframes auth-form-out-back {
+  45% {
+    opacity: 0;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+@keyframes auth-form-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  20% {
+    opacity: 0;
+  }
+}
+@keyframes brand-auth-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 .brand-auth-sr-only {
   position: absolute;
   width: 1px;
@@ -463,6 +607,44 @@
   }
   .hl-brand-auth .brand-auth-form-panel {
     padding: var(--s12) var(--s6) var(--s8);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact .brand-auth-form-panel {
+    padding: var(--s8) var(--s6) var(--s6);
+  }
+}
+/* Laptop screens (1440×900, 1536×864, 1366×768...): a tighter vertical rhythm keeps the whole
+   dialog, signup and its error messages included, on screen without scrolling. */
+@media (max-height: 820px) {
+  .hl-brand-auth.brand-auth-overlay {
+    padding-block: var(--s3);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact {
+    max-height: calc(100dvh - 24px);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact .brand-auth-form-panel {
+    padding-block: 20px var(--s4);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact .brand-auth-compact-logo {
+    margin-bottom: var(--s3);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact .hl-auth-swap .hl-auth-heading {
+    margin-bottom: var(--s2);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact .hl-auth-swap :is(.hl-auth-label, .hl-auth-submit) {
+    margin-top: var(--s3);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact .hl-auth-swap .hl-auth-divider {
+    margin-block: var(--s3);
+  }
+  .hl-brand-auth .brand-auth-card.is-compact .hl-auth-swap .hl-auth-switch {
+    margin-top: var(--s1);
+  }
+}
+/* 1366×768 laptops leave about 650px for the page: the header behind the dialog already shows the
+   logo, so the dialog drops its own to keep signup and its error messages on screen. */
+@media (max-height: 700px) {
+  .hl-brand-auth .brand-auth-card.is-compact .brand-auth-compact-logo {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
