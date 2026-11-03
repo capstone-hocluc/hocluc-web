@@ -81,7 +81,7 @@ test('roadmaps compare as plans with facts from the data and a badge chosen by r
 
   // Most weeks before its exam and not opened yet: recommended. Opens soonest, within 30 days: opening soon.
   const longPlan = plan(page, 'Lộ trình Dài')
-  await expect(longPlan.locator('.roadmap-badge')).toHaveText('Khuyên dùng')
+  await expect(longPlan.locator('.roadmap-badge')).toHaveText('Nên chọn')
   await expect(longPlan).toContainText('Phù hợp nếu bạn muốn ôn sớm')
   await expect(longPlan).toContainText('3.990.000')
   await expect(longPlan).toContainText('Còn 37 ngày')
@@ -89,12 +89,12 @@ test('roadmaps compare as plans with facts from the data and a badge chosen by r
   await expect(longPlan).toContainText('Đợt 1 · 30/03/2027')
   await expect(longPlan).not.toContainText('Dự kiến')
   await expect(longPlan).toContainText('Đủ 4 phần thi V-ACT')
-  await expect(longPlan).toContainText('19 khóa học thành phần, chia 3 giai đoạn')
+  await expect(longPlan).toContainText('19 khóa học thành phần, chia thành 3 giai đoạn')
   await expect(longPlan.getByRole('link', { name: /Xem lộ trình/ })).toHaveAttribute('href', '/courses/fixture-long')
 
   const shortPlan = plan(page, 'Lộ trình Ngắn')
   await expect(shortPlan.locator('.roadmap-badge')).toHaveText('Sắp khai giảng')
-  await expect(shortPlan).toContainText('Phù hợp nếu bạn cần nước rút')
+  await expect(shortPlan).toContainText('Phù hợp nếu bạn cần ôn nước rút')
   // No exam session to confirm the date, so it is shown as expected only.
   await expect(shortPlan).toContainText('Dự kiến')
   await expect(shortPlan).not.toContainText('khóa học thành phần')
