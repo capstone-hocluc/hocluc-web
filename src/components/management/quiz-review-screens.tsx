@@ -1,28 +1,21 @@
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
-import { CheckCircle2, Clock3, Eye, GraduationCap, ListChecks, MoreHorizontal } from '../console/icons'
+import { CheckCircle2, Clock3, Eye, GraduationCap, ListChecks } from '../console/icons'
 import { IconAction, RowActions } from '../console/icon-action'
 import ListCard from '../console/list-card'
 import ScheduleResourceState from '../console/schedule/schedule-resource-state'
 import SelectField from '../console/select-field'
 import ConsoleSheet from '../console/sheet'
-import Notice from '../console/notice'
 import StatCard from '../ui/StatCard'
 import Status from '../console/status'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../tailgrids/core/dropdown'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getErrorMessage } from '../../lib/errors'
-import { assertQuizWriteAccess } from '../../services/teacherQuizService'
 import {
   getTeacherAttemptReview,
-  getTeacherQuiz,
   getTeacherQuizAttempts,
   getTeacherQuizStats,
   getTeacherQuizzes,
-  markTeacherQuestionsReviewed,
   type TeacherAttemptRecord,
   type TeacherAttemptReview,
-  type TeacherQuestionType,
 } from '../../services/teacherQuizService'
 import Page from './screen-page'
 import { text } from './screen-columns'
@@ -30,123 +23,8 @@ import MathText from '../ui/MathText'
 
 // Màn hình dùng API giáo viên (/api/v1/teacher/...): Teacher, Staff, Manager, Admin đều gọi được.
 
-const QUESTION_TYPE_LABELS: Record<TeacherQuestionType, string> = {
-  SINGLE_CHOICE: 'Một đáp án',
-  MULTIPLE_CHOICE: 'Nhiều đáp án',
-  TRUE_FALSE: 'Đúng/Sai',
-  SHORT_ANSWER: 'Trả lời ngắn',
-  LONG_ANSWER: 'Tự luận',
-}
-
 const formatDateTime = (value: string | null) =>
   value ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '—'
-
-/* ---------- Duyệt câu hỏi ---------- */
-
-interface ReviewRow {
-  id: string
-  quizId: string
-  quizTitle: string
-  courseTitle: string
-  questionText: string
-  type: string
-  reviewNote: string
-}
-
-async function loadReviewRows(): Promise<ReviewRow[]> {
-  const quizzes = (await getTeacherQuizzes()).filter((quiz) => quiz.needsReviewCount > 0)
-  const editors = await Promise.all(quizzes.map((quiz) => getTeacherQuiz(quiz.id)))
-  return editors.flatMap(({ quiz, questions }) =>
-    questions
-      .filter((question) => question.needsReview)
-      .map((question) => ({
-        id: question.id,
-        quizId: quiz.id,
-        quizTitle: quiz.title,
-        courseTitle: quiz.courseTitle ?? '—',
-        questionText: question.questionText,
-        type: QUESTION_TYPE_LABELS[question.questionType],
-        reviewNote: question.reviewNote ?? '—',
-      }))
-  )
-}
-
-export function QuestionReview({ readOnly = true }: { readOnly?: boolean }) {
-  const { data, setData, status, errorMessage, reload } = usePageResource(loadReviewRows, [])
-  const [error, setError] = useState('')
-
-  const markReviewed = async (row: ReviewRow) => {
-    if (readOnly) return
-    setError('')
-    try {
-      assertQuizWriteAccess()
-      await markTeacherQuestionsReviewed(row.quizId, [row.id])
-      setData((current) => current?.filter((item) => item.id !== row.id) ?? current)
-    } catch (requestError) {
-      setError(getErrorMessage(requestError))
-    }
-  }
-
-  const columns: ColumnDef<ReviewRow>[] = [
-      {
-        id: 'questionText',
-        header: 'Câu hỏi',
-        accessorKey: 'questionText',
-        cell: ({ row }) => <span className="block max-w-96 truncate font-medium text-text-primary">{row.original.questionText}</span>,
-      },
-      text<ReviewRow>('quizTitle', 'Bài kiểm tra'),
-      text<ReviewRow>('courseTitle', 'Khóa học'),
-      text<ReviewRow>('type', 'Dạng câu'),
-      text<ReviewRow>('reviewNote', 'Ghi chú'),
-      {
-        id: 'status',
-        header: 'Trạng thái',
-        cell: () => <Status tone="warning">Chờ duyệt</Status>,
-        enableSorting: false,
-      },
-      {
-        id: 'actions',
-        header: '',
-        enableSorting: false,
-        cell: ({ row }) => readOnly ? null : (
-          <div className="flex justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label="Thao tác duyệt câu hỏi"
-                className="grid size-8 place-items-center rounded-md text-icon-tertiary outline-none hover:bg-background-gray-secondary"
-              >
-                <MoreHorizontal size={18} />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onAction={() => void markReviewed(row.original)}>
-                  <CheckCircle2 size={16} />
-                  Đánh dấu đã duyệt
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ),
-      },
-  ]
-
-  const rows = data ?? []
-  return (
-    <Page
-      title={readOnly ? 'Câu hỏi cần kiểm tra' : 'Duyệt câu hỏi'}
-    >
-      {error && <Notice tone="danger">{error}</Notice>}
-      <ScheduleResourceState status={status} errorMessage={errorMessage} onRetry={reload} empty={status === 'ready' && rows.length === 0} emptyMessage="Không có câu hỏi nào chờ duyệt.">
-        <ListCard
-          data={rows}
-          columns={columns}
-          getRowKey={(row) => row.id}
-          searchPlaceholder="Tìm câu hỏi, bài kiểm tra..."
-          searchText={(row) => `${row.questionText} ${row.quizTitle} ${row.courseTitle}`}
-        />
-      </ScheduleResourceState>
-    </Page>
-  )
-}
 
 /* ---------- Bài làm học viên ---------- */
 

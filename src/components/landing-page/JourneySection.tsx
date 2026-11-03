@@ -33,7 +33,7 @@ export default function JourneySection({
           ))}
         </ol>
         <div className="practice-compact">
-          <span>Cùng bạn trong từng bước học</span>
+          <span>Đồng hành qua từng chặng ôn thi</span>
           <div className="practice-pills">
             {practiceOperations.map((operation) => (
               <button

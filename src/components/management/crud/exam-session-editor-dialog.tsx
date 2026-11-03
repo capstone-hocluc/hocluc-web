@@ -1,3 +1,4 @@
+import DateField from '../../console/date-field'
 import { useState, type FormEvent } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
@@ -23,6 +24,10 @@ interface Props {
 export default function ExamSessionEditorDialog({ year, session, onClose, onSaved }: Props) {
   const nextRound = Math.max(0, ...year.sessions.map((s) => s.roundNo)) + 1
   const [roundNo, setRoundNo] = useState(String(session?.roundNo ?? nextRound))
+  const [examStartDate, setExamStartDate] = useState(session?.examStartDate ?? '')
+  const [examEndDate, setExamEndDate] = useState(session?.examEndDate ?? '')
+  const [registrationOpenDate, setRegistrationOpenDate] = useState(session?.registrationOpenDate ?? '')
+  const [registrationCloseDate, setRegistrationCloseDate] = useState(session?.registrationCloseDate ?? '')
   const [dateConfirmed, setDateConfirmed] = useState(session?.dateConfirmed ?? false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -118,42 +123,10 @@ export default function ExamSessionEditorDialog({ year, session, onClose, onSave
               className={fieldControlClass}
             />
           </Field>
-          <Field label="Ngày thi (từ ngày)">
-            <input
-              name="examStartDate"
-              type="date"
-              required
-              defaultValue={session?.examStartDate ?? ''}
-              className={fieldControlClass}
-              aria-invalid={!!fields.examStartDate}
-            />
-          </Field>
-          <Field label="Đến ngày" hint="Để trống nếu chỉ thi một ngày.">
-            <input
-              name="examEndDate"
-              type="date"
-              defaultValue={session?.examEndDate ?? ''}
-              className={fieldControlClass}
-              aria-invalid={!!fields.examEndDate}
-            />
-          </Field>
-          <Field label="Mở đăng ký dự thi">
-            <input
-              name="registrationOpenDate"
-              type="date"
-              defaultValue={session?.registrationOpenDate ?? ''}
-              className={fieldControlClass}
-            />
-          </Field>
-          <Field label="Hạn đăng ký dự thi">
-            <input
-              name="registrationCloseDate"
-              type="date"
-              defaultValue={session?.registrationCloseDate ?? ''}
-              className={fieldControlClass}
-              aria-invalid={!!fields.registrationCloseDate}
-            />
-          </Field>
+          <DateField label="Ngày thi (từ ngày)" name="examStartDate" value={examStartDate} onChange={setExamStartDate} required disabled={busy} invalid={!!fields.examStartDate} />
+          <DateField label="Đến ngày" hint="Để trống nếu chỉ thi một ngày." name="examEndDate" value={examEndDate} onChange={setExamEndDate} disabled={busy} invalid={!!fields.examEndDate} />
+          <DateField label="Mở đăng ký dự thi" name="registrationOpenDate" value={registrationOpenDate} onChange={setRegistrationOpenDate} disabled={busy} invalid={!!fields.registrationOpenDate} />
+          <DateField label="Hạn đăng ký dự thi" name="registrationCloseDate" value={registrationCloseDate} onChange={setRegistrationCloseDate} disabled={busy} invalid={!!fields.registrationCloseDate} />
         </div>
         <Checkbox isSelected={dateConfirmed} onChange={setDateConfirmed} isDisabled={busy}>
           Ngày thi đã được công bố chính thức

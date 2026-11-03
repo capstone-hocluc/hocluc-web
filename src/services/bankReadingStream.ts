@@ -7,6 +7,7 @@ export type BankIngestStage =
   | 'STRUCTURE'
   | 'QUESTIONS'
   | 'KEY_TABLE'
+  | 'REVIEW'
   | 'FIGURES'
   | 'KEY'
   | 'STORE'
@@ -15,7 +16,7 @@ export type BankIngestStage =
 
 export type BankPartStatus = 'WAITING' | 'READING' | 'DONE'
 
-/** One part of the paper the AI reads in one call (a few pages); parts are read in parallel. */
+/** One part of the paper the AI reads in one call (a few pages); parts are read one after another, in the paper's order. */
 export interface BankStreamPart {
   id: string
   title: string | null
@@ -42,6 +43,16 @@ export interface BankStreamSnapshot {
   parts: BankStreamPart[]
   labelled: number
   labelTotal: number
+  /** Questions the reviewer model has checked of those read so far. */
+  reviewed: number
+  reviewTotal: number
+  /** Being read again after the reviewer found a difference. */
+  rereading: number
+  /** Waiting for a person to settle the reading. */
+  needsPerson: number
+  /** The question the reviewer model is checking now, and the one the reading model is reading again. */
+  checking?: number | null
+  rewriting?: number | null
 }
 
 export type BankStreamEvent =
@@ -51,9 +62,13 @@ export type BankStreamEvent =
   | { type: 'part'; data: BankStreamPart }
   | { type: 'text'; data: { partId: string; attempt: number; text: string } }
   | { type: 'label'; data: { labelled: number; labelTotal: number } }
+  | {
+      type: 'review'
+      data: { reviewed: number; reviewTotal: number; rereading: number; needsPerson: number; checking: number | null; rewriting: number | null }
+    }
   | { type: 'end'; data: { status: BankIngestStatus; error: string | null } }
 
-const EVENT_TYPES = new Set(['snapshot', 'stage', 'plan', 'part', 'text', 'label', 'end'])
+const EVENT_TYPES = new Set(['snapshot', 'stage', 'plan', 'part', 'text', 'review', 'label', 'end'])
 const MAX_RETRIES = 5
 const RETRY_MS = 2000
 

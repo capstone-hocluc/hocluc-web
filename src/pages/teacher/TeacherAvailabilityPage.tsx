@@ -1,3 +1,4 @@
+import DateField from '../../components/console/date-field'
 import { useRef, useState, type FormEvent } from 'react'
 import { CalendarPlus, Clock3, Trash2 } from '../../components/console/icons'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
@@ -38,6 +39,7 @@ export default function TeacherAvailabilityPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [availabilityDirty, setAvailabilityDirty] = useState(false)
+  const [exceptionDate, setExceptionDate] = useState('')
   const [exceptionDirty, setExceptionDirty] = useState(false)
   const [exceptionToDelete, setExceptionToDelete] = useState<AvailabilityExceptionResponse | null>(null)
   const exceptionFormRef = useRef<HTMLFormElement>(null)
@@ -97,6 +99,7 @@ export default function TeacherAvailabilityPage() {
         reason: String(form.get('reason') || ''),
       })
       formElement.reset()
+      setExceptionDate('')
       setExceptionDirty(false)
       setNotice('Đã thêm ngoại lệ.')
       resource.reload()
@@ -175,10 +178,11 @@ export default function TeacherAvailabilityPage() {
             )
           }}
         >
-          <label className="text-sm font-medium text-text-primary">
-            Ngày
-            <input name="exceptionDate" autoComplete="off" type="date" required disabled={busy} className={fieldClass + ' mt-1 w-full'} />
-          </label>
+          <DateField label="Ngày" name="exceptionDate" value={exceptionDate} onChange={(value) => {
+            setExceptionDate(value)
+            const form = exceptionFormRef.current ? new FormData(exceptionFormRef.current) : null
+            setExceptionDirty(!!value || ['startTime', 'endTime', 'reason', 'isAvailable'].some((name) => String(form?.get(name) ?? '').trim() !== ''))
+          }} required disabled={busy} />
           <label className="text-sm font-medium text-text-primary">
             Bắt đầu
             <input name="startTime" autoComplete="off" type="time" disabled={busy} className={fieldClass + ' mt-1 w-full'} />

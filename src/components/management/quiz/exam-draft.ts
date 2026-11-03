@@ -1,20 +1,11 @@
-import type { TeacherQuestionType } from '../../../services/teacherQuizService'
+import { CHOICE_TYPES, type QuestionDraft } from '../question/question-draft'
 
-export interface DraftOption {
-  text: string
-  correct: boolean
-}
+export { CHOICE_TYPES, QUESTION_TYPE_OPTIONS } from '../question/question-draft'
+export type { DraftOption } from '../question/question-draft'
 
-export interface DraftQuestion {
+export interface DraftQuestion extends QuestionDraft {
   clientId: string
   serverId: string | null
-  questionText: string
-  questionType: TeacherQuestionType
-  options: DraftOption[]
-  explanation: string
-  imageUrl: string | null
-  categoryId: string | null
-  difficulty: string | null
   sourcePage: number | null
   /** Only marks the teacher set; an equal share is BE's to compute and must not be sent back as fixed. */
   marks: number | null
@@ -34,14 +25,6 @@ export interface DraftSection {
   unassigned: boolean
   questions: DraftQuestion[]
 }
-
-export const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']
-
-export const QUESTION_TYPE_OPTIONS: Array<{ id: TeacherQuestionType; label: string }> = [
-  { id: 'SINGLE_CHOICE', label: 'Trắc nghiệm một đáp án' },
-  { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm nhiều đáp án' },
-  { id: 'LONG_ANSWER', label: 'Tự luận' },
-]
 
 export type QuestionStatus = 'ok' | 'missing-answer' | 'needs-review'
 

@@ -1,14 +1,15 @@
+import DateField from '../../console/date-field'
 import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
+import PageHeading from '../../console/page-heading'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
 import Status from '../../console/status'
 import Notice from '../../console/notice'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import { Eye } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
-import { Input } from '../../tailgrids/core/input'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { getAdminCourses } from '../../../services/courseAdminService'
@@ -28,9 +29,11 @@ const LIST_KEY = 'admin-orders'
 export default function OrderManagement({
   readOnly = false,
   canConfirm = false,
+  title,
 }: {
   readOnly?: boolean
   canConfirm?: boolean
+  title: string
 }) {
   const [query, setQuery] = useState<OrderQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
@@ -139,11 +142,7 @@ export default function OrderManagement({
 
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">
-          Đơn của học viên, kèm mọi lần thanh toán và dấu vết xử lý.
-        </p>
-      </div>
+      <PageHeading title={title} readOnly={readOnly} />
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
         <FilterToolbar>
           <form
@@ -190,26 +189,8 @@ export default function OrderManagement({
                 ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
               ]}
             />
-            <Input
-              type="date"
-              aria-label="Từ ngày tạo"
-              title="Từ ngày"
-              value={query.from ?? ''}
-              className="h-9 w-40 py-0 text-sm"
-              onChange={(event) =>
-                setQuery((old) => ({ ...old, from: event.target.value || undefined, page: 0 }))
-              }
-            />
-            <Input
-              type="date"
-              aria-label="Đến ngày tạo"
-              title="Đến ngày"
-              value={query.to ?? ''}
-              className="h-9 w-40 py-0 text-sm"
-              onChange={(event) =>
-                setQuery((old) => ({ ...old, to: event.target.value || undefined, page: 0 }))
-              }
-            />
+            <DateField label="Từ ngày tạo" hideLabel className="w-40" value={query.from ?? ''} onChange={(value) => setQuery((old) => ({ ...old, from: value || undefined, page: 0 }))} />
+            <DateField label="Đến ngày tạo" hideLabel className="w-40" value={query.to ?? ''} onChange={(value) => setQuery((old) => ({ ...old, to: value || undefined, page: 0 }))} />
           </FilterGroup>
         </FilterToolbar>
         {courses.status === 'error' && (

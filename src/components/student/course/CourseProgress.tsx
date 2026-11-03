@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import Progress from '../../ui/Progress'
 import { cn } from '../../../lib/cn'
+import { formatStudyPercent } from './studyUtils'
 
 interface CourseProgressProps {
   /** 0-100 learning progress; clamped by <Progress>. */
@@ -17,7 +18,7 @@ function CourseProgress({ value, label = 'Tiến độ học tập', className }
     <div className={cn('flex flex-col gap-2', className)}>
       <div className="flex items-center justify-between gap-2.5 text-[13px] font-semibold text-text-secondary">
         <span>{label}</span>
-        <strong className="text-sm font-bold text-primary-text">{value}%</strong>
+        <strong className="text-sm font-bold text-primary-text">{formatStudyPercent(value)}</strong>
       </div>
       <Progress value={value} aria-label={typeof label === 'string' ? label : undefined} />
     </div>

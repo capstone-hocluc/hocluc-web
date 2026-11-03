@@ -1,4 +1,11 @@
-import type { ReactNode } from 'react'
+import Notice from '../../console/notice'
+import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { findByLabel } from '../../../services/lessonLabelService'
+import { getChaptersByDomain } from '../../../services/chapterAdminService'
+import { getBankQuestions } from '../../../services/questionBankService'
+import { consoleTracePath } from '../../../lib/consoleTrace'
+import { Skeleton } from '../../tailgrids/core/skeleton'
+import { useState, type ReactNode } from 'react'
 import ConsoleSheet from '../../console/sheet'
 import DetailSection from '../../console/detail/detail-section'
 import Status from '../../console/status'
@@ -314,6 +321,40 @@ function body(
   }
 }
 
+function RelatedTrace({ selection }: { selection: Selection }) {
+  const [expanded, setExpanded] = useState(false)
+  const skill = selection.kind === 'skills'
+  const domain = selection.kind === 'domains'
+  const resource = useScheduleResource(skill || domain ? `trace:${selection.kind}:${selection.code}` : null, async () => {
+    if (skill) {
+      const [lessons, questions] = await Promise.all([
+        findByLabel({ skillCode: selection.code }),
+        getBankQuestions({ primarySkillCode: selection.code, page: 0, size: 1 }),
+      ])
+      return { lessons: [...new Map(lessons.map((lesson) => [lesson.lessonId, lesson])).values()], questions: questions.totalElements, chapters: [] }
+    }
+    return { lessons: [], questions: 0, chapters: await getChaptersByDomain(selection.code) }
+  })
+  if (!skill && !domain) return null
+  if (resource.status === 'loading') return <div className="flex gap-3"><Skeleton className="h-8 w-24" /><Skeleton className="h-8 w-24" /></div>
+  if (resource.status !== 'ready' || !resource.data) return <Notice tone="danger">{resource.errorMessage || 'Không thể tải dữ liệu liên quan.'}</Notice>
+  const { lessons, questions, chapters } = resource.data
+  return (
+    <section className="flex min-w-0 flex-col gap-2">
+      <div className="flex flex-wrap gap-3">
+        <button type="button" className="text-brand-500 hover:underline" onClick={() => setExpanded(!expanded)}>
+          {skill ? `Bài học (${lessons.length})` : `Chương (${chapters.length})`}
+        </button>
+        {skill && <a className="text-brand-500 hover:underline" href={consoleTracePath('question-bank', { primarySkillCode: selection.code })}>Câu hỏi ({questions})</a>}
+      </div>
+      {expanded && <ul className="flex flex-col gap-2">
+        {lessons.map((lesson) => <li key={lesson.lessonId}><a className="break-words text-brand-500 hover:underline" href={consoleTracePath('courses', { courseId: lesson.courseId })}>{lesson.courseTitle} › {lesson.chapterTitle} › {lesson.lessonTitle}</a></li>)}
+        {chapters.map((chapter) => <li key={chapter.chapterId}><a className="break-words text-brand-500 hover:underline" href={consoleTracePath('courses', { courseId: chapter.courseId })}>{chapter.courseTitle} › {chapter.chapterTitle}</a></li>)}
+      </ul>}
+    </section>
+  )
+}
+
 /** The side sheet for one record; codes in it open their own record, Back returns. */
 export default function MasterDataDetail({
   selection,
@@ -383,6 +424,7 @@ export default function MasterDataDetail({
                 </div>
               )}
               {shown.node}
+              <RelatedTrace key={`${selection.kind}:${selection.code}`} selection={selection} />
             </>
           ) : (
             <p className="text-sm text-text-tertiary">

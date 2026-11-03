@@ -25,7 +25,7 @@ const record = (id: string, title: string, type: TeacherQuizType, courseId = QUI
   description: null, chapterId: QUIZ_IDS.chapter, chapterTitle: 'Chương nháp',
   lessonId: type === 'QUICK' ? QUIZ_IDS.lesson : null, lessonTitle: type === 'QUICK' ? 'Bài nháp' : null,
   durationMinutes: 30, maxAttempts: 2, passingPercentage: 60, showAnswers: false,
-  availableFrom: null, availableUntil: null, practiceAllowed: true, examFile: null, totalMarks: null, marksSum: null,
+  availableFrom: null, availableUntil: null, practiceAllowed: true, totalMarks: null, marksSum: null,
   questionCount: 1, missingAnswerCount: 0, needsReviewCount: 0,
   attemptCount: 0, locked: false, publishProblems: [], createdById: QUIZ_IDS.user,
   createdAt: stamp, updatedAt: stamp,
@@ -153,7 +153,7 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
       const q = state.quizzes.find(item => item.id === match[1]), action = match[2]
       if (!q) return answer(null, 404, 'Not found')
       if (state.deniedQuiz === q.id || (!writer && q.courseId !== QUIZ_IDS.course)) return answer(null, 403, 'Không được phân công khóa này.')
-      if (!action && method === 'GET') return answer({ quiz: q, sections: q.type === 'PLACEMENT' ? state.sections : [], groups: [], questions: state.questions, latestJob: null })
+      if (!action && method === 'GET') return answer({ quiz: q, sections: q.type === 'PLACEMENT' ? state.sections : [], groups: [], questions: state.questions })
       if (!action && method === 'PUT') { Object.assign(q, body); return answer(q) }
       if (!action && method === 'DELETE') { state.quizzes = state.quizzes.filter(item => item.id !== q.id); return answer(null) }
       if (action === 'publish' || action === 'unpublish') { q.status = action === 'publish' ? 'PUBLISHED' : q.attemptCount ? 'ARCHIVED' : 'DRAFT'; return answer(q) }
@@ -207,7 +207,7 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
   return state
 }
 
-/** The exam and placement editors are three steps; open one by its label before touching its fields. */
-export async function showEditorStep(page: Page, label: 'Thông tin và quy định' | 'Đề PDF' | 'Các phần và câu hỏi') {
+/** The exam and placement editors have two steps; open one by its label before touching its fields. */
+export async function showEditorStep(page: Page, label: 'Thông tin và quy định' | 'Các phần và câu hỏi') {
   await page.getByRole('list', { name: 'Các bước soạn đề' }).getByRole('button', { name: label }).click()
 }

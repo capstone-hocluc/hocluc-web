@@ -40,11 +40,17 @@ import DragHandle from './drag-handle'
 import { arrayMove, useDragReorder } from './use-drag-reorder'
 import ChapterEditorDialog from './chapter-editor-dialog'
 import LessonEditorDialog from './lesson-editor-dialog'
+import LessonSkillsDialog from './lesson-skills-dialog'
+import { getLessonLabels } from '../../../services/lessonLabelService'
+import { getBankScopes } from '../../../services/questionBankService'
 
 interface Props {
   courseId: string
+  categoryId?: string | null
   readOnly?: boolean
   title?: string
+  /** The course's default content state; when set, rows only show a badge that differs from it. */
+  publishedByDefault?: boolean
   /** Extra per-chapter action rendered next to the authoring controls. */
   chapterAction?: (chapter: ChapterAdmin) => ReactNode
   /** The course's content sections; chapters are grouped under them when there are any. */
@@ -80,8 +86,10 @@ const lessonMeta = (lesson: LessonAdmin) => {
 
 export default function CourseContentPanel({
   courseId,
+  categoryId = null,
   readOnly = false,
   title = 'Nội dung khóa học',
+  publishedByDefault,
   chapterAction,
   sections = [],
   onChapters,
@@ -90,6 +98,9 @@ export default function CourseContentPanel({
   const resource = useScheduleResource(`course-content:${courseId}`, () =>
     getAdminChapters(courseId)
   )
+  const scopes = useScheduleResource(!readOnly ? 'course-label-scopes' : null, getBankScopes)
+  const canLabel = Boolean(scopes.data && (scopes.data.administrator ||
+    (categoryId && scopes.data.authorSubjectIds.includes(categoryId))))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -102,12 +113,17 @@ export default function CourseContentPanel({
     chapterId: string
     lesson: LessonAdmin | null
   } | null>(null)
+  const [labelEditor, setLabelEditor] = useState<{ lessonId: string; chapterId: string } | null>(null)
   const [openChapter, setOpenChapter] = useState<string | null>(null)
   const [lessons, setLessons] = useState<Record<string, LessonAdmin[]>>({})
   const [lessonsBusy, setLessonsBusy] = useState(false)
   const [quickPublishOpen, setQuickPublishOpen] = useState(false)
 
   const chapters = useMemo(() => resource.data ?? [], [resource.data])
+  // A row that matches the course default is quiet; only a deviation is worth a badge.
+  const showsStatus = (published: boolean) =>
+    publishedByDefault === undefined || published !== publishedByDefault
+
   useEffect(() => {
     if (resource.status === 'ready') onChapters?.(chapters)
   }, [resource.status, chapters, onChapters])
@@ -162,7 +178,13 @@ export default function CourseContentPanel({
     setLessonsBusy(true)
     setError('')
     try {
-      const rows = await getAdminLessons(chapterId)
+      const items = await getAdminLessons(chapterId)
+      const labels = await Promise.allSettled(items.map((item) => getLessonLabels(item.id)))
+      const rows = items.map((item, index) => ({
+        ...item,
+        labels: labels[index].status === 'fulfilled' ? labels[index].value : item.labels,
+      }))
+      if (labels.some((item) => item.status === 'rejected')) setError('Không thể tải nhãn của một số bài học.')
       setLessons((prev) => ({ ...prev, [chapterId]: rows }))
     } catch (err) {
       setError(crudError(err))
@@ -416,7 +438,7 @@ export default function CourseContentPanel({
                         'py-3 first:pt-0 last:pb-0'
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <div className="flex min-w-0 flex-1 items-center gap-2">
                           {!readOnly && (
                             <DragHandle
@@ -448,14 +470,18 @@ export default function CourseContentPanel({
                             <h3 className="truncate font-medium text-text-primary">
                               {chapter.title}
                             </h3>
-                            <p className="text-xs text-text-tertiary">Thứ tự {chapter.sequence}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {(chapter.domainCodes ?? []).map((code) => <Status key={code} tone="neutral">{code}</Status>)}
+                            </div>
                           </div>
                         </div>
-                        <div className="w-28 shrink-0">
-                          <Status tone={chapter.published ? 'success' : 'neutral'}>
-                            {chapter.published ? 'Đã xuất bản' : 'Nháp'}
-                          </Status>
-                        </div>
+                        {showsStatus(chapter.published) && (
+                          <div className="w-28 shrink-0">
+                            <Status tone={chapter.published ? 'success' : 'neutral'}>
+                              {chapter.published ? 'Đã xuất bản' : 'Nháp'}
+                            </Status>
+                          </div>
+                        )}
                         {!readOnly && (
                           <div className="flex shrink-0 items-center gap-1">
                             {chapterAction?.(chapter)}
@@ -513,7 +539,7 @@ export default function CourseContentPanel({
                                   {...lessonDrag.rowProps(lesson.id)}
                                   className={cn(
                                     lessonDrag.rowProps(lesson.id).className,
-                                    'flex items-center gap-3 py-2 first:pt-0 last:pb-0'
+                                    'flex flex-wrap items-center gap-3 py-2 first:pt-0 last:pb-0'
                                   )}
                                 >
                                   {!readOnly && (
@@ -529,15 +555,20 @@ export default function CourseContentPanel({
                                     <p className="truncate text-sm font-medium text-text-primary">
                                       {lesson.title}
                                     </p>
+                                    {lesson.labels?.skills.filter((skill) => skill.primary).map((skill) => (
+                                      <Status key={skill.code} tone="neutral">{skill.code}</Status>
+                                    ))}
                                     <p className="text-xs text-text-tertiary">
                                       {lessonMeta(lesson)}
                                     </p>
                                   </div>
-                                  <div className="w-28 shrink-0">
-                                    <Status tone={lesson.published ? 'success' : 'neutral'}>
-                                      {lesson.published ? 'Đã xuất bản' : 'Nháp'}
-                                    </Status>
-                                  </div>
+                                  {showsStatus(lesson.published) && (
+                                    <div className="w-28 shrink-0">
+                                      <Status tone={lesson.published ? 'success' : 'neutral'}>
+                                        {lesson.published ? 'Đã xuất bản' : 'Nháp'}
+                                      </Status>
+                                    </div>
+                                  )}
                                   <div className="flex shrink-0 items-center gap-1">
                                     {lesson.preview && (
                                       <span className="rounded-full border border-card-border px-2 py-0.5 text-xs text-text-tertiary">
@@ -546,6 +577,7 @@ export default function CourseContentPanel({
                                     )}
                                     {!readOnly && (
                                       <>
+                                        {canLabel && <Button size="sm" appearance="ghost" disabled={busy} onClick={() => setLabelEditor({ lessonId: lesson.id, chapterId: chapter.id })}>Nhãn</Button>}
                                         <IconAction
                                           hover="info"
                                           label={`Sửa bài học ${lesson.title}`}
@@ -642,20 +674,22 @@ export default function CourseContentPanel({
             </div>
           ))}
         </div>
-        {!readOnly && (
-          <div className="mt-4 flex justify-center border-t border-card-border pt-3">
-            <IconAction
-              label="Thêm chương"
-              icon={Plus}
-              disabled={busy}
-              onClick={() => setChapterEditor({ chapter: null })}
-            />
-          </div>
-        )}
       </ScheduleResourceState>
+      {!readOnly && resource.status === 'ready' && (
+        <div className="mt-4 flex justify-center border-t border-card-border pt-3">
+          <IconAction
+            label="Thêm chương"
+            icon={Plus}
+            disabled={busy}
+            onClick={() => setChapterEditor({ chapter: null })}
+          />
+        </div>
+      )}
       {chapterEditor && (
         <ChapterEditorDialog
           courseId={courseId}
+          categoryId={categoryId}
+          canLabel={canLabel}
           chapter={chapterEditor.chapter}
           sections={sections}
           defaultSectionId={chapterEditor.sectionId}
@@ -665,6 +699,18 @@ export default function CourseContentPanel({
             setNotice('Đã lưu chương.')
             void resource.reload()
             onChange?.()
+          }}
+        />
+      )}
+      {labelEditor && (
+        <LessonSkillsDialog
+          lessonId={labelEditor.lessonId}
+          categoryId={categoryId}
+          onClose={() => setLabelEditor(null)}
+          onSaved={() => {
+            const chapterId = labelEditor.chapterId
+            setLabelEditor(null)
+            void loadLessons(chapterId)
           }}
         />
       )}

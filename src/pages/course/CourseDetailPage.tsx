@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import BundleCourses from '../../components/course/BundleCourses'
+import ChapterList from '../../components/course/ChapterList'
 import CourseAbout from '../../components/course/CourseAbout'
 import {
   ownChapters,
   parseDescription,
-  roadmapStages,
   shortCourseName,
   weeksBetween,
-  type RoadmapStage,
 } from '../../components/course/course-detail-content'
 import AuthLink from '../../components/landing-page/AuthLink'
 import Icon from '../../components/landing-page/Icon'
@@ -26,6 +26,7 @@ import { addCartItem } from '../../services/cartService'
 import {
   getCourseDetail,
   type CourseChapter,
+  type CoursePhase,
   type CourseDetail,
   type CourseOutcomeView,
   type GiftCourse,
@@ -79,27 +80,18 @@ function Outcomes({ outcomes }: { outcomes: CourseOutcomeView[] }) {
   )
 }
 
-function Roadmap({ stages }: { stages: RoadmapStage[] }) {
-  const phases = stages.filter((stage) => stage.id !== 'throughout').length
+function Roadmap({ phases }: { phases: CoursePhase[] }) {
   return (
     <section className="cd-block" aria-labelledby="cd-roadmap-title">
-      <h2 id="cd-roadmap-title">Lộ trình {phases} giai đoạn</h2>
+      <h2 id="cd-roadmap-title">Lộ trình học</h2>
       <ol className="cd-stages">
-        {stages.map((stage, index) => (
-          <li key={stage.id} className="cd-stage">
-            <span className="cd-stage-mark" aria-hidden="true">
-              {stage.id === 'throughout' ? <Icon name="rotate-ccw" /> : index + 1}
-            </span>
+        {phases.map((phase, index) => (
+          <li key={phase.id ?? 'unphased'} className="cd-stage">
+            <span className="cd-stage-mark" aria-hidden="true">{phase.id ? index + 1 : <Icon name="rotate-ccw" />}</span>
             <div className="cd-stage-body">
-              <h3>{stage.name}</h3>
-              {stage.note && <p>{stage.note}</p>}
-              {stage.gifts.length > 0 && (
-                <ul className="cd-gifts">
-                  {stage.gifts.map((gift) => (
-                    <GiftCard key={gift.courseId} gift={gift} />
-                  ))}
-                </ul>
-              )}
+              <h3>{phase.name ?? 'Xuyên suốt lộ trình'}</h3>
+              {phase.sections.flatMap((section) => section.chapters).map((chapter) => <p key={chapter.id}>{chapter.title}</p>)}
+              {phase.gifts.length > 0 && <ul className="cd-gifts">{phase.gifts.map((gift) => <GiftCard key={gift.courseId} gift={gift} />)}</ul>}
             </div>
           </li>
         ))}
@@ -112,32 +104,7 @@ function Chapters({ chapters, purchased }: { chapters: CourseChapter[]; purchase
   return (
     <section className="cd-block" aria-labelledby="cd-content-title">
       <h2 id="cd-content-title">Nội dung khóa học</h2>
-      <div className="cd-chapters">
-        {chapters.map((chapter, index) => {
-          const lessons = [...chapter.lessons].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
-          return (
-            <details key={chapter.id} className="cd-chapter" open={index === 0}>
-              <summary>
-                <span className="cd-chapter-index">Chương {index + 1}</span>
-                <span className="cd-chapter-title">{chapter.title}</span>
-                <span className="cd-chapter-count">{lessons.length} bài</span>
-                <Icon name="chevron-down" />
-              </summary>
-              <ul className="cd-lessons">
-                {lessons.map((lesson) => (
-                  <li key={lesson.id}>
-                    <span className="cd-lesson-title">{lesson.title}</span>
-                    {lesson.preview && !purchased && <span className="cd-chip is-preview">Học thử</span>}
-                    {lesson.durationSeconds ? (
-                      <span className="cd-lesson-time">{formatDuration(lesson.durationSeconds)}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )
-        })}
-      </div>
+      <ChapterList chapters={chapters} purchased={purchased} />
     </section>
   )
 }
@@ -229,18 +196,23 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
 
   const view = useMemo(() => {
     if (!course) return null
-    const gifts = course.gifts ?? []
-    const stages = roadmapStages(course.phases ?? [], gifts)
+    const phases = [...(course.phases ?? [])].sort((a, b) => (a.sequence ?? Infinity) - (b.sequence ?? Infinity))
+    const gifts = phases.flatMap((phase) => phase.gifts)
+    const stages = phases.some((phase) => phase.id) ? phases : null
     // The roadmap section tells the stages, so the description's own roadmap paragraph is dropped.
     const about = parseDescription(course.description).filter(
       (block) => !(stages && block.heading?.startsWith('Lộ trình'))
     )
     const giftLessons = gifts.reduce((sum, gift) => sum + gift.lessonCount, 0)
+    const chapters = ownChapters(course)
     return {
       gifts,
+      phases,
+      // Made only of smaller courses (it teaches no chapters itself): shown as the set it is.
+      bundle: gifts.length > 0 && chapters.length === 0,
       stages,
       about,
-      chapters: ownChapters(course),
+      chapters,
       lessons: (course.lessonCount ?? 0) + giftLessons,
       weeks: weeksBetween(course.startDate, course.endDate),
     }
@@ -323,6 +295,12 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                       <h1>{course.title}</h1>
                       {course.shortIntroduction && <p className="cd-lead">{course.shortIntroduction}</p>}
                       <dl className="cd-facts">
+                        {view.bundle && (
+                          <div>
+                            <dt>Gồm</dt>
+                            <dd>{view.gifts.length} khóa học</dd>
+                          </div>
+                        )}
                         {day(course.startDate) && (
                           <div>
                             <dt>Khai giảng</dt>
@@ -342,13 +320,19 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             </dd>
                           </div>
                         )}
+                        {course.estimatedDurationMinutes ? (
+                          <div>
+                            <dt>Thời lượng</dt>
+                            <dd>{formatDuration(course.estimatedDurationMinutes * 60)}</dd>
+                          </div>
+                        ) : null}
                         {view.weeks && (
                           <div>
                             <dt>Thời gian học</dt>
                             <dd>{view.weeks} tuần</dd>
                           </div>
                         )}
-                        {view.gifts.length > 0 && (
+                        {view.gifts.length > 0 && !view.bundle && (
                           <div>
                             <dt>Khóa đi kèm</dt>
                             <dd>{view.gifts.length} khóa</dd>
@@ -363,12 +347,20 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                       </dl>
                     </header>
 
-                    {view.about.length > 0 && <CourseAbout blocks={view.about} startDate={course.startDate} />}
+                    {view.about.length > 0 && (
+                      <CourseAbout
+                        blocks={view.about}
+                        startDate={course.startDate}
+                        includedCount={view.bundle ? view.gifts.length : 0}
+                      />
+                    )}
 
                     {course.outcomes && course.outcomes.length > 0 && <Outcomes outcomes={course.outcomes} />}
 
-                    {view.stages ? (
-                      <Roadmap stages={view.stages} />
+                    {view.bundle ? (
+                      <BundleCourses phases={view.phases} purchased={Boolean(course.purchased)} />
+                    ) : view.stages ? (
+                      <Roadmap phases={view.stages} />
                     ) : (
                       view.gifts.length > 0 && (
                         <section className="cd-block" aria-labelledby="cd-gifts-title">
@@ -405,6 +397,11 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             <strong>{price}</strong>
                           </p>
                         )}
+                        {view.bundle && (
+                          <p className="-mt-2! text-(length:--small)">
+                            Trọn bộ {view.gifts.length} khóa học, mua một lần học được tất cả.
+                          </p>
+                        )}
                         {buy}
                         {course.purchased && <p className="cd-buy-note">Bạn đã sở hữu khóa học này.</p>}
                         {view.gifts.length > 0 && (
@@ -428,7 +425,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                   </div>
                   <div className="closing-cta-actions">
                     <AuthLink className="btn btn-primary">
-                      {landingHero.primaryCta} <Icon name="arrow-right" />
+                      {landingHero.assessmentCta} <Icon name="arrow-right" />
                     </AuthLink>
                     <LandingLink className="btn btn-secondary" href="/courses">
                       Xem khóa học khác
@@ -438,7 +435,14 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
               </section>
 
               <div className="cd-mobile-bar">
-                {price && <strong>{price}</strong>}
+                {price && (
+                  <div className="grid leading-tight">
+                    <strong>{price}</strong>
+                    {view.bundle && (
+                      <span className="text-(length:--small) text-(--muted)">Trọn bộ {view.gifts.length} khóa</span>
+                    )}
+                  </div>
+                )}
                 {buy}
               </div>
             </>

@@ -1,382 +1,145 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Background,
-  Controls,
-  Handle,
-  Position,
-  ReactFlow,
-  type Node,
-  type NodeProps,
-  type ReactFlowInstance,
-} from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
+import { useMemo, useState, type ReactNode } from 'react'
 import { cn } from '../../../lib/cn'
-import { Search } from '../../console/icons'
+import { ArrowUpRight, ChevronDown } from '../../console/icons'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import type { MasterDataContent } from '../../../services/masterDataService'
+import { MAPPING_ROLE_LABELS } from './master-data-labels'
 import type { RecordKind, Selection } from './master-data-tables'
-import {
-  HEAD_H,
-  layoutStructure,
-  NODE_H,
-  NODE_W,
-  recordName,
-  rootOf,
-  type BandData,
-  type ColumnData,
-  type LaneData,
-  type RecordFlowNode,
-  type RecordState,
-  type StructureLayout,
-  type StructureNode,
-  type StructureRoot,
-} from './master-data-structure-layout'
+import { errorCodePresentation } from './error-code-presentation'
 
-const KIND: Record<
-  RecordKind,
-  {
-    label: string
-    text: string
-    soft: string
-    border: string
-    ring: string
-    solid: string
-    stroke: string
-  }
-> = {
-  domains: {
-    label: 'Domain',
-    text: 'text-badge-violet-text',
-    soft: 'bg-badge-violet-background',
-    border: 'border-badge-violet-text/30',
-    ring: 'ring-badge-violet-text/35',
-    solid: 'bg-badge-violet-text border-badge-violet-text',
-    stroke: 'var(--color-badge-violet-text)',
-  },
-  patterns: {
-    label: 'Dạng câu',
-    text: 'text-badge-blue-text',
-    soft: 'bg-badge-blue-background',
-    border: 'border-badge-blue-text/30',
-    ring: 'ring-badge-blue-text/35',
-    solid: 'bg-badge-blue-text border-badge-blue-text',
-    stroke: 'var(--color-badge-blue-text)',
-  },
-  skills: {
-    label: 'Kỹ năng',
-    text: 'text-badge-cyan-text',
-    soft: 'bg-badge-cyan-background',
-    border: 'border-badge-cyan-text/30',
-    ring: 'ring-badge-cyan-text/35',
-    solid: 'bg-badge-cyan-text border-badge-cyan-text',
-    stroke: 'var(--color-badge-cyan-text)',
-  },
-  microSkills: {
-    label: 'Micro-skill',
-    text: 'text-badge-orange-text',
-    soft: 'bg-badge-orange-background',
-    border: 'border-badge-orange-text/30',
-    ring: 'ring-badge-orange-text/35',
-    solid: 'bg-badge-orange-text border-badge-orange-text',
-    stroke: 'var(--color-badge-orange-text)',
-  },
-  errorCodes: {
-    label: 'Lỗi sai thường gặp',
-    text: 'text-badge-rose-text',
-    soft: 'bg-badge-rose-background',
-    border: 'border-badge-rose-text/30',
-    ring: 'ring-badge-rose-text/35',
-    solid: 'bg-badge-rose-text border-badge-rose-text',
-    stroke: 'var(--color-badge-rose-text)',
-  },
+const KIND: Record<RecordKind, { label: string; dot: string }> = {
+  domains: { label: 'Domain', dot: 'bg-badge-violet-text' },
+  patterns: { label: 'Dạng câu', dot: 'bg-badge-blue-text' },
+  skills: { label: 'Kỹ năng', dot: 'bg-badge-cyan-text' },
+  microSkills: { label: 'Micro-skill', dot: 'bg-badge-orange-text' },
+  errorCodes: { label: 'Lỗi sai thường gặp', dot: 'bg-badge-rose-text' },
 }
 
-function RecordNode({ data }: NodeProps<RecordFlowNode>) {
-  const k = KIND[data.kind]
-  const focus = data.state === 'focus'
-  return (
-    <div
-      className={cn(
-        'flex h-full w-full cursor-pointer flex-col justify-center gap-0.5 rounded-xl border px-3 shadow-xs transition-[opacity,box-shadow,translate] duration-200 hover:shadow-md',
-        k.border,
-        k.soft,
-        data.state === 'dim' && 'opacity-30',
-        data.state === 'lit' && '-translate-y-0.5 shadow-md',
-        data.state === 'path' && cn('ring-4', k.ring),
-        focus && cn('shadow-lg ring-4', k.solid, k.ring)
-      )}
-      title={data.name}
-    >
-      <Handle
-        type="target"
-        position={Position.Left}
-        isConnectable={false}
-        className="!size-1 !min-w-0 !border-0 !bg-transparent"
-      />
-      {data.role === 'SUPPORTING' && (
-        <span
-          className={cn(
-            'self-start rounded-full border px-1.5 text-[10px] leading-4 font-medium',
-            focus ? 'border-white/60 text-white' : 'border-badge-cyan-text/40 text-badge-cyan-text'
-          )}
-        >
-          hỗ trợ
-        </span>
-      )}
-      <span
-        className={cn(
-          'line-clamp-2 text-[13px] leading-snug font-medium',
-          focus ? 'text-white' : 'text-text-primary'
-        )}
-      >
-        {data.name}
-      </span>
-      <Handle
-        type="source"
-        position={Position.Right}
-        isConnectable={false}
-        className="!size-1 !min-w-0 !border-0 !bg-transparent"
-      />
-    </div>
-  )
+type Role = 'PRIMARY' | 'SUPPORTING'
+
+/** The skills a question type needs, its primary one where mappings are not loaded. */
+function patternSkills(content: MasterDataContent, code: string): { code: string; role: Role }[] {
+  const rows = content.mappings.filter((m) => m.patternCode === code)
+  if (rows.length)
+    return [...rows]
+      .sort((a, b) => Number(a.role === 'SUPPORTING') - Number(b.role === 'SUPPORTING'))
+      .map((m) => ({
+        code: m.skillCode,
+        role: m.role === 'SUPPORTING' ? 'SUPPORTING' : 'PRIMARY',
+      }))
+  const primary = content.patterns.find((p) => p.code === code)?.primarySkillCode
+  return primary ? [{ code: primary, role: 'PRIMARY' }] : []
 }
 
-function ColumnNode({ data }: NodeProps<Node<ColumnData, 'column'>>) {
-  const k = KIND[data.kind]
-  return (
-    <div className="flex h-full items-center gap-2 text-xs font-semibold tracking-wide text-text-primary uppercase">
-      <span aria-hidden className={cn('size-2.5 rounded-[3px]', k.solid)} />
-      {k.label}
-      <span className="rounded-full bg-background-gray-secondary px-2 py-0.5 text-[11px] font-medium tracking-normal text-text-tertiary tabular-nums">
-        {data.count}
-      </span>
-    </div>
-  )
-}
-
-function LaneNode({ data }: NodeProps<Node<LaneData, 'lane'>>) {
-  return (
-    <div
-      className={cn('h-full w-full rounded-2xl', data.alt && 'bg-background-gray-secondary/60')}
-    />
-  )
-}
-
-function BandNode({ data }: NodeProps<Node<BandData, 'band'>>) {
-  return (
-    <div
-      className={cn(
-        'relative h-full w-full border-t border-card-border',
-        data.alt && 'bg-brand-500/[0.025]'
-      )}
-    >
-      {data.note && (
-        <span className="absolute top-1.5 left-[38px] text-[11px] font-medium text-badge-orange-text italic">
-          {data.note}
-        </span>
-      )}
-    </div>
-  )
-}
-
-const nodeTypes = { record: RecordNode, column: ColumnNode, lane: LaneNode, band: BandNode }
-
-const isRecord = (node: StructureNode): node is RecordFlowNode => node.type === 'record'
-
-/** A record node and everything above and below it in the tree. */
-function lineage(layout: StructureLayout, id: string): Set<string> {
-  const ids = new Set([id])
-  for (let at = layout.parentOf.get(id); at; at = layout.parentOf.get(at)) ids.add(at)
-  const below = [id]
-  while (below.length) {
-    const at = below.pop()!
-    for (const edge of layout.edges)
-      if (edge.source === at && !ids.has(edge.target)) {
-        ids.add(edge.target)
-        below.push(edge.target)
-      }
-  }
-  return ids
-}
-
-function StructureCanvas({
-  content,
-  root,
-  focus,
-  seek,
-  onPick,
-}: {
-  content: MasterDataContent
-  root: StructureRoot
-  focus: Selection | null
-  seek: number
-  onPick: (selection: Selection) => void
-}) {
-  const layout = useMemo(() => layoutStructure(content, root), [content, root])
-  const flow = useRef<ReactFlowInstance<StructureNode> | null>(null)
-  const box = useRef<HTMLDivElement>(null)
-  const [hover, setHover] = useState<string | null>(null)
-
-  // Fit the width and pin the column headings to the top: a short tree should not float mid-canvas.
-  function place(instance: ReactFlowInstance<StructureNode>) {
-    const width = box.current?.clientWidth ?? 0
-    if (!width) return
-    const pad = 20
-    const zoom = Math.min(1, Math.max(0.6, (width - pad * 2) / layout.width))
-    void instance.setViewport({
-      x: Math.max(pad, (width - layout.width * zoom) / 2),
-      y: pad + HEAD_H * zoom,
-      zoom,
-    })
-  }
-
-  const records = useMemo(() => layout.nodes.filter(isRecord), [layout])
-  const focused = useMemo(
-    () =>
-      focus
-        ? records
-            .filter((n) => n.data.kind === focus.kind && n.data.code === focus.code)
-            .map((n) => n.id)
-        : [],
-    [records, focus]
-  )
-  const path = useMemo(() => {
-    const ids = new Set<string>()
-    for (const id of focused)
-      for (let at: string | undefined = id; at; at = layout.parentOf.get(at)) ids.add(at)
-    return ids
-  }, [layout, focused])
-  const lit = useMemo(() => (hover ? lineage(layout, hover) : null), [layout, hover])
-
-  const nodes = useMemo(
-    () =>
-      layout.nodes.map((n): StructureNode => {
-        if (!isRecord(n)) return n
-        const state: RecordState | undefined = focused.includes(n.id)
-          ? 'focus'
-          : lit
-            ? lit.has(n.id)
-              ? 'lit'
-              : 'dim'
-            : path.has(n.id)
-              ? 'path'
-              : undefined
-        return { ...n, data: { ...n.data, state } }
-      }),
-    [layout, focused, path, lit]
-  )
-  const edges = useMemo(
-    () =>
-      layout.edges.map((e) => {
-        const on = lit
-          ? lit.has(e.source) && lit.has(e.target)
-          : path.has(e.source) && path.has(e.target)
-        const role = e.data?.role
-        return {
-          ...e,
-          animated: !!lit && on,
-          style: {
-            stroke: on && e.data ? KIND[e.data.kind].stroke : 'var(--color-border-secondary)',
-            strokeWidth: on ? 2.25 : 1.5,
-            strokeDasharray: role === 'SUPPORTING' ? '6 4' : role === 'LOOSE' ? '2 5' : undefined,
-            opacity: lit && !on ? 0.2 : 1,
-            transition: 'opacity 200ms, stroke 200ms',
-          },
-        }
-      }),
-    [layout, lit, path]
-  )
-
-  // Finding a record from the search moves the view to it; picking one on the canvas leaves the view alone.
-  useEffect(() => {
-    if (!seek || !flow.current) return
-    const target = records.find((n) => focused.includes(n.id))
-    if (target)
-      void flow.current.setCenter(target.position.x + NODE_W / 2, target.position.y + NODE_H / 2, {
-        zoom: 1,
-        duration: 600,
-      })
-  }, [seek]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  return (
-    <div ref={box} className="h-full w-full">
-      <ReactFlow<StructureNode>
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onInit={(instance) => {
-          flow.current = instance
-          place(instance)
-        }}
-        minZoom={0.2}
-        maxZoom={1.6}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        panOnScroll
-        zoomOnDoubleClick={false}
-        onNodeMouseEnter={(_, node) => {
-          if (isRecord(node)) setHover(node.id)
-        }}
-        onNodeMouseLeave={() => setHover(null)}
-        onNodeClick={(_, node) => {
-          if (isRecord(node)) onPick({ kind: node.data.kind, code: node.data.code })
-        }}
-      >
-        <Background gap={22} size={1} />
-        <Controls showInteractive={false} position="bottom-right" />
-      </ReactFlow>
-    </div>
-  )
-}
-
-function RailButton({
-  active,
+function Section({
   kind,
-  name,
-  meta,
-  onClick,
+  count,
+  children,
 }: {
-  active: boolean
   kind: RecordKind
-  name: string
-  meta?: string
-  onClick: () => void
+  count: number
+  children: ReactNode
 }) {
-  const k = KIND[kind]
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active || undefined}
-      className={cn(
-        'flex w-full flex-col gap-0.5 rounded-xl px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-brand-500',
-        active ? k.soft : 'hover:bg-background-gray-secondary'
-      )}
-    >
-      <span className="flex items-start gap-2 text-sm leading-snug font-medium text-text-primary">
-        <span aria-hidden className={cn('mt-1.5 size-2 shrink-0 rounded-full', k.solid)} />
-        {name}
-      </span>
-      {meta && <span className="text-xs text-text-tertiary">{meta}</span>}
-    </button>
+    <section className="min-w-0">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+        <span aria-hidden className={cn('size-2 shrink-0 rounded-[3px]', KIND[kind].dot)} />
+        {KIND[kind].label}
+        <span className="rounded-full bg-background-gray-secondary px-2 py-0.5 text-[11px] font-medium text-text-tertiary tabular-nums">
+          {count}
+        </span>
+      </h3>
+      <div className="mt-2">{children}</div>
+    </section>
   )
 }
 
-function RailHeading({ children }: { children: string }) {
+function List({ children }: { children: ReactNode }) {
   return (
-    <p className="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-text-tertiary uppercase">
+    <ul className="divide-y divide-card-border overflow-hidden rounded-lg border border-card-border bg-card-background">
+      {children}
+    </ul>
+  )
+}
+
+function Empty({ children }: { children: string }) {
+  return (
+    <p className="rounded-lg border border-dashed border-card-border px-3 py-4 text-sm text-text-tertiary">
       {children}
     </p>
   )
 }
 
-const SEARCH_KINDS: RecordKind[] = ['domains', 'patterns', 'skills', 'microSkills', 'errorCodes']
+function RecordName({
+  kind,
+  code,
+  name,
+  onOpen,
+}: {
+  kind: RecordKind
+  code: string
+  name: string
+  onOpen: (selection: Selection) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen({ kind, code })}
+      className="max-w-full text-left text-sm font-medium break-words text-text-primary underline-offset-2 hover:text-brand-500 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500"
+    >
+      {name}
+    </button>
+  )
+}
 
-/**
- * The version as one tree: pick a domain (or an error code) on the left and its question types, skills,
- * micro-skills and errors hang in columns on the right. A record opens its detail sheet.
- */
+function RecordCode({ children }: { children: string }) {
+  return <span className="text-xs break-all text-text-tertiary">{children}</span>
+}
+
+function SkillChip({
+  content,
+  code,
+  role,
+  onOpen,
+}: {
+  content: MasterDataContent
+  code: string
+  role: Role
+  onOpen: (selection: Selection) => void
+}) {
+  const skill = content.skills.find((s) => s.code === code)
+  const label = skill?.nameVi ?? code
+  const body = (
+    <>
+      <span className="font-medium text-text-tertiary">{MAPPING_ROLE_LABELS[role]}</span>
+      <span aria-hidden>·</span>
+      <span className="break-words">{label}</span>
+    </>
+  )
+  const className =
+    'inline-flex max-w-full flex-wrap items-baseline gap-x-1 rounded-lg border border-border-secondary bg-background-gray-secondary px-2 py-1 text-xs text-text-secondary'
+  if (!skill)
+    return (
+      <span className={className} title={code}>
+        {body}
+      </span>
+    )
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen({ kind: 'skills', code })}
+      title={code}
+      className={cn(
+        className,
+        'text-left hover:border-brand-500 hover:text-brand-500 focus-visible:outline-2 focus-visible:outline-brand-500'
+      )}
+    >
+      {body}
+    </button>
+  )
+}
+
+/** The version as a readable outline: domains open to their question types, skills, micro-skills and errors. */
 export default function MasterDataStructure({
   content,
   onOpen,
@@ -384,44 +147,34 @@ export default function MasterDataStructure({
   content: MasterDataContent
   onOpen: (selection: Selection) => void
 }) {
-  const [picked, setPicked] = useState<StructureRoot | null>(null)
-  // A picked domain or error that an edit removed falls back to the first domain.
-  const pickedExists = picked && content[picked.kind].some((row) => row.code === picked.code)
-  const root: StructureRoot | null = pickedExists
-    ? picked
-    : content.domains[0]
-      ? { kind: 'domains', code: content.domains[0].code }
-      : null
-  const [focus, setFocus] = useState<Selection | null>(null)
-  const [seek, setSeek] = useState(0)
-  const [query, setQuery] = useState('')
+  const tree = useMemo(
+    () =>
+      content.domains.map((domain) => ({
+        domain,
+        patterns: content.patterns
+          .filter((p) => p.domainCode === domain.code)
+          .map((pattern) => ({ pattern, skills: patternSkills(content, pattern.code) })),
+        skills: content.skills.filter((s) => s.domainCodes.includes(domain.code)),
+        errorCodes: content.errorCodes.filter(
+          (e) => e.allDomains || e.domainCodes.includes(domain.code)
+        ),
+      })),
+    [content]
+  )
+  const [open, setOpen] = useState<Set<string>>(
+    () => new Set(content.domains[0] ? [content.domains[0].code] : [])
+  )
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return null
-    return SEARCH_KINDS.map((kind) => ({
-      kind,
-      rows: content[kind]
-        .map((row) => ({ code: row.code, name: recordName(content, kind, row.code) }))
-        .filter((row) => `${row.code} ${row.name}`.toLowerCase().includes(q))
-        .slice(0, 8),
-    })).filter((group) => group.rows.length)
-  }, [content, query])
-
-  function chooseRoot(next: StructureRoot) {
-    setPicked(next)
-    setFocus(null)
+  function toggle(code: string) {
+    setOpen((current) => {
+      const next = new Set(current)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
+      return next
+    })
   }
 
-  function find(selection: Selection) {
-    const next = rootOf(content, selection)
-    if (next) setPicked(next)
-    setFocus(selection)
-    setSeek((n) => n + 1)
-    onOpen(selection)
-  }
-
-  if (!root) {
+  if (!content.domains.length) {
     return (
       <div className="rounded-xl border border-dashed border-card-border px-5 py-10 text-center text-sm text-text-tertiary">
         Phiên bản này chưa có domain.
@@ -429,170 +182,213 @@ export default function MasterDataStructure({
     )
   }
 
-  const domainMeta = (code: string) => {
-    const patterns = content.patterns.filter((p) => p.domainCode === code).length
-    const skills = content.skills.filter((s) => s.domainCodes.includes(code)).length
-    return `${patterns} dạng câu · ${skills} kỹ năng`
-  }
-
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="flex max-h-[46vh] min-h-0 flex-col overflow-hidden rounded-2xl border border-card-border bg-card-background lg:h-[min(76vh,760px)] lg:max-h-none">
-        <div className="border-b border-card-border p-3">
-          <label className="relative block">
-            <span className="sr-only">Tìm trong cấu trúc</span>
-            <Search
-              size={16}
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-text-tertiary"
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm dạng câu, kỹ năng..."
-              className="h-10 w-full rounded-lg border border-border-secondary bg-transparent pr-3 pl-9 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-brand-500"
-            />
-          </label>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          {results ? (
-            results.length ? (
-              results.map((group) => (
-                <div key={group.kind}>
-                  <RailHeading>{KIND[group.kind].label}</RailHeading>
-                  {group.rows.map((row) => (
-                    <RailButton
-                      key={row.code}
-                      active={focus?.kind === group.kind && focus.code === row.code}
-                      kind={group.kind}
-                      name={row.name}
-                      onClick={() => find({ kind: group.kind, code: row.code })}
-                    />
-                  ))}
-                </div>
-              ))
-            ) : (
-              <p className="px-3 py-6 text-center text-sm text-text-tertiary">
-                Không có mục nào khớp “{query.trim()}”.
-              </p>
-            )
-          ) : (
-            <>
-              <RailHeading>Domain</RailHeading>
-              {content.domains.map((d) => (
-                <RailButton
-                  key={d.code}
-                  active={root.kind === 'domains' && root.code === d.code}
-                  kind="domains"
-                  name={d.nameVi}
-                  meta={domainMeta(d.code)}
-                  onClick={() => chooseRoot({ kind: 'domains', code: d.code })}
-                />
-              ))}
-              {content.errorCodes.length > 0 && <RailHeading>Lỗi sai thường gặp</RailHeading>}
-              {content.errorCodes.map((e) => (
-                <RailButton
-                  key={e.code}
-                  active={root.kind === 'errorCodes' && root.code === e.code}
-                  kind="errorCodes"
-                  name={recordName(content, 'errorCodes', e.code)}
-                  onClick={() => chooseRoot({ kind: 'errorCodes', code: e.code })}
-                />
-              ))}
-            </>
-          )}
-        </div>
-      </aside>
+    <div className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+      <ul className="divide-y divide-card-border">
+        {tree.map(({ domain, patterns, skills, errorCodes }, index) => {
+          const expanded = open.has(domain.code)
+          const bodyId = `structure-domain-${index}`
+          return (
+            <li key={domain.code}>
+              <div className="flex items-center gap-1 pr-1">
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  aria-controls={expanded ? bodyId : undefined}
+                  onClick={() => toggle(domain.code)}
+                  className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-background-gray-secondary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500"
+                >
+                  <ChevronDown
+                    size={16}
+                    aria-hidden
+                    className={cn(
+                      'shrink-0 text-text-tertiary transition-transform',
+                      !expanded && '-rotate-90'
+                    )}
+                  />
+                  <RecordCode>{domain.code}</RecordCode>
+                  <span className="min-w-0 flex-1 text-sm font-medium break-words text-text-primary">
+                    {domain.nameVi}
+                  </span>
+                  <span className="w-full pl-7 text-xs text-text-tertiary tabular-nums sm:w-auto sm:pl-0">
+                    {patterns.length} dạng câu · {skills.length} kỹ năng
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Xem chi tiết ${domain.nameVi}`}
+                  title={`Xem chi tiết ${domain.nameVi}`}
+                  onClick={() => onOpen({ kind: 'domains', code: domain.code })}
+                  className="shrink-0 rounded-lg p-2 text-text-tertiary hover:bg-background-gray-secondary hover:text-text-primary focus-visible:outline-2 focus-visible:outline-brand-500"
+                >
+                  <ArrowUpRight size={16} />
+                </button>
+              </div>
+              {expanded && (
+                <div
+                  id={bodyId}
+                  className="border-t border-card-border bg-background-gray-secondary/30 px-3 py-4 sm:px-5"
+                >
+                  <div className="grid gap-5 lg:grid-cols-2">
+                    <Section kind="patterns" count={patterns.length}>
+                      {patterns.length ? (
+                        <List>
+                          {patterns.map(({ pattern, skills: mapped }) => (
+                            <li key={pattern.code} className="px-3 py-2.5">
+                              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                <RecordName
+                                  kind="patterns"
+                                  code={pattern.code}
+                                  name={pattern.nameVi}
+                                  onOpen={onOpen}
+                                />
+                                <RecordCode>{pattern.code}</RecordCode>
+                              </div>
+                              {mapped.length ? (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {mapped.map((skill) => (
+                                    <SkillChip
+                                      key={`${skill.code}-${skill.role}`}
+                                      content={content}
+                                      code={skill.code}
+                                      role={skill.role}
+                                      onOpen={onOpen}
+                                    />
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-1 text-xs text-text-tertiary">Chưa gán kỹ năng.</p>
+                              )}
+                            </li>
+                          ))}
+                        </List>
+                      ) : (
+                        <Empty>Chưa có dạng câu.</Empty>
+                      )}
+                    </Section>
 
-      <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-card-border bg-card-background">
-        <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-card-border px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span
-              aria-hidden
-              className={cn('size-2.5 shrink-0 rounded-[3px]', KIND[root.kind].solid)}
-            />
-            <h2 className="truncate text-base font-semibold text-text-primary">
-              {recordName(content, root.kind, root.code)}
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-tertiary sm:ml-auto">
-            <LegendLine label="Kỹ năng chính" />
-            <LegendLine label="Hỗ trợ" dash="6 4" />
-            <LegendLine label="Chưa có dạng câu" dash="2 5" />
-          </div>
-        </header>
-        <div className="h-[min(70vh,700px)] min-h-[420px]">
-          <StructureCanvas
-            key={`${root.kind}:${root.code}`}
-            content={content}
-            root={root}
-            focus={focus}
-            seek={seek}
-            onPick={(selection) => {
-              setFocus(selection)
-              onOpen(selection)
-            }}
-          />
-        </div>
-      </section>
+                    <Section kind="skills" count={skills.length}>
+                      {skills.length ? (
+                        <List>
+                          {skills.map((skill) => {
+                            const microSkills = content.microSkills.filter(
+                              (m) => m.skillCode === skill.code
+                            )
+                            return (
+                              <li key={skill.code} className="px-3 py-2.5">
+                                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                  <RecordName
+                                    kind="skills"
+                                    code={skill.code}
+                                    name={skill.nameVi}
+                                    onOpen={onOpen}
+                                  />
+                                  <RecordCode>{skill.code}</RecordCode>
+                                </div>
+                                {microSkills.length ? (
+                                  <ul className="mt-1.5 flex flex-col gap-1 border-l border-card-border pl-3">
+                                    {microSkills.map((micro) => (
+                                      <li
+                                        key={micro.code}
+                                        className="flex flex-wrap items-baseline gap-x-2"
+                                      >
+                                        <RecordName
+                                          kind="microSkills"
+                                          code={micro.code}
+                                          name={micro.nameVi}
+                                          onOpen={onOpen}
+                                        />
+                                        <RecordCode>{micro.code}</RecordCode>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="mt-1 text-xs text-text-tertiary">
+                                    Chưa có micro-skill.
+                                  </p>
+                                )}
+                              </li>
+                            )
+                          })}
+                        </List>
+                      ) : (
+                        <Empty>Chưa có kỹ năng.</Empty>
+                      )}
+                    </Section>
+                  </div>
+
+                  <div className="mt-5">
+                    <Section kind="errorCodes" count={errorCodes.length}>
+                      {errorCodes.length ? (
+                        <List>
+                          {errorCodes.map((error) => {
+                            const presentation = errorCodePresentation(error)
+                            return (
+                              <li key={error.code} className="px-3 py-2.5">
+                                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                  <RecordName
+                                    kind="errorCodes"
+                                    code={error.code}
+                                    name={presentation.name}
+                                    onOpen={onOpen}
+                                  />
+                                  <RecordCode>{error.code}</RecordCode>
+                                  {presentation.category && (
+                                    <span className="text-xs text-text-tertiary">
+                                      {presentation.category}
+                                    </span>
+                                  )}
+                                  {error.allDomains && (
+                                    <span className="text-xs text-text-tertiary">Toàn môn học</span>
+                                  )}
+                                </div>
+                              </li>
+                            )
+                          })}
+                        </List>
+                      ) : (
+                        <Empty>Chưa có lỗi sai.</Empty>
+                      )}
+                    </Section>
+                  </div>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
 
-function LegendLine({ label, dash }: { label: string; dash?: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <svg width="24" height="6" aria-hidden className="overflow-visible">
-        <line
-          x1="0"
-          y1="3"
-          x2="24"
-          y2="3"
-          stroke="var(--color-border-secondary)"
-          strokeWidth="2"
-          strokeDasharray={dash}
-        />
-      </svg>
-      {label}
-    </span>
-  )
-}
-
-/** Mirrors the structure tab: the domain rail on the left, the column diagram on the right. */
+/** Mirrors the outline: domain rows with the first one open. */
 export function MasterDataStructureSkeleton() {
   return (
     <div
       role="status"
       aria-label="Đang tải cấu trúc"
-      className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]"
+      className="overflow-hidden rounded-xl border border-card-border bg-card-background"
     >
-      <div className="flex flex-col gap-3 rounded-2xl border border-card-border bg-card-background p-3 lg:h-[min(76vh,760px)]">
-        <Skeleton className="h-10 rounded-lg" />
-        {Array.from({ length: 7 }, (_, i) => (
-          <div key={i} className="flex flex-col gap-2 px-3 py-2">
-            <Skeleton className="h-2.5 w-14" />
-            <Skeleton className="h-3.5 w-44" />
-            <Skeleton className="h-2.5 w-28" />
+      {[0, 1, 2, 3, 4].map((row) => (
+        <div key={row} className={cn('px-4 py-3', row > 0 && 'border-t border-card-border')}>
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-4 shrink-0 rounded" />
+            <Skeleton className="h-3.5 w-56 max-w-full" />
+            <Skeleton className="ml-auto hidden h-3 w-32 sm:block" />
           </div>
-        ))}
-      </div>
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-card-border bg-card-background">
-        <div className="flex items-center gap-3 border-b border-card-border px-4 py-4">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-4 w-56" />
-        </div>
-        <div className="grid h-[min(70vh,700px)] min-h-[420px] grid-cols-5 gap-6 overflow-hidden p-6">
-          {[1, 4, 4, 5, 5].map((rows, col) => (
-            <div key={col} className={cn('flex flex-col gap-3', col === 0 && 'justify-center')}>
-              <Skeleton className="mb-3 h-3 w-24" />
-              {Array.from({ length: rows }, (_, i) => (
-                <Skeleton key={i} className="h-14 rounded-xl" />
+          {row === 0 && (
+            <div className="mt-4 grid gap-5 sm:pl-7 lg:grid-cols-2">
+              {[0, 1].map((column) => (
+                <div key={column} className="flex flex-col gap-3">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-16 rounded-lg" />
+                  <Skeleton className="h-16 rounded-lg" />
+                </div>
               ))}
             </div>
-          ))}
+          )}
         </div>
-      </div>
+      ))}
     </div>
   )
 }

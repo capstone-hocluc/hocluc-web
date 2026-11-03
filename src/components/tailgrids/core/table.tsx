@@ -7,7 +7,7 @@ const tableRootStyles = cva(
   {
     variants: {
       fullBleed: {
-        true: "border-y",
+        true: "border-0",
         false: "rounded-lg border",
       },
     },

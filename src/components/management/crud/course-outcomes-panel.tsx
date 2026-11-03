@@ -183,7 +183,7 @@ export default function CourseOutcomesPanel({
           {!resource.data?.length ? (
             <p className="text-sm text-text-tertiary">
               Chưa có chuẩn đầu ra. Mỗi chuẩn đầu ra nói học sinh làm được gì sau khóa, và gắn với
-              kỹ năng trong master data để sau này đo mức đạt.
+              kỹ năng trong khung đề thi để sau này đo mức đạt.
             </p>
           ) : (
             <ul className="divide-y divide-card-border">
@@ -198,9 +198,9 @@ export default function CourseOutcomesPanel({
                     </span>
                   </div>
                   {outcome.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pl-19">
+                    <div className="flex flex-wrap gap-2 sm:pl-19">
                       {outcome.skills.map((skill) => (
-                        <Status key={skill.code} tone="neutral">
+                        <Status key={skill.code} tone="neutral" className="max-w-full whitespace-normal">
                           {skill.code}
                           {skill.name ? ` · ${skill.name}` : ''}
                         </Status>

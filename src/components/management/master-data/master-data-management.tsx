@@ -5,6 +5,7 @@ import ConfirmDialog from '../../console/confirm-dialog'
 import DataTable from '../../console/data-table'
 import Notice from '../../console/notice'
 import PageHeading from '../../console/page-heading'
+import SubjectRail from '../crud/subject-rail'
 import Panel from '../../console/panel'
 import SelectField from '../../console/select-field'
 import Status from '../../console/status'
@@ -17,6 +18,8 @@ import {
   ConsoleTabsTrigger,
 } from '../../console/tabs'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { can } from '../../../lib/permissions'
+import type { UserRole } from '../../../services/userService'
 import { getCategories, type Category } from '../../../services/categoryService'
 import {
   activateVersion,
@@ -25,6 +28,10 @@ import {
   getActiveContent,
   getVersionContent,
   getVersions,
+  reportOf,
+  validateVersion,
+  type MasterDataIssue,
+  type MasterDataReport,
   type MasterDataContent,
   type MasterDataVersion,
 } from '../../../services/masterDataService'
@@ -45,14 +52,24 @@ import MasterDataStructure, { MasterDataStructureSkeleton } from './master-data-
 import MasterDataEditorDialog, { type EditTarget } from './master-data-editor-dialog'
 import MasterDataDeleteDialog, { type DeleteTarget } from './master-data-delete-dialog'
 import MasterDataCloneDialog from './master-data-clone-dialog'
+import MasterDataPatternBundleDialog from './master-data-pattern-bundle-dialog'
 import { codePrefix } from './master-data-rules'
+import ReportTable from './master-data-report-table'
 
 interface SubjectOption {
   id: string
   label: string
+  /** Set on a sub-subject: the rail indents it under this subject. */
+  parentId?: string
 }
 
 const STATUS_ORDER = { ACTIVE: 0, DRAFT: 1, RETIRED: 2 } as const
+
+/** Shorter strip labels only; the tables and validation reports keep the full names. */
+const TAB_LABELS: Partial<Record<MasterDataTab, string>> = {
+  errorCodes: 'Lỗi sai',
+  history: 'Lịch sử',
+}
 
 /** The version a subject opens on: the active one, else the newest import. */
 function defaultVersion(versions: MasterDataVersion[]): MasterDataVersion | undefined {
@@ -60,8 +77,8 @@ function defaultVersion(versions: MasterDataVersion[]): MasterDataVersion | unde
 }
 
 /**
- * The subjects a workbook belongs to, in menu order: a group with subjects under it ("Sử dụng ngôn ngữ")
- * is left out and its subjects read "Group › Subject"; a top-level subject without children stays.
+ * The subjects a workbook belongs to, in menu order: every subject, a sub-subject right after its
+ * parent. A parent keeps its own row because it can carry its own label set ("Tiếng Việt").
  */
 function subjectTree(categories: Category[]): SubjectOption[] {
   const active = categories.filter((c) => c.active)
@@ -69,14 +86,86 @@ function subjectTree(categories: Category[]): SubjectOption[] {
     a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'vi')
   const ids = new Set(active.map((c) => c.id))
   const roots = active.filter((c) => !c.parentId || !ids.has(c.parentId)).sort(byOrder)
-  const hasChildren = (root: Category) => active.some((c) => c.parentId === root.id)
   return roots.flatMap((root) => [
-    ...(hasChildren(root) ? [] : [{ id: root.id, label: root.name }]),
+    { id: root.id, label: root.name },
     ...active
       .filter((c) => c.parentId === root.id)
       .sort(byOrder)
-      .map((c) => ({ id: c.id, label: c.name })),
+      .map((c) => ({ id: c.id, label: c.name, parentId: root.id })),
   ])
+}
+
+function ValidationCard({
+  status,
+  report,
+  errorMessage,
+  onRetry,
+  onSelect,
+}: {
+  status: string
+  report: MasterDataReport | null
+  errorMessage: string
+  onRetry: () => void
+  onSelect: (item: MasterDataIssue) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  if (status === 'loading' && !report) {
+    return (
+      <Panel>
+        <div role="status" aria-label="Đang kiểm tra bản nháp" className="animate-pulse space-y-3">
+          <div className="h-6 w-32 rounded bg-background-gray-secondary" />
+          {[0, 1, 2].map((row) => (
+            <div key={row} className="h-10 rounded bg-background-gray-secondary" />
+          ))}
+        </div>
+      </Panel>
+    )
+  }
+  if (!report) {
+    return (
+      <Notice tone="danger">
+        <span>{errorMessage || 'Không thể kiểm tra bản nháp.'}</span>
+        <Button appearance="outline" size="sm" onClick={onRetry}>
+          Thử lại
+        </Button>
+      </Notice>
+    )
+  }
+  const invalid = !report.valid || report.errors.length > 0
+  return (
+    <Panel>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Status tone={invalid ? 'danger' : 'success'}>
+            {invalid
+              ? `Chưa kích hoạt được: ${report.errors.length} lỗi, ${report.warnings.length} cảnh báo`
+              : `Hợp lệ${report.warnings.length ? ` · ${report.warnings.length} cảnh báo` : ''}`}
+          </Status>
+          {!invalid && report.warnings.length > 0 && (
+            <Button
+              appearance="outline"
+              size="sm"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? 'Ẩn cảnh báo' : 'Xem cảnh báo'}
+            </Button>
+          )}
+        </div>
+        {invalid && (
+          <ReportTable
+            items={report.errors}
+            warnings={report.warnings}
+            tone="danger"
+            onSelect={onSelect}
+          />
+        )}
+        {!invalid && expanded && report.warnings.length > 0 && (
+          <ReportTable items={report.warnings} tone="warning" onSelect={onSelect} />
+        )}
+      </div>
+    </Panel>
+  )
 }
 
 /**
@@ -86,10 +175,13 @@ function subjectTree(categories: Category[]): SubjectOption[] {
 export default function MasterDataManagement({
   title,
   reader,
+  role,
 }: {
   title: string
   reader: boolean
+  role: UserRole
 }) {
+  const canActivate = can(role, 'TAXONOMY_ACTIVATE')
   const categories = useScheduleResource<SubjectOption[]>(
     reader ? 'md-subjects-active' : 'md-subjects',
     async () =>
@@ -100,8 +192,20 @@ export default function MasterDataManagement({
           }))
         : subjectTree(await getCategories())
   )
-  const [pickedCategory, setPickedCategory] = useState<string | null>(null)
+  const [pickedCategory, setPickedCategory] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get('categoryId')
+  )
   const categoryId = pickedCategory ?? categories.data?.[0]?.id ?? null
+  const subjectGroups = useMemo(() => {
+    const toCategory = (c: SubjectOption) => ({ id: c.id, name: c.label, active: true }) as Category
+    const all = categories.data ?? []
+    return all
+      .filter((c) => !c.parentId)
+      .map((root) => ({
+        root: toCategory(root),
+        children: all.filter((c) => c.parentId === root.id).map(toCategory),
+      }))
+  }, [categories.data])
 
   const versions = useScheduleResource(
     !reader && categoryId ? `md-versions:${categoryId}` : null,
@@ -118,6 +222,30 @@ export default function MasterDataManagement({
     [versions.data]
   )
   const version = versionList.find((v) => v.id === pickedVersion) ?? defaultVersion(versionList)
+
+  const isDraft = version?.status === 'DRAFT'
+  const validationKey = !reader && isDraft && version ? `md-validation:${version.id}` : null
+  const validation = useScheduleResource(validationKey, () => validateVersion(version!.id))
+  const [raceReport, setRaceReport] = useState<{
+    versionId: string
+    report: MasterDataReport
+  } | null>(null)
+  const report =
+    raceReport && raceReport.versionId === version?.id ? raceReport.report : validation.data
+  const activationBlocked =
+    validation.status !== 'ready' || !report || !report.valid || report.errors.length > 0
+  const activationTitle =
+    validation.status === 'loading'
+      ? 'Đang kiểm tra bản nháp'
+      : !report
+        ? 'Chưa kiểm tra được bản nháp'
+        : report.errors.length > 0
+          ? 'Còn lỗi, sửa trước khi kích hoạt'
+          : undefined
+  function recheckValidation() {
+    setRaceReport(null)
+    validation.reload()
+  }
 
   const contentKey = reader
     ? categoryId
@@ -139,7 +267,15 @@ export default function MasterDataManagement({
   const contentStatus = shownContent ? 'ready' : content.status
 
   const [tab, setTab] = useState<MasterDataTab>('structure')
-  const [stack, setStack] = useState<Selection[]>([])
+  const [stack, setStack] = useState<Selection[]>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const kind = params.get('kind')
+    const code = params.get('code')
+    return code &&
+      (kind === 'domains' || kind === 'patterns' || kind === 'skills' || kind === 'microSkills')
+      ? [{ kind, code }]
+      : []
+  })
   const [importing, setImporting] = useState(false)
   const [comparing, setComparing] = useState(false)
   const [confirm, setConfirm] = useState<'activate' | 'delete' | null>(null)
@@ -149,6 +285,7 @@ export default function MasterDataManagement({
   const [editing, setEditing] = useState<EditTarget | null>(null)
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null)
   const [cloning, setCloning] = useState(false)
+  const [addingPattern, setAddingPattern] = useState(false)
   // The detail sheet steps aside while a form opened from it is up, and comes back after.
   const [parked, setParked] = useState<Selection[] | null>(null)
 
@@ -163,6 +300,7 @@ export default function MasterDataManagement({
   }
 
   function chooseCategory(id: string) {
+    setRaceReport(null)
     setPickedCategory(id)
     setPickedVersion(null)
     setStack([])
@@ -171,6 +309,7 @@ export default function MasterDataManagement({
   }
 
   function chooseVersion(id: string) {
+    setRaceReport(null)
     setPickedVersion(id)
     setStack([])
     setError('')
@@ -178,7 +317,8 @@ export default function MasterDataManagement({
   }
 
   async function runConfirmed() {
-    if (!version || !confirm) return
+    if (!version || !confirm || (confirm === 'activate' && (!canActivate || activationBlocked)))
+      return
     setBusy(true)
     setError('')
     try {
@@ -197,7 +337,11 @@ export default function MasterDataManagement({
       setComparing(false)
       versions.reload()
     } catch (err) {
-      setError(crudError(err))
+      const rejected = confirm === 'activate' ? reportOf(err) : null
+      if (rejected) {
+        setRaceReport({ versionId: version.id, report: rejected })
+        setComparing(false)
+      } else setError(crudError(err))
       setConfirm(null)
     } finally {
       setBusy(false)
@@ -205,7 +349,6 @@ export default function MasterDataManagement({
   }
 
   const tabs = reader ? TABLE_TABS.filter((t) => t.id !== 'mappings') : TABLE_TABS
-  const isDraft = version?.status === 'DRAFT'
   // Only a draft changes; the version in use is copied into one first.
   const actions = !reader && isDraft ? { onEdit: setEditing, onDelete: setDeleting } : undefined
   const sheetActions = actions && {
@@ -222,6 +365,10 @@ export default function MasterDataManagement({
   }
   const hasData = reader ? !!categoryId : versionList.length > 0
   const versionsLoading = !reader && versions.status !== 'ready'
+  // A subject with no version starts its first draft with the first pattern; one with versions
+  // adds to its draft, and copies the active version into a draft only when a person asks.
+  const canAddPattern =
+    !reader && !!categoryId && (isDraft || (!versionsLoading && versionList.length === 0))
 
   const historyColumns = useMemo<ColumnDef<MasterDataVersion>[]>(
     () => [
@@ -280,17 +427,23 @@ export default function MasterDataManagement({
       <PageHeading
         title={title}
         readOnly={reader}
-        subtitle={
-          reader
-            ? 'Các lĩnh vực kiến thức, dạng câu, kỹ năng và lỗi sai thường gặp đang dùng để gắn nhãn bài học và câu hỏi.'
-            : 'Bộ nhãn của từng môn, nhập từ file Excel. Bản nháp chỉ được dùng sau khi kích hoạt.'
-        }
         action={
           !reader && (
-            <Button onClick={() => setImporting(true)} disabled={categories.status !== 'ready'}>
-              <Plus size={16} />
-              Nhập file Excel
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              {canAddPattern && (
+                <Button onClick={() => setAddingPattern(true)}>
+                  <Plus size={16} />
+                  Thêm dạng câu
+                </Button>
+              )}
+              <Button
+                appearance={canAddPattern ? 'outline' : 'fill'}
+                onClick={() => setImporting(true)}
+                disabled={categories.status !== 'ready'}
+              >
+                Nhập file Excel
+              </Button>
+            </div>
           )
         }
       />
@@ -300,170 +453,225 @@ export default function MasterDataManagement({
         errorMessage={categories.errorMessage}
         onRetry={categories.reload}
         empty={!categories.data?.length}
-        emptyMessage={reader ? 'Chưa môn nào có master data đang dùng.' : 'Chưa có môn học.'}
+        emptyMessage={reader ? 'Chưa môn nào có khung đề thi đang dùng.' : 'Chưa có môn học.'}
         skeleton="detail"
       >
-        <div className="flex flex-col gap-5">
-          <Panel>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="w-full sm:w-72">
-                  <SelectField
-                    ariaLabel="Môn học"
-                    value={categoryId ?? undefined}
-                    onChange={chooseCategory}
-                    options={categories.data ?? []}
-                  />
-                </div>
-                {!reader && versionList.length > 0 && (
-                  <div className="w-full sm:w-64">
-                    <SelectField
-                      ariaLabel="Phiên bản"
-                      value={version?.id}
-                      onChange={chooseVersion}
-                      options={versionList.map((v) => ({
-                        id: v.id,
-                        label: `v${v.version} · ${VERSION_STATUS_LABELS[v.status]}`,
-                      }))}
-                    />
+        <div className="flex flex-col gap-2 md:hidden">
+          <SelectField
+            ariaLabel="Môn học"
+            value={categoryId ?? undefined}
+            onChange={chooseCategory}
+            options={(categories.data ?? []).map((c) => ({ id: c.id, label: c.label }))}
+          />
+        </div>
+        <div className="grid items-start gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">
+          <SubjectRail
+            className="hidden md:flex"
+            status={categories.status}
+            errorMessage={categories.errorMessage}
+            onRetry={categories.reload}
+            groups={subjectGroups}
+            countsLoading={false}
+            selectedId={categoryId ?? ''}
+            onSelect={chooseCategory}
+            withCounts={false}
+          />
+          <div className="flex min-w-0 flex-col gap-4">
+            {(hasData || versionsLoading) && (
+              <Panel>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-wrap items-end gap-3">
+                    {!reader && versionList.length > 0 && (
+                      <div className="w-full sm:w-64">
+                        <SelectField
+                          ariaLabel="Phiên bản"
+                          value={version?.id}
+                          onChange={chooseVersion}
+                          options={versionList.map((v) => ({
+                            id: v.id,
+                            label: `v${v.version} · ${VERSION_STATUS_LABELS[v.status]}`,
+                          }))}
+                        />
+                      </div>
+                    )}
+                    {version && !reader && (
+                      <Status tone={VERSION_STATUS_TONES[version.status]}>
+                        {VERSION_STATUS_LABELS[version.status]}
+                      </Status>
+                    )}
+                    {version && !reader && !isDraft && (
+                      <Button
+                        appearance="outline"
+                        size="sm"
+                        className="sm:ml-auto"
+                        onClick={() => setCloning(true)}
+                      >
+                        <Pencil size={14} />
+                        Tạo bản nháp để chỉnh sửa
+                      </Button>
+                    )}
+                    {isDraft && !reader && (
+                      <div className="flex flex-wrap gap-2 sm:ml-auto">
+                        <Button appearance="outline" size="sm" onClick={recheckValidation}>
+                          Kiểm tra lại
+                        </Button>
+                        <Button appearance="outline" size="sm" onClick={() => setComparing(true)}>
+                          <Repeat2 size={14} />
+                          So sánh
+                        </Button>
+                        {canActivate && (
+                          <span title={activationTitle}>
+                            <Button
+                              size="sm"
+                              disabled={activationBlocked || busy}
+                              onClick={() => setConfirm('activate')}
+                            >
+                              <CheckCircle2 size={14} />
+                              Kích hoạt
+                            </Button>
+                          </span>
+                        )}
+                        <Button
+                          variant="danger"
+                          appearance="outline"
+                          size="sm"
+                          onClick={() => setConfirm('delete')}
+                        >
+                          <Trash2 size={14} />
+                          Xóa nháp
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
-                {version && !reader && (
-                  <Status tone={VERSION_STATUS_TONES[version.status]}>
-                    {VERSION_STATUS_LABELS[version.status]}
-                  </Status>
-                )}
-                {version && !reader && !isDraft && (
-                  <Button
-                    appearance="outline"
-                    size="sm"
-                    className="sm:ml-auto"
-                    onClick={() => setCloning(true)}
-                  >
-                    <Pencil size={14} />
-                    Tạo bản nháp để chỉnh sửa
-                  </Button>
-                )}
-                {isDraft && !reader && (
-                  <div className="flex flex-wrap gap-2 sm:ml-auto">
-                    <Button appearance="outline" size="sm" onClick={() => setComparing(true)}>
-                      <Repeat2 size={14} />
-                      So sánh
-                    </Button>
-                    <Button size="sm" onClick={() => setConfirm('activate')}>
-                      <CheckCircle2 size={14} />
-                      Kích hoạt
-                    </Button>
-                    <Button
-                      variant="danger"
-                      appearance="outline"
-                      size="sm"
-                      onClick={() => setConfirm('delete')}
-                    >
-                      <Trash2 size={14} />
-                      Xóa nháp
+                  {shownContent && (
+                    <p className="text-sm text-text-secondary">
+                      {contentSummary(shownContent, !reader)}
+                    </p>
+                  )}
+                </div>
+              </Panel>
+            )}
+
+            {isDraft && !reader && version && (
+              <ValidationCard
+                key={version.id}
+                status={validation.status}
+                report={report}
+                errorMessage={validation.errorMessage}
+                onRetry={recheckValidation}
+                onSelect={(item) => {
+                  const selected = TABLE_TABS.find((entry) => entry.sheet === item.sheetName)
+                  if (selected) setTab(selected.id)
+                }}
+              />
+            )}
+
+            {notice && <Notice tone="info">{notice}</Notice>}
+            {error && (
+              <Notice tone="danger">
+                <span role="alert">{error}</span>
+              </Notice>
+            )}
+
+            {versionsLoading ? (
+              <ScheduleResourceState
+                status={versions.status}
+                errorMessage={versions.errorMessage}
+                onRetry={versions.reload}
+                skeleton="table"
+              >
+                {null}
+              </ScheduleResourceState>
+            ) : !hasData ? (
+              <div className="rounded-xl border border-dashed border-card-border px-5 py-10 text-center">
+                <p className="text-sm font-medium text-text-primary">Môn này chưa có khung đề thi</p>
+                <p className="mt-1 text-sm text-text-tertiary">
+                  Thêm dạng câu đầu tiên để tạo bản nháp, hoặc nhập file Excel của môn.
+                </p>
+                {canAddPattern && (
+                  <div className="mt-4 flex justify-center">
+                    <Button onClick={() => setAddingPattern(true)}>
+                      <Plus size={16} />
+                      Thêm dạng câu
                     </Button>
                   </div>
                 )}
               </div>
-              {shownContent && (
-                <p className="text-sm text-text-secondary">
-                  {contentSummary(shownContent, !reader)}
-                </p>
-              )}
-            </div>
-          </Panel>
-
-          {notice && <Notice tone="info">{notice}</Notice>}
-          {error && (
-            <Notice tone="danger">
-              <span role="alert">{error}</span>
-            </Notice>
-          )}
-
-          {versionsLoading ? (
-            <ScheduleResourceState
-              status={versions.status}
-              errorMessage={versions.errorMessage}
-              onRetry={versions.reload}
-              skeleton="table"
-            >
-              {null}
-            </ScheduleResourceState>
-          ) : !hasData ? (
-            <div className="rounded-xl border border-dashed border-card-border px-5 py-10 text-center">
-              <p className="text-sm font-medium text-text-primary">Môn này chưa có master data</p>
-              <p className="mt-1 text-sm text-text-tertiary">
-                Nhập file Excel của môn (7 sheet) để tạo bản nháp đầu tiên.
-              </p>
-            </div>
-          ) : (
-            <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as MasterDataTab)}>
-              <ConsoleTabsList aria-label="Bảng master data">
-                <ConsoleTabsTrigger value="structure">Cấu trúc</ConsoleTabsTrigger>
-                {tabs.map((t) => (
-                  <ConsoleTabsTrigger key={t.id} value={t.id}>
-                    {t.label}
+            ) : (
+              <ConsoleTabs value={tab} onValueChange={(value) => setTab(value as MasterDataTab)}>
+                <ConsoleTabsList
+                  aria-label="Bảng khung đề thi"
+                  className="max-sm:flex-wrap max-sm:overflow-visible"
+                >
+                  <ConsoleTabsTrigger value="structure" className="px-3">
+                    Cấu trúc
                   </ConsoleTabsTrigger>
+                  {tabs.map((t) => (
+                    <ConsoleTabsTrigger key={t.id} value={t.id} className="px-3">
+                      {TAB_LABELS[t.id] ?? t.label}
+                    </ConsoleTabsTrigger>
+                  ))}
+                  {!reader && (
+                    <ConsoleTabsTrigger value="history" className="px-3">
+                      {TAB_LABELS.history}
+                    </ConsoleTabsTrigger>
+                  )}
+                </ConsoleTabsList>
+                <ConsoleTabsContent value="structure">
+                  {contentStatus === 'loading' ? (
+                    <MasterDataStructureSkeleton />
+                  ) : (
+                    <ScheduleResourceState
+                      status={contentStatus}
+                      errorMessage={content.errorMessage}
+                      onRetry={content.reload}
+                    >
+                      {shownContent && tab === 'structure' && (
+                        <MasterDataStructure
+                          key={contentKey}
+                          content={shownContent}
+                          onOpen={(selection) => setStack([selection])}
+                        />
+                      )}
+                    </ScheduleResourceState>
+                  )}
+                </ConsoleTabsContent>
+                {tabs.map((t) => (
+                  <ConsoleTabsContent key={t.id} value={t.id}>
+                    <ScheduleResourceState
+                      status={contentStatus}
+                      errorMessage={content.errorMessage}
+                      onRetry={content.reload}
+                      skeleton="table"
+                    >
+                      {shownContent && tab === t.id && (
+                        <MasterDataTable
+                          key={contentKey}
+                          tab={t.id}
+                          content={shownContent}
+                          onOpen={(selection) => setStack([selection])}
+                          actions={actions}
+                        />
+                      )}
+                    </ScheduleResourceState>
+                  </ConsoleTabsContent>
                 ))}
                 {!reader && (
-                  <ConsoleTabsTrigger value="history">Lịch sử phiên bản</ConsoleTabsTrigger>
+                  <ConsoleTabsContent value="history">
+                    <DataTable
+                      data={versionList}
+                      columns={historyColumns}
+                      getRowKey={(row) => row.id}
+                      onRowClick={(row) => {
+                        chooseVersion(row.id)
+                        setTab('structure')
+                      }}
+                    />
+                  </ConsoleTabsContent>
                 )}
-              </ConsoleTabsList>
-              <ConsoleTabsContent value="structure">
-                {contentStatus === 'loading' ? (
-                  <MasterDataStructureSkeleton />
-                ) : (
-                  <ScheduleResourceState
-                    status={contentStatus}
-                    errorMessage={content.errorMessage}
-                    onRetry={content.reload}
-                  >
-                    {shownContent && tab === 'structure' && (
-                      <MasterDataStructure
-                        key={contentKey}
-                        content={shownContent}
-                        onOpen={(selection) => setStack([selection])}
-                      />
-                    )}
-                  </ScheduleResourceState>
-                )}
-              </ConsoleTabsContent>
-              {tabs.map((t) => (
-                <ConsoleTabsContent key={t.id} value={t.id}>
-                  <ScheduleResourceState
-                    status={contentStatus}
-                    errorMessage={content.errorMessage}
-                    onRetry={content.reload}
-                    skeleton="table"
-                  >
-                    {shownContent && tab === t.id && (
-                      <MasterDataTable
-                        key={contentKey}
-                        tab={t.id}
-                        content={shownContent}
-                        onOpen={(selection) => setStack([selection])}
-                        actions={actions}
-                      />
-                    )}
-                  </ScheduleResourceState>
-                </ConsoleTabsContent>
-              ))}
-              {!reader && (
-                <ConsoleTabsContent value="history">
-                  <DataTable
-                    data={versionList}
-                    columns={historyColumns}
-                    getRowKey={(row) => row.id}
-                    onRowClick={(row) => {
-                      chooseVersion(row.id)
-                      setTab('structure')
-                    }}
-                  />
-                </ConsoleTabsContent>
-              )}
-            </ConsoleTabs>
-          )}
+              </ConsoleTabs>
+            )}
+          </div>
         </div>
       </ScheduleResourceState>
 
@@ -494,6 +702,7 @@ export default function MasterDataManagement({
             setNotice(outcome.notice ?? '')
             setError(outcome.warning ?? '')
             content.reload()
+            recheckValidation()
           }}
         />
       )}
@@ -523,6 +732,7 @@ export default function MasterDataManagement({
             setNotice(message)
             setError('')
             content.reload()
+            recheckValidation()
           }}
         />
       )}
@@ -541,6 +751,36 @@ export default function MasterDataManagement({
             chooseVersion(draft.id)
             setNotice(`Đã tạo bản nháp v${draft.version}. Sửa xong thì so sánh và kích hoạt.`)
             versions.reload()
+          }}
+        />
+      )}
+
+      {addingPattern && categoryId && (
+        <MasterDataPatternBundleDialog
+          target={
+            isDraft && version
+              ? { versionId: version.id }
+              : {
+                  categoryId,
+                  categoryName: categories.data?.find((c) => c.id === categoryId)?.label ?? '',
+                }
+          }
+          content={isDraft ? shownContent : null}
+          onClose={() => setAddingPattern(false)}
+          onSaved={(result) => {
+            setAddingPattern(false)
+            setPickedVersion(result.versionId)
+            setTab('structure')
+            setStack([])
+            setError('')
+            setNotice(
+              result.draftCreated
+                ? `Đã thêm dạng câu ${result.patternCode} và tạo bản nháp v${result.version}. Thêm các dạng câu khác, rồi so sánh và kích hoạt.`
+                : `Đã thêm dạng câu ${result.patternCode}.`
+            )
+            versions.reload()
+            content.reload()
+            recheckValidation()
           }}
         />
       )}
@@ -567,13 +807,13 @@ export default function MasterDataManagement({
       {comparing && version && (
         <MasterDataDiffDialog
           version={version}
-          canActivate={isDraft}
+          canActivate={canActivate && isDraft && !activationBlocked}
           onActivate={() => setConfirm('activate')}
           onClose={() => setComparing(false)}
         />
       )}
 
-      {confirm && version && (
+      {confirm && version && (confirm !== 'activate' || canActivate) && (
         <ConfirmDialog
           title={
             confirm === 'activate'
@@ -582,7 +822,7 @@ export default function MasterDataManagement({
           }
           description={
             confirm === 'activate'
-              ? `Phiên bản đang dùng của ${version.categoryName} sẽ chuyển sang "Đã ngưng". Bài học và câu hỏi mới sẽ gắn nhãn theo phiên bản này. Nên xem "So sánh" trước.`
+              ? `Phiên bản đang dùng của ${version.categoryName} sẽ chuyển sang "Đã ngưng". Bài học và câu hỏi mới sẽ gắn nhãn theo phiên bản này. Nên xem "So sánh" trước.${report?.warnings.length ? ` Bản nháp còn ${report.warnings.length} cảnh báo.` : ''}`
               : 'Bản nháp và toàn bộ dữ liệu đã nhập của nó sẽ bị xóa. Không thể hoàn tác.'
           }
           cancelLabel="Hủy"

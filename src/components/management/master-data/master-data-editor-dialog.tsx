@@ -8,7 +8,6 @@ import DetailSection from '../../console/detail/detail-section'
 import { Checkbox } from '../../tailgrids/core/checkbox'
 import {
   saveLabel,
-  type DifficultyLevel,
   type MasterDataContent,
   type MdDomain,
   type MdErrorCode,
@@ -27,6 +26,7 @@ import {
   suggestCode,
   type EditKind,
 } from './master-data-rules'
+import { BANDS, NONE, STIMULUS_KINDS } from './master-data-labels'
 
 export type EditTarget =
   | { kind: 'domains'; record: MdDomain | null }
@@ -47,38 +47,10 @@ interface Shared {
   onSaved: (outcome: SaveOutcome) => void
 }
 
-const NONE = 'NONE'
 const text = (value: string) => value.trim() || null
 const SKILL_LEVELS = ['Cơ bản', 'Kỹ năng', 'Nâng cao', 'Tích hợp']
-const BANDS: {
-  id: string
-  label: string
-  min: DifficultyLevel | null
-  max: DifficultyLevel | null
-}[] = [
-  { id: NONE, label: 'Chưa đặt', min: null, max: null },
-  { id: 'DE-DE', label: 'Dễ', min: 'DE', max: 'DE' },
-  { id: 'DE-TB', label: 'Dễ – Trung bình', min: 'DE', max: 'TB' },
-  { id: 'TB-TB', label: 'Trung bình', min: 'TB', max: 'TB' },
-  { id: 'TB-KHO', label: 'Trung bình – Khó', min: 'TB', max: 'KHO' },
-  { id: 'KHO-KHO', label: 'Khó', min: 'KHO', max: 'KHO' },
-  { id: 'DE-KHO', label: 'Dễ – Khó', min: 'DE', max: 'KHO' },
-]
 /** The band text a micro-skill keeps, written as the workbooks write it. */
 const BAND_TEXTS = ['Dễ', 'Dễ–TB', 'TB', 'TB–Khó', 'Khó']
-const STIMULUS_KINDS = [
-  { id: NONE, label: 'Tự nhận theo loại ngữ liệu' },
-  { id: 'NONE', label: 'Nằm ngay trong đề' },
-  { id: 'LITERARY', label: 'Văn bản văn học' },
-  { id: 'ARGUMENTATIVE', label: 'Văn bản nghị luận' },
-  { id: 'INFORMATIONAL', label: 'Văn bản thông tin' },
-  { id: 'SCIENCE', label: 'Văn bản khoa học' },
-  { id: 'DATA', label: 'Bảng, biểu đồ, số liệu' },
-  { id: 'RULES', label: 'Bộ quy tắc' },
-  { id: 'FIGURE', label: 'Hình vẽ' },
-  { id: 'FORMULA', label: 'Công thức' },
-  { id: 'OTHER', label: 'Khác' },
-].map((option, i) => (i === 0 ? option : { ...option, id: `KIND_${option.id}` }))
 
 const nameOf = (rows: { code: string; nameVi: string }[], code: string | null | undefined) =>
   rows.find((row) => row.code === code)?.nameVi ?? code ?? ''

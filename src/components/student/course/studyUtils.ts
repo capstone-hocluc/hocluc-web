@@ -22,3 +22,9 @@ export function lessonContainsId(
 ) {
   return Boolean(lessonId) && chapter.lessons.some((lesson) => lesson.id === lessonId)
 }
+
+/** Formats learning progress without hiding a nonzero value below one percent. */
+export function formatStudyPercent(value: number | null | undefined): string {
+  const percent = Math.max(0, Math.min(100, Number.isFinite(value) ? value! : 0))
+  return percent > 0 && percent < 1 ? '<1%' : `${Math.round(percent)}%`
+}

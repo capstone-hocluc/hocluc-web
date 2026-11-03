@@ -111,7 +111,7 @@
   color: var(--blue-text);
 }
 
-/* Who it is for: full width, Mai beside the checklist. */
+/* Who it is for: full width, a student photo beside the checklist. */
 .course-page .ab-audience {
   grid-column: 1 / -1;
   display: grid;
@@ -150,30 +150,6 @@
   width: 14px;
   height: 14px;
 }
-.course-page .ab-audience-art {
-  position: relative;
-  align-self: end;
-  margin: 0 -8px -28px 0;
-}
-.course-page .ab-audience-art img {
-  width: 100%;
-  animation: ab-float 5s ease-in-out infinite;
-}
-.course-page .ab-bubble {
-  position: absolute;
-  top: -8px;
-  right: 24px;
-  z-index: 1;
-  padding: 8px 14px;
-  border-radius: 16px 16px 4px 16px;
-  background: var(--paper);
-  color: var(--ink);
-  font-size: var(--small);
-  font-weight: 600;
-  box-shadow: 0 10px 24px -12px rgb(22 75 111 / 0.4);
-  white-space: nowrap;
-}
-
 /* What you learn: big numbered steps. */
 .course-page .ab-learn li {
   display: grid;
@@ -299,17 +275,6 @@
 }
 .course-page .ab-bento > .ab-other:last-child:nth-child(odd) {
   grid-column: 1 / -1;
-}
-
-@keyframes ab-float {
-  50% {
-    transform: translateY(-8px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .course-page .ab-audience-art img {
-    animation: none;
-  }
 }
 
 /* Roadmap */
@@ -582,11 +547,6 @@
   }
   .course-page .ab-audience {
     grid-template-columns: 1fr;
-  }
-  .course-page .ab-audience-art {
-    width: 150px;
-    justify-self: end;
-    margin: -8px -4px -22px 0;
   }
   .course-page .ab-time {
     flex-direction: column;

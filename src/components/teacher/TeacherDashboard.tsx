@@ -9,11 +9,10 @@ import QuizConsoleScreen from '../management/quiz/QuizConsoleScreen'
 import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
 import { DashboardActions, RoleDashboardWelcome } from '../common/DashboardWelcome'
 import { ManagementScreen } from '../management/ManagementDashboard'
+import AiAssistantScreen from '../management/ai-assistant/AiAssistantScreen'
 import { ForbiddenPage } from '../console/access-states'
 import { buildNavSections, canAccessPage } from '../../lib/console-nav'
-
-// Old teacher URL for the question review page.
-const PAGE_ALIASES: Record<string, string> = { questions: 'question-review' }
+import { roleHome } from '../../lib/role-home'
 
 // Course sub-pages (quiz editor, assignments) belong to "Lớp của tôi".
 function menuPageOf(page: string) {
@@ -31,7 +30,7 @@ function TeacherDashboard({
   logoutLoading = false,
   page: requestedPage = 'dashboard',
 }) {
-  const page = PAGE_ALIASES[requestedPage] ?? requestedPage
+  const page = requestedPage
   const quizCreateMode = page.startsWith('quiz-new-')
   const quizCourseId = quizCreateMode
     ? page.replace('quiz-new-', '')
@@ -41,7 +40,8 @@ function TeacherDashboard({
   const assignmentCourseId = page.startsWith('assignments-')
     ? page.replace('assignments-', '')
     : null
-  const detailCourseId = quizCourseId || assignmentCourseId
+  const linkedCourseId = page === 'courses' ? new URLSearchParams(window.location.search).get('courseId') : null
+  const detailCourseId = quizCourseId || assignmentCourseId || linkedCourseId
   const [notice, setNotice] = useState('')
   const [view, setView] = useState(detailCourseId ? 'courses' : page)
   const [selectedCourse, setSelectedCourse] = useState(() =>
@@ -101,11 +101,15 @@ function TeacherDashboard({
     'courses',
     'schedule',
     'availability',
-    'question-review',
     'attempts',
     'profile',
     'mock-exams',
   ]
+  if (allowed && menuPageOf(view) === 'ai-assistant') {
+    return (
+      <AiAssistantScreen onBack={() => navigate('dashboard')} backHref={roleHome('TEACHER')} />
+    )
+  }
   return (
     <ConsoleShell
       sections={sections}

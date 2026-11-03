@@ -10,6 +10,7 @@ export interface ChapterAdmin {
   updatedAt: string
   sectionId: string | null
   sectionTitle: string | null
+  domainCodes: string[]
 }
 export interface SaveChapterRequest {
   title: string
@@ -19,6 +20,7 @@ export interface SaveChapterRequest {
   sectionId?: string
   /** True takes the chapter out of its section. */
   clearSection?: boolean
+  domainCodes?: string[]
 }
 const path = (courseId: string, chapterId?: string) =>
   `/api/v1/courses/${encodeURIComponent(courseId)}/chapters${chapterId ? `/${encodeURIComponent(chapterId)}` : ''}`
@@ -70,4 +72,17 @@ export async function orderAdminChapters(
 }
 export async function deleteAdminChapter(courseId: string, chapterId: string): Promise<void> {
   await request<void>(path(courseId, chapterId), { auth: true, method: 'DELETE' })
+}
+
+export interface ChapterDomainMatch {
+  chapterId: string
+  chapterTitle: string
+  courseId: string
+  courseTitle: string
+}
+
+export async function getChaptersByDomain(domainCode: string): Promise<ChapterDomainMatch[]> {
+  return data(await request<ChapterDomainMatch[]>(
+    `/api/v1/admin/chapters/by-domain?domainCode=${encodeURIComponent(domainCode)}`, { auth: true }
+  ))
 }

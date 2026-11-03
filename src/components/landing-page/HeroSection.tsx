@@ -1,108 +1,231 @@
-import type { LandingHero } from '../../data/landing-content'
-import Icon from './Icon'
-import AuthLink from './AuthLink'
+import type { HeroSlide, LandingHero } from '../../data/landing-content'
 import { studentRoutes } from '../../lib/studentRoutes'
+import AuthLink from './AuthLink'
+import Icon from './Icon'
 import { useHeroCarousel } from './useHeroCarousel'
 
+const rise = (delayMs: number) => ({ animationDelay: `${delayMs}ms` })
+
+// The logo mark's rising body and its wing (viewBox 16 19 317 419), drawn large behind the students.
+const MARK_BODY =
+  'M328.518,19.272C299.417,96.693 287.323,118.643 214.002,165.783C178.848,188.385 143.570,205.310 114.192,239.619C78.509,281.292 54.562,318.822 54.562,375.510C54.563,397.462 59.607,417.339 66.642,436.728C75.988,433.579 146.934,373.922 156.855,362.534C198.693,314.507 195.594,255.769 229.255,219.888C283.951,161.585 350.052,109.432 328.518,19.272Z'
+const MARK_WING =
+  'M17.220,167.000C66.923,198.487 80.405,221.623 73.000,280.989C89.316,249.107 115.290,226.007 142.000,202.897C122.546,173.063 50.415,154.821 17.220,167.000Z'
+
+type SlideProps = { slide: HeroSlide; active: boolean; first: boolean }
+
+// Students cut out in front of a layered copy of the logo's rising stroke, with a dashed flight line.
+function RiseArt({ slide, active, first }: SlideProps) {
+  return (
+    <>
+      <svg
+        aria-hidden="true"
+        viewBox="16 19 317 419"
+        className="absolute -bottom-[8%] right-[4%] h-[96%] w-auto overflow-visible lg:bottom-[1%] lg:right-[7%] lg:h-[92%] lg:[mask-image:linear-gradient(to_bottom,black_72%,transparent_96%)]"
+      >
+        <defs>
+          <linearGradient id="hero-rise-body" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stopColor="#0b3a82" />
+            <stop offset="1" stopColor="#1e88ff" />
+          </linearGradient>
+          <radialGradient id="hero-rise-head" cx="0.35" cy="0.35" r="0.8">
+            <stop offset="0" stopColor="#e3f1ff" />
+            <stop offset="1" stopColor="#7cc8ff" />
+          </radialGradient>
+        </defs>
+        <path transform="translate(26 -16) rotate(4 190 230)" fill="#d3e8ff" d={MARK_BODY} />
+        <path transform="translate(12 -7)" fill="#7cc8ff" opacity={0.55} d={MARK_BODY} />
+        <path fill="#9bd8fd" opacity={0.9} d={MARK_WING} />
+        <path fill="url(#hero-rise-body)" d={MARK_BODY} />
+        <circle cx="185.22" cy="118.91" r="40.53" fill="url(#hero-rise-head)" />
+      </svg>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 400 300"
+        fill="none"
+        className="absolute left-[6%] top-[2%] hidden h-[54%] w-[62%] overflow-visible lg:block"
+      >
+        <path
+          d="M10 280 C 90 250, 120 160, 210 150 S 330 90, 380 20"
+          stroke="#1e88ff"
+          strokeWidth="2.5"
+          strokeDasharray="7 9"
+          strokeLinecap="round"
+          opacity="0.7"
+        />
+        <path d="M366 18 l22 -8 l-8 22 l-4 -9 z" fill="#0b3a82" />
+      </svg>
+      <img
+        src={slide.src}
+        srcSet={`${slide.src.replace('.webp', '-720.webp')} 720w, ${slide.src} 1400w`}
+        sizes="(max-width: 1023px) 92vw, 680px"
+        alt={slide.alt}
+        width={1400}
+        height={1028}
+        fetchPriority={first ? 'high' : undefined}
+        loading={first ? undefined : 'lazy'}
+        // From lg the group sits a little above the bottom, level with the headline, and the cut-out fades out
+        // at its waist instead of being cut by the edge.
+        className={`absolute bottom-0 left-1/2 w-[min(94%,680px)] -translate-x-1/2 drop-shadow-[0_24px_30px_rgba(11,35,72,0.22)] lg:bottom-[7%] lg:[mask-image:linear-gradient(to_bottom,black_78%,transparent)] ${active ? 'motion-safe:animate-rise' : ''}`}
+      />
+    </>
+  )
+}
+
+// A photo filling the right of the hero; on large screens it fades out towards the text.
+function PhotoArt({ slide, active, first }: SlideProps) {
+  return (
+    <img
+      src={slide.src}
+      srcSet={`${slide.src.replace('.webp', '-800.webp')} 800w, ${slide.src} 1536w`}
+      sizes="(max-width: 1023px) 100vw, 60vw"
+      alt={slide.alt}
+      width={1536}
+      height={1024}
+      fetchPriority={first ? 'high' : undefined}
+      loading={first ? undefined : 'lazy'}
+      className={`absolute inset-0 h-full w-full object-cover object-[50%_35%] lg:[mask-image:linear-gradient(to_right,transparent,black_38%)] ${active ? 'motion-safe:animate-settle' : ''}`}
+    />
+  )
+}
+
+// The offer and the two actions stay put on the left; the picture on the right cycles between the
+// students in front of the logo shape and bright photos of studying. The hero fills the first screen
+// under the sticky header (84px from lg, 76px below), so the course catalog starts right under the
+// fold instead of being cut through by it.
 function HeroSection({ hero }: { hero: LandingHero }) {
   const { slides } = hero
-  const { active, handlers, manuallyPaused, togglePause, selectSlide } = useHeroCarousel(
-    slides.length
-  )
+  const { active, selectSlide } = useHeroCarousel(slides.length)
+  const step = (by: number) => selectSlide((active + by + slides.length) % slides.length)
 
   return (
-    <section className="hero" {...handlers}>
-      <div className="container hero-grid">
-        <div className="hero-copy">
-          <p className="hero-tagline">
-            <img src="/hocluc-mark.svg" alt="" width="20" height="26" />
-            <span>Học vững · Lực bền · Vươn xa</span>
-          </p>
-          <h1>
-            <span className="hero-title-line">{hero.titleLines[0]}</span>
-            <span className="hero-title-line accent">{hero.titleLines[1]}</span>
+    <section className="hero relative isolate flex min-h-[calc(100svh-76px)] flex-col justify-center overflow-hidden bg-(--soft) lg:min-h-[calc(100svh-84px)]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(55%_65%_at_88%_8%,rgba(30,136,255,0.18),transparent_70%),radial-gradient(45%_55%_at_0%_100%,rgba(11,58,130,0.1),transparent_70%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 [background-image:radial-gradient(rgba(11,58,130,0.13)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]"
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-[7%] top-[16%] hidden size-3 rotate-45 rounded-[3px] bg-(--blue)/60 lg:block motion-safe:animate-float-slow"
+      />
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 16 16"
+        className="pointer-events-none absolute bottom-[18%] left-[30%] hidden size-4 stroke-(--blue) opacity-50 lg:block motion-safe:animate-float-slow motion-safe:[animation-delay:-4s]"
+      >
+        <path d="M8 2v12M2 8h12" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+      </svg>
+
+      <div className="container relative z-10 grid items-center gap-10 py-14 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:py-20">
+        <div className="flex flex-col gap-6">
+          <h1
+            className="text-[clamp(2.5rem,4.6vw,3.75rem)]! leading-[1.08]! motion-safe:animate-rise"
+            style={rise(0)}
+          >
+            <span className="block">{hero.titleLines[0]}</span>
+            <span className="block text-(--blue)">{hero.titleLines[1]}</span>
           </h1>
-          <p className="hero-copy-description">{hero.description}</p>
-          <div className="hero-buttons">
-            <AuthLink destination={studentRoutes.placement()} className="btn btn-primary">
-              {hero.primaryCta}
+          <p className="max-w-[44ch] text-lg! motion-safe:animate-rise" style={rise(80)}>
+            {hero.description}
+          </p>
+          <div className="hero-buttons flex flex-wrap gap-3 motion-safe:animate-rise" style={rise(160)}>
+            <a className="btn btn-primary" href="#khoa-hoc">
+              <Icon name="book-open" />
+              {hero.coursesCta}
+            </a>
+            <AuthLink
+              destination={studentRoutes.placement()}
+              className="btn btn-secondary bg-white! hover:bg-(--blue-soft)!"
+            >
+              {hero.assessmentCta}
               <Icon name="arrow-right" />
             </AuthLink>
-            <a className="btn btn-secondary" href="#khoa-hoc">
-              <Icon name="book-open" />
-              {hero.secondaryCta}
-            </a>
           </div>
-          <p className="hero-note">Bài đánh giá miễn phí · Cần đăng nhập</p>
-        </div>
-        <div
-          className="hero-showcase hero-carousel"
-          role="region"
-          aria-roledescription="carousel"
-          aria-label="Cảnh học tập cùng Học Lực"
-        >
-          {slides.map((slide, index) => {
-            const isActive = index === active
-            return (
-              <figure
-                key={slide.id}
-                className={`hero-slide${isActive ? ' is-active' : ''}`}
-                id={slide.id}
-                role="group"
-                aria-roledescription="slide"
-                aria-label={`${index + 1} trên ${slides.length}: ${slide.label}`}
-                aria-hidden={!isActive}
-                inert={!isActive}
-              >
-                <img
-                  src={slide.src}
-                  srcSet={`${slide.src.replace('.webp', '-800.webp')} 800w, ${slide.src} 1536w`}
-                  sizes="(max-width: 760px) 100vw, 54vw"
-                  alt={slide.alt}
-                  width={1536}
-                  height={1024}
-                  fetchPriority={index === 0 ? 'high' : undefined}
-                  loading={index === 0 ? undefined : 'lazy'}
-                />
-                <figcaption className="sr-only">
-                  <strong>{slide.label}</strong>
-                  <span>{slide.caption}</span>
-                </figcaption>
-              </figure>
-            )
-          })}
         </div>
       </div>
-      <div className="container hero-topic-controls">
-        <div className="hero-slide-buttons" aria-label="Chọn chủ đề học tập">
-          {slides.map((slide, index) => (
-            <button
+
+      <div
+        className="hero-showcase relative mx-4 mb-4 h-[min(78vw,440px)] overflow-hidden rounded-[28px] sm:mx-6 lg:absolute lg:inset-y-0 lg:right-0 lg:m-0 lg:h-auto lg:w-[58%] lg:overflow-visible lg:rounded-none"
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="Cảnh học tập cùng Hocluc"
+      >
+        {slides.map((slide, index) => {
+          const isActive = index === active
+          const Art = slide.kind === 'rise' ? RiseArt : PhotoArt
+          return (
+            <figure
               key={slide.id}
-              type="button"
-              aria-label={`Xem hình ${index + 1}: ${slide.label}`}
-              aria-pressed={index === active}
-              aria-controls={slide.id}
-              onClick={() => selectSlide(index)}
+              className={`hero-slide absolute inset-0 m-0 transition-opacity duration-700 ease-out ${isActive ? 'opacity-100' : 'opacity-0'}`}
+              id={slide.id}
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${index + 1}/${slides.length}: ${slide.label}`}
+              aria-hidden={!isActive}
+              inert={!isActive}
             >
-              <span className="hero-topic-number" aria-hidden="true">
-                0{index + 1}
-              </span>
-              <span className="hero-topic-copy">
+              <Art slide={slide} active={isActive} first={index === 0} />
+              <figcaption className="sr-only">
                 <strong>{slide.label}</strong>
                 <span>{slide.caption}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="hero-pause"
-          onClick={togglePause}
-          aria-label={manuallyPaused ? 'Tiếp tục chuyển hình tự động' : 'Dừng chuyển hình tự động'}
-        >
-          {manuallyPaused ? 'Tiếp tục' : 'Tạm dừng'}
-        </button>
+              </figcaption>
+            </figure>
+          )
+        })}
       </div>
+
+      {/* Below the picture on small screens; over its bottom-right corner from lg. */}
+      <div className="relative z-20 mx-auto -mt-2 mb-8 flex w-fit items-center gap-0.5 rounded-full bg-white/85 p-1 shadow-[0_12px_30px_-14px_rgba(11,35,72,0.45)] backdrop-blur-md lg:absolute lg:bottom-8 lg:right-8 lg:m-0">
+          <button
+            type="button"
+            className="grid size-9 place-items-center rounded-full text-(--ink) transition-colors hover:bg-white"
+            aria-label="Hình trước"
+            onClick={() => step(-1)}
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
+          <div className="hero-slide-buttons flex items-center" aria-label="Chọn hình">
+            {slides.map((slide, index) => (
+              <button
+                key={slide.id}
+                type="button"
+                className="group grid h-9 place-items-center px-1"
+                aria-label={`Xem hình ${index + 1}: ${slide.label}`}
+                aria-pressed={index === active}
+                aria-controls={slide.id}
+                onClick={() => selectSlide(index)}
+              >
+                <span className="block h-2 w-2 rounded-full bg-[#0b2348]/25 transition-all duration-300 group-hover:bg-[#0b2348]/50 group-aria-pressed:w-6 group-aria-pressed:bg-(--blue)" />
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="grid size-9 place-items-center rounded-full text-(--ink) transition-colors hover:bg-white"
+            aria-label="Hình sau"
+            onClick={() => step(1)}
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+      </div>
+
+      <a
+        href="#khoa-hoc"
+        aria-label="Xem các khóa học bên dưới"
+        className="absolute bottom-5 left-1/2 z-20 hidden size-11 -translate-x-1/2 place-items-center rounded-full bg-white/85 text-(--ink)! shadow-[0_12px_30px_-14px_rgba(11,35,72,0.45)] ring-1 ring-(--line) backdrop-blur-md transition-colors hover:bg-white lg:grid [&_.ui-icon]:size-5!"
+      >
+        <span className="grid place-items-center motion-safe:animate-float-slow">
+          <Icon name="chevron-down" />
+        </span>
+      </a>
     </section>
   )
 }

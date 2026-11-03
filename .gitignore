@@ -46,3 +46,9 @@ docs/master-data/
 
 playwright-report/
 test-results/
+
+# More AI agent and skill tooling (local per developer)
+.claude/
+.qoder/
+.codex/
+.cursor/

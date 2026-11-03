@@ -4,6 +4,7 @@ import { useCurrentUser } from '../../hooks/useCurrentUser'
 import AccountMenu from './AccountMenu'
 import { accountLinks, requestLogout } from './account-links'
 import AppLink from './AppLink'
+import { CoursesNavGroup, CoursesNavMenu } from './CoursesNav'
 import Icon from './Icon'
 import LandingLogo from './LandingLogo'
 import AuthLink from './AuthLink'
@@ -41,8 +42,17 @@ function NavItem({ link, onLanding, onClick }: NavItemProps) {
   )
 }
 
+// The nav item that opens the course menu.
+const isCoursesLink = (link: LandingLink) => link.href === '#khoa-hoc'
+
+interface LandingHeaderProps {
+  onLanding?: boolean
+  /** On the home page: shows one tab of the course catalog instead of loading the page again. */
+  onSelectCourseTab?: (tab: string) => void
+}
+
 // Shared header of the landing page and the public course pages (catalog, detail, cart, orders).
-function LandingHeader({ onLanding = true }: { onLanding?: boolean }) {
+function LandingHeader({ onLanding = true, onSelectCourseTab }: LandingHeaderProps) {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -102,9 +112,17 @@ function LandingHeader({ onLanding = true }: { onLanding?: boolean }) {
             </AppLink>
           )}
           <div className="nav-links">
-            {landingNav.map((link) => (
-              <NavItem key={link.href} link={link} onLanding={onLanding} />
-            ))}
+            {landingNav.map((link) =>
+              isCoursesLink(link) ? (
+                <CoursesNavMenu
+                  key={link.href}
+                  trigger={<NavItem link={link} onLanding={onLanding} />}
+                  onSelect={onSelectCourseTab}
+                />
+              ) : (
+                <NavItem key={link.href} link={link} onLanding={onLanding} />
+              )
+            )}
           </div>
           <div className="nav-actions">
             {profile ? (
@@ -141,9 +159,13 @@ function LandingHeader({ onLanding = true }: { onLanding?: boolean }) {
           id="mobile-nav"
           aria-label="Điều hướng trên điện thoại"
         >
-          {landingNav.map((link) => (
-            <NavItem key={link.href} link={link} onLanding={onLanding} onClick={closeMenu} />
-          ))}
+          {landingNav.map((link) =>
+            isCoursesLink(link) ? (
+              <CoursesNavGroup key={link.href} onSelect={onSelectCourseTab} onNavigate={closeMenu} />
+            ) : (
+              <NavItem key={link.href} link={link} onLanding={onLanding} onClick={closeMenu} />
+            )
+          )}
           {profile ? (
             <div className="mobile-nav-account">
               {accountLinks(profile).map((link) => (

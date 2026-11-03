@@ -132,12 +132,14 @@ export function Select<T extends object>({ className, children, ...props }: Sele
     );
   }
 
+  // react-aria's Select also accepts value/onChange; passing them through as well would fire every change twice.
+  const { value, onChange, ...single } = props;
   return (
     <AriaSelect
-      {...(props as any)}
+      {...(single as any)}
       className={cn("group flex w-full flex-col gap-2", className)}
-      selectedKey={props.value as Key}
-      onSelectionChange={props.onChange}
+      selectedKey={value as Key}
+      onSelectionChange={onChange}
     >
       {children}
     </AriaSelect>

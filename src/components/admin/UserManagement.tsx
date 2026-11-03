@@ -28,6 +28,7 @@ import {
 import { grantedRoles } from '../../lib/role-home'
 import Button from '../console/button'
 import DataTable from '../console/data-table'
+import PageHeading from '../console/page-heading'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../console/filter-toolbar'
 import Status from '../console/status'
 import RoleBadge from '../console/role-badge'
@@ -59,11 +60,12 @@ function emptyPage(): UserListPage {
 interface UserManagementProps {
   /** Students are the platform's customers and personnel run it, so each has its own list. */
   audience: 'staff' | 'students'
+  title: string
   readOnly?: boolean
   canCreateUsers?: boolean
 }
 
-function UserManagement({ audience, readOnly = false, canCreateUsers = false }: UserManagementProps) {
+function UserManagement({ audience, title, readOnly = false, canCreateUsers = false }: UserManagementProps) {
   const students = audience === 'students'
   const noun = students ? 'học viên' : 'tài khoản'
   const [page, setPage] = useState(0)
@@ -319,110 +321,118 @@ function UserManagement({ audience, readOnly = false, canCreateUsers = false }: 
   )
 
   return (
-    <section
-      className="overflow-hidden rounded-xl border border-card-border bg-card-background"
-      aria-busy={loading}
-    >
-      <FilterToolbar>
-        <SearchInput
-          ariaLabel="Tìm theo tên hoặc email"
-          placeholder="Tìm theo tên hoặc email..."
-          value={query}
-          onChange={(value) => {
-            setQuery(value)
-            setPage(0)
-          }}
-        />
-        <FilterGroup>
-          {!students && (
-            <FilterSelect
-              ariaLabel="Lọc theo vai trò"
-              options={ROLE_FILTER_OPTIONS}
-              value={roleFilter}
-              onChange={(value) => {
-                setRoleFilter(value as UserRole | 'ALL')
-                setPage(0)
-              }}
-            />
-          )}
-          <FilterSelect
-            ariaLabel="Lọc theo trạng thái"
-            options={STATUS_FILTER_OPTIONS}
-            value={statusFilter}
-            onChange={(value) => {
-              setStatusFilter(value as UserStatus | 'ALL')
-              setPage(0)
-            }}
-          />
-          {canCreateUsers && !readOnly && (
-            <Button size="sm" onClick={() => setCreateUserOpen(true)}>
+    <>
+      <PageHeading
+        title={title}
+        readOnly={readOnly}
+        action={
+          canCreateUsers && !readOnly && (
+            <Button onClick={() => setCreateUserOpen(true)}>
               <Plus size={16} />
               {students ? 'Thêm học viên' : 'Thêm nhân sự'}
             </Button>
-          )}
-        </FilterGroup>
-      </FilterToolbar>
-
-      {(feedback || error) && (
-        <div className="flex flex-col gap-2 px-5 py-4">
-          {feedback && (
-            <div
-              className="flex items-center gap-2 rounded-lg bg-badge-success-bg px-3 py-2 text-sm text-badge-success-text"
-              role="status"
-            >
-              <CheckCircle2 size={16} />
-              {feedback}
-            </div>
-          )}
-
-          {error && (
-            <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-badge-danger-bg px-3 py-2 text-sm text-badge-danger-text"
-              role="alert"
-            >
-              <span className="flex items-center gap-2">
-                <AlertCircle size={16} />
-                {error}
-              </span>
-              <Button variant="danger" appearance="ghost" size="sm" onClick={() => setReloadKey((current) => current + 1)}>
-                Thử lại
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      <DataTable
-        columns={columns}
-        data={visibleUsers}
-        getRowKey={(user) => user.id}
-        onRowClick={(user) => void openUserDetail(user)}
-        emptyMessage={
-          loading ? (
-            <span className="inline-flex items-center gap-2">
-              <LoaderCircle size={16} className="animate-spin" />
-              Đang tải...
-            </span>
-          ) : (
-            `Không có ${noun} phù hợp.`
           )
         }
       />
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border px-5 py-3">
-        <span className="text-sm text-text-tertiary">{pageData.totalElements} {noun}</span>
-        {pageData.totalPages > 1 && (
-          <div className="ml-auto w-auto">
-            <Pagination
-              currentPage={page + 1}
-              totalPages={pageData.totalPages}
-              onPageChange={(next) => setPage(next - 1)}
-              sideLayout="icon"
-              variant="compact"
+      <section
+        className="overflow-hidden rounded-xl border border-card-border bg-card-background"
+        aria-busy={loading}
+      >
+        <FilterToolbar>
+          <SearchInput
+            ariaLabel="Tìm theo tên hoặc email"
+            placeholder="Tìm theo tên hoặc email..."
+            value={query}
+            onChange={(value) => {
+              setQuery(value)
+              setPage(0)
+            }}
+          />
+          <FilterGroup>
+            {!students && (
+              <FilterSelect
+                ariaLabel="Lọc theo vai trò"
+                options={ROLE_FILTER_OPTIONS}
+                value={roleFilter}
+                onChange={(value) => {
+                  setRoleFilter(value as UserRole | 'ALL')
+                  setPage(0)
+                }}
+              />
+            )}
+            <FilterSelect
+              ariaLabel="Lọc theo trạng thái"
+              options={STATUS_FILTER_OPTIONS}
+              value={statusFilter}
+              onChange={(value) => {
+                setStatusFilter(value as UserStatus | 'ALL')
+                setPage(0)
+              }}
             />
+          </FilterGroup>
+        </FilterToolbar>
+
+        {(feedback || error) && (
+          <div className="flex flex-col gap-2 px-5 py-4">
+            {feedback && (
+              <div
+                className="flex items-center gap-2 rounded-lg bg-badge-success-bg px-3 py-2 text-sm text-badge-success-text"
+                role="status"
+              >
+                <CheckCircle2 size={16} />
+                {feedback}
+              </div>
+            )}
+
+            {error && (
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-badge-danger-bg px-3 py-2 text-sm text-badge-danger-text"
+                role="alert"
+              >
+                <span className="flex items-center gap-2">
+                  <AlertCircle size={16} />
+                  {error}
+                </span>
+                <Button variant="danger" appearance="ghost" size="sm" onClick={() => setReloadKey((current) => current + 1)}>
+                  Thử lại
+                </Button>
+              </div>
+            )}
           </div>
         )}
-      </div>
+
+        <DataTable
+          columns={columns}
+          data={visibleUsers}
+          getRowKey={(user) => user.id}
+          onRowClick={(user) => void openUserDetail(user)}
+          emptyMessage={
+            loading ? (
+              <span className="inline-flex items-center gap-2">
+                <LoaderCircle size={16} className="animate-spin" />
+                Đang tải...
+              </span>
+            ) : (
+              `Không có ${noun} phù hợp.`
+            )
+          }
+        />
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border px-5 py-3">
+          <span className="text-sm text-text-tertiary">{pageData.totalElements} {noun}</span>
+          {pageData.totalPages > 1 && (
+            <div className="ml-auto w-auto">
+              <Pagination
+                currentPage={page + 1}
+                totalPages={pageData.totalPages}
+                onPageChange={(next) => setPage(next - 1)}
+                sideLayout="icon"
+                variant="compact"
+              />
+            </div>
+          )}
+        </div>
+      </section>
 
       <UserCreateDialog
         open={createUserOpen}
@@ -466,7 +476,7 @@ function UserManagement({ audience, readOnly = false, canCreateUsers = false }: 
           onConfirm={() => void handleDeleteUser()}
         />
       )}
-    </section>
+    </>
   )
 }
 

@@ -12,20 +12,22 @@ import { crudError, unknownMutation } from './crud-errors'
 
 interface Props {
   category: Category | null
+  /** The parent a new subject starts under, when it is added from that parent's card. */
+  initialParentId?: string
   categories: Category[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function CategoryEditorDialog({ category, categories, onClose, onSaved }: Props) {
-  const [parentId, setParentId] = useState(category?.parentId ?? 'NONE')
+export default function CategoryEditorDialog({ category, initialParentId, categories, onClose, onSaved }: Props) {
+  const [parentId, setParentId] = useState(category?.parentId ?? initialParentId ?? 'NONE')
   const [active, setActive] = useState(category?.active ?? true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [uncertain, setUncertain] = useState(false)
   // Optional blocks stay folded unless the category already uses them.
-  const hasOptional = Boolean(category && (category.parentId || category.imageUrl || category.description))
+  const hasOptional = Boolean(initialParentId || (category && (category.parentId || category.imageUrl || category.description)))
   const excluded = new Set(category ? [category.id] : [])
   // Exclude descendants, not just the current category. BE still owns cycle enforcement.
   for (let i = 0; i < categories.length; i++) {

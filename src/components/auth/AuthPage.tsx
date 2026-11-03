@@ -3,6 +3,7 @@ import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, NotebookPen } from '../conso
 import BrandAuthShell from './BrandAuthShell'
 import DevQuickLogin from './DevQuickLogin'
 import GoogleSignInButton from './GoogleSignInButton'
+import { swapAuthForm } from './swap-auth-form'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getErrorMessage } from '../../lib/errors'
 import { pendingAuthEmail, setPendingAuthEmail } from '../../lib/auth-email'
@@ -77,6 +78,7 @@ function AuthPage({
   const recoveryIntervals = useRef([])
   const verificationTimers = useRef([])
   const verificationIntervals = useRef([])
+  const formRef = useRef<HTMLFormElement>(null)
   const isSignup = mode === 'signup'
   const isEmailVerification = mode === 'verify-email'
   const isRecovery = mode === 'forgot-password' || mode === 'reset-password'
@@ -168,6 +170,19 @@ function AuthPage({
     setLoginErrors({})
     setMode(nextMode)
     onModeChange?.(nextMode)
+  }
+  // Login and signup swap inside the open dialog, then the new form's first field takes focus.
+  const toggleSignup = () => {
+    const nextMode = isSignup ? 'login' : 'signup'
+    swapAuthForm(
+      isSignup ? 'back' : 'forward',
+      () => switchMode(nextMode),
+      () => {
+        const form = formRef.current
+        form?.closest('.brand-auth-card')?.scrollTo({ top: 0 })
+        form?.querySelector('input')?.focus({ preventScroll: true })
+      }
+    )
   }
   const openRecovery = () => {
     resetRecovery()
@@ -779,24 +794,26 @@ function AuthPage({
   return (
     <BrandAuthShell
       onBack={onBack}
-      className={`${isEmailVerification ? 'is-verification' : ''} ${isRecovery ? 'is-recovery' : ''}`}
+      className={`${isSignup ? 'is-signup' : ''} ${isEmailVerification ? 'is-verification' : ''} ${isRecovery ? 'is-recovery' : ''}`}
     >
       {isEmailVerification ? (
         renderEmailVerification()
       ) : isRecovery ? (
         renderRecoveryStep()
       ) : (
-        <>
+        <div className="hl-auth-swap">
           <div className="hl-auth-heading">
-            <h1>{isSignup ? 'Tạo tài khoản' : 'Chào mừng trở lại'}</h1>
-            <p>
-              {isSignup
-                ? 'Bắt đầu hành trình học tập cùng Học Lực.'
-                : 'Đăng nhập để tiếp tục hành trình học tập của bạn.'}
-            </p>
+            <h1>{isSignup ? 'Tạo tài khoản' : 'Đăng nhập'}</h1>
           </div>
+          {/* Signup pairs its fields two per row on wider screens so the whole form fits without scrolling. */}
           <form
+            ref={formRef}
             noValidate
+            className={
+              isSignup
+                ? 'grid grid-cols-2 gap-x-4 max-[560px]:grid-cols-1 [&>:not(.hl-auth-label)]:col-span-full'
+                : undefined
+            }
             onSubmit={(event) => {
               event.preventDefault()
               if (isSignup) void submitRegister()
@@ -805,40 +822,40 @@ function AuthPage({
             aria-busy={isSignup ? registerLoading : loginLoading}
           >
             {isSignup && (
-              <div className="hl-auth-name-row">
-                <label className="hl-auth-label">
-                  Họ
-                  <span className={`hl-auth-input ${registerErrors.lastName ? 'has-error' : ''}`}>
-                    <NotebookPen size={19} />
-                    <input
-                      type="text"
-                      placeholder="Nguyễn"
-                      value={signupForm.lastName}
-                      onChange={(event) => updateSignup('lastName', event.target.value)}
-                      autoComplete="family-name"
-                    />
-                  </span>
-                  {registerErrors.lastName && (
-                    <small className="hl-auth-error">{registerErrors.lastName}</small>
-                  )}
-                </label>
-                <label className="hl-auth-label">
-                  Tên
-                  <span className={`hl-auth-input ${registerErrors.firstName ? 'has-error' : ''}`}>
-                    <NotebookPen size={19} />
-                    <input
-                      type="text"
-                      placeholder="An"
-                      value={signupForm.firstName}
-                      onChange={(event) => updateSignup('firstName', event.target.value)}
-                      autoComplete="given-name"
-                    />
-                  </span>
-                  {registerErrors.firstName && (
-                    <small className="hl-auth-error">{registerErrors.firstName}</small>
-                  )}
-                </label>
-              </div>
+              <label className="hl-auth-label">
+                Họ
+                <span className={`hl-auth-input ${registerErrors.lastName ? 'has-error' : ''}`}>
+                  <NotebookPen size={19} />
+                  <input
+                    type="text"
+                    placeholder="Nguyễn"
+                    value={signupForm.lastName}
+                    onChange={(event) => updateSignup('lastName', event.target.value)}
+                    autoComplete="family-name"
+                  />
+                </span>
+                {registerErrors.lastName && (
+                  <small className="hl-auth-error">{registerErrors.lastName}</small>
+                )}
+              </label>
+            )}
+            {isSignup && (
+              <label className="hl-auth-label">
+                Tên
+                <span className={`hl-auth-input ${registerErrors.firstName ? 'has-error' : ''}`}>
+                  <NotebookPen size={19} />
+                  <input
+                    type="text"
+                    placeholder="An"
+                    value={signupForm.firstName}
+                    onChange={(event) => updateSignup('firstName', event.target.value)}
+                    autoComplete="given-name"
+                  />
+                </span>
+                {registerErrors.firstName && (
+                  <small className="hl-auth-error">{registerErrors.firstName}</small>
+                )}
+              </label>
             )}
             <label className="hl-auth-label">
               Email
@@ -926,7 +943,9 @@ function AuthPage({
                   aria-describedby={
                     (isSignup ? registerErrors.password : loginErrors.password)
                       ? 'learner-password-error'
-                      : undefined
+                      : isSignup && passwordHelper.text
+                        ? 'learner-password-note'
+                        : undefined
                   }
                   value={authPassword}
                   onChange={(event) => {
@@ -963,13 +982,6 @@ function AuthPage({
                   {loginErrors.password}
                 </small>
               )}
-              {isSignup && !registerErrors.password && passwordHelper.text && (
-                <small
-                  className={`hl-auth-password-note ${passwordHelper.isError ? 'is-error' : ''}`}
-                >
-                  {passwordHelper.text}
-                </small>
-              )}
             </label>
             {isSignup && (
               <label className="hl-auth-label">
@@ -998,6 +1010,14 @@ function AuthPage({
                   <small className="hl-auth-error">{registerErrors.confirmPassword}</small>
                 )}
               </label>
+            )}
+            {isSignup && !registerErrors.password && passwordHelper.text && (
+              <small
+                id="learner-password-note"
+                className={`hl-auth-password-note mt-2! ${passwordHelper.isError ? 'is-error' : ''}`}
+              >
+                {passwordHelper.text}
+              </small>
             )}
             {!isSignup && loginError && (
               <small className="hl-auth-error" role="alert">
@@ -1043,15 +1063,10 @@ function AuthPage({
           />
           <p className="hl-auth-switch">
             {isSignup ? 'Bạn đã có tài khoản?' : 'Chưa có tài khoản?'}{' '}
-            <button type="button" onClick={() => switchMode(isSignup ? 'login' : 'signup')}>
+            <button type="button" onClick={toggleSignup}>
               {isSignup ? 'Đăng nhập' : 'Đăng ký'}
             </button>
           </p>
-          {!isSignup && (
-            <p className="hl-auth-switch hl-auth-staff">
-              Dành cho nhân sự: <a href="/console/login">Đăng nhập quản lý</a>
-            </p>
-          )}
           {import.meta.env.DEV && !isSignup && (
             <DevQuickLogin
               accounts={DEV_LEARNERS}
@@ -1063,7 +1078,7 @@ function AuthPage({
               }}
             />
           )}
-        </>
+        </div>
       )}
     </BrandAuthShell>
   )

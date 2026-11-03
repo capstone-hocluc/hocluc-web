@@ -1,8 +1,8 @@
 import { cn } from '../../../lib/cn'
 
-const EXAM_EDITOR_STEPS = ['Thông tin và quy định', 'Đề PDF', 'Các phần và câu hỏi'] as const
+const EXAM_EDITOR_STEPS = ['Thông tin và quy định', 'Các phần và câu hỏi'] as const
 
-/** Where the editor is in its three steps, as a row for the workspace's top bar; a step before the current one is marked done. */
+/** Where the editor is in its two steps, as a row for the workspace's top bar; a step before the current one is marked done. */
 export default function ExamEditorSteps({ current, onSelect, disabled }: {
   current: number
   onSelect: (step: number) => void

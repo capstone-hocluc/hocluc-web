@@ -1,21 +1,10 @@
 import { accessTokenRole, ApiError, request, type ApiResponse } from '../lib/api'
-import type { ExtractionJob } from './aiExtractionService'
 import { can, ROLE_PERMISSIONS } from '../lib/permissions'
 import type { UserRole } from './userService'
 
 export type TeacherQuizType = 'PLACEMENT' | 'QUICK' | 'LESSON' | 'CHAPTER' | 'EXAM'
 export type TeacherQuizStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 export type TeacherQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'LONG_ANSWER'
-
-export interface TeacherExamFile {
-  fileName: string
-  contentType: string | null
-  size: number | null
-  pageCount: number
-  uploadedAt: string | null
-  url: string | null
-  expiresAt: string | null
-}
 
 export interface TeacherQuizRecord {
   id: string
@@ -36,7 +25,6 @@ export interface TeacherQuizRecord {
   availableFrom: string | null
   availableUntil: string | null
   practiceAllowed: boolean
-  examFile: TeacherExamFile | null
   totalMarks: number | null
   marksSum: number | null
   questionCount: number
@@ -112,7 +100,6 @@ export interface TeacherQuizEditor {
   }>
   questions: TeacherQuizQuestion[]
   pages: Array<{ pageNumber: number; url: string; width: number | null; height: number | null }>
-  latestJob: ExtractionJob | null
 }
 
 export interface CreateTeacherQuizRequest {
@@ -256,102 +243,10 @@ export interface TeacherQuizImportResult {
   totalQuestions: number
 }
 
-export interface TeacherQuizExtractionJob {
-  id: string
-  quizId: string
-  kind: 'EXAM_FILE' | 'GENERATE'
-  status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED' | 'APPLIED'
-  progress: string | null
-  error: string | null
-  questionCount: number | null
-  needsReviewCount: number | null
-  missingAnswerCount: number | null
-  warnings: string[] | null
-  result: {
-    sections: Array<{ key: string; title: string }>
-    groups: Array<{ key: string; instruction: string | null; passage: string | null; imageUrl: string | null }>
-    questions: Array<{ number: number; text: string; options: Array<{ label: string; text: string; correct: boolean }>; explanation: string | null; imageUrl: string | null; reviewNote: string | null; sourcePage: number | null }>
-    warnings: string[]
-    missingQuestions: number[]
-  } | null
-}
-
-export interface TeacherQuizWithFileResult {
-  quiz: TeacherQuizRecord
-  imported: TeacherQuizImportResult | null
-  aiJob: TeacherQuizExtractionJob | null
-  warnings: string[]
-}
-
-export class AmbiguousQuizFileCreateError extends Error {
-  constructor(public readonly quizId: string | null = null) {
-    super('Chưa xác nhận được kết quả tạo đề. Không gửi lại file; hãy kiểm tra danh sách đề trước khi tạo mới.')
-    this.name = 'AmbiguousQuizFileCreateError'
-  }
-}
-
 function validImportResult(result: TeacherQuizImportResult) {
   return result && [result.sectionsAdded, result.groupsAdded, result.questionsAdded,
     result.needsReview, result.missingAnswers, result.totalQuestions].every(value => Number.isInteger(value) && value >= 0) &&
     (result.warnings === null || (Array.isArray(result.warnings) && result.warnings.every(warning => typeof warning === 'string')))
-}
-
-export async function createTeacherQuizWithFile(payload: CreateTeacherQuizRequest, file: File): Promise<TeacherQuizWithFileResult> {
-  assertQuizWriteAccess()
-  if (!/\.(pdf|docx|txt|md)$/i.test(file.name) || !file.size) throw new ApiError('Chọn file PDF, DOCX, TXT hoặc MD có nội dung.', 400)
-  const body = new FormData()
-  for (const [key, value] of Object.entries(payload)) {
-    if (value !== undefined && value !== null) body.append(key, String(value))
-  }
-  body.append('file', file)
-  body.append('read', 'true')
-  let result: TeacherQuizWithFileResult
-  try {
-    result = await requireData(`${quizPath()}/with-file`, 'Không thể xác nhận kết quả tạo đề.', { method: 'POST', body, timeoutMs: 120_000 })
-  } catch (error) {
-    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
-    throw new AmbiguousQuizFileCreateError()
-  }
-  const quizId = typeof result.quiz?.id === 'string' && result.quiz.id.trim() ? result.quiz.id : null
-  if (!quizId || result.quiz.type !== payload.type || result.quiz.status !== 'DRAFT' ||
-    !Array.isArray(result.warnings) || result.warnings.some(item => typeof item !== 'string') ||
-    (result.imported !== null && !validImportResult(result.imported)) ||
-    (result.aiJob !== null && (!result.aiJob?.id || result.aiJob.quizId !== quizId))) {
-    throw new AmbiguousQuizFileCreateError(quizId)
-  }
-  return result
-}
-
-export async function getTeacherQuizExtractionJob(quizId: string, jobId: string): Promise<TeacherQuizExtractionJob> {
-  const job = await requireData<TeacherQuizExtractionJob>(`${quizPath(quizId)}/ai/jobs/${encodeURIComponent(jobId)}`, 'Không thể tải tiến trình đọc PDF.')
-  if (job.id !== jobId || job.quizId !== quizId || !['PENDING', 'RUNNING', 'DONE', 'FAILED', 'APPLIED'].includes(job.status) ||
-    (job.result && (!Array.isArray(job.result.sections) || !Array.isArray(job.result.groups) || !Array.isArray(job.result.questions) ||
-      job.result.questions.some(q => typeof q.text !== 'string' || !Array.isArray(q.options) || q.options.some(o => typeof o.text !== 'string' || typeof o.correct !== 'boolean'))))) {
-    throw new Error('Tiến trình đọc đề trả dữ liệu không hợp lệ.')
-  }
-  return job
-}
-
-export async function applyTeacherQuizExtraction(quizId: string, jobId: string): Promise<TeacherQuizImportResult> {
-  assertQuizWriteAccess()
-  const [{ quiz }, job] = await Promise.all([getTeacherQuiz(quizId), getTeacherQuizExtractionJob(quizId, jobId)])
-  if (quiz.status !== 'DRAFT' || quiz.locked || quiz.attemptCount > 0 || job.status !== 'DONE') {
-    throw new ApiError('Chỉ áp dụng kết quả chưa dùng vào bản nháp chưa có lượt làm. Hãy tải lại để kiểm tra.', 409)
-  }
-  if (!job.result?.questions.length || job.result.questions.some(q => q.options.length < 2 || q.options.filter(o => o.correct).length > 1)) {
-    throw new ApiError('Kết quả có câu hỏi ngoài dạng trắc nghiệm một đáp án. Chưa thể áp dụng trong luồng này.', 400)
-  }
-  try {
-    // Preserve existing questions; never rely on the BE's REPLACE default.
-    const result = await requireData<TeacherQuizImportResult>(`${quizPath(quizId)}/ai/jobs/${encodeURIComponent(jobId)}/apply`, 'Không thể xác nhận kết quả áp dụng.', {
-      method: 'POST', body: { mode: quiz.questionCount > 0 ? 'APPEND' : 'REPLACE' }, timeoutMs: 120_000,
-    })
-    if (!validImportResult(result)) throw new AmbiguousQuizImportError()
-    return result
-  } catch (error) {
-    if (isDefiniteTeacherQuestionWriteRejection(error)) throw error
-    throw new AmbiguousQuizImportError()
-  }
 }
 
 export class AmbiguousQuizImportError extends Error {

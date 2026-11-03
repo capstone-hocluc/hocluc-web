@@ -20,6 +20,8 @@ export interface CourseAdmin {
   status: CourseStatus
   paid: boolean
   price: number | null
+  /** Study time the author states, in minutes. */
+  estimatedDurationMinutes?: number | null
   track: string | null
   startDate: string | null
   endDate: string | null
@@ -52,6 +54,7 @@ export interface CourseAdminPhase {
 }
 /** A course that comes with this one (a gift). */
 export interface CourseAdminSection {
+  phaseId: string | null
   id: string
   sectionCourseId: string
   title: string
@@ -93,6 +96,7 @@ export type SaveCourseRequest = Pick<
   | 'categoryId'
   | 'paid'
   | 'price'
+  | 'estimatedDurationMinutes'
   | 'track'
   | 'startDate'
   | 'endDate'
@@ -169,4 +173,12 @@ export async function mutateCourse(
   return requireData(
     await request<CourseAdmin>(`${path(id)}/${resource}`, { auth: true, method, body })
   )
+}
+
+export function attachSection(courseId: string, sectionCourseId: string, phaseId: string | null = null): Promise<CourseAdmin> {
+  return mutateCourse(courseId, 'sections', 'POST', { sectionCourseId, phaseId })
+}
+
+export function assignSectionPhase(courseId: string, linkId: string, phaseId: string | null): Promise<CourseAdmin> {
+  return mutateCourse(courseId, `sections/${encodeURIComponent(linkId)}/phase`, 'PUT', { phaseId })
 }

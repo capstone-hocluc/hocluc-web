@@ -19,6 +19,7 @@ import SystemInfo from '../console/detail/system-info'
 import { getInitials } from '../console/profile-utils'
 import { Avatar, AvatarFallback, AvatarImage } from '../tailgrids/core/avatar'
 import { Checkbox } from '../tailgrids/core/checkbox'
+import SubjectScopeEditor from './subject-scope-editor'
 import {
   ROLE_LABELS,
   STATUS_LABELS,
@@ -42,7 +43,7 @@ interface UserDetailDialogProps {
 
 const LISTED_COURSES = 3
 
-type UserTab = 'overview' | 'learning' | 'profile' | 'roles' | 'system'
+type UserTab = 'overview' | 'learning' | 'profile' | 'roles' | 'subjects' | 'system'
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' }
 const TRACK_LABELS: Record<string, string> = {
@@ -94,6 +95,8 @@ function UserDetail({
   const student = user?.studentProfile
   const isStudent = user?.role === 'STUDENT'
   const showRoleTab = canGrantRoles && !!user && !isStudent
+  // Subject permissions are granted by administrators and managers, to staff-side accounts only.
+  const showSubjectTab = !!user && !isStudent && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER')
   const [tab, setTab] = useState<UserTab>('overview')
   const busy = grantingRoles || savingProfile
   const [editing, setEditing] = useState(false)
@@ -272,6 +275,7 @@ function UserDetail({
                   {isStudent && <ConsoleTabsTrigger value="learning">Học tập</ConsoleTabsTrigger>}
                   {isStudent && <ConsoleTabsTrigger value="profile">Hồ sơ</ConsoleTabsTrigger>}
                   {showRoleTab && <ConsoleTabsTrigger value="roles">Vai trò</ConsoleTabsTrigger>}
+                  {showSubjectTab && <ConsoleTabsTrigger value="subjects">Quyền theo môn</ConsoleTabsTrigger>}
                   <ConsoleTabsTrigger value="system">Hệ thống</ConsoleTabsTrigger>
                 </ConsoleTabsList>
 
@@ -326,6 +330,12 @@ function UserDetail({
                   {showRoleTab && (
                     <ConsoleTabsContent value="roles">
                       <RoleEditor key={`${user.id}:${grantedRoles.join(',')}`} user={user} saving={grantingRoles} onSave={onSaveRoles} />
+                    </ConsoleTabsContent>
+                  )}
+
+                  {showSubjectTab && (
+                    <ConsoleTabsContent value="subjects">
+                      <SubjectScopeEditor key={`${user.id}:${grantedRoles.join(',')}`} userId={user.id} roles={grantedRoles} />
                     </ConsoleTabsContent>
                   )}
 

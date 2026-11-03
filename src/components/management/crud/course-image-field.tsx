@@ -3,6 +3,7 @@ import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
 import { fieldControlClass } from '../../console/form-field'
 import { imageFileProblem, uploadPublicImage } from '../../../services/fileService'
+import { courseImageSrc } from './course-image-src'
 
 interface Props {
   /** Form field the chosen address is submitted under. */
@@ -54,7 +55,7 @@ export default function CourseImageField({
     }
   }
 
-  const previewable = /^https?:\/\//i.test(value.trim())
+  const previewSrc = courseImageSrc(value)
 
   return (
     <div
@@ -103,14 +104,14 @@ export default function CourseImageField({
           {error}
         </p>
       )}
-      {previewable &&
+      {previewSrc &&
         (previewFailed ? (
           <p className="text-xs font-normal text-text-tertiary">
             Chưa xem trước được ảnh này. Kiểm tra lại địa chỉ.
           </p>
         ) : (
           <img
-            src={value.trim()}
+            src={previewSrc}
             alt="Ảnh khóa học đã chọn"
             onError={() => setPreviewFailed(true)}
             className="aspect-video w-full max-w-64 rounded-lg border border-card-border object-cover"

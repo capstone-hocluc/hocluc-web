@@ -1,4 +1,4 @@
-import type { CourseChapter, CourseDetail, CoursePhase, GiftCourse } from '../../services/courseService'
+import type { CourseChapter, CourseDetail } from '../../services/courseService'
 import { parseCourseDate } from '../landing-page/landing-course-format'
 
 export interface DescriptionBlock {
@@ -49,43 +49,20 @@ export function shortCourseName(title: string) {
   return title.split(' · ')[1]?.split(' – ')[0]?.trim() || title
 }
 
-const GIFT_LIST = /^Khóa tặng kèm:\s*/
-
-export interface RoadmapStage {
-  id: string
-  name: string
-  note: string | null
-  gifts: GiftCourse[]
-}
-
-// Phases name their gift courses in the description ("Khóa tặng kèm: A · B."), since the API
-// does not link a gift to a phase. The gifts are grouped that way only when every listed name
-// is a real gift and no gift lands in two phases; gifts no phase names run through the whole
-// roadmap. Anything else falls back to the plain list (null).
-export function roadmapStages(phases: CoursePhase[], gifts: GiftCourse[]): RoadmapStage[] | null {
-  const ordered = [...phases].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
-  if (ordered.length === 0 || gifts.length === 0) return null
-  const byTitle = new Map(gifts.map((gift) => [gift.title, gift]))
-  const used = new Set<string>()
-  const stages: RoadmapStage[] = []
-  for (const phase of ordered) {
-    const text = (phase.description ?? '').trim()
-    const listed = GIFT_LIST.test(text)
-      ? text.replace(GIFT_LIST, '').replace(/\.$/, '').split(' · ').map((name) => name.trim())
-      : []
-    const stageGifts: GiftCourse[] = []
-    for (const name of listed) {
-      const gift = byTitle.get(name)
-      if (!gift || used.has(gift.courseId)) return null
-      used.add(gift.courseId)
-      stageGifts.push(gift)
-    }
-    stages.push({ id: phase.id, name: phase.name, note: listed.length ? null : text || null, gifts: stageGifts })
+// An included course's description opens with a fact line such as
+// "Khoá cơ bản · 20 giờ · Phần 1A Tiếng Việt (câu 1–30)". The hours become their own figure and
+// the rest of that line is the course's one-line summary.
+export function includedCourseSummary(description?: string) {
+  const first = (description ?? '').split('\n').map((line) => line.trim()).find(Boolean) ?? ''
+  if (/^[•\-*]/.test(first)) return { summary: null, hours: null }
+  let hours: number | null = null
+  const parts: string[] = []
+  for (const part of first.split(' · ')) {
+    const match = part.match(/^(\d+(?:[.,]\d+)?)\s*giờ$/)
+    if (match) hours = Number(match[1].replace(',', '.'))
+    else parts.push(part)
   }
-  if (used.size === 0) return null
-  const rest = gifts.filter((gift) => !used.has(gift.courseId))
-  if (rest.length) stages.push({ id: 'throughout', name: 'Xuyên suốt lộ trình', note: null, gifts: rest })
-  return stages
+  return { summary: parts.join(' · ') || null, hours }
 }
 
 /** The chapters a course teaches itself (a SECTION course, or a MAIN course with own content). */

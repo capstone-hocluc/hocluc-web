@@ -10,7 +10,7 @@ Students preparing for the V-ACT competency assessment who need a clear place to
 
 ## Product Purpose
 
-Học Lực helps learners prepare for V-ACT through structured subject content, guided practice, and approachable study tools. Success means learners can find a useful next step and understand what to practice.
+Hocluc helps learners prepare for V-ACT through structured subject content, guided practice, and approachable study tools. Success means learners can find a useful next step and understand what to practice.
 
 ## Brand Personality
 
@@ -27,7 +27,8 @@ Friendly, encouraging, and clear. The experience should make serious preparation
 - Show a clear next step for learners.
 - Connect each subject with practical ways to learn and practice.
 - Make progress feel approachable and achievable.
-- Use student illustrations to support learning, not compete with it. Keep the owl only on the Math & Quantitative Reasoning card in “Bạn muốn bắt đầu từ đâu?”.
+- Lead with the courses: the home page opens on the catalog by subject, explanations come after it.
+- Use photos of Vietnamese students and the calculator app's own screens to support learning, not compete with it; no mascots or generic stock scenes.
 
 ## Accessibility & Inclusion
 

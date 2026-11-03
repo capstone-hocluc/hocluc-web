@@ -1,3 +1,4 @@
+import DateField from '../../console/date-field'
 import { useState, type FormEvent } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
@@ -21,6 +22,8 @@ interface Props {
 /** A new year starts with Đợt 1 and Đợt 2 when their dates are filled in; both stay "dự kiến" until confirmed. */
 export default function ExamYearEditorDialog({ year, onClose, onSaved }: Props) {
   const [examYear, setExamYear] = useState(String(year?.examYear ?? new Date().getFullYear() + 1))
+  const [round1Date, setRound1Date] = useState('')
+  const [round2Date, setRound2Date] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [fields, setFields] = useState<Record<string, string>>({})
@@ -122,12 +125,8 @@ export default function ExamYearEditorDialog({ year, onClose, onSaved }: Props) 
         </div>
         {!year && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Ngày thi Đợt 1" hint="Có thể để trống và thêm sau.">
-              <input name="round1Date" type="date" className={fieldControlClass} />
-            </Field>
-            <Field label="Ngày thi Đợt 2" hint="Có thể để trống và thêm sau.">
-              <input name="round2Date" type="date" className={fieldControlClass} />
-            </Field>
+            <DateField label="Ngày thi Đợt 1" hint="Có thể để trống và thêm sau." name="round1Date" value={round1Date} onChange={setRound1Date} disabled={busy} />
+            <DateField label="Ngày thi Đợt 2" hint="Có thể để trống và thêm sau." name="round2Date" value={round2Date} onChange={setRound2Date} disabled={busy} />
           </div>
         )}
         <Field label="Ghi chú">
