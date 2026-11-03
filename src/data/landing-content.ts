@@ -141,7 +141,7 @@ export const landingHero: LandingHero = {
   titleLines: ['Luyện thi V-ACT', 'theo từng môn.'],
   description: 'Chọn lộ trình trọn gói cho cả bài thi, hoặc học riêng môn bạn còn yếu.',
   coursesCta: 'Xem khóa học',
-  assessmentCta: 'Làm đánh giá miễn phí',
+  assessmentCta: 'Làm bài đánh giá miễn phí',
   slides: [
     {
       id: 'hero-slide-0',
@@ -149,7 +149,7 @@ export const landingHero: LandingHero = {
       src: `${landingAssets}/hero-students-cutout.webp`,
       alt: 'Ba học sinh lớp 12, hai nam sinh áo sơ mi trắng và một nữ sinh áo dài trắng, tươi cười ôm vở và máy tính bảng',
       label: 'Cùng nhau vươn lên',
-      caption: 'Chọn môn còn yếu, học đúng phần cần học.',
+      caption: 'Học cùng bạn bè, tiến bộ mỗi ngày.',
     },
     {
       id: 'hero-slide-1',
@@ -172,7 +172,7 @@ export const landingHero: LandingHero = {
       kind: 'photo',
       src: `${landingAssets}/hero-mock-exam-v4.webp`,
       alt: 'Nữ sinh mặc áo dài trắng tập trung làm bài thi thử trên giấy, phía sau là các dãy bàn trong phòng học sáng sủa',
-      label: 'Luyện đề, vững tâm thế',
+      label: 'Luyện đề, vững tâm lý',
       caption: 'Làm quen với nhịp thi trên giấy.',
     },
   ],
@@ -457,7 +457,7 @@ export const journey = {
     },
     {
       title: 'Hiểu điểm xuất phát',
-      text: 'Bài đánh giá miễn phí bao quát các nhóm kiến thức V-ACT.',
+      text: 'Làm bài đánh giá miễn phí để biết bạn đang ở đâu trong từng phần thi.',
     },
     {
       title: 'Chọn phần cần học',
@@ -465,7 +465,7 @@ export const journey = {
     },
     {
       title: 'Học và luyện mỗi ngày',
-      text: 'Theo dõi bài học, luyện tập và xem lại những phần chưa vững.',
+      text: 'Học bài, làm bài luyện và ôn lại những phần chưa vững.',
     },
   ],
   avatars: {
@@ -484,10 +484,10 @@ const appScreens = `${landingAssets}/app`
 // not a real student's.
 export const studentApp = {
   badge: 'Ứng dụng Android',
-  title: 'Học mọi lúc, mọi nơi',
+  title: 'Mở điện thoại là học tiếp',
   text: 'Ứng dụng Hocluc đưa khóa học, lịch học và công cụ giải Toán lên điện thoại của bạn.',
   facts: [
-    'Mở ra là học tiếp đúng bài đang dở',
+    'Tiếp tục đúng bài đang học dở',
     'Lịch học, bài kiểm tra và thông báo ở cùng một nơi',
     'Máy tính CW-880 dùng được cả khi không có mạng',
   ],

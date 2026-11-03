@@ -49,7 +49,7 @@ export const SUBJECTS: SubjectStyle[] = [
   {
     key: 'logic',
     label: 'Logic & Số liệu',
-    short: 'Logic',
+    short: 'Logic & Số liệu',
     part: 'Phần 3 của đề V-ACT · 12 câu',
     icon: 'chart-column-increasing',
     tone: '#7652bf',
@@ -58,7 +58,7 @@ export const SUBJECTS: SubjectStyle[] = [
   {
     key: 'khoa-hoc',
     label: 'Suy luận khoa học',
-    short: 'Khoa học',
+    short: 'Suy luận khoa học',
     part: 'Phần 3 của đề V-ACT · 18 câu',
     icon: 'flask-conical',
     tone: '#27735b',
