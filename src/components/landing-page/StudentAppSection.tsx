@@ -1,43 +1,92 @@
+import type { CSSProperties } from 'react'
 import { studentApp, type AppScreen } from '../../data/landing-content'
 import Icon from './Icon'
 import { tiltClass, usePointerTilt } from './use-pointer-tilt'
 
-// Side buttons of a phone: [side, top %, height %].
-const PHONE_BUTTONS = [
-  ['left', 17, 5],
-  ['left', 25, 9],
-  ['left', 36, 9],
-  ['right', 28, 13],
+// Keys on the right edge, as on most Android phones: [top %, height %] of the power key and the
+// volume rocker below it.
+const SIDE_KEYS = [
+  [19, 7],
+  [29, 14],
 ] as const
 
-// A phone drawn in Tailwind around one screen. The screens are 2x renders of the app's own design
-// (390 × 844), so the frame only adds the body, the speaker slot and the side buttons.
+// Graphite metal frame: light catches the top-left and bottom-right corners and a fine line runs
+// along the edge. The drop shadows lift the phone off the page.
+const frameStyle: CSSProperties = {
+  background: 'linear-gradient(145deg, #a9afba 0%, #4b505a 13%, #25282f 40%, #1c1e23 62%, #3f444e 87%, #9da3ae 100%)',
+  boxShadow: [
+    'inset 0 0 0 0.22cqw rgba(255,255,255,0.14)',
+    'inset 0 0.3cqw 0.45cqw rgba(255,255,255,0.2)',
+    'inset 0 -0.3cqw 0.45cqw rgba(0,0,0,0.45)',
+    '0 2cqw 4cqw -1cqw rgba(11,35,72,0.3)',
+    '0 16cqw 24cqw -14cqw rgba(11,35,72,0.5)',
+  ].join(', '),
+}
+
+const sideKeyStyle: CSSProperties = {
+  background: 'linear-gradient(90deg, #2b2e35, #9197a2 55%, #4c515b)',
+}
+
+// Front camera: a dark lens with a faint blue glint, sitting in the app's status-bar band.
+const cameraStyle: CSSProperties = {
+  background: 'radial-gradient(circle at 36% 34%, #52617f 0 9%, #121620 26%, #030405 64%)',
+  boxShadow: '0 0 0 0.3cqw rgba(0,0,0,0.5), inset 0 0 0.25cqw rgba(255,255,255,0.12)',
+}
+
+// Glass over the screen: a soft diagonal sheen and a dark hairline where the glass meets the bezel.
+const glassStyle: CSSProperties = {
+  background:
+    'linear-gradient(115deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0) 46%), linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0) 14%)',
+  boxShadow: 'inset 0 0 0 0.2cqw rgba(0,0,0,0.45)',
+}
+
+// A modern Android phone drawn in CSS around one screen. The screens are 2x captures (390 × 844) that
+// keep the status-bar band empty, so the punch-hole camera sits in it. Every size is in cqw of the
+// phone's own width, so the front and back phones keep the same proportions; the radii are
+// concentric (screen + bezel + frame).
 function Phone({ screen }: { screen: AppScreen }) {
   return (
-    <div className="relative rounded-[2.2rem] bg-[#0e1014] px-[7px] pb-[7px] pt-[17px] shadow-[0_50px_80px_-40px_rgba(11,35,72,0.6),0_18px_30px_-18px_rgba(11,35,72,0.4),inset_0_0_0_1px_rgba(255,255,255,0.07)] ring-1 ring-black/40">
-      {PHONE_BUTTONS.map(([side, top, height]) => (
-        <span
-          key={`${side}-${top}`}
-          aria-hidden="true"
-          className={`absolute w-[3px] bg-[#1b1e24] ${side === 'left' ? '-left-[2.5px] rounded-l-[2px]' : '-right-[2.5px] rounded-r-[2px]'}`}
-          style={{ top: `${top}%`, height: `${height}%` }}
-        />
-      ))}
-      <span aria-hidden="true" className="absolute left-1/2 top-[6px] h-[5px] w-[22%] -translate-x-1/2 rounded-full bg-[#23272f]" />
-      <div className="relative overflow-hidden rounded-[1.7rem]">
-        <img src={screen.src} alt={screen.alt} width={780} height={1688} loading="lazy" decoding="async" className="block h-auto w-full" />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.1),transparent_34%)]"
-        />
+    <div className="@container">
+      <div className="relative">
+        {SIDE_KEYS.map(([top, height]) => (
+          <span
+            key={top}
+            aria-hidden="true"
+            className="absolute -right-[0.8cqw] w-[1.6cqw] rounded-r-[0.6cqw]"
+            style={{ ...sideKeyStyle, top: `${top}%`, height: `${height}%` }}
+          />
+        ))}
+        <div className="relative rounded-[13.8cqw] p-[0.9cqw]" style={frameStyle}>
+          <div className="rounded-[12.9cqw] bg-[#050608] p-[2.4cqw] shadow-[inset_0_0_0_0.2cqw_rgba(255,255,255,0.05)]">
+            <div className="relative overflow-hidden rounded-[10.5cqw] bg-black">
+              <img src={screen.src} alt={screen.alt} width={780} height={1688} loading="lazy" decoding="async" className="block h-auto w-full" />
+              <span
+                aria-hidden="true"
+                className="absolute left-1/2 top-[2cqw] size-[2.7cqw] -translate-x-1/2 rounded-full"
+                style={cameraStyle}
+              />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[inherit]" style={glassStyle} />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-// Introduces the HocLuc Android app (learning from the phone, anytime) and links to its newest APK.
+// Contact shadow on the page under a phone. It stays still while the phone above it floats.
+function GroundShadow() {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-[7%] -bottom-[5%] -z-10 h-[7%] rounded-[50%] bg-[radial-gradient(closest-side,rgba(11,35,72,0.3),rgba(11,35,72,0.1)_55%,transparent)]"
+    />
+  )
+}
+
+// Introduces the HocLuc Android app and links to its newest APK.
 export default function StudentAppSection() {
-  const { badge, title, text, facts, download, screens } = studentApp
+  const { title, text, facts, download, screens } = studentApp
   const [front, back] = screens
   // The pointer is tracked over the whole stage; only the phones read the tilt it writes.
   const stageRef = usePointerTilt<HTMLDivElement>(6)
@@ -51,12 +100,6 @@ export default function StudentAppSection() {
       <div className="container">
         <div className="app-preview grid items-center gap-10 md:grid-cols-2 md:gap-12">
           <div className="flex flex-col items-start gap-5">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-(--ink) ring-1 ring-(--line) [&_.ui-icon]:size-4!">
-              <span aria-hidden="true" className="text-(--blue)">
-                <Icon name="smartphone" />
-              </span>
-              {badge}
-            </span>
             <h2 id="app-title">{title}</h2>
             <p className="max-w-[44ch] text-lg">{text}</p>
             <ul className="flex flex-col gap-3">
@@ -88,10 +131,14 @@ export default function StudentAppSection() {
             />
             <div className={tiltClass}>
               <div className="relative">
-                <div className="relative z-10 w-[64%] motion-safe:animate-float-slow">
-                  <Phone screen={front} />
+                <div className="relative z-10 w-[64%]">
+                  <GroundShadow />
+                  <div className="motion-safe:animate-float-slow">
+                    <Phone screen={front} />
+                  </div>
                 </div>
                 <div className="absolute right-[3%] top-[9%] w-[54%] rotate-[4deg]">
+                  <GroundShadow />
                   <div className="motion-safe:animate-float-slow motion-safe:[animation-delay:-3s]">
                     <Phone screen={back} />
                   </div>

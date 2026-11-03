@@ -12,10 +12,12 @@ const MARK_BODY =
 const MARK_WING =
   'M17.220,167.000C66.923,198.487 80.405,221.623 73.000,280.989C89.316,249.107 115.290,226.007 142.000,202.897C122.546,173.063 50.415,154.821 17.220,167.000Z'
 
-type SlideProps = { slide: HeroSlide; active: boolean; first: boolean }
+// `first` is the LCP image. `near` marks the slides next to the shown one: they sit outside the
+// viewport while hidden, so lazy loading would wait until they fade in; they load early at low priority.
+type SlideProps = { slide: HeroSlide; active: boolean; first: boolean; near: boolean }
 
 // Students cut out in front of a layered copy of the logo's rising stroke, with a dashed flight line.
-function RiseArt({ slide, active, first }: SlideProps) {
+function RiseArt({ slide, active, first, near }: SlideProps) {
   return (
     <>
       <svg
@@ -62,8 +64,8 @@ function RiseArt({ slide, active, first }: SlideProps) {
         alt={slide.alt}
         width={1400}
         height={1028}
-        fetchPriority={first ? 'high' : undefined}
-        loading={first ? undefined : 'lazy'}
+        fetchPriority={first ? 'high' : 'low'}
+        loading={first || near ? undefined : 'lazy'}
         // From lg the group sits a little above the bottom, level with the headline, and the cut-out fades out
         // at its waist instead of being cut by the edge.
         className={`absolute bottom-0 left-1/2 w-[min(94%,680px)] -translate-x-1/2 drop-shadow-[0_24px_30px_rgba(11,35,72,0.22)] lg:bottom-[7%] lg:[mask-image:linear-gradient(to_bottom,black_78%,transparent)] ${active ? 'motion-safe:animate-rise' : ''}`}
@@ -73,7 +75,7 @@ function RiseArt({ slide, active, first }: SlideProps) {
 }
 
 // A photo filling the right of the hero; on large screens it fades out towards the text.
-function PhotoArt({ slide, active, first }: SlideProps) {
+function PhotoArt({ slide, active, first, near }: SlideProps) {
   return (
     <img
       src={slide.src}
@@ -82,8 +84,8 @@ function PhotoArt({ slide, active, first }: SlideProps) {
       alt={slide.alt}
       width={1536}
       height={1024}
-      fetchPriority={first ? 'high' : undefined}
-      loading={first ? undefined : 'lazy'}
+      fetchPriority={first ? 'high' : 'low'}
+      loading={first || near ? undefined : 'lazy'}
       className={`absolute inset-0 h-full w-full object-cover object-[50%_35%] lg:[mask-image:linear-gradient(to_right,transparent,black_38%)] ${active ? 'motion-safe:animate-settle' : ''}`}
     />
   )
@@ -95,8 +97,10 @@ function PhotoArt({ slide, active, first }: SlideProps) {
 // fold instead of being cut through by it.
 function HeroSection({ hero }: { hero: LandingHero }) {
   const { slides } = hero
-  const { active, selectSlide } = useHeroCarousel(slides.length)
-  const step = (by: number) => selectSlide((active + by + slides.length) % slides.length)
+  const { active, paused, selectSlide, step, rootProps, viewportProps } = useHeroCarousel()
+  const count = slides.length
+  const isNear = (index: number) =>
+    index === (active + 1) % count || index === (active + count - 1) % count
 
   return (
     <section className="hero relative isolate flex min-h-[calc(100svh-76px)] flex-col justify-center overflow-hidden bg-(--soft) lg:min-h-[calc(100svh-84px)]">
@@ -108,20 +112,10 @@ function HeroSection({ hero }: { hero: LandingHero }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10 [background-image:radial-gradient(rgba(11,58,130,0.13)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]"
       />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute left-[7%] top-[16%] hidden size-3 rotate-45 rounded-[3px] bg-(--blue)/60 lg:block motion-safe:animate-float-slow"
-      />
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 16 16"
-        className="pointer-events-none absolute bottom-[18%] left-[30%] hidden size-4 stroke-(--blue) opacity-50 lg:block motion-safe:animate-float-slow motion-safe:[animation-delay:-4s]"
-      >
-        <path d="M8 2v12M2 8h12" strokeWidth="2.4" strokeLinecap="round" fill="none" />
-      </svg>
 
-      <div className="container relative z-10 grid items-center gap-10 py-14 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:py-20">
-        <div className="flex flex-col gap-6">
+      {/* From lg the grid's empty right column lies over the picture; let pointers through to it. */}
+      <div className="container relative z-10 grid items-center gap-10 py-14 lg:pointer-events-none lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:py-20">
+        <div className="pointer-events-auto relative flex flex-col gap-6">
           <h1
             className="text-[clamp(2.5rem,4.6vw,3.75rem)]! leading-[1.08]! motion-safe:animate-rise"
             style={rise(0)}
@@ -148,38 +142,42 @@ function HeroSection({ hero }: { hero: LandingHero }) {
         </div>
       </div>
 
-      <div
-        className="hero-showcase relative mx-4 mb-4 h-[min(78vw,440px)] overflow-hidden rounded-[28px] sm:mx-6 lg:absolute lg:inset-y-0 lg:right-0 lg:m-0 lg:h-auto lg:w-[58%] lg:overflow-visible lg:rounded-none"
-        role="region"
-        aria-roledescription="carousel"
-        aria-label="Cảnh học tập cùng Hocluc"
-      >
-        {slides.map((slide, index) => {
-          const isActive = index === active
-          const Art = slide.kind === 'rise' ? RiseArt : PhotoArt
-          return (
-            <figure
-              key={slide.id}
-              className={`hero-slide absolute inset-0 m-0 transition-opacity duration-700 ease-out ${isActive ? 'opacity-100' : 'opacity-0'}`}
-              id={slide.id}
-              role="group"
-              aria-roledescription="slide"
-              aria-label={`${index + 1}/${slides.length}: ${slide.label}`}
-              aria-hidden={!isActive}
-              inert={!isActive}
-            >
-              <Art slide={slide} active={isActive} first={index === 0} />
-              <figcaption className="sr-only">
-                <strong>{slide.label}</strong>
-                <span>{slide.caption}</span>
-              </figcaption>
-            </figure>
-          )
-        })}
-      </div>
+      {/* The carousel wrapper is left unpositioned: from lg the picture and its controls are placed
+          against the section, the picture over the right 58% and the controls on its bottom-right corner. */}
+      <div role="region" aria-roledescription="carousel" aria-label="Cảnh học tập cùng Hocluc" {...rootProps}>
+        <div
+          {...viewportProps}
+          className="hero-showcase relative mx-4 mb-4 h-[min(78vw,440px)] overflow-hidden rounded-[28px] sm:mx-6 lg:absolute lg:inset-y-0 lg:right-0 lg:m-0 lg:h-auto lg:w-[58%] lg:overflow-visible lg:rounded-none"
+        >
+          <div className="flex h-full touch-pan-y touch-pinch-zoom" aria-live={paused ? 'polite' : 'off'}>
+            {slides.map((slide, index) => {
+              const isActive = index === active
+              const Art = slide.kind === 'rise' ? RiseArt : PhotoArt
+              return (
+                // Until Embla takes over the opacity, only the selected slide shows.
+                <figure
+                  key={slide.id}
+                  className={`hero-slide relative m-0 h-full min-w-0 shrink-0 grow-0 basis-full ${isActive ? '' : 'opacity-0'}`}
+                  id={slide.id}
+                  role="group"
+                  aria-roledescription="slide"
+                  aria-label={`${index + 1}/${slides.length}: ${slide.label}`}
+                  aria-hidden={!isActive}
+                  inert={!isActive}
+                >
+                  <Art slide={slide} active={isActive} first={index === 0} near={isNear(index)} />
+                  <figcaption className="sr-only">
+                    <strong>{slide.label}</strong>
+                    <span>{slide.caption}</span>
+                  </figcaption>
+                </figure>
+              )
+            })}
+          </div>
+        </div>
 
-      {/* Below the picture on small screens; over its bottom-right corner from lg. */}
-      <div className="relative z-20 mx-auto -mt-2 mb-8 flex w-fit items-center gap-0.5 rounded-full bg-white/85 p-1 shadow-[0_12px_30px_-14px_rgba(11,35,72,0.45)] backdrop-blur-md lg:absolute lg:bottom-8 lg:right-8 lg:m-0">
+        {/* Below the picture on small screens; over its bottom-right corner from lg. */}
+        <div className="relative z-20 mx-auto -mt-2 mb-8 flex w-fit items-center gap-0.5 rounded-full bg-white/85 p-1 shadow-[0_12px_30px_-14px_rgba(11,35,72,0.45)] backdrop-blur-md lg:absolute lg:bottom-8 lg:right-8 lg:m-0">
           <button
             type="button"
             className="grid size-9 place-items-center rounded-full text-(--ink) transition-colors hover:bg-white"
@@ -190,18 +188,18 @@ function HeroSection({ hero }: { hero: LandingHero }) {
               <path d="m15 18-6-6 6-6" />
             </svg>
           </button>
-          <div className="hero-slide-buttons flex items-center" aria-label="Chọn hình">
+          <div className="hero-slide-buttons flex items-center" role="group" aria-label="Chọn hình">
             {slides.map((slide, index) => (
               <button
                 key={slide.id}
                 type="button"
                 className="group grid h-9 place-items-center px-1"
                 aria-label={`Xem hình ${index + 1}: ${slide.label}`}
-                aria-pressed={index === active}
+                aria-current={index === active ? 'true' : undefined}
                 aria-controls={slide.id}
                 onClick={() => selectSlide(index)}
               >
-                <span className="block h-2 w-2 rounded-full bg-[#0b2348]/25 transition-all duration-300 group-hover:bg-[#0b2348]/50 group-aria-pressed:w-6 group-aria-pressed:bg-(--blue)" />
+                <span className="block h-2 w-2 rounded-full bg-[#0b2348]/25 transition-all duration-300 group-hover:bg-[#0b2348]/50 group-aria-[current=true]:w-6 group-aria-[current=true]:bg-(--blue)" />
               </button>
             ))}
           </div>
@@ -215,6 +213,7 @@ function HeroSection({ hero }: { hero: LandingHero }) {
               <path d="m9 18 6-6-6-6" />
             </svg>
           </button>
+        </div>
       </div>
 
       <a

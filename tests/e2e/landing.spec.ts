@@ -156,7 +156,7 @@ test('signup and login actions have matching destinations', async ({ page }) => 
 test('app section introduces the Hocluc app on phones and links to its newest APK', async ({ page }) => {
   await page.goto('/')
   const section = page.locator('#ung-dung')
-  await expect(section.getByRole('heading', { name: 'Mở điện thoại là học tiếp' })).toBeVisible()
+  await expect(section.getByRole('heading', { name: 'Mở ứng dụng là biết hôm nay học gì' })).toBeVisible()
   await expect(section).not.toContainText('Đang phát triển')
   // The one action is the download: the newest release on GitHub, always the same address.
   await expect(section.getByRole('link')).toHaveCount(1)
@@ -366,8 +366,8 @@ test('exam section shows the key facts from the official ĐHQG-HCM pages above t
 
   // Six cells divide into 6, 3 or 2 columns, and every figure stays inside its cell down to a small phone.
   const expectedRows = [
-    [1440, 1],
-    [1280, 1],
+    [1440, 2],
+    [1280, 2],
     [1024, 2],
     [768, 2],
     [390, 3],
@@ -444,7 +444,7 @@ test('carousel keeps looping after a slide is picked by hand', async ({ page }) 
   const last = (await dots.count()) - 1
   const dot = dots.nth(last)
   await dot.click()
-  await expect(dot).toHaveAttribute('aria-pressed', 'true')
+  await expect(dot).toHaveAttribute('aria-current', 'true')
   await expect(slides.nth(last)).toHaveAttribute('aria-hidden', 'false')
   // The last slide wraps around to the first instead of stopping.
   await page.clock.runFor(6500)

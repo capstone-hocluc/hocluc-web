@@ -130,7 +130,7 @@ function PlanCard({
           {course.targetExam === 'VNUHCM_DGNL' && (
             <li className="flex items-start gap-2">
               <Icon name="check" />
-              <span>Đủ 4 phần thi V-ACT</span>
+              <span>Đủ 4 phần thi ĐGNL</span>
             </li>
           )}
           {subCourses && (

@@ -36,7 +36,7 @@ function CourseCatalogPage() {
                     <br />
                     <span className="accent">Chọn lộ trình hợp với bạn.</span>
                   </h1>
-                  <p>Mỗi lộ trình gồm đủ 4 phần của bài thi V-ACT, khác nhau ở thời gian ôn và nhịp học.</p>
+                  <p>Mỗi lộ trình gồm đủ 4 phần của bài thi ĐGNL, khác nhau ở thời gian ôn và nhịp học.</p>
                 </div>
               </div>
               <div aria-busy={status === 'loading'}>

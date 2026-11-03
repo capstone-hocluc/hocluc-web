@@ -98,7 +98,7 @@ export interface CourseModule {
   summary: string
 }
 
-/** A V-ACT subject with its study modules; the quick suggestion recommends one module. */
+/** A ĐGNL subject with its study modules; the quick suggestion recommends one module. */
 export interface Domain {
   id: string
   title: string
@@ -124,21 +124,21 @@ export const landingNav: LandingLink[] = [
   { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
   { label: 'Ứng dụng', href: '#ung-dung' },
   { label: 'Cách học', href: '#lo-trinh' },
-  { label: 'V-ACT', href: '#ky-thi' },
+  { label: 'ĐGNL', href: '#ky-thi' },
 ]
 
 export const landingFooterNav: LandingLink[] = [
   { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
   { label: 'Ứng dụng', href: '#ung-dung' },
   { label: 'Cách học', href: '#lo-trinh' },
-  { label: 'Tìm hiểu V-ACT', href: '#ky-thi' },
+  { label: 'Tìm hiểu ĐGNL', href: '#ky-thi' },
   { label: 'Câu hỏi thường gặp', href: '#faq' },
 ]
 
 const landingAssets = '/landing-v2/assets'
 
 export const landingHero: LandingHero = {
-  titleLines: ['Luyện thi V-ACT', 'theo từng môn.'],
+  titleLines: ['Luyện thi ĐGNL', 'theo từng môn.'],
   description: 'Chọn lộ trình trọn gói cho cả bài thi, hoặc học riêng môn bạn còn yếu.',
   coursesCta: 'Xem khóa học',
   assessmentCta: 'Làm bài đánh giá miễn phí',
@@ -180,7 +180,7 @@ export const landingHero: LandingHero = {
 
 export const examIntro: ExamIntro = {
   eyebrow: 'Kỳ thi ĐGNL ĐHQG-HCM',
-  title: 'Kỳ thi Đánh giá năng lực V-ACT là gì?',
+  title: 'Kỳ thi Đánh giá năng lực (ĐGNL) là gì?',
   summary:
     'Đánh giá năng lực (ĐGNL) là tên gọi chung của các kỳ thi tuyển sinh sớm do đại học tổ chức. V-ACT là kỳ thi ĐGNL của Đại học Quốc gia TP.HCM: bài thi trắc nghiệm trên giấy, đo năng lực cốt lõi cần cho việc học đại học và được hơn 100 trường đại học, cao đẳng dùng để xét tuyển.',
   sheetCaption: 'Minh họa phiếu trả lời trắc nghiệm',
@@ -230,12 +230,12 @@ export const examIntro: ExamIntro = {
   ],
   scoringNote:
     'Điểm tính theo lý thuyết ứng đáp câu hỏi (IRT): mỗi câu có trọng số riêng, tùy theo độ khó.',
-  seasonTitle: 'Một mùa thi diễn ra thế nào?',
+  seasonTitle: 'Các bước trong một đợt thi',
   season: [
-    { title: 'Đăng ký', text: 'Đăng ký và đóng lệ phí trực tuyến.' },
+    { title: 'Đăng ký', text: 'Đăng ký dự thi và đóng lệ phí trực tuyến.' },
     {
       title: 'Dự thi',
-      text: 'Tự in giấy báo dự thi từ tài khoản; khi đi thi, mang theo căn cước hoặc hộ chiếu còn hạn.',
+      text: 'In giấy báo dự thi từ tài khoản. Ngày thi, bạn mang theo căn cước hoặc hộ chiếu còn hạn.',
     },
     {
       title: 'Nhận kết quả',
@@ -249,6 +249,46 @@ export const examIntro: ExamIntro = {
   source: {
     href: 'https://cetqa.vnuhcm.edu.vn/danh-gia-nang-luc',
     updatedAt: '02/11/2026',
+  },
+}
+
+export interface ExamUniversity {
+  /** The short name the school goes by, drawn as its mark when there is no logo file. */
+  short: string
+  name: string
+  tone: string
+  /** The school logo under public/, when one has been added. */
+  logo?: string
+}
+
+// The member universities of ĐHQG-HCM, which organises the exam: they all admit with its result. Other schools
+// that do are not named here because their lists change every year (see `examIntro.source`). The logo files and
+// their licences are listed in public/landing-v2/assets/universities/SOURCES.md.
+const universityLogos = '/landing-v2/assets/universities'
+
+export const examUniversities: ExamUniversity[] = [
+  { short: 'BK', name: 'ĐH Bách khoa', tone: '#1b4f9c', logo: `${universityLogos}/hcmut.svg` },
+  { short: 'KHTN', name: 'ĐH Khoa học Tự nhiên', tone: '#0f7a4a', logo: `${universityLogos}/hcmus.png` },
+  { short: 'KHXH', name: 'ĐH Khoa học Xã hội và Nhân văn', tone: '#a3342c', logo: `${universityLogos}/hcmussh.svg` },
+  { short: 'IU', name: 'ĐH Quốc tế', tone: '#0d5c8c', logo: `${universityLogos}/hcmiu.png` },
+  { short: 'UIT', name: 'ĐH Công nghệ Thông tin', tone: '#1a5fb4', logo: `${universityLogos}/uit.svg` },
+  { short: 'UEL', name: 'ĐH Kinh tế - Luật', tone: '#8a5a00', logo: `${universityLogos}/uel.png` },
+  { short: 'AGU', name: 'ĐH An Giang', tone: '#2f6e3b', logo: `${universityLogos}/agu.jpg` },
+  { short: 'KHSK', name: 'ĐH Khoa học Sức khỏe', tone: '#0b7f86', logo: `${universityLogos}/uhs.svg` },
+]
+
+export interface ExamPhoto {
+  src: string
+  small: string
+  alt: string
+}
+
+/** Photos of the exam, shown with the exam section. */
+export const examPhotos: Record<'hall', ExamPhoto> = {
+  hall: {
+    src: '/landing-v2/assets/hero-mock-exam-v4.webp',
+    small: '/landing-v2/assets/hero-mock-exam-v4-800.webp',
+    alt: 'Thí sinh mặc áo dài làm bài thi trắc nghiệm trên giấy trong phòng thi',
   },
 }
 
@@ -275,7 +315,7 @@ export const domains: Domain[] = [
       },
       {
         code: 'TV03',
-        title: 'Luyện Tiếng Việt theo chuẩn V-ACT',
+        title: 'Luyện Tiếng Việt theo chuẩn ĐGNL',
         level: 'Tích hợp',
         hours: 12,
         summary:
@@ -305,7 +345,7 @@ export const domains: Domain[] = [
       },
       {
         code: 'EN03',
-        title: 'Luyện Tiếng Anh theo chuẩn V-ACT',
+        title: 'Luyện Tiếng Anh theo chuẩn ĐGNL',
         level: 'Tích hợp',
         hours: 12,
         summary:
@@ -319,7 +359,7 @@ export const domains: Domain[] = [
     modules: [
       {
         code: 'MA01',
-        title: 'Nền tảng Toán học V-ACT',
+        title: 'Nền tảng Toán học ĐGNL',
         level: 'Cơ bản',
         hours: 36,
         summary:
@@ -343,7 +383,7 @@ export const domains: Domain[] = [
       },
       {
         code: 'MA04',
-        title: 'Luyện Toán theo chuẩn V-ACT',
+        title: 'Luyện Toán theo chuẩn ĐGNL',
         level: 'Tích hợp',
         hours: 16,
         summary:
@@ -365,11 +405,11 @@ export const domains: Domain[] = [
       },
       {
         code: 'RM10',
-        title: 'V-ACT Logic & Data Practice',
+        title: 'ĐGNL Logic & Data Practice',
         level: 'Tích hợp',
         hours: 12,
         summary:
-          'Chùm logic và ràng buộc, quy luật, bảng và biểu đồ, điều chắc chắn/có thể/không thể đúng, luyện có thời gian theo định dạng V-ACT.',
+          'Chùm logic và ràng buộc, quy luật, bảng và biểu đồ, điều chắc chắn/có thể/không thể đúng, luyện có thời gian theo định dạng ĐGNL.',
       },
     ],
   },
@@ -387,7 +427,7 @@ export const domains: Domain[] = [
       },
       {
         code: 'SR10',
-        title: 'V-ACT Scientific Reasoning Practice',
+        title: 'ĐGNL Scientific Reasoning Practice',
         level: 'Tích hợp',
         hours: 14,
         summary:
@@ -403,7 +443,7 @@ export const practiceOperations: PracticeOperation[] = [
     label: 'Định hướng',
     tagline: 'Trước khi bắt đầu',
     hours: 3,
-    title: 'Định hướng & Chiến lược thi V-ACT',
+    title: 'Định hướng & Chiến lược thi ĐGNL',
     summary:
       'Làm quen với cấu trúc 120 câu/150 phút, phân bổ thời gian, chiến thuật 3 vòng, đánh dấu câu, loại trừ đáp án và tô phiếu.',
   },
@@ -412,7 +452,7 @@ export const practiceOperations: PracticeOperation[] = [
     label: 'Luyện tổng hợp',
     tagline: 'Kết nối 5 nhóm kiến thức',
     hours: 18,
-    title: 'Luyện tập Tổng hợp V-ACT',
+    title: 'Luyện tập Tổng hợp ĐGNL',
     summary:
       'Luyện hỗn hợp, luyện xen kẽ các kỹ năng, chuyển đổi nhanh giữa 5 nhóm câu hỏi và luyện theo từng phần.',
   },
@@ -436,10 +476,10 @@ export const practiceOperations: PracticeOperation[] = [
   },
   {
     id: 'MT00',
-    label: 'Thi thử V-ACT',
+    label: 'Thi thử ĐGNL',
     tagline: 'Sẵn sàng về đích',
     hours: 30,
-    title: 'Thi thử & Mô phỏng V-ACT',
+    title: 'Thi thử & Mô phỏng ĐGNL',
     summary:
       'Đề đầy đủ 120 câu/150 phút, mô phỏng đề giấy, phân tích độ chính xác, tốc độ, điểm theo phần và hồ sơ lỗi.',
   },
@@ -453,53 +493,46 @@ export const journey = {
   steps: [
     {
       title: 'Đặt mục tiêu',
-      text: 'Tạo tài khoản học sinh, chọn mục tiêu để bắt đầu.',
+      text: 'Chọn điểm muốn đạt, cùng trường và ngành bạn nhắm tới. Mục tiêu rõ thì biết mình cần đi bao xa.',
     },
     {
       title: 'Hiểu điểm xuất phát',
-      text: 'Làm bài đánh giá miễn phí để biết bạn đang ở đâu trong từng phần thi.',
+      text: 'Làm bài đánh giá miễn phí. Kết quả cho thấy bạn đang vững phần nào, còn hổng phần nào trong đề thi.',
     },
     {
       title: 'Chọn phần cần học',
-      text: 'Xem kết quả theo từng phần để biết bạn nên tập trung vào đâu.',
+      text: 'So kết quả với điểm mục tiêu: phần nào còn cách xa nhất thì học trước.',
     },
     {
       title: 'Học và luyện mỗi ngày',
-      text: 'Học bài, làm bài luyện và ôn lại những phần chưa vững.',
+      text: 'Mỗi ngày một chút: học bài, làm bài luyện và ôn lại phần còn chưa vững.',
     },
   ],
-  avatars: {
-    label: 'Mai và Nam học cùng avatar hình khối',
-    images: [
-      { src: `${landingAssets}/mai-avatar-interaction.webp`, alt: 'Mai đang ghi chép' },
-      { src: `${landingAssets}/nam-avatar-interaction.webp`, alt: 'Nam đang khám phá hình học' },
-    ],
-  },
 }
 
 const appScreens = `${landingAssets}/app`
 
 // The HocLuc Android app (com.hocluc.app). The download link always serves the newest APK from the
-// app's GitHub releases. The screens are renders of the app's own design and show its example data,
-// not a real student's.
+// app's GitHub releases. The screens are rendered from the released app's own widgets (v0.3.3) with
+// its test fixtures, so they show example data, not a real student's. Lessons and tests open on the
+// Hocluc website; the app lists them and links there.
 export const studentApp = {
-  badge: 'Ứng dụng Android',
-  title: 'Mở điện thoại là học tiếp',
-  text: 'Ứng dụng Hocluc đưa khóa học, lịch học và công cụ giải Toán lên điện thoại của bạn.',
+  title: 'Mở ứng dụng là biết hôm nay học gì',
+  text: 'Trang chủ của ứng dụng Hocluc cho Android hiện bài bạn đang học dở, các buổi học và bài kiểm tra trong ngày.',
   facts: [
-    'Tiếp tục đúng bài đang học dở',
-    'Lịch học, bài kiểm tra và thông báo ở cùng một nơi',
-    'Máy tính CW-880 dùng được cả khi không có mạng',
+    'Bấm Học tiếp để mở đúng bài đang học trên web Hocluc',
+    'Lịch học theo tuần, bài kiểm tra và thông báo nằm chung một chỗ',
+    'Máy tính CW-880 dùng được cả khi mất mạng',
   ],
   download: {
     label: 'Tải ứng dụng cho Android',
     href: 'https://github.com/nguyenquocan0101/HocLuc-Releases/releases/latest/download/hocluc.apk',
-    note: 'Tệp APK cài trực tiếp trên máy Android. Đăng nhập bằng tài khoản học sinh Hocluc.',
+    note: 'Tệp APK cài trực tiếp trên máy Android. Lần đầu mở, bạn đăng nhập bằng tài khoản học sinh Hocluc.',
   },
   screens: [
     {
       src: `${appScreens}/app-home.webp`,
-      alt: 'Trang chủ ứng dụng Hocluc: học tiếp bài Hàm số bậc ba và cực trị, lịch học hôm nay và công cụ nhanh',
+      alt: 'Trang chủ ứng dụng Hocluc: học tiếp bài Hàm số bậc ba và cực trị, đã xong 62%, cùng các buổi học và bài kiểm tra hôm nay',
     },
     {
       src: `${appScreens}/app-calculator.webp`,
@@ -510,7 +543,7 @@ export const studentApp = {
 
 export const faq = {
   title: 'Trước khi bắt đầu',
-  text: 'Thông tin ngắn gọn để bạn biết Hocluc phù hợp với bước nào trong hành trình ôn V-ACT.',
+  text: 'Thông tin ngắn gọn để bạn biết Hocluc phù hợp với bước nào trong hành trình ôn ĐGNL.',
   items: [
     {
       question: 'Bài đánh giá đầu vào có mất phí không?',
@@ -523,9 +556,9 @@ export const faq = {
         'Bạn vẫn xem được danh mục, thông tin chi tiết và các bài học mở xem trước. Lộ trình gợi ý có thể gồm cả khóa học bạn chưa mua; muốn học toàn bộ nội dung, bạn cần sở hữu khóa học đó.',
     },
     {
-      question: 'Kết quả đánh giá có phải điểm thi V-ACT chính thức không?',
+      question: 'Kết quả đánh giá có phải điểm thi ĐGNL chính thức không?',
       answer:
-        'Không. Kết quả này chỉ giúp bạn định hướng việc học trên Hocluc, không thay thế kết quả kỳ thi V-ACT.',
+        'Không. Kết quả này chỉ giúp bạn định hướng việc học trên Hocluc, không thay thế kết quả kỳ thi ĐGNL.',
     },
     {
       question: 'Thời hạn và hình thức học của khóa học ra sao?',
