@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import { can } from '../../../lib/permissions'
+import { canAccessPage } from '../../../lib/console-nav'
+import { requestPaper } from '../ai-assistant/open-paper'
 import { getErrorMessage } from '../../../lib/errors'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import {
@@ -24,7 +26,7 @@ import DataTable from '../../console/data-table'
 import Notice from '../../console/notice'
 import PageHeading from '../../console/page-heading'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
-import { AlertTriangle, Eye, FileQuestion, ListTree, Plus } from '../../console/icons'
+import { AlertTriangle, Eye, FileQuestion, ListTree, Plus, Sparkles } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import Status from '../../console/status'
@@ -103,7 +105,7 @@ function SubjectFilter({
   )
 }
 
-export default function QuestionBankScreen({ readOnly = false, title }: { readOnly?: boolean; title: string }) {
+export default function QuestionBankScreen({ readOnly = false, title, onNavigate }: { readOnly?: boolean; title: string; onNavigate?: (page: string) => void }) {
   const { profile } = useCurrentUser()
   const legacyReadOnly = readOnly || !profile || !can(profile.role, 'QUIZ_WRITE')
   const [tab, setTab] = useState('questions')
@@ -326,9 +328,23 @@ export default function QuestionBankScreen({ readOnly = false, title }: { readOn
       <Button disabled={!selected.length || bulkBusy} onClick={bulkApprove}>Duyệt đã chọn</Button>
     ) : undefined
 
+  // Exams are composed, and papers loaded and read, in the AI workspace; every viewer of the bank may open it.
+  const openAssistant =
+    onNavigate && profile && canAccessPage(profile.role, 'ai-assistant') ? () => onNavigate('ai-assistant') : undefined
+
   return (
     <>
-      <PageHeading title={title} readOnly={readOnly} action={headingAction} />
+      <PageHeading title={title} readOnly={readOnly} action={(
+        <>
+          {openAssistant && (
+            <Button appearance="outline" onClick={openAssistant}>
+              <Sparkles size={16} />
+              Soạn đề với AI
+            </Button>
+          )}
+          {headingAction}
+        </>
+      )} />
       <ConsoleTabs value={tab} onValueChange={setTab}>
         <ConsoleTabsList aria-label="Ngân hàng câu hỏi">
           <ConsoleTabsTrigger value="questions">Câu hỏi</ConsoleTabsTrigger>
@@ -387,6 +403,15 @@ export default function QuestionBankScreen({ readOnly = false, title }: { readOn
         <ConsoleTabsContent value="sources">
           <BankSourcesPanel
             readOnly={legacyReadOnly}
+            onOpenAssistant={openAssistant}
+            onOpenPaper={
+              openAssistant
+                ? (id) => {
+                    requestPaper(id)
+                    openAssistant()
+                  }
+                : undefined
+            }
             onFinished={() => {
               list.reload()
               stats.reload()

@@ -28,6 +28,7 @@ export function isQuizPage(page: string): boolean {
 /** Sidebar grouping only. quizMenuPage retains each tab's route and permission. */
 export function quizSidebarPage(page: string): string {
   const menu = quizMenuPage(page)
+  if (menu === 'ai-assistant') return 'question-bank'
   return ['placements', 'mock-exams'].includes(menu) ? 'quizzes' : menu
 }
 

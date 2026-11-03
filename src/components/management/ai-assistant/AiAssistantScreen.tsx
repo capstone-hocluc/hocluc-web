@@ -1,10 +1,11 @@
 // The AI exam composer, laid out like a document editor: header with menus, formatting toolbar, the document
 // panel (outline, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import ThemeProvider from '../../common/ThemeProvider'
 import Button from '../../console/button'
+import { FileText } from '../../console/icons'
 import ConfirmDialog from '../../console/confirm-dialog'
 import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -13,16 +14,15 @@ import ResizeHandle from '../../ui/ResizeHandle'
 import FormulaDialog, { type FormulaValue } from '../../ui/math/FormulaDialog'
 import { DIVIDER_WIDTH, PANEL_LIMITS, usePanelWidths } from './use-panel-widths'
 import { buildPaper, isSoloGroup, questionNumbers } from './exam-format'
-import AiSidebar from './AiSidebar'
 import ChatPanel from './ChatPanel'
-import ExamOutline from './ExamOutline'
 import ExamPaper from './ExamPaper'
 import DocHeader from '../exam-doc/DocHeader'
 import DocSheet from '../exam-doc/DocSheet'
 import DocToolbar from '../exam-doc/DocToolbar'
-import LeftPanel from '../exam-doc/LeftPanel'
 import StatusBar from '../exam-doc/StatusBar'
 import TemplateLibrary from '../exam-doc/templates/TemplateLibrary'
+import { EditorOutlineTree, PaperOutlineTree } from '../exam-doc/doc-tree'
+import WorkspaceTree from './WorkspaceTree'
 import { parentHeadingText, partHeadings, questionsToBlocks } from '../exam-doc/draft-to-doc'
 import { scrollToPos } from '../exam-doc/doc-outline'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
@@ -47,6 +47,12 @@ import VariantBanner from '../exam-doc/variants/VariantBanner'
 import VariantsPanel from '../exam-doc/variants/VariantsPanel'
 import { useExamVariants } from '../exam-doc/variants/use-exam-variants'
 import { useVariantEditor } from '../exam-doc/variants/use-variant-editor'
+import type { BankSource } from '../../../services/questionBankService'
+import BankImportDialog from '../question-bank/BankImportDialog'
+import { useSourceActions } from '../question-bank/use-source-actions'
+import PaperReadingWorkspace from './PaperReadingWorkspace'
+import { useBankPapers } from './use-bank-papers'
+import { clearRequestedPaper, requestedPaper, showPaperInAddress } from './open-paper'
 
 const GREETING_BUCKETS: Record<'morning' | 'afternoon' | 'evening' | 'night', string[]> = {
   morning: [
@@ -81,12 +87,43 @@ function greetingForHour(hour: number) {
 export default function AiAssistantScreen({
   onBack,
   backHref,
+  canImport = false,
 }: {
   onBack: () => void
   backHref: string
+  /** The viewer may load papers into the bank (the AI reads them here, as it writes an exam). */
+  canImport?: boolean
 }) {
   const ai = useAiAssistant()
-  const [conversationsOpen, setConversationsOpen] = useState(false)
+  const bankPapers = useBankPapers(true)
+  // The loaded paper on the sheet instead of an exam: one asked for by the bank's list (or kept in the address) at
+  // first. The list refreshes it; `queued` covers one just loaded, before the list has it.
+  const [viewingId, setViewingId] = useState<string | null>(requestedPaper)
+  const [queued, setQueued] = useState<BankSource | null>(null)
+  const [importing, setImporting] = useState(false)
+  useEffect(clearRequestedPaper, [])
+  const viewingPaper = viewingId
+    ? (bankPapers.papers.find((paper) => paper.id === viewingId) ?? (queued?.id === viewingId ? queued : null))
+    : null
+  // A paper that is not in the list (deleted, or not allowed) leaves the address once the list is in.
+  const shownPaperId = bankPapers.loading ? viewingId : (viewingPaper?.id ?? null)
+  useEffect(() => showPaperInAddress(shownPaperId), [shownPaperId])
+  const { refresh: refreshPapers } = bankPapers
+  const openQueued = useCallback(
+    (source: BankSource) => {
+      setQueued(source)
+      setViewingId(source.id)
+      refreshPapers()
+    },
+    [refreshPapers]
+  )
+  const sourceActions = useSourceActions(openQueued)
+  const { actionError, setActionError: clearActionError } = sourceActions
+  useEffect(() => {
+    if (!actionError) return
+    showErrorToast(actionError)
+    clearActionError('')
+  }, [actionError, clearActionError])
   const [chatOpen, setChatOpen] = useState(true)
   const [chatSheet, setChatSheet] = useState(false)
   // The "Mã đề" panel takes the chat's place on the right (a sheet on narrow screens); one of them at a time.
@@ -473,8 +510,9 @@ export default function AiAssistantScreen({
   }
 
   function startNew() {
+    setViewingId(null)
     ai.startNew()
-    setConversationsOpen(false)
+    setOutlineSheet(false)
     setEditingId(null)
     setFocusedId(null)
   }
@@ -504,6 +542,13 @@ export default function AiAssistantScreen({
     else setOutlineSheet((open) => !open)
   }
 
+  /** The list of exams is the left panel (a sheet on a narrow screen). */
+  function openTree() {
+    setChatSheet(false)
+    if (window.matchMedia('(min-width: 1280px)').matches) setOutlineOpen(true)
+    else setOutlineSheet(true)
+  }
+
   const chatPanelProps = {
     messages: ai.messages,
     mode: ai.mode,
@@ -528,15 +573,92 @@ export default function AiAssistantScreen({
     onStop: ai.cancel,
     onRegenerate: ai.regenerate,
     onStartNew: startNew,
-    conversationsOpen,
-    // On a narrow screen the chat is itself a sheet; it gives way to the list.
-    onOpenConversations: () => {
-      setChatSheet(false)
-      setConversationsOpen(true)
-    },
+    conversationsOpen: outlineOpen || outlineSheet,
+    onOpenConversations: openTree,
     onPickPrompt: pickPrompt,
     onDownload: downloadExam,
     onAnswerKey: writeAnswerKey,
+  }
+
+  /** The left panel: every exam and loaded paper, with the open one's outline under it. */
+  const renderTree = (outline: ReactNode, chrome: { onCollapse?: () => void; onClose?: () => void; templates?: ReactNode; className: string; style?: CSSProperties }) => (
+    <WorkspaceTree
+      conversations={ai.conversations}
+      papers={bankPapers.papers}
+      activeId={ai.activeId}
+      activePaperId={viewingPaper?.id ?? null}
+      loading={ai.conversationsLoading || bankPapers.loading}
+      outline={outline}
+      onSelect={(id) => {
+        setViewingId(null)
+        ai.selectConversation(id)
+        setOutlineSheet(false)
+        setEditingId(null)
+        setFocusedId(null)
+      }}
+      onSelectPaper={(id) => {
+        setViewingId(id)
+        setOutlineSheet(false)
+      }}
+      onNew={startNew}
+      onImport={
+        canImport
+          ? () => {
+              setOutlineSheet(false)
+              setImporting(true)
+            }
+          : undefined
+      }
+      onRename={(id, title) => void ai.renameConversation(id, title)}
+      onDelete={(id) => setPendingDelete(ai.conversations.find((item) => item.id === id) ?? null)}
+      {...chrome}
+    />
+  )
+  // The free document lists its own headings; the question view lists the draft (the document would show hidden text).
+  const composeOutline =
+    examDoc.mode === 'FREE' ? (
+      <EditorOutlineTree editor={shownEditor} depth={1} />
+    ) : (
+      <PaperOutlineTree paper={ai.paper} numberOf={numberOf} onJump={jumpToQuestion} depth={1} />
+    )
+  const composeTemplates = examDoc.mode === 'FREE' ? <TemplateLibrary /> : undefined
+
+  const importDialog = importing && (
+    <BankImportDialog
+      onClose={() => setImporting(false)}
+      onQueued={(source) => {
+        setImporting(false)
+        openQueued(source)
+      }}
+    />
+  )
+
+  if (viewingPaper) {
+    const labelling = sourceActions.labelling
+    return (
+      <ThemeProvider>
+        <PaperReadingWorkspace
+          key={viewingPaper.id}
+          source={viewingPaper}
+          onBack={onBack}
+          backHref={backHref}
+          onNew={startNew}
+          renderTree={renderTree}
+          onLoadAgain={
+            canImport && viewingPaper.status === 'FAILED' ? () => sourceActions.loadAgain(viewingPaper) : undefined
+          }
+          onLabel={
+            canImport && viewingPaper.status === 'DONE' && viewingPaper.unlabelledCount > 0 && labelling?.ready !== false
+              ? () => sourceActions.askLabelling(viewingPaper)
+              : undefined
+          }
+          labellingBlocker={labelling && !labelling.ready ? labelling.reason : null}
+        >
+          {importDialog}
+          {sourceActions.dialogs}
+        </PaperReadingWorkspace>
+      </ThemeProvider>
+    )
   }
 
   return (
@@ -562,33 +684,29 @@ export default function AiAssistantScreen({
           outlineOpen={outlineOpen || outlineSheet}
           onToggleOutline={toggleOutline}
           onNew={startNew}
+          actions={
+            canImport ? (
+              <Button appearance="ghost" size="sm" onClick={() => setImporting(true)} aria-label="Nạp đề" title="Nạp đề">
+                <FileText size={15} />
+                <span className="hidden lg:inline">Nạp đề</span>
+              </Button>
+            ) : undefined
+          }
         />
 
-        <div className="shrink-0 px-2 pb-2 sm:px-3">
+        <div className="shrink-0 px-2 pb-1.5 sm:px-3">
           <DocToolbar />
         </div>
 
         <div ref={row} className="flex min-h-0 min-w-0 flex-1">
           {outlineOpen && (
             <>
-              {examDoc.mode === 'FREE' ? (
-                <LeftPanel
-                  onCollapse={() => setOutlineOpen(false)}
-                  templates={<TemplateLibrary />}
-                  style={{ width: widths.outline }}
-                  className="hidden shrink-0 border-r border-card-border bg-card-background xl:flex"
-                />
-              ) : (
-                // The question view has its own outline (of the draft); the document's would show the hidden text.
-                <ExamOutline
-                  paper={ai.paper}
-                  numberOf={numberOf}
-                  onJump={jumpToQuestion}
-                  onCollapse={() => setOutlineOpen(false)}
-                  style={{ width: widths.outline }}
-                  className="hidden shrink-0 border-r border-card-border bg-card-background xl:flex"
-                />
-              )}
+              {renderTree(composeOutline, {
+                onCollapse: () => setOutlineOpen(false),
+                templates: composeTemplates,
+                style: { width: widths.outline },
+                className: 'hidden shrink-0 border-r border-card-border bg-card-background xl:flex',
+              })}
               <ResizeHandle
                 label="Kéo để đổi độ rộng mục lục"
                 value={widths.outline}
@@ -721,33 +839,7 @@ export default function AiAssistantScreen({
           )}
         </div>
 
-        <SheetOverlay isOpen={conversationsOpen} onOpenChange={setConversationsOpen}>
-          <SheetContent
-            side="right"
-            showCloseButton={false}
-            className="w-[min(340px,90vw)]! min-w-0! max-w-[90vw]! gap-0 border-l border-card-border bg-card-background p-0 sm:max-w-[90vw]!"
-          >
-            <SheetTitle className="sr-only">Cuộc trò chuyện</SheetTitle>
-            <AiSidebar
-              conversations={ai.conversations}
-              activeId={ai.activeId}
-              loading={ai.conversationsLoading}
-              onSelect={(id) => {
-                ai.selectConversation(id)
-                setConversationsOpen(false)
-                setEditingId(null)
-                setFocusedId(null)
-              }}
-              onNew={startNew}
-              onRename={(id, title) => void ai.renameConversation(id, title)}
-              onDelete={(id) =>
-                setPendingDelete(ai.conversations.find((item) => item.id === id) ?? null)
-              }
-              onClose={() => setConversationsOpen(false)}
-              className="flex h-full w-full"
-            />
-          </SheetContent>
-        </SheetOverlay>
+        {importDialog}
 
         <SheetOverlay isOpen={chatSheet} onOpenChange={setChatSheet}>
           <SheetContent
@@ -787,21 +879,11 @@ export default function AiAssistantScreen({
             className="w-[min(280px,85vw)]! min-w-0! max-w-[85vw]! gap-0 border-r border-card-border bg-card-background p-0 sm:max-w-[85vw]!"
           >
             <SheetTitle className="sr-only">Mục lục đề thi</SheetTitle>
-            {examDoc.mode === 'FREE' ? (
-              <LeftPanel
-                onClose={() => setOutlineSheet(false)}
-                templates={<TemplateLibrary />}
-                className="flex h-full w-full"
-              />
-            ) : (
-              <ExamOutline
-                paper={ai.paper}
-                numberOf={numberOf}
-                onJump={jumpToQuestion}
-                onClose={() => setOutlineSheet(false)}
-                className="flex h-full w-full"
-              />
-            )}
+            {renderTree(composeOutline, {
+              onClose: () => setOutlineSheet(false),
+              templates: composeTemplates,
+              className: 'flex h-full w-full',
+            })}
           </SheetContent>
         </SheetOverlay>
 

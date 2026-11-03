@@ -8,7 +8,10 @@ const ignoreEdit = () => undefined
  * A read-only editor showing one exam variant on the paged sheets. It is built once, from the document editor's own
  * extension list, and given each variant's content as it changes.
  */
-export function useVariantEditor(content: JSONContent | null): { editor: Editor | null; pages: number } {
+export function useVariantEditor(
+  content: JSONContent | null,
+  label = 'Mã đề đang xem (chỉ đọc)'
+): { editor: Editor | null; pages: number } {
   const [pages, setPages] = useState(1)
   const editor = useEditor(
     {
@@ -16,7 +19,7 @@ export function useVariantEditor(content: JSONContent | null): { editor: Editor 
       editable: false,
       extensions: examDocExtensions({ onEditFormula: ignoreEdit, onPages: setPages }),
       editorProps: {
-        attributes: { class: 'exam-doc-content', 'aria-label': 'Mã đề đang xem (chỉ đọc)', spellcheck: 'false' },
+        attributes: { class: 'exam-doc-content', 'aria-label': label, spellcheck: 'false' },
       },
     },
     []
