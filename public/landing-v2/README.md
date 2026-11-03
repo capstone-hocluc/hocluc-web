@@ -22,8 +22,13 @@ a 1536 px and an 800 px WebP for `srcSet`. `hero-students-cutout` (1400 px and 7
 generated the same way on a green screen and keyed out locally; it stands in front of the logo shape in the
 first hero slide.
 
+`student-laptop-study-v1-480.webp` (484 × 600) is the photo beside "Khoá dành cho ai" on the public course
+page: a grade-12 student in school uniform studying on a laptop at a desk at home. It was generated with
+Canva's image generator in November 2026 and is an illustration, not a real student; there is no text or
+logo in the frame. Only this preview size could be downloaded; the 1136 × 1408 original stays in Canva.
+
 The subject illustrations and character avatars (star, robot, owl, Mai, Nam) are no longer used on the home
-page; `mai-avatar-interaction.webp` is still used on the course page. UI icons are Lucide (ISC,
+or course pages. UI icons are Lucide (ISC,
 `assets/icons/LICENSE`). Avatar silhouettes are adapted from the MathTutor `bot-avatars` package under the
 MIT licence (`assets/bot-avatars-LICENSE.txt`).
 

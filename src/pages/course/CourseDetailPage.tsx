@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import BundleCourses from '../../components/course/BundleCourses'
+import ChapterList from '../../components/course/ChapterList'
 import CourseAbout from '../../components/course/CourseAbout'
 import {
   ownChapters,
@@ -102,32 +104,7 @@ function Chapters({ chapters, purchased }: { chapters: CourseChapter[]; purchase
   return (
     <section className="cd-block" aria-labelledby="cd-content-title">
       <h2 id="cd-content-title">Nội dung khóa học</h2>
-      <div className="cd-chapters">
-        {chapters.map((chapter, index) => {
-          const lessons = [...chapter.lessons].sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
-          return (
-            <details key={chapter.id} className="cd-chapter" open={index === 0}>
-              <summary>
-                <span className="cd-chapter-index">Chương {index + 1}</span>
-                <span className="cd-chapter-title">{chapter.title}</span>
-                <span className="cd-chapter-count">{lessons.length} bài</span>
-                <Icon name="chevron-down" />
-              </summary>
-              <ul className="cd-lessons">
-                {lessons.map((lesson) => (
-                  <li key={lesson.id}>
-                    <span className="cd-lesson-title">{lesson.title}</span>
-                    {lesson.preview && !purchased && <span className="cd-chip is-preview">Học thử</span>}
-                    {lesson.durationSeconds ? (
-                      <span className="cd-lesson-time">{formatDuration(lesson.durationSeconds)}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )
-        })}
-      </div>
+      <ChapterList chapters={chapters} purchased={purchased} />
     </section>
   )
 }
@@ -227,11 +204,15 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
       (block) => !(stages && block.heading?.startsWith('Lộ trình'))
     )
     const giftLessons = gifts.reduce((sum, gift) => sum + gift.lessonCount, 0)
+    const chapters = ownChapters(course)
     return {
       gifts,
+      phases,
+      // Made only of smaller courses (it teaches no chapters itself): shown as the set it is.
+      bundle: gifts.length > 0 && chapters.length === 0,
       stages,
       about,
-      chapters: ownChapters(course),
+      chapters,
       lessons: (course.lessonCount ?? 0) + giftLessons,
       weeks: weeksBetween(course.startDate, course.endDate),
     }
@@ -314,6 +295,12 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                       <h1>{course.title}</h1>
                       {course.shortIntroduction && <p className="cd-lead">{course.shortIntroduction}</p>}
                       <dl className="cd-facts">
+                        {view.bundle && (
+                          <div>
+                            <dt>Gồm</dt>
+                            <dd>{view.gifts.length} khóa học</dd>
+                          </div>
+                        )}
                         {day(course.startDate) && (
                           <div>
                             <dt>Khai giảng</dt>
@@ -345,7 +332,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             <dd>{view.weeks} tuần</dd>
                           </div>
                         )}
-                        {view.gifts.length > 0 && (
+                        {view.gifts.length > 0 && !view.bundle && (
                           <div>
                             <dt>Khóa đi kèm</dt>
                             <dd>{view.gifts.length} khóa</dd>
@@ -360,11 +347,19 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                       </dl>
                     </header>
 
-                    {view.about.length > 0 && <CourseAbout blocks={view.about} startDate={course.startDate} />}
+                    {view.about.length > 0 && (
+                      <CourseAbout
+                        blocks={view.about}
+                        startDate={course.startDate}
+                        includedCount={view.bundle ? view.gifts.length : 0}
+                      />
+                    )}
 
                     {course.outcomes && course.outcomes.length > 0 && <Outcomes outcomes={course.outcomes} />}
 
-                    {view.stages ? (
+                    {view.bundle ? (
+                      <BundleCourses phases={view.phases} purchased={Boolean(course.purchased)} />
+                    ) : view.stages ? (
                       <Roadmap phases={view.stages} />
                     ) : (
                       view.gifts.length > 0 && (
@@ -402,6 +397,11 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             <strong>{price}</strong>
                           </p>
                         )}
+                        {view.bundle && (
+                          <p className="-mt-2! text-(length:--small)">
+                            Trọn bộ {view.gifts.length} khóa học, mua một lần học được tất cả.
+                          </p>
+                        )}
                         {buy}
                         {course.purchased && <p className="cd-buy-note">Bạn đã sở hữu khóa học này.</p>}
                         {view.gifts.length > 0 && (
@@ -435,7 +435,14 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
               </section>
 
               <div className="cd-mobile-bar">
-                {price && <strong>{price}</strong>}
+                {price && (
+                  <div className="grid leading-tight">
+                    <strong>{price}</strong>
+                    {view.bundle && (
+                      <span className="text-(length:--small) text-(--muted)">Trọn bộ {view.gifts.length} khóa</span>
+                    )}
+                  </div>
+                )}
                 {buy}
               </div>
             </>

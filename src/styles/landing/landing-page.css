@@ -448,40 +448,6 @@
 .landing-page .catalog-compare {
   padding-top: 0;
 }
-.landing-page .compare-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  font-size: 0.9375rem;
-}
-.landing-page .compare-table :is(th, td) {
-  padding: 16px 20px;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
-  font-variant-numeric: tabular-nums;
-}
-.landing-page .compare-table tbody tr:last-child :is(th, td) {
-  border-bottom: 0;
-}
-.landing-page .compare-table thead th {
-  background: var(--soft);
-  color: var(--muted);
-  font-size: var(--small);
-  font-weight: 600;
-}
-.landing-page .compare-table tbody th {
-  font-weight: 600;
-}
-.landing-page .compare-table tbody th a:hover {
-  color: var(--blue-text);
-}
-.landing-page .compare-table .compare-price {
-  font-weight: 600;
-  white-space: nowrap;
-}
 .landing-page .course-info {
   display: flex;
   flex-direction: column;
@@ -903,41 +869,6 @@
   }
 }
 @media (max-width: 760px) {
-  .landing-page .compare-table,
-  .landing-page .compare-table tbody,
-  .landing-page .compare-table tr,
-  .landing-page .compare-table :is(th, td) {
-    display: block;
-  }
-  .landing-page .compare-table {
-    border: 0;
-    border-radius: 0;
-  }
-  .landing-page .compare-table thead {
-    display: none;
-  }
-  .landing-page .compare-table tbody {
-    display: grid;
-    gap: 12px;
-  }
-  .landing-page .compare-table tr {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 8px 0;
-  }
-  .landing-page .compare-table :is(th, td) {
-    padding: 8px 16px;
-    border-bottom: 0;
-  }
-  .landing-page .compare-table td {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-  }
-  .landing-page .compare-table td::before {
-    content: attr(data-label);
-    color: var(--muted);
-  }
   .landing-page .container {
     width: calc(100% - 40px);
   }

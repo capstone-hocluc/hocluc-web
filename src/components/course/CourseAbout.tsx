@@ -44,10 +44,14 @@ function Audience({ block }: { block: DescriptionBlock }) {
           ))}
         </ul>
       </div>
-      <figure className="ab-audience-art" aria-hidden="true">
-        <span className="ab-bubble">Khóa này dành cho mình!</span>
-        <img src="/landing-v2/assets/mai-avatar-interaction.webp" alt="" loading="lazy" />
-      </figure>
+      <img
+        src="/landing-v2/assets/student-laptop-study-v1-480.webp"
+        alt=""
+        width={484}
+        height={600}
+        loading="lazy"
+        className="aspect-[4/3] w-full max-w-[280px] self-center justify-self-end md:max-w-none rounded-[18px] object-cover object-[center_35%] shadow-[0_16px_32px_-20px_rgb(22_75_111/0.45)] md:aspect-[4/5]"
+      />
     </article>
   )
 }
@@ -71,10 +75,10 @@ function Learn({ block }: { block: DescriptionBlock }) {
   )
 }
 
-function Get({ block }: { block: DescriptionBlock }) {
+function Get({ block, includedCount }: { block: DescriptionBlock; includedCount: number }) {
   return (
     <article className="ab-tile ab-get">
-      <span className="ab-kicker">Trọn gói</span>
+      <span className="ab-kicker">{includedCount > 0 ? `Trọn bộ ${includedCount} khóa học` : 'Trọn gói'}</span>
       <h3>{block.heading}</h3>
       <ul>
         {block.bullets.map((item, index) => (
@@ -138,9 +142,18 @@ function Other({ block }: { block: DescriptionBlock }) {
   )
 }
 
-// "Giới thiệu khóa học" as a bento: who it is for (with Mai), what you learn as numbered steps,
-// what you get on a dark tile, and the timing as a strip with a countdown to the start date.
-export default function CourseAbout({ blocks, startDate }: { blocks: DescriptionBlock[]; startDate?: string }) {
+// "Giới thiệu khóa học" as a bento: who it is for (beside a photo of a student), what you learn as
+// numbered steps, what you get on a dark tile, and the timing as a strip with a countdown to the
+// start date. `includedCount` is the number of courses a bundle is made of (0 for a single course).
+export default function CourseAbout({
+  blocks,
+  startDate,
+  includedCount = 0,
+}: {
+  blocks: DescriptionBlock[]
+  startDate?: string
+  includedCount?: number
+}) {
   const lead = blocks.filter((block) => !block.heading).flatMap((block) => block.lines)
   const tiles = blocks.filter((block) => block.heading)
   return (
@@ -155,7 +168,7 @@ export default function CourseAbout({ blocks, startDate }: { blocks: Description
             case 'learn':
               return <Learn key={index} block={block} />
             case 'get':
-              return <Get key={index} block={block} />
+              return <Get key={index} block={block} includedCount={includedCount} />
             case 'time':
               return <Time key={index} block={block} startDate={startDate} />
             default:

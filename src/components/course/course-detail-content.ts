@@ -49,6 +49,22 @@ export function shortCourseName(title: string) {
   return title.split(' · ')[1]?.split(' – ')[0]?.trim() || title
 }
 
+// An included course's description opens with a fact line such as
+// "Khoá cơ bản · 20 giờ · Phần 1A Tiếng Việt (câu 1–30)". The hours become their own figure and
+// the rest of that line is the course's one-line summary.
+export function includedCourseSummary(description?: string) {
+  const first = (description ?? '').split('\n').map((line) => line.trim()).find(Boolean) ?? ''
+  if (/^[•\-*]/.test(first)) return { summary: null, hours: null }
+  let hours: number | null = null
+  const parts: string[] = []
+  for (const part of first.split(' · ')) {
+    const match = part.match(/^(\d+(?:[.,]\d+)?)\s*giờ$/)
+    if (match) hours = Number(match[1].replace(',', '.'))
+    else parts.push(part)
+  }
+  return { summary: parts.join(' · ') || null, hours }
+}
+
 /** The chapters a course teaches itself (a SECTION course, or a MAIN course with own content). */
 export function ownChapters(course: CourseDetail): CourseChapter[] {
   return (course.phases ?? [])

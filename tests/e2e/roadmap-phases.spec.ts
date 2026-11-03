@@ -1,7 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { fixtureProblems, IDS, installCrudFixture } from './core-crud-fixture'
 import { studentRoutes } from '../../src/lib/studentRoutes'
+import type { CourseDetail } from '../../src/services/courseService'
 import {
+  gift,
   installRoadmapFixture,
   roadmapCourse,
   roadmapLesson,
@@ -142,25 +144,99 @@ test('public course page renders 4/6/8 gifts under their phases and the unphased
     courses: { [ROADMAP_IDS.main]: roadmapCourse(), [ROADMAP_IDS.sparse]: sparseCourse() },
   })
   await page.goto(`/courses/${ROADMAP_IDS.main}`)
-  await expect(page.getByRole('heading', { name: 'Lộ trình học', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Gồm 19 khóa học', exact: true })).toBeVisible()
 
   const stages = page.locator('.cd-stage')
   await expect(stages).toHaveCount(4)
   await expect(stages.locator('h3')).toHaveText([
-    'Giai đoạn 1',
-    'Giai đoạn 2',
-    'Giai đoạn 3',
-    'Xuyên suốt lộ trình',
+    /^Giai đoạn 1\s*4 khóa$/,
+    /^Giai đoạn 2\s*6 khóa$/,
+    /^Giai đoạn 3\s*8 khóa$/,
+    /^Xuyên suốt lộ trình\s*1 khóa$/,
   ])
-  await expect(stages.nth(0).locator('.cd-gift')).toHaveCount(4)
-  await expect(stages.nth(1).locator('.cd-gift')).toHaveCount(6)
-  await expect(stages.nth(2).locator('.cd-gift')).toHaveCount(8)
-  await expect(stages.nth(3).locator('.cd-gift')).toHaveCount(1)
-  await expect(stages.nth(3).locator('.cd-gift')).toContainText('Quà xuyên suốt')
+  const courses = (index: number) => stages.nth(index).getByTestId('included-course')
+  await expect(courses(0)).toHaveCount(4)
+  await expect(courses(1)).toHaveCount(6)
+  await expect(courses(2)).toHaveCount(8)
+  await expect(courses(3)).toHaveCount(1)
+  await expect(courses(3)).toContainText('Quà xuyên suốt')
 
   // The old grouping read "Khóa tặng kèm:" out of the description; the roadmap must ignore it.
   await expect(page.getByText('Khóa tặng kèm: Không có thật.')).toHaveCount(0)
   await expect(stages.nth(0).locator('.cd-stage-body > p')).toHaveCount(0)
+})
+
+test('a course made of smaller courses shows them as a set that opens into each curriculum', async ({ page }) => {
+  const bundle = roadmapCourse()
+  bundle.phases![0].gifts[1] = gift('g1-1', 'Nền tảng Tiếng Việt', {
+    phaseId: ROADMAP_IDS.phase1,
+    categoryName: 'Tiếng Việt',
+    chapterCount: 2,
+    lessonCount: 3,
+    description: 'Khoá cơ bản · 20 giờ · Phần 1A Tiếng Việt (câu 1–30)\n\nBạn sẽ học\n• Chính tả',
+  })
+  const included: CourseDetail = {
+    id: 'g1-1',
+    title: 'Nền tảng Tiếng Việt',
+    price: 590000,
+    giftCount: 0,
+    phases: [
+      {
+        id: null,
+        name: null,
+        gifts: [],
+        sections: [
+          {
+            sectionCourseId: 'g1-1',
+            title: 'Nền tảng Tiếng Việt',
+            chapters: [
+              {
+                id: 'g1-1-c1',
+                title: 'Chính tả & chuẩn dùng từ',
+                sequence: 1,
+                lessons: [
+                  { id: 'g1-1-l1', title: 'Các cặp âm dễ nhầm', sequence: 1 },
+                  { id: 'g1-1-l2', title: 'Dấu câu', sequence: 2 },
+                ],
+              },
+              {
+                id: 'g1-1-c2',
+                title: 'Từ vựng & ngữ nghĩa',
+                sequence: 2,
+                lessons: [{ id: 'g1-1-l3', title: 'Từ Hán Việt', sequence: 1 }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+  const state = await installRoadmapFixture(page, {
+    courses: { [ROADMAP_IDS.main]: bundle, 'g1-1': included },
+  })
+  await page.goto(`/courses/${ROADMAP_IDS.main}`)
+
+  await expect(page.getByRole('heading', { name: 'Gồm 19 khóa học', exact: true })).toBeVisible()
+  await expect(page.locator('.cd-facts')).toContainText('Gồm19 khóa học')
+  await expect(page.locator('.cd-facts')).not.toContainText('Khóa đi kèm')
+  await expect(page.getByLabel('Đăng ký khóa học')).toContainText('Trọn bộ 19 khóa học')
+
+  const card = page.getByTestId('included-course').filter({ hasText: 'Nền tảng Tiếng Việt' })
+  await expect(card).toContainText('Khoá cơ bản · Phần 1A Tiếng Việt (câu 1–30)')
+  await expect(card).toContainText('2 chương · 3 bài · 20 giờ')
+
+  // The curriculum is fetched only when the course is opened.
+  expect(state.requests.some((request) => request.path === '/api/v1/courses/g1-1')).toBe(false)
+  await card.locator('summary').first().click()
+  await expect(card.getByText('Chính tả & chuẩn dùng từ', { exact: true })).toBeVisible()
+  await expect(card.getByText('Từ vựng & ngữ nghĩa', { exact: true })).toBeVisible()
+  await expect(card.getByRole('link', { name: /Xem chi tiết khóa học/ })).toHaveAttribute('href', '/courses/g1-1')
+
+  // The included course on its own is a single course: its chapters, no bundle heading.
+  await page.goto('/courses/g1-1')
+  await expect(page.getByRole('heading', { name: 'Nội dung khóa học', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Gồm \d+ khóa học$/ })).toHaveCount(0)
+  await expect(page.getByText('Chính tả & chuẩn dùng từ', { exact: true })).toBeVisible()
 })
 
 test('public course page does not render an empty gift group', async ({ page }) => {
@@ -238,7 +314,7 @@ test('study and public course pages fit a 390px viewport without horizontal scro
   ).toBe(true)
 
   await page.goto(`/courses/${ROADMAP_IDS.main}`)
-  await expect(page.getByRole('heading', { name: 'Lộ trình học', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Gồm 19 khóa học', exact: true })).toBeVisible()
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth
