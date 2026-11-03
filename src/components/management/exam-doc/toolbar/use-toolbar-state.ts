@@ -71,6 +71,9 @@ function readBlock(editor: Editor): BlockStyle {
   if (editor.isActive('heading', { level: 1 })) return 'h1'
   if (editor.isActive('heading', { level: 2 })) return 'h2'
   if (editor.isActive('heading', { level: 3 })) return 'h3'
+  if (editor.isActive('heading', { level: 4 })) return 'h4'
+  if (editor.isActive('paragraph', { paragraphStyle: 'title' })) return 'title'
+  if (editor.isActive('paragraph', { paragraphStyle: 'subtitle' })) return 'subtitle'
   return 'paragraph'
 }
 

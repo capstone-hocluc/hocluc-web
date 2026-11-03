@@ -83,7 +83,7 @@ export function FontSizeControl({ value, disabled, onChange, onDone }: FontSizeC
           }
         }}
         className={cn(
-          'h-7 w-11 shrink-0 rounded-md border border-input-border bg-input-background text-center text-[13px] font-medium text-text-primary outline-none transition-colors',
+          'h-6 w-11 shrink-0 rounded-md border border-input-border bg-input-background text-center text-[13px] font-medium text-text-primary outline-none transition-colors',
           'focus:border-input-primary-focus-border focus-visible:ring-2 focus-visible:ring-input-primary-focus-border/30 disabled:opacity-40'
         )}
       />

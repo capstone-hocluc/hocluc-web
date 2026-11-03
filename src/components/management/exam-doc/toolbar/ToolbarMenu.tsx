@@ -107,8 +107,9 @@ export function MenuRadioList({ value, options, onChange }: MenuRadioListProps) 
           value={option.value}
           icon={option.icon}
           style={option.fontFamily ? { fontFamily: option.fontFamily } : undefined}
+          className={option.previewClass ? 'h-auto min-h-8 py-2' : undefined}
         >
-          {option.label}
+          {option.previewClass ? <span className={option.previewClass}>{option.label}</span> : option.label}
         </MenuRadioItem>
       ))}
     </Menu.RadioGroup>

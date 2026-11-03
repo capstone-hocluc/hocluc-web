@@ -3,7 +3,7 @@
 
 /** Any control sitting on the pill: icon buttons, select triggers, colour buttons. */
 export const controlClass =
-  'inline-flex h-8 shrink-0 items-center rounded-md text-icon-secondary outline-none transition-colors hover:bg-background-gray-tertiary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-background-gray-tertiary data-[state=open]:text-text-primary aria-pressed:bg-badge-primary-background aria-pressed:text-primary-text aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-primary-text/25'
+  'inline-flex h-7 shrink-0 items-center rounded-md text-icon-secondary outline-none transition-colors hover:bg-background-gray-tertiary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-background-gray-tertiary data-[state=open]:text-text-primary aria-pressed:bg-badge-primary-background aria-pressed:text-primary-text aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-primary-text/25'
 
 /** Trigger that shows a value as text ("100%", "Văn bản thường"). */
 export const textTriggerClass = 'gap-1 px-2 text-[13px] font-medium text-text-primary'

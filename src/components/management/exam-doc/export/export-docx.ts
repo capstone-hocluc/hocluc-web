@@ -60,7 +60,7 @@ const ALIGNMENTS: Record<string, (typeof AlignmentType)[keyof typeof AlignmentTy
   justify: AlignmentType.JUSTIFIED,
 }
 
-const HEADINGS = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3 } as const
+const HEADINGS = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3, 4: HeadingLevel.HEADING_4 } as const
 
 const LINE = { style: BorderStyle.SINGLE, size: 6, color: '111111' } as const
 const TABLE_LINES = {
@@ -244,9 +244,10 @@ class DocxWriter {
   private async block(node: JSONContent, place: Place): Promise<Block[]> {
     switch (node.type) {
       case 'paragraph':
-        return [await this.paragraph(node, place)]
+        // "Tiêu đề" is Word's Title style; "Phụ đề" stays a plain paragraph, Word has no matching heading
+        return [await this.paragraph(node, place, node.attrs?.paragraphStyle === 'title' ? { heading: HeadingLevel.TITLE } : {})]
       case 'heading':
-        return [await this.paragraph(node, place, { heading: HEADINGS[node.attrs?.level as 1 | 2 | 3] ?? HeadingLevel.HEADING_3 })]
+        return [await this.paragraph(node, place, { heading: HEADINGS[node.attrs?.level as 1 | 2 | 3 | 4] ?? HeadingLevel.HEADING_3 })]
       case 'bulletList':
         return this.list(node, place, false)
       case 'orderedList':

@@ -7,7 +7,7 @@ import Superscript from '@tiptap/extension-superscript'
 import { TableKit } from '@tiptap/extension-table'
 import Image from '@tiptap/extension-image'
 import { Placeholder } from '@tiptap/extensions'
-import { Boxed, Indent, LineSpacing, MathNode, PageBreak, type MathOptions } from './extensions'
+import { Boxed, Indent, LineSpacing, MathNode, PageBreak, ParagraphStyles, type MathOptions } from './extensions'
 import { ExamTags } from './exam-tags'
 import { LiveDraftWidget } from './nodes/live-draft-widget'
 import { EXAM_NODES } from './nodes'
@@ -27,7 +27,7 @@ export interface ExamDocExtensionOptions {
 export function examDocExtensions({ onEditFormula, onPages }: ExamDocExtensionOptions): AnyExtension[] {
   return [
     StarterKit.configure({
-      heading: { levels: [1, 2, 3] },
+      heading: { levels: [1, 2, 3, 4] },
       code: false,
       codeBlock: false,
       blockquote: false,
@@ -43,6 +43,7 @@ export function examDocExtensions({ onEditFormula, onPages }: ExamDocExtensionOp
     Placeholder.configure({ placeholder: 'Bắt đầu soạn đề…' }),
     Indent,
     LineSpacing,
+    ParagraphStyles,
     Boxed,
     PageBreak,
     MathNode.configure({ onEdit: onEditFormula }),

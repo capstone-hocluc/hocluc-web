@@ -29,7 +29,7 @@ export function ToolbarButton({
       title={shortcut ? `${label} (${shortcut})` : label}
       aria-keyshortcuts={shortcut?.replace('Ctrl', 'Control')}
       onMouseDown={(event) => event.preventDefault()}
-      className={cn(controlClass, 'w-8 justify-center', className)}
+      className={cn(controlClass, 'w-7 justify-center', className)}
       {...props}
     >
       <Icon size={18} strokeWidth={1.75} aria-hidden />
