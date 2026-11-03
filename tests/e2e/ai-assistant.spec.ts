@@ -2172,6 +2172,270 @@ for (const { width, outlineMax, chatMax } of [
   })
 }
 
+// The ruler above the sheet sets the selected paragraph's indents, as in Word.
+test.describe('ruler indents', () => {
+  const CM_PX = 96 / 2.54
+  const OLD_STEPS_LINE = 'Dòng thụt hai bậc theo cách lưu cũ.'
+  const PLAIN_LINE = 'Dòng chưa thụt lề.'
+  const OPTION_LINE = 'a) Phương án thụt một bậc.'
+  // Documents saved before free indents carry `indent: n`, n steps of 1.27 cm; the compose writer still writes
+  // `indent: 1` for options lettered a), b)… (draft-to-doc.ts).
+  const indentContent = tiptapDoc(
+    heading(1, 'ĐỀ KIỂM TRA TOÁN 10'),
+    { type: 'paragraph', attrs: { indent: 2 }, content: [run(OLD_STEPS_LINE)] },
+    paragraph(run(PLAIN_LINE)),
+    { type: 'paragraph', attrs: { indent: 1 }, content: [run(OPTION_LINE)] },
+    paragraph(run('--- HẾT ---', 'bold'))
+  )
+  const indentDocument = (): FixtureDocument => ({ mode: 'FREE', content: indentContent, version: 3, updatedAt: stamp })
+
+  const sheetLine = (page: Page, text: string) => docEditor(page).locator(':scope > p', { hasText: text })
+  const marker = (page: Page, name: 'Thụt lề trái' | 'Thụt lề phải' | 'Thụt dòng đầu' | 'Thụt treo') =>
+    page.getByRole('slider', { name, exact: true })
+  /** The paragraph's computed indents, in unzoomed CSS px. */
+  const indentsOf = (line: Locator) =>
+    line.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return { left: parseFloat(style.marginLeft), right: parseFloat(style.marginRight), first: parseFloat(style.textIndent) }
+    })
+  const leftOf = (line: Locator) => async () => Math.round((await indentsOf(line)).left * 10) / 10
+  const firstOf = (line: Locator) => async () => Math.round((await indentsOf(line)).first * 10) / 10
+  const px = (cm: number) => Math.round(cm * CM_PX * 10) / 10
+
+  async function openIndentDocument(page: Page) {
+    const fixture = await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': indentDocument() } })
+    await openSavedDocument(page, PLAIN_LINE)
+    return fixture
+  }
+
+  /** Screen px per unzoomed px of the ruler (the sheet's zoom). */
+  async function rulerScale(page: Page) {
+    const box = await page.getByRole('group', { name: 'Thước', exact: true }).boundingBox()
+    return (box?.width ?? 0) / (21 * CM_PX)
+  }
+
+  async function centreOf(locator: Locator) {
+    const box = await locator.boundingBox()
+    if (!box) throw new Error('not on screen')
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  }
+
+  /** Presses a marker and moves it `cm` right (screen distance at the ruler's zoom), without letting go. */
+  async function pressAndMove(page: Page, handle: Locator, cm: number) {
+    const from = await centreOf(handle)
+    const scale = await rulerScale(page)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(from.x + cm * CM_PX * scale, from.y, { steps: 8 })
+  }
+
+  test('old step indents load at 1.27 cm a step, and opening them saves nothing', async ({ page }) => {
+    const { state } = await openIndentDocument(page)
+    await expect.poll(leftOf(sheetLine(page, OLD_STEPS_LINE))).toBe(px(2.54))
+    await expect.poll(leftOf(sheetLine(page, OPTION_LINE))).toBe(px(1.27))
+    await expect.poll(leftOf(sheetLine(page, PLAIN_LINE))).toBe(0)
+    await page.waitForTimeout(1_600)
+    expect(documentSaves(state, 'conv-9')).toEqual([])
+    // Printing (and the browser's PDF) keeps the inline indents.
+    await page.emulateMedia({ media: 'print' })
+    await expect.poll(leftOf(sheetLine(page, OLD_STEPS_LINE))).toBe(px(2.54))
+    await page.emulateMedia({ media: 'screen' })
+
+    // Old HTML (`data-indent="2"`) pasted in comes in at 2.54 cm too.
+    await caretAtEndOf(page, PLAIN_LINE)
+    await docEditor(page).evaluate((root) => {
+      const data = new DataTransfer()
+      data.setData('text/html', '<p>Đầu.</p><p data-indent="2">Dòng dán theo cách cũ.</p><p>Cuối.</p>')
+      root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+    })
+    await expect.poll(leftOf(sheetLine(page, 'Dòng dán theo cách cũ.'))).toBe(px(2.54))
+  })
+
+  test('the markers follow the selection between paragraphs with different indents', async ({ page }) => {
+    await openIndentDocument(page)
+    const left = marker(page, 'Thụt lề trái')
+    await sheetLine(page, OLD_STEPS_LINE).click()
+    await expect(left).toHaveAttribute('aria-valuenow', '2.54')
+    await expect(left).toHaveAttribute('aria-valuetext', '2,54 cm')
+    const indented = (await centreOf(left)).x
+    await sheetLine(page, PLAIN_LINE).click()
+    await expect(left).toHaveAttribute('aria-valuenow', '0')
+    const plain = (await centreOf(left)).x
+    expect(Math.abs(indented - plain - 2.54 * CM_PX * (await rulerScale(page)))).toBeLessThan(1.5)
+  })
+
+  test('dragging the left marker shows its guide, writes one undo step, and Escape cancels a drag', async ({ page }) => {
+    await openIndentDocument(page)
+    const line = sheetLine(page, PLAIN_LINE)
+    await line.click()
+    const guide = page.locator('[data-ruler-guide]')
+    const value = page.locator('[data-ruler-value]')
+
+    await pressAndMove(page, marker(page, 'Thụt lề trái'), 1)
+    await expect(guide).toBeVisible()
+    await expect(value).toHaveText('1 cm')
+    // The sheet shows the indent while the marker is held.
+    await expect.poll(leftOf(line)).toBe(px(1))
+    await page.mouse.up()
+    await expect(guide).toHaveCount(0)
+    await expect.poll(leftOf(line)).toBe(px(1))
+    await expect(line).toHaveAttribute('data-indent-left', '1')
+    // The editor kept focus: Ctrl+Z goes to it and takes the whole drag back at once.
+    await expect(docEditor(page)).toBeFocused()
+    await page.keyboard.press('Control+z')
+    await expect.poll(leftOf(line)).toBe(0)
+
+    await pressAndMove(page, marker(page, 'Thụt lề trái'), 2)
+    await expect.poll(leftOf(line)).toBe(px(2))
+    await page.keyboard.press('Escape')
+    await expect(guide).toHaveCount(0)
+    await expect.poll(leftOf(line)).toBe(0)
+    await page.mouse.up()
+    await expect.poll(leftOf(line)).toBe(0)
+    await expect(marker(page, 'Thụt lề trái')).toHaveAttribute('aria-valuenow', '0')
+  })
+
+  test('arrow keys move a focused marker a quarter centimetre, a whole one with Shift', async ({ page }) => {
+    await openIndentDocument(page)
+    const line = sheetLine(page, PLAIN_LINE)
+    await line.click()
+    const left = marker(page, 'Thụt lề trái')
+    await left.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(left).toHaveAttribute('aria-valuenow', '0.25')
+    await expect.poll(leftOf(line)).toBe(px(0.25))
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(left).toHaveAttribute('aria-valuenow', '1.25')
+    await page.keyboard.press('ArrowLeft')
+    await expect.poll(leftOf(line)).toBe(px(1))
+
+    const right = marker(page, 'Thụt lề phải')
+    await right.focus()
+    await page.keyboard.press('Shift+ArrowLeft')
+    await expect(right).toHaveAttribute('aria-valuenow', '1')
+    await expect.poll(async () => Math.round((await indentsOf(line)).right * 10) / 10).toBe(px(1))
+    // At least 3 cm of text is left: the left indent stops where the right one leaves 3 cm.
+    await left.focus()
+    for (let step = 0; step < 16; step++) await page.keyboard.press('Shift+ArrowRight')
+    await expect(left).toHaveAttribute('aria-valuenow', '13.5')
+  })
+
+  test('the first-line marker sets the first line apart, and the hanging one the lines after it', async ({ page }) => {
+    await openIndentDocument(page)
+    const line = sheetLine(page, PLAIN_LINE)
+    await line.click()
+    await pressAndMove(page, marker(page, 'Thụt dòng đầu'), 1)
+    await page.mouse.up()
+    await expect.poll(firstOf(line)).toBe(px(1))
+    await expect.poll(leftOf(line)).toBe(0)
+
+    // The hanging marker moves the left indent; the first line stays at 1 cm, so it now hangs 1 cm out.
+    await marker(page, 'Thụt treo').focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect.poll(leftOf(line)).toBe(px(2))
+    await expect.poll(firstOf(line)).toBe(-px(1))
+    await expect(marker(page, 'Thụt dòng đầu')).toHaveAttribute('aria-valuenow', '-1')
+  })
+
+  test('Tăng thụt lề still steps 1.27 cm, from an old step count too', async ({ page }) => {
+    await openIndentDocument(page)
+    const more = page.getByRole('button', { name: 'Tăng thụt lề', exact: true })
+    await sheetLine(page, PLAIN_LINE).click()
+    await more.click()
+    await expect.poll(leftOf(sheetLine(page, PLAIN_LINE))).toBe(px(1.27))
+    await sheetLine(page, OLD_STEPS_LINE).click()
+    await more.click()
+    await expect.poll(leftOf(sheetLine(page, OLD_STEPS_LINE))).toBe(px(3.81))
+    await page.getByRole('button', { name: 'Giảm thụt lề', exact: true }).click()
+    await page.getByRole('button', { name: 'Giảm thụt lề', exact: true }).click()
+    await expect.poll(leftOf(sheetLine(page, OLD_STEPS_LINE))).toBe(px(1.27))
+  })
+
+  test('indents go into the Word file as w:ind, in twips', async ({ page }) => {
+    await openIndentDocument(page)
+    await sheetLine(page, PLAIN_LINE).click()
+    await marker(page, 'Thụt lề trái').focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await page.keyboard.press('Shift+ArrowRight')
+    await marker(page, 'Thụt dòng đầu').focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await marker(page, 'Thụt lề phải').focus()
+    await page.keyboard.press('Shift+ArrowLeft')
+    // 1.27 cm, then the hanging marker 1 cm on: left 2.27 cm, the first line 1 cm out.
+    await sheetLine(page, OPTION_LINE).click()
+    await marker(page, 'Thụt treo').focus()
+    await page.keyboard.press('Shift+ArrowRight')
+    await expect(marker(page, 'Thụt lề trái')).toHaveAttribute('aria-valuenow', '2.27')
+
+    const word = await downloadFromFileMenu(page, 'Word (.docx)')
+    const zip = await JSZip.loadAsync(await readFile(await word.path()))
+    const body = (await zip.file('word/document.xml')?.async('string')) ?? ''
+    const indentOf = (text: string) => {
+      const xml = body.split(/<w:p[ >]/).find((chunk) => chunk.includes(text)) ?? ''
+      const ind = /<w:ind\b[^>]*>/.exec(xml)?.[0] ?? ''
+      return Object.fromEntries(Array.from(ind.matchAll(/w:(\w+)="(-?\d+)"/g), ([, name, value]) => [name, Number(value)]))
+    }
+    expect(indentOf(PLAIN_LINE)).toEqual({ left: 1134, right: 567, firstLine: 567 })
+    expect(indentOf(OPTION_LINE)).toEqual({ left: 1287, hanging: 567 })
+    expect(indentOf(OLD_STEPS_LINE)).toEqual({ left: 1440 })
+  })
+
+  test('at 75% zoom a drag lands the indent under the pointer', async ({ page }) => {
+    await openIndentDocument(page)
+    const paper = page.locator('.exam-doc-paper')
+    const box = await paper.boundingBox()
+    await page.mouse.move((box?.x ?? 0) + 200, (box?.y ?? 0) + 200)
+    await page.keyboard.down('Control')
+    await page.mouse.wheel(0, 120)
+    await page.mouse.wheel(0, 120)
+    await page.keyboard.up('Control')
+    await expect.poll(() => paper.evaluate((element) => element.style.zoom)).toBe('0.75')
+    const scale = await rulerScale(page)
+    expect(scale).toBeCloseTo(0.75, 2)
+
+    const line = sheetLine(page, PLAIN_LINE)
+    await line.click()
+    const handle = marker(page, 'Thụt lề trái')
+    const from = await centreOf(handle)
+    const ruler = await page.getByRole('group', { name: 'Thước', exact: true }).boundingBox()
+    // 3 cm in from the left text margin, at the ruler's scale.
+    const target = (ruler?.x ?? 0) + (2 + 3) * CM_PX * scale
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(target, from.y, { steps: 10 })
+    await page.mouse.up()
+    await expect.poll(leftOf(line)).toBe(px(3))
+    expect(Math.abs(((await line.boundingBox())?.x ?? 0) - target)).toBeLessThan(2)
+    expect(Math.abs((await centreOf(handle)).x - target)).toBeLessThan(2)
+  })
+
+  test('the markers of a read-only exam code cannot be moved', async ({ page }) => {
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
+    await openSavedExam(page)
+    await page.getByRole('button', { name: 'Tạo mã đề', exact: true }).click()
+    const panel = page.getByRole('complementary', { name: 'Tạo mã đề', exact: true })
+    await panel.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
+    await panel.getByRole('button', { name: 'Tạo 4 mã đề', exact: true }).click()
+    const variant = page.getByRole('textbox', { name: 'Mã đề đang xem (chỉ đọc)', exact: true })
+    await expect(variant).toHaveAttribute('contenteditable', 'false')
+
+    for (const name of ['Thụt lề trái', 'Thụt lề phải', 'Thụt dòng đầu', 'Thụt treo'] as const) {
+      await expect(marker(page, name)).toHaveAttribute('aria-disabled', 'true')
+      await expect(marker(page, name)).not.toHaveAttribute('tabindex')
+    }
+    const line = variant.locator(':scope > p', { hasText: /^Câu 1\./ })
+    await line.click()
+    const from = await centreOf(marker(page, 'Thụt lề trái'))
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(from.x + 60, from.y, { steps: 5 })
+    await page.mouse.up()
+    await expect(page.locator('[data-ruler-guide]')).toHaveCount(0)
+    expect((await indentsOf(line)).left).toBe(0)
+  })
+})
+
 // The PDF: the server prints it (real text) when it can; any failure falls back to the browser's picture of the sheets.
 test.describe('PDF from the server', () => {
   const EXAM_PDF = '**/api/v1/exam-docs/pdf'

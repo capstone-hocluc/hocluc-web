@@ -3,63 +3,11 @@ import { EditorContent } from '@tiptap/react'
 import ChartEditorHost from './chart-editor/ChartEditorHost'
 import { useExamDoc } from './exam-doc-context'
 import { placeCaretNear, repaginate } from './pagination'
+import Ruler from './ruler/Ruler'
 import './exam-doc.css'
 
-/** A4 in CSS pixels at 96 dpi, and the exam margins (top 2 cm, right 1.5 cm, bottom 2 cm, left 2 cm). */
-const CM = 96 / 2.54
-const SHEET = {
-  widthCm: 21,
-  marginLeftCm: 2,
-  marginRightCm: 1.5,
-} as const
-
-function Ruler() {
-  const width = SHEET.widthCm * CM
-  const start = SHEET.marginLeftCm * CM
-  const end = (SHEET.widthCm - SHEET.marginRightCm) * CM
-  const ticks: Array<{ x: number; kind: 'cm' | 'half' | 'quarter'; label?: number }> = []
-  for (let quarter = 0; quarter <= SHEET.widthCm * 4; quarter++) {
-    const cm = quarter / 4 - SHEET.marginLeftCm
-    const x = quarter * (CM / 4)
-    const kind = quarter % 4 === 0 ? 'cm' : quarter % 2 === 0 ? 'half' : 'quarter'
-    ticks.push({ x, kind, label: kind === 'cm' && cm > 0 && x < end ? cm : undefined })
-  }
-  return (
-    <svg
-      aria-hidden
-      width={width}
-      height={18}
-      viewBox={`0 0 ${width} 18`}
-      className="block text-text-tertiary print:hidden"
-    >
-      <rect x={0} y={4} width={start} height={10} className="fill-background-gray-secondary" />
-      <rect x={end} y={4} width={width - end} height={10} className="fill-background-gray-secondary" />
-      <rect x={start} y={4} width={end - start} height={10} className="fill-card-background" />
-      {ticks.map((tick) =>
-        tick.label !== undefined ? (
-          <text key={tick.x} x={tick.x} y={12.5} textAnchor="middle" fontSize={8} fill="currentColor">
-            {tick.label}
-          </text>
-        ) : (
-          <line
-            key={tick.x}
-            x1={tick.x}
-            x2={tick.x}
-            y1={tick.kind === 'quarter' ? 8 : 6.5}
-            y2={tick.kind === 'quarter' ? 10 : 11.5}
-            stroke="currentColor"
-            strokeWidth={0.75}
-          />
-        )
-      )}
-      <path d={`M${start - 4} 0 h8 l-4 5 z`} className="fill-brand-500" />
-      <path d={`M${end - 4} 0 h8 l-4 5 z`} className="fill-brand-500" />
-    </svg>
-  )
-}
-
-/** Sheet width plus the paper's side padding, in unscaled CSS pixels. */
-const PAPER_WIDTH = SHEET.widthCm * CM + 32
+/** Sheet width (A4 at 96 dpi) plus the paper's side padding, in unscaled CSS pixels. */
+const PAPER_WIDTH = (21 * 96) / 2.54 + 32
 const MIN_FIT = 0.5
 
 /** The scale (≤ 1) at which the paper fits the width of the column holding it. */

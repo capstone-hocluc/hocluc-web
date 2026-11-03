@@ -26,6 +26,7 @@ import {
   type ParagraphChild,
 } from 'docx'
 import { chartPicture, normalizeChart } from '../chart-data'
+import { readIndents } from '../indents'
 import { CHOICE_LABELS } from '../nodes/choice-grid'
 import { loadImage, shownSize, type LoadedImage } from './docx-images'
 import { formulaRun, type FormulaReport } from './docx-math'
@@ -35,8 +36,9 @@ import { documentTitle, downloadBlob, fileNameFor } from './file-name'
 const PAGE = { width: 11906, height: 16838, top: 1134, right: 850, bottom: 1134, left: 1134 }
 const TEXT_WIDTH = PAGE.width - PAGE.left - PAGE.right
 const TWIPS_PER_PX = 15
-/** One indent step of the editor, 1.27 cm. */
+/** One list level, Word's 1.27 cm. */
 const INDENT_STEP = 720
+const TWIPS_PER_CM = 567
 const FONT = 'Times New Roman'
 const BASE_SIZE = 23
 const SHEET_LINE_HEIGHT = 1.5
@@ -153,12 +155,26 @@ function runFormat(marks: JSONContent['marks'] = [], bold: boolean | undefined, 
   }
 }
 
+/** The paragraph's indents (cm on the sheet) as Word's `w:ind`, in twips; a negative first line is a hanging indent. */
+function paragraphIndent(attrs: Record<string, unknown>): ParagraphFormat {
+  const { left, right, firstLine } = readIndents(attrs)
+  if (!left && !right && !firstLine) return {}
+  const twips = (cm: number) => Math.round(cm * TWIPS_PER_CM)
+  return {
+    indent: {
+      ...(left ? { left: twips(left) } : {}),
+      ...(right ? { right: twips(right) } : {}),
+      ...(firstLine > 0 ? { firstLine: twips(firstLine) } : firstLine < 0 ? { hanging: twips(-firstLine) } : {}),
+    },
+  }
+}
+
 function paragraphFormat(node: JSONContent, place: Place): ParagraphFormat {
   const attrs = node.attrs ?? {}
   const lineHeight = Number(attrs.lineSpacing) || place.lineHeight
   return {
     alignment: ALIGNMENTS[String(attrs.textAlign)] ?? AlignmentType.JUSTIFIED,
-    ...(attrs.indent ? { indent: { left: Number(attrs.indent) * INDENT_STEP } } : {}),
+    ...paragraphIndent(attrs),
     ...(lineHeight ? { spacing: { line: lineTwips(lineHeight), lineRule: LineRuleType.AUTO } } : {}),
   }
 }
@@ -524,7 +540,7 @@ export async function buildDocx(doc: JSONContent, { shownColumns = [], code = nu
     paragraph: { spacing: { before, after }, keepNext: true, keepLines: true },
   })
   const document = new Document({
-    creator: 'HocLuc',
+    creator: 'Hocluc',
     title: documentTitle(doc) ?? 'Đề thi',
     styles: {
       default: {
