@@ -75,7 +75,7 @@ function StudentTopbar({
         </button>
         <button
           type="button"
-          aria-label="HocLuc.com"
+          aria-label="Hocluc.com"
           onClick={onNavigateHome}
           className="flex min-h-11 cursor-pointer items-center p-0"
         >

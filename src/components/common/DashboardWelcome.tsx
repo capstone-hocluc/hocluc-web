@@ -29,7 +29,7 @@ export default function DashboardWelcome({ role, title, description, action }: D
 const ROLE_COPY: Record<PersonnelRole, { title: string; description: string }> = {
   ADMINISTRATOR: {
     title: 'Tổng quan hệ thống',
-    description: 'Theo dõi tài khoản và truy cập các công cụ quản trị Học Lực.',
+    description: 'Theo dõi tài khoản và truy cập các công cụ quản trị Hocluc.',
   },
   MANAGER: {
     title: 'Tổng quan vận hành',
