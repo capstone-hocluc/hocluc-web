@@ -5,6 +5,7 @@ import DevQuickLogin from './DevQuickLogin'
 import GoogleSignInButton from './GoogleSignInButton'
 import { swapAuthForm } from './swap-auth-form'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { ApiError } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
 import { pendingAuthEmail, setPendingAuthEmail } from '../../lib/auth-email'
 import { getPasswordHelper, getPasswordIssues, validatePassword } from '../../lib/passwordRules'
@@ -26,6 +27,20 @@ const DEV_LEARNERS = [{ label: 'Học viên', email: 'student@gmail.com' }] as c
 const DEV_PASSWORD = '123456'
 
 const DEFAULT_ALLOWED_ROLES: readonly UserRole[] = ['STUDENT']
+
+// What the backend's Google sign-in refusals mean for a learner; its own messages are English.
+const GOOGLE_ERRORS: Record<string, string> = {
+  GOOGLE_LOGIN_NOT_CONFIGURED: 'Đăng nhập bằng Google đang tạm tắt. Vui lòng dùng email và mật khẩu.',
+  INVALID_GOOGLE_TOKEN: 'Phiên đăng nhập Google đã hết hạn. Vui lòng thử lại.',
+  GOOGLE_ACCOUNT_NOT_STUDENT: 'Email này thuộc tài khoản nhân sự. Vui lòng đăng nhập ở trang quản lý.',
+  GOOGLE_ACCOUNT_CONFLICT: 'Email này đã gắn với một tài khoản Google khác.',
+  USER_NOT_ACTIVE: 'Tài khoản đang bị khoá. Vui lòng liên hệ hỗ trợ.',
+}
+
+function googleErrorText(error: unknown) {
+  const code = error instanceof ApiError ? error.code : undefined
+  return (code && GOOGLE_ERRORS[code]) || getErrorMessage(error) || 'Đăng nhập với Google không thành công. Vui lòng thử lại.'
+}
 
 function AuthPage({
   mode: initialMode = 'login',
@@ -52,6 +67,8 @@ function AuthPage({
   const [loginLoading, setLoginLoading] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [googleLoading, setGoogleLoading] = useState(false)
+  // Shown under the Google button on both tabs: one sign-in serves login and registration alike.
+  const [googleError, setGoogleError] = useState('')
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({})
   const [registerLoading, setRegisterLoading] = useState(false)
   const [registerSuccess, setRegisterSuccess] = useState('')
@@ -448,20 +465,18 @@ function AuthPage({
   const handleGoogleCredential = async (idToken: string) => {
     if (googleLoading) return
     setGoogleLoading(true)
-    setLoginError('')
+    setGoogleError('')
     try {
       await googleAuth({ idToken })
       const profile = await loadCurrentUser()
       if (!allowedRoles.includes(profile.role)) {
         try { await logout() } finally { clearCurrentUser() }
-        setLoginError(rejectedRoleMessage)
+        setGoogleError(rejectedRoleMessage)
         return
       }
       onContinue?.(profile)
     } catch (error) {
-      setLoginError(
-        getErrorMessage(error) || 'Đăng nhập với Google không thành công. Vui lòng thử lại.'
-      )
+      setGoogleError(googleErrorText(error))
     } finally {
       setGoogleLoading(false)
     }
@@ -1061,6 +1076,11 @@ function AuthPage({
             disabled={googleLoading || loginLoading || registerLoading}
             onCredential={handleGoogleCredential}
           />
+          {googleError && (
+            <small className="hl-auth-error" role="alert">
+              {googleError}
+            </small>
+          )}
           <p className="hl-auth-switch">
             {isSignup ? 'Bạn đã có tài khoản?' : 'Chưa có tài khoản?'}{' '}
             <button type="button" onClick={toggleSignup}>
