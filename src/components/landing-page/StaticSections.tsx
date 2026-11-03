@@ -21,9 +21,9 @@ export function LearningSupportSection() {
     >
       <div className="container support-layout grid gap-8 lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:gap-x-16 xl:gap-x-24">
         <h2 id="support-title" className="lg:col-start-2 lg:row-start-1">
-          Có thêm cách
+          Bí bài?
           <br />
-          để hiểu bài.
+          Luôn có người cùng gỡ.
         </h2>
 
         {/* The image fills its box instead of sizing it, so at desktop width the photo takes the height of
@@ -47,10 +47,10 @@ export function LearningSupportSection() {
               <Icon name="message-circle" />
             </span>
             <div className="flex min-w-0 flex-col gap-1.5">
-              <h3 className={supportTitle}>Trao đổi cùng Mentor</h3>
+              <h3 className={supportTitle}>Hỏi mentor</h3>
               <p className="text-[0.9375rem] leading-relaxed">
-                Hỏi mentor những phần bạn chưa hiểu trong lúc học. Mức hỗ trợ tùy từng khóa, ghi rõ
-                trong thông tin khóa học.
+                Gửi câu hỏi về những phần bạn chưa hiểu trong lúc học. Mức hỗ trợ tùy từng khóa, ghi
+                rõ trong thông tin khóa học.
               </p>
             </div>
           </li>
@@ -59,7 +59,7 @@ export function LearningSupportSection() {
               <Icon name="sparkles" />
             </span>
             <div className="flex min-w-0 flex-col gap-1.5">
-              <h3 className={supportTitle}>Khám phá cùng gia sư AI</h3>
+              <h3 className={supportTitle}>Hỏi gia sư AI</h3>
               <p className="text-[0.9375rem] leading-relaxed">
                 Dùng được khi bạn có khóa học đã mua và còn hạn. Xem điều kiện sử dụng trong tài
                 khoản học tập.
@@ -156,7 +156,7 @@ export function LandingFooter({ onLanding = true }: { onLanding?: boolean }) {
             <p>
               Mỗi ngày một chút,
               <br />
-              tiến xa một bước.
+              đi xa từng bước.
             </p>
           </div>
           <nav className="footer-nav" aria-label="Điều hướng cuối trang">

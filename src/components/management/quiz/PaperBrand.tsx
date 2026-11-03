@@ -11,7 +11,7 @@ export default function PaperBrand({ content, showCopyright = true }: { content:
     <header className="quiz-paper-brand">
       <div className="quiz-paper-brand-row">
         <Logo size={32} />
-        <span className="quiz-paper-brand-motto">Mỗi ngày một chút, tiến xa một bước</span>
+        <span className="quiz-paper-brand-motto">Mỗi ngày một chút, đi xa từng bước</span>
       </div>
       {showCopyright && <p className="quiz-paper-copyright">
         {content === 'own'
