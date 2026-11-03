@@ -6,6 +6,7 @@ import Button from '../../components/console/button'
 import ConfirmDialog from '../../components/console/confirm-dialog'
 import Notice from '../../components/console/notice'
 import ConsoleSheet from '../../components/console/sheet'
+import DateTimeField from '../../components/console/date-time-field'
 import Field, { fieldControlClass } from '../../components/console/form-field'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
 
@@ -85,12 +86,8 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
             <input name="title" autoComplete="off" required disabled={busy} defaultValue={session.title} className={fieldControlClass} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Bắt đầu">
-              <input name="startDateTime" autoComplete="off" type="datetime-local" required disabled={busy} value={start} onChange={(event) => setStart(event.target.value)} className={fieldControlClass} />
-            </Field>
-            <Field label="Kết thúc">
-              <input name="endDateTime" autoComplete="off" type="datetime-local" required disabled={busy} value={end} onChange={(event) => setEnd(event.target.value)} className={fieldControlClass} />
-            </Field>
+            <DateTimeField label="Bắt đầu" name="startDateTime" required disabled={busy} value={start} onChange={setStart} />
+            <DateTimeField label="Kết thúc" name="endDateTime" required disabled={busy} value={end} onChange={setEnd} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Hình thức">

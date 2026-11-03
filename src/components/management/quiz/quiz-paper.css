@@ -1,0 +1,190 @@
+/* The quiz laid out like a printed ĐGNL paper: always black on white, whatever the console theme. */
+.quiz-paper {
+  width: 210mm;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 18mm 18mm 20mm;
+  background: #fff;
+  color: #000;
+  font-family: 'Times New Roman', Tinos, 'Liberation Serif', serif;
+  font-size: 12pt;
+  line-height: 1.32;
+  text-align: justify;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 8px 24px rgb(0 0 0 / 0.08);
+}
+
+.quiz-paper .quiz-paper-brand {
+  margin: 0 0 12pt;
+  padding-bottom: 6pt;
+  border-bottom: 3px double #1e3a8a;
+  text-align: left;
+}
+
+.quiz-paper .quiz-paper-brand-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4pt 12pt;
+}
+
+.quiz-paper .quiz-paper-brand-motto {
+  font-size: 10.5pt;
+  font-style: italic;
+  color: #1e3a8a;
+}
+
+.quiz-paper .quiz-paper-copyright {
+  margin: 4pt 0 0;
+  font-size: 9pt;
+  line-height: 1.3;
+  color: #475569;
+}
+
+.quiz-paper h1 {
+  margin: 0 0 2pt;
+  font-size: 15pt;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.quiz-paper .quiz-paper-meta {
+  margin: 0 0 14pt;
+  text-align: center;
+  font-style: italic;
+}
+
+.quiz-paper h2 {
+  margin: 12pt 0 6pt;
+  font-size: 12pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  break-after: avoid;
+}
+
+.quiz-paper h3 {
+  margin: 8pt 0 4pt;
+  font-size: 12pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  break-after: avoid;
+}
+
+.quiz-paper .quiz-paper-group {
+  margin-top: 8pt;
+}
+
+.quiz-paper .quiz-paper-group-title {
+  margin: 0 0 2pt;
+  font-weight: 700;
+  break-after: avoid;
+}
+
+.quiz-paper .quiz-paper-passage {
+  margin: 0 0 4pt;
+  white-space: pre-wrap;
+  text-indent: 1.27cm;
+}
+
+.quiz-paper .quiz-paper-question {
+  margin-top: 4pt;
+  break-inside: avoid;
+}
+
+.quiz-paper .quiz-paper-stem {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.quiz-paper .quiz-paper-options {
+  display: grid;
+  margin: 1pt 0 0;
+  padding: 0 0 0 0.5cm;
+  list-style: none;
+  column-gap: 8pt;
+  row-gap: 0;
+  text-align: left;
+}
+
+.quiz-paper .quiz-paper-options[data-columns='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quiz-paper .quiz-paper-options[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quiz-paper .quiz-paper-options[data-columns='1'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.quiz-paper img {
+  display: block;
+  max-width: 100%;
+  max-height: 80mm;
+  margin: 4pt auto;
+  object-fit: contain;
+}
+
+.quiz-paper .quiz-paper-end {
+  margin-top: 16pt;
+  text-align: center;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .quiz-paper {
+    padding: 16px;
+    font-size: 11pt;
+  }
+
+  .quiz-paper .quiz-paper-options[data-columns='4'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* The A4 pages Paged.js made (see PagedPreview), as sheets on a desk. */
+.paged-preview-pages .pagedjs_pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.paged-preview-pages .pagedjs_page {
+  background: #fff;
+  color: #000;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 8px 24px rgb(0 0 0 / 0.08);
+}
+
+.paged-preview-pages .paged-focus {
+  border-radius: 3px;
+  background: #e0f2fe;
+  outline: 2px solid #0ea5e9;
+}
+
+/* Only while "Tải PDF" prints (see print-quiz-paper.ts): the pages alone, one sheet each. Other pages print as before. */
+@media print {
+  html.printing-quiz-paper body * {
+    visibility: hidden;
+  }
+
+  html.printing-quiz-paper .paper-print-root,
+  html.printing-quiz-paper .paper-print-root * {
+    visibility: visible;
+  }
+
+  html.printing-quiz-paper .paper-print-root {
+    position: absolute;
+    inset: 0 0 auto;
+  }
+
+  html.printing-quiz-paper .paper-print-root .pagedjs_pages {
+    gap: 0;
+  }
+
+  html.printing-quiz-paper .paper-print-root .pagedjs_page {
+    box-shadow: none;
+  }
+}

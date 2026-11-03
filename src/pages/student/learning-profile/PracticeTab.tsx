@@ -10,7 +10,6 @@ import {
   ProfileHeading,
   TextButton,
 } from '../../../components/student/learning-profile/primitives'
-import { thinScrollbar } from '../../../components/student/learning-profile/styles'
 import Button from '../../../components/ui/Button'
 import DropdownField from '../../../components/ui/DropdownField'
 import type { LearningProfileData } from '../../../data/learningProfile'
@@ -195,7 +194,7 @@ function TeacherFeedbackPanel({
       </div>
 
       <div
-        className={cn('flex max-h-[260px] flex-col gap-2.5 overflow-y-auto pr-1.5', thinScrollbar)}
+        className={cn('flex max-h-[260px] flex-col gap-2.5 app-scroll overflow-y-auto pr-1.5')}
       >
         {visibleFeedback.map((item) => (
           <button

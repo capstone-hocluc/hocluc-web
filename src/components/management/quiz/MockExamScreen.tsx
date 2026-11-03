@@ -7,6 +7,7 @@ import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import {
   ArrowDown,
   ArrowLeft,
+  ArrowRight,
   Eye,
   ArrowUp,
   ClipboardCheck,
@@ -25,6 +26,7 @@ import {
   addTeacherQuizQuestions,
   AmbiguousTeacherQuestionSaveError,
   createTeacherQuiz,
+  type CreateTeacherQuizRequest,
   deleteTeacherQuiz,
   deleteTeacherQuizQuestion,
   duplicateTeacherQuiz,
@@ -41,7 +43,6 @@ import {
   type TeacherQuizEditor,
   type TeacherQuizQuestion,
   type TeacherQuizRecord,
-  type CreateTeacherQuizRequest,
   type TeacherQuizSectionSpec,
 } from '../../../services/teacherQuizService'
 import { ApiError } from '../../../lib/api'
@@ -53,13 +54,20 @@ import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
 import QuizImportDialog from './QuizImportDialog'
-import QuizPdfImportPanel from './QuizPdfImportPanel'
-import DragHandle from '../crud/drag-handle'
-import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
-import { cn } from '../../../lib/cn'
-import Card, { CardEyebrow, CardTitle } from '../../console/card'
+import Card from '../../console/card'
+import DateTimeField from '../../console/date-time-field'
+import { Checkbox } from '../../tailgrids/core/checkbox'
 import ConfirmDialog from '../../console/confirm-dialog'
 import DropdownField from '../../console/dropdown-field'
+import ExamEditorSteps from './ExamEditorSteps'
+import { describePublishProblems } from './publish-problems'
+import MockExamEditorSkeleton from './MockExamEditorSkeleton'
+import ExamQuestionEditor from './ExamQuestionEditor'
+import ExamQuestionRail from './ExamQuestionRail'
+import { CHOICE_TYPES, type DraftQuestion, type DraftSection } from './exam-draft'
+import ScrollArea from '../../ui/ScrollArea'
+import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
+import { useConsoleFocus } from '../../console/console-focus'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import Notice from '../../console/notice'
 import StatusBadge from '../../console/status'
@@ -67,8 +75,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 type AssessmentType = 'EXAM' | 'PLACEMENT'
 
+const LAST_EXAM_STEP = 1
+
 interface TeacherMockExamsProps {
-  onOpenEditor?: (quizId: string) => void
   navigation?: ReactNode
   assessmentType?: AssessmentType
   readOnly?: boolean
@@ -76,37 +85,6 @@ interface TeacherMockExamsProps {
   initialEditorId?: string | null
   onBack: () => void
   onAction: (message: string) => void
-}
-
-interface DraftOption {
-  text: string
-  correct: boolean
-}
-
-interface DraftQuestion {
-  clientId: string
-  serverId: string | null
-  questionText: string
-  questionType: TeacherQuestionType
-  options: DraftOption[]
-  explanation: string
-  imageUrl: string | null
-  categoryId: string | null
-  difficulty: string | null
-  sourcePage: number | null
-  marks: number | null
-  needsReview: boolean
-  reviewNote: string
-  editable: boolean
-}
-
-interface DraftSection {
-  clientId: string
-  title: string
-  categoryId: string | null
-  suggestedMinutes: string
-  unassigned: boolean
-  questions: DraftQuestion[]
 }
 
 interface ExamSettings {
@@ -139,24 +117,17 @@ interface PendingExamCreate {
 }
 
 
-const CHOICE_TYPES: TeacherQuestionType[] = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE']
-const QUESTION_TYPE_OPTIONS: Array<{ id: TeacherQuestionType; label: string }> = [
-  { id: 'SINGLE_CHOICE', label: 'Trắc nghiệm một đáp án' },
-  { id: 'MULTIPLE_CHOICE', label: 'Trắc nghiệm nhiều đáp án' },
-  { id: 'LONG_ANSWER', label: 'Tự luận' },
-]
-
 function createDraftQuestion(): DraftQuestion {
   return {
     clientId: 'local-question-' + crypto.randomUUID(),
     serverId: null,
     questionText: '',
     questionType: 'SINGLE_CHOICE',
+    difficulty: null,
     options: Array.from({ length: 4 }, () => ({ text: '', correct: false })),
     explanation: '',
     imageUrl: null,
     categoryId: null,
-    difficulty: null,
     sourcePage: null,
     marks: null,
     needsReview: false,
@@ -169,6 +140,8 @@ function createDraftSection(title = ''): DraftSection {
   return {
     clientId: 'local-section-' + crypto.randomUUID(),
     title,
+    parentTitle: null,
+    childTitle: null,
     categoryId: null,
     suggestedMinutes: '',
     unassigned: false,
@@ -180,6 +153,8 @@ function createUnassignedSection(questions: DraftQuestion[]): DraftSection {
   return {
     clientId: 'unassigned-questions',
     title: 'Câu hỏi chưa xếp phần',
+    parentTitle: null,
+    childTitle: null,
     categoryId: null,
     suggestedMinutes: '',
     unassigned: true,
@@ -200,7 +175,7 @@ function fromServerQuestion(question: TeacherQuizQuestion): DraftQuestion {
     categoryId: question.categoryId,
     difficulty: question.difficulty ?? null,
     sourcePage: question.sourcePage,
-    marks: question.marks,
+    marks: question.marksFixed ? question.marks : null,
     needsReview: question.needsReview,
     reviewNote: question.reviewNote ?? '',
     editable: editable && question.options.length <= 8,
@@ -212,15 +187,17 @@ function fromServerEditor(editor: TeacherQuizEditor): DraftSection[] {
   const orderedSections = [...editor.sections]
     .sort((a, b) => a.sequence - b.sequence)
     .flatMap((section) => [
-      { section, displayTitle: section.title },
+      { section, displayTitle: section.title, parentTitle: null as string | null, childTitle: null as string | null },
       ...[...section.children]
         .sort((a, b) => a.sequence - b.sequence)
-        .map((child) => ({ section: child, displayTitle: section.title + ' · ' + child.title })),
+        .map((child) => ({ section: child, displayTitle: section.title + ' · ' + child.title, parentTitle: section.title as string | null, childTitle: child.title as string | null })),
     ])
   const sectionIds = new Set(orderedSections.map(({ section }) => section.id))
-  const sections: DraftSection[] = orderedSections.map(({ section, displayTitle }) => ({
+  const sections: DraftSection[] = orderedSections.map(({ section, displayTitle, parentTitle, childTitle }) => ({
       clientId: section.id,
       title: displayTitle,
+      parentTitle,
+      childTitle,
       categoryId: section.categoryId,
       suggestedMinutes: section.suggestedMinutes == null ? '' : String(section.suggestedMinutes),
       unassigned: false,
@@ -385,7 +362,7 @@ function questionPayloadMatchesServer(draft: DraftQuestion, server: TeacherQuizQ
     (payload.categoryId ?? null) === server.categoryId &&
     (payload.difficulty ?? null) === (server.difficulty ?? null) &&
     (payload.sourcePage ?? null) === server.sourcePage &&
-    (payload.marks ?? null) === server.marks &&
+    (payload.marks ?? null) === (server.marksFixed ? server.marks : null) &&
     payload.needsReview === server.needsReview &&
     (payload.reviewNote ?? '') === (server.reviewNote ?? '') &&
     payload.options?.length === server.options.length &&
@@ -441,7 +418,7 @@ function sameLayout(a: TeacherQuizSectionSpec[], b: TeacherQuizSectionSpec[]) {
   ]))
 }
 
-function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, onOpenEditor, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
+function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
   const placement = assessmentType === 'PLACEMENT'
   const quizzes = usePageResource(() => getTeacherQuizzes(), [])
   const [creating, setCreating] = useState(!readOnly && startCreating)
@@ -471,7 +448,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, onOpenE
       const blockers = quiz.publishProblems?.filter(Boolean) ?? []
       onAction(
         error instanceof ApiError && error.status === 409 && quiz.status === 'DRAFT' && blockers.length > 0
-          ? 'Chưa thể xuất bản: ' + blockers.join(', ') + '. Mở đề để hoàn thiện.'
+          ? 'Chưa thể xuất bản: ' + describePublishProblems(blockers) + '. Mở đề để hoàn thiện.'
           : getErrorMessage(error)
       )
     } finally {
@@ -506,7 +483,6 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, onOpenE
   if (!readOnly && (creating || editorQuizId)) {
     return (
       <TeacherMockExamEditor
-        onCreated={id => { if (onOpenEditor) onOpenEditor(id); else { setCreating(false); setEditorQuizId(id) } }}
         assessmentType={assessmentType}
         quizId={editorQuizId}
         onCancel={() => {
@@ -529,7 +505,6 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, onOpenE
   return (
     <section className="flex min-w-0 flex-col gap-5">
       <PageHeading title={navigation ? 'Bài kiểm tra' : placement ? 'Đánh giá đầu vào' : 'Bài thi thử'} readOnly={readOnly}
-        subtitle={placement ? 'Quản lý bài đánh giá đầu vào độc lập với khóa học.' : readOnly ? 'Xem nội dung và theo dõi bài kiểm tra trong các khóa được phân công.' : 'Quản lý đề thi thử, lịch làm bài và nội dung câu hỏi.'}
         action={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />{placement ? 'Tạo đánh giá đầu vào' : 'Tạo đề thi thử'}</Button>} />
       {navigation}
       {placement && <Notice tone="info">Student sẽ nhận bài đã xuất bản được tạo mới nhất. Xuất bản lại bài cũ không thay đổi thời điểm tạo bài. Khi ẩn bài đang dùng, bài đã xuất bản mới nhất còn lại sẽ được chọn.</Notice>}
@@ -617,27 +592,28 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, onOpenE
 }
 
 function TeacherMockExamEditor({
-  onCreated,
   assessmentType,
   quizId,
   onCancel,
   onSaved,
 }: {
-  onCreated: (id: string) => void
   assessmentType: AssessmentType
   quizId: string | null
   onCancel: () => void
   onSaved: (message: string) => void
 }) {
   const access = useQuizAccess()
+  useConsoleFocus()
+  // Kept here, not in the form, so reloading the exam (after an import, say) stays on the step the teacher was on.
+  const [step, setStep] = useState<number | null>(null)
   const editor = usePageResource(() => access.canWrite && quizId ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
   if (!access.canWrite) return <ForbiddenPage />
   if (quizId && editor.status === 'loading') {
-    return <div className="flex flex-col gap-4"><Skeleton className="h-8 w-64" /><Skeleton className="h-48" /><Skeleton className="h-72" /></div>
+    return <MockExamEditorSkeleton />
   }
   if (quizId && (editor.status !== 'ready' || !editor.data)) {
     return (
-      <div className="rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
+      <div className="m-6 rounded-xl border border-card-border bg-background-gray-secondary p-4" role="alert">
         <p className="m-0 text-sm text-text-tertiary">
           {editor.status === 'forbidden'
             ? 'Tài khoản hiện tại không có quyền chỉnh sửa đề thi này.'
@@ -652,31 +628,34 @@ function TeacherMockExamEditor({
       </div>
     )
   }
-  if (quizId && editor.data?.quiz.type !== assessmentType) return <Notice tone="warning">Bài kiểm tra không thuộc loại đang mở. <Button appearance="outline" onClick={onCancel}>Quay lại</Button></Notice>
+  if (quizId && editor.data?.quiz.type !== assessmentType) return <div className="p-6"><Notice tone="warning">Bài kiểm tra không thuộc loại đang mở. <Button appearance="outline" onClick={onCancel}>Quay lại</Button></Notice></div>
   return (
     <TeacherMockExamForm
       key={quizId ?? 'new-exam'}
       assessmentType={assessmentType}
       initial={quizId ? editor.data : null}
+      initialStep={step}
+      onStepChange={setStep}
       onCancel={onCancel}
       onSaved={onSaved}
       onReload={editor.reload}
-      onCreated={onCreated}
     />
   )
 }
 
 function TeacherMockExamForm({
-  onCreated,
   assessmentType,
   initial,
+  initialStep,
+  onStepChange,
   onCancel,
   onSaved,
   onReload,
 }: {
-  onCreated: (id: string) => void
   assessmentType: AssessmentType
   initial: TeacherQuizEditor | null
+  initialStep: number | null
+  onStepChange: (step: number) => void
   onCancel: () => void
   onSaved: (message: string) => void
   onReload: () => void
@@ -703,14 +682,16 @@ function TeacherMockExamForm({
   const [sections, setSections] = useState<DraftSection[]>(() =>
     initial ? fromServerEditor(initial) : [createDraftSection('Phần 1')]
   )
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [railOpen, setRailOpen] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
   const [importBaseline] = useState(() => JSON.stringify({ settings, sections }))
   const hasUnsavedChanges = JSON.stringify({ settings, sections }) !== importBaseline
-  const aiReading = initial?.latestJob?.kind === 'EXAM_FILE' && (initial.latestJob.status === 'PENDING' || initial.latestJob.status === 'RUNNING')
   const pendingCreateRef = useRef<PendingExamCreate | null>(null)
+  const [step, setStep] = useState(() => initialStep ?? 0)
 
   const courseCatalog = usePageResource(async () => {
     if (initialQuiz || placement) return [] as CourseAdmin[]
@@ -720,17 +701,23 @@ function TeacherMockExamForm({
   const categoryOptions = (categories.data ?? []).filter(category => category.active).map(category => ({ id: category.id, label: category.name }))
 
   const settingsLocked = isLocked(quizSnapshot)
-  const questionsLocked = aiReading || settingsLocked || ambiguousCreate || ambiguousQuestionSave
+  const questionsLocked = settingsLocked || ambiguousCreate || ambiguousQuestionSave
   const publishedQuiz = Boolean(quizSnapshot && quizSnapshot.status !== 'DRAFT')
-  const fieldsLocked = aiReading || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave
+  const fieldsLocked = settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave
   const structureSupported = initial ? sectionStructureIsSupported(initial, fromServerEditor(initial)) : true
   const structureReadOnly = !structureSupported
-  const canEditQuestions = !questionsLocked && !publishedQuiz && !structureReadOnly
+  // A nested structure (groups, parent sections) stays fixed, but the content of each question can still be corrected.
+  const canEditContent = !questionsLocked && !publishedQuiz
+  const canEditQuestions = canEditContent && !structureReadOnly
   const hasCreatedQuiz = serverQuizId !== null
-  const importBlockedReason = !serverQuizId ? ambiguousCreate || ambiguousQuestionSave ? 'Kiểm tra danh sách đề trước khi tạo lại.'
-    : sections.length !== 1 || sections[0].title !== 'Phần 1' || sections[0].categoryId || sections[0].suggestedMinutes || sections.some(s => s.questions.some(q => questionHasAnyContent(q) || q.explanation.trim() || q.options.some(o => o.correct)))
-      ? 'Đang có nội dung hoặc cấu trúc soạn tay. Lưu bản nháp trước để giữ nội dung, rồi nhập thêm file.' : ''
-    : aiReading ? 'AI đang đọc PDF. Kiểm tra tiến trình trước khi nhập thêm.'
+  // Questions are numbered across the whole exam, in the order they are saved.
+  const numbered = sections.flatMap((section) => section.questions.map((question) => ({ section, question })))
+  const activeEntry = numbered.find((entry) => entry.question.clientId === selectedId)
+    ?? numbered.find((entry) => entry.section.clientId === selectedId)
+    ?? (sections.some((section) => section.clientId === selectedId) ? null : numbered[0] ?? null)
+  const activeSection = activeEntry?.section ?? sections.find((section) => section.clientId === selectedId) ?? sections[0] ?? null
+  const railSelectedId = activeEntry ? activeEntry.question.clientId : selectedId
+  const importBlockedReason = !serverQuizId ? ''
     : publishedQuiz || settingsLocked ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
       : ambiguousCreate || ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
         : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
@@ -754,9 +741,26 @@ function TeacherMockExamForm({
   const addSection = () => {
     const unassigned = sections.find((section) => section.unassigned)
     const next = sections.filter((section) => !section.unassigned)
-    next.push(createDraftSection('Phần ' + (next.length + 1)))
+    const created = createDraftSection('Phần ' + (next.length + 1))
+    next.push(created)
     if (unassigned) next.push(unassigned)
     setSections(next)
+    setSelectedId(created.clientId)
+  }
+
+  const addQuestion = (sectionId: string) => {
+    const created = createDraftQuestion()
+    setSections((items) => items.map((section) => section.clientId === sectionId ? { ...section, questions: [...section.questions, created] } : section))
+    setSelectedId(created.clientId)
+  }
+
+  const deleteQuestion = (sectionId: string, clientId: string) => {
+    const index = numbered.findIndex((entry) => entry.question.clientId === clientId)
+    const neighbour = numbered[index + 1] ?? numbered[index - 1]
+    setSections((items) => items.map((section) => section.clientId === sectionId
+      ? { ...section, questions: section.questions.filter((question) => question.clientId !== clientId) }
+      : section))
+    setSelectedId(neighbour ? neighbour.question.clientId : sectionId)
   }
 
   const moveSection = (clientId: string, direction: -1 | 1) => {
@@ -794,24 +798,7 @@ function TeacherMockExamForm({
     }))
   }
 
-  const questionDrag = useDragReorder(
-    (fromId, toId) => {
-      if (!access.canWrite || !canEditQuestions || busy) return
-      setSections(items => items.map(section => {
-        const ids = section.questions.map(question => question.clientId)
-        // Keep the existing section boundary; dragging does not assign questions to another section.
-        if (!ids.includes(fromId) || !ids.includes(toId) || !section.questions.find(question => question.clientId === fromId)?.editable) return section
-        const byId = new Map(section.questions.map(question => [question.clientId, question]))
-        return { ...section, questions: arrayMove(ids, fromId, toId).map(id => byId.get(id)!) }
-      }))
-    },
-    (id, direction) => {
-      const section = sections.find(item => item.questions.some(question => question.clientId === id))
-      if (section) moveQuestion(section.clientId, id, direction)
-    }
-  )
-
-  const validate = (publish: boolean) => {
+  const validateSettings = () => {
     const title = settings.title.trim()
     if (!title) return 'Nhập tên đề thi trước khi lưu.'
     if (!placement && !serverQuizId && !settings.courseId) return 'Chọn khóa học chính cho đề thi.'
@@ -833,52 +820,68 @@ function TeacherMockExamForm({
     }
     if (quizSnapshot?.availableFrom && !settings.availableFrom) return 'API hiện tại không hỗ trợ xóa thời điểm bắt đầu đã lưu; hãy chọn thời điểm mới.'
     if (quizSnapshot?.availableUntil && !settings.availableUntil) return 'API hiện tại không hỗ trợ xóa hạn làm bài đã lưu; hãy chọn hạn mới.'
-
-    if (canEditQuestions) {
-      const activeSections = sections.filter((section) => section.title.trim() || section.questions.some(questionHasAnyContent))
-      const nonEmptyQuestions = activeSections.flatMap((section) => section.questions.filter(questionHasAnyContent))
-      for (const section of activeSections) {
-        const hasQuestions = section.questions.some(questionHasAnyContent)
-        if (!section.unassigned && hasQuestions && !section.title.trim()) return 'Đặt tên cho mỗi phần có câu hỏi.'
-      }
-      for (const question of nonEmptyQuestions) {
-        if (!question.questionText.trim()) return 'Mỗi câu hỏi cần có nội dung.'
-        if (CHOICE_TYPES.includes(question.questionType)) {
-          const options = question.options.filter((option) => option.text.trim())
-          if (options.length < 2) return 'Mỗi câu trắc nghiệm cần ít nhất hai lựa chọn.'
-          if (!question.needsReview && !options.some((option) => option.correct)) {
-            return 'Chọn ít nhất một đáp án đúng hoặc đánh dấu câu hỏi cần rà soát.'
-          }
-          if (question.questionType === 'SINGLE_CHOICE' && options.filter((option) => option.correct).length > 1) {
-            return 'Câu trắc nghiệm một đáp án chỉ được chọn một đáp án đúng.'
-          }
-        }
-      }
-      if (publish && nonEmptyQuestions.length === 0) return 'Thêm ít nhất một câu hỏi trước khi xuất bản.'
-      if (placement && publish && nonEmptyQuestions.some(question => question.questionType !== 'SINGLE_CHOICE')) return 'Màn Student hiện chỉ làm được câu hỏi một đáp án. Cần hoàn thiện hỗ trợ loại câu hỏi khác trước khi xuất bản bài này.'
-    }
     return ''
   }
 
-  const getImportCreateRequest = (): CreateTeacherQuizRequest | null => {
-    const validation = validate(false)
-    if (validation || settings.title.trim().length > 500) {
-      setError(validation || 'Tên đề thi tối đa 500 ký tự.')
-      return null
+  /** The first problem found, with the step and question it belongs to so the editor can show it. */
+  const validate = (publish: boolean): { message: string; step?: number; questionId?: string } => {
+    const settingsError = validateSettings()
+    if (settingsError) return { message: settingsError, step: 0 }
+
+    if (canEditContent) {
+      const activeSections = sections.filter((section) => section.title.trim() || section.questions.some(questionHasAnyContent))
+      const allQuestions = activeSections.flatMap((section) => section.questions.filter(questionHasAnyContent))
+      // With a fixed structure only the questions the teacher changed are checked, so one fix can be saved while others still lack answers.
+      const originalQuestions = originalEditorRef.current?.questions ?? []
+      const nonEmptyQuestions = structureReadOnly
+        ? allQuestions.filter((question) => {
+          const previous = originalQuestions.find((item) => item.id === question.serverId)
+          return !previous || !questionPayloadMatchesServer(question, previous)
+        })
+        : allQuestions
+      for (const section of activeSections) {
+        const hasQuestions = section.questions.some(questionHasAnyContent)
+        if (!section.unassigned && hasQuestions && !section.title.trim()) return { message: 'Đặt tên cho mỗi phần có câu hỏi.', step: 1, questionId: section.clientId }
+      }
+      for (const question of nonEmptyQuestions) {
+        const at = { step: 1, questionId: question.clientId }
+        if (!question.questionText.trim()) return { message: 'Mỗi câu hỏi cần có nội dung.', ...at }
+        if (CHOICE_TYPES.includes(question.questionType)) {
+          const options = question.options.filter((option) => option.text.trim())
+          if (options.length < 2) return { message: 'Mỗi câu trắc nghiệm cần ít nhất hai lựa chọn.', ...at }
+          if (!question.needsReview && !options.some((option) => option.correct)) {
+            return { message: 'Chọn ít nhất một đáp án đúng hoặc đánh dấu câu hỏi cần rà soát.', ...at }
+          }
+          if (question.questionType === 'SINGLE_CHOICE' && options.filter((option) => option.correct).length > 1) {
+            return { message: 'Câu trắc nghiệm một đáp án chỉ được chọn một đáp án đúng.', ...at }
+          }
+        }
+      }
+      if (publish && allQuestions.length === 0) return { message: 'Thêm ít nhất một câu hỏi trước khi xuất bản.', step: 1 }
+      if (placement && publish && allQuestions.some(question => question.questionType !== 'SINGLE_CHOICE')) return { message: 'Màn Student hiện chỉ làm được câu hỏi một đáp án. Cần hoàn thiện hỗ trợ loại câu hỏi khác trước khi xuất bản bài này.', step: 1 }
+    }
+    return { message: '' }
+  }
+
+  const goToStep = (target: number) => {
+    // Moving on from the settings checks them first, so a bad value is reported where it can be fixed.
+    if (target > 0 && step === 0 && !publishedQuiz) {
+      const problem = validateSettings()
+      if (problem) { setError(problem); return }
     }
     setError('')
-    return {
-      type: assessmentType, title: settings.title.trim(), durationMinutes: Number(settings.duration), maxAttempts: Number(settings.maxAttempts),
-      ...(placement ? { description: settings.description.trim() } : { courseId: settings.courseId,
-        passingPercentage: Number(settings.passingPercentage), showAnswers: settings.showAnswers, practiceAllowed: settings.practiceAllowed }),
-      ...(fromDateTimeLocal(settings.availableFrom) ? { availableFrom: fromDateTimeLocal(settings.availableFrom) } : {}),
-      ...(fromDateTimeLocal(settings.availableUntil) ? { availableUntil: fromDateTimeLocal(settings.availableUntil) } : {}),
-    }
+    const next = Math.max(0, Math.min(LAST_EXAM_STEP, target))
+    setStep(next)
+    onStepChange(next)
   }
 
   const checkPendingCreate = async () => {
     const pending = pendingCreateRef.current
-    if (!pending || busy) return
+    if (busy) return
+    if (!pending) {
+      setError('Kết quả nhập file chưa rõ. Hãy quay về danh sách và kiểm tra đề trước khi tạo lại.')
+      return
+    }
     setBusy(true)
     try {
       const candidates = findPendingExamCreateCandidates(await getTeacherQuizzes(), pending)
@@ -898,7 +901,7 @@ function TeacherMockExamForm({
 
   const save = async (publish: boolean) => {
     if (!access.canWrite) return
-    if (busy || aiReading) return
+    if (busy) return
     if (publishedQuiz) {
       setError('Đề đã xuất bản hoặc lưu trữ chỉ xem. Tạo bản nháp để chỉnh sửa nội dung.')
       return
@@ -911,9 +914,14 @@ function TeacherMockExamForm({
       setError('Kết quả lưu câu hỏi chưa rõ. Hãy quay về danh sách và mở lại đề để kiểm tra; không gửi lại biểu mẫu này.')
       return
     }
-    const validationMessage = validate(publish)
-    if (validationMessage) {
-      setError(validationMessage)
+    const problem = validate(publish)
+    if (problem.message) {
+      setError(problem.message)
+      if (problem.questionId) setSelectedId(problem.questionId)
+      if (problem.step !== undefined && problem.step !== step) {
+        setStep(problem.step)
+        onStepChange(problem.step)
+      }
       return
     }
     setBusy(true)
@@ -942,7 +950,7 @@ function TeacherMockExamForm({
         }
         pendingCreateRef.current = pending
         try {
-          const created = await createTeacherQuiz({
+          const createPayload: CreateTeacherQuizRequest = {
             type: assessmentType,
             ...(placement ? { description: settings.description.trim() } : { courseId: settings.courseId }),
             title: settings.title.trim(),
@@ -951,7 +959,8 @@ function TeacherMockExamForm({
             ...(!placement ? { passingPercentage, showAnswers: settings.showAnswers, practiceAllowed: settings.practiceAllowed } : {}),
             ...(fromDateTimeLocal(settings.availableFrom) ? { availableFrom: fromDateTimeLocal(settings.availableFrom) } : {}),
             ...(fromDateTimeLocal(settings.availableUntil) ? { availableUntil: fromDateTimeLocal(settings.availableUntil) } : {}),
-          })
+          }
+          const created = await createTeacherQuiz(createPayload)
           quizId = created.id
           setServerQuizId(created.id)
           setQuizSnapshot(created)
@@ -979,7 +988,7 @@ function TeacherMockExamForm({
         await updateTeacherQuiz(quizId, updatePayload)
       }
 
-      if (canEditQuestions && quizId) {
+      if (canEditContent && quizId) {
         const original = originalEditorRef.current
         const activeSections = sections
           .filter((section) => section.title.trim() || section.questions.some(questionHasAnyContent))
@@ -990,8 +999,10 @@ function TeacherMockExamForm({
         const finalQuestionDrafts = activeSections.flatMap((section) => section.questions)
         const retainedIds = new Set(finalQuestionDrafts.map((question) => question.serverId).filter(Boolean))
 
-        for (const serverQuestion of original?.questions ?? []) {
-          if (!retainedIds.has(serverQuestion.id)) await deleteTeacherQuizQuestion(serverQuestion.id)
+        if (canEditQuestions) {
+          for (const serverQuestion of original?.questions ?? []) {
+            if (!retainedIds.has(serverQuestion.id)) await deleteTeacherQuizQuestion(serverQuestion.id)
+          }
         }
 
         for (const question of finalQuestionDrafts) {
@@ -1033,7 +1044,7 @@ function TeacherMockExamForm({
           .sort((a, b) => a.sequence - b.sequence)
           .map((question) => question.id)
         const questionOrderChanged = JSON.stringify(finalQuestionIds) !== JSON.stringify(currentQuestionIds)
-        if (questionOrderChanged && finalQuestionIds.length > 0) {
+        if (canEditQuestions && questionOrderChanged && finalQuestionIds.length > 0) {
           await reorderTeacherQuizQuestions(quizId, finalQuestionIds)
         }
 
@@ -1042,7 +1053,7 @@ function TeacherMockExamForm({
         )
         const desiredLayout = sectionLayoutSpecs(workingSections, questionCounts)
         const previousLayout = original ? existingLayoutSpecs(original) : []
-        if (!sameLayout(desiredLayout, previousLayout)) await setTeacherQuizLayout(quizId, desiredLayout)
+        if (canEditQuestions && !sameLayout(desiredLayout, previousLayout)) await setTeacherQuizLayout(quizId, desiredLayout)
       }
 
       if (publish && quizId) await publishTeacherQuiz(quizId)
@@ -1050,7 +1061,8 @@ function TeacherMockExamForm({
       onSaved(
         publish
           ? 'Đã lưu và xuất bản đề thi thử.'
-          : serverQuizId ? 'Đã lưu thay đổi đề thi thử.' : 'Đã lưu đề thi dưới dạng bản nháp.'
+          : serverQuizId ? 'Đã lưu thay đổi đề thi thử.'
+            : 'Đã lưu đề thi dưới dạng bản nháp.'
       )
     } catch (saveError) {
       if (saveError instanceof AmbiguousTeacherQuestionSaveError) {
@@ -1077,7 +1089,7 @@ function TeacherMockExamForm({
           ))
           const blockers = refreshed.quiz.publishProblems?.filter(Boolean) ?? []
           if (publish && saveError instanceof ApiError && saveError.status === 409 && blockers.length > 0) {
-            message = 'Chưa thể xuất bản: ' + blockers.join(', ') + '. Hoàn thiện nội dung trong đề rồi thử lại.'
+            message = 'Chưa thể xuất bản: ' + describePublishProblems(blockers) + '. Hoàn thiện nội dung trong đề rồi thử lại.'
           }
         } catch {
           // Preserve the local form if the follow-up read also fails.
@@ -1093,38 +1105,150 @@ function TeacherMockExamForm({
   const courseOptions = (courseCatalog.data ?? []).map((course) => ({ id: course.id, label: course.title }))
   const serverCourseName = quizSnapshot?.courseTitle || 'Khóa học đã chọn'
 
-  return (
-    <section className="flex flex-col gap-4">
-      <Button appearance="ghost" size="sm" className="self-start" type="button" onClick={onCancel}>
-        <ArrowLeft size={16} />{placement ? 'Quay lại đánh giá đầu vào' : 'Quay lại danh sách đề thi'}
-      </Button>
-      <PageHeading title={placement ? initialQuiz ? 'Chỉnh sửa đánh giá đầu vào' : hasCreatedQuiz ? 'Hoàn thiện bài đầu vào nháp' : 'Tạo đánh giá đầu vào' : initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'} action={quizSnapshot ? <StatusBadge tone={statusTone(quizSnapshot.status)}>{statusLabel(quizSnapshot.status)}</StatusBadge> : undefined} />
+  const headingLabel = placement
+    ? initialQuiz ? 'Chỉnh sửa đánh giá đầu vào' : hasCreatedQuiz ? 'Hoàn thiện bài đầu vào nháp' : 'Tạo đánh giá đầu vào'
+    : initialQuiz ? 'Chỉnh sửa đề thi thử' : hasCreatedQuiz ? 'Hoàn thiện đề thi nháp' : 'Tạo đề thi thử'
+  const backLabel = placement ? 'Quay lại đánh giá đầu vào' : 'Quay lại danh sách đề thi'
+  const editableSections = sections.filter((section) => !section.unassigned)
 
-      <Card as="section" padding="lg" aria-labelledby="exam-settings-title">
-        <div className="mb-4">
-          <CardEyebrow>THÔNG TIN VÀ QUY ĐỊNH</CardEyebrow>
-          <CardTitle id="exam-settings-title" className="text-base">{placement ? 'Thông tin bài đánh giá' : 'Cấu hình đề thi'}</CardTitle>
+  const numberOf = new Map(numbered.map((entry, index) => [entry.question.clientId, index + 1]))
+
+  const sectionBar = (section: DraftSection) => {
+    const sectionIndex = sections.indexOf(section)
+    const position = editableSections.indexOf(section) + 1
+    return (
+      <div className="mx-auto flex w-full max-w-3xl items-end gap-2 px-4 pt-4 sm:px-6">
+        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-text-tertiary">
+          <span>Phần {position} · {section.questions.length} câu</span>
+          <input
+            className={fieldControlClass}
+            value={section.title}
+            onChange={(event) => updateSection(section.clientId, { title: event.target.value })}
+            placeholder="Tên phần thi, ví dụ: Tư duy định lượng"
+            disabled={busy}
+          />
+        </label>
+        <div className="flex shrink-0 gap-1">
+          <Button appearance="outline" size="icon" aria-label="Đưa phần lên" disabled={busy || sectionIndex === 0} onClick={() => moveSection(section.clientId, -1)}><ArrowUp size={15} /></Button>
+          <Button appearance="outline" size="icon" aria-label="Đưa phần xuống" disabled={busy || sections[sectionIndex + 1]?.unassigned === true || sectionIndex === editableSections.length - 1} onClick={() => moveSection(section.clientId, 1)}><ArrowDown size={15} /></Button>
+          <Button variant="danger" appearance="ghost" size="icon" aria-label={'Xóa phần ' + position} disabled={busy} onClick={() => removeSection(section)}><Trash2 size={15} /></Button>
         </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
+      </div>
+    )
+  }
+
+  const questionEditor = (section: DraftSection, question: DraftQuestion) => {
+    const number = numberOf.get(question.clientId) ?? 0
+    const position = section.questions.indexOf(question)
+    return (
+      <ExamQuestionEditor
+        key={question.clientId}
+        question={question}
+        number={number}
+        sectionTitle={section.title}
+        placement={placement}
+        editable={canEditContent && question.editable && (!placement || question.questionType === 'SINGLE_CHOICE')}
+        structureEditable={canEditQuestions}
+        busy={busy}
+        canMoveUp={position > 0}
+        canMoveDown={position < section.questions.length - 1}
+        categoryOptions={categoryOptions}
+        categoriesReady={categories.status === 'ready'}
+        categoriesLoading={categories.status === 'loading'}
+        onChange={(update) => updateQuestion(section.clientId, question.clientId, update)}
+        onMove={(direction) => moveQuestion(section.clientId, question.clientId, direction)}
+        onDelete={() => deleteQuestion(section.clientId, question.clientId)}
+        onPrevious={number > 1 ? () => setSelectedId(numbered[number - 2].question.clientId) : null}
+        onNext={number < numbered.length ? () => setSelectedId(numbered[number].question.clientId) : null}
+      />
+    )
+  }
+
+  // In the drawer every choice also closes it, so the question it leads to is in view.
+  const rail = (afterChoice?: () => void) => (
+    <ExamQuestionRail sections={sections} selectedId={railSelectedId} canEditStructure={canEditQuestions} busy={busy}
+      onSelect={(clientId) => { setSelectedId(clientId); afterChoice?.() }}
+      onAddQuestion={(sectionId) => { addQuestion(sectionId); afterChoice?.() }}
+      onAddSection={() => { addSection(); afterChoice?.() }} />
+  )
+
+  return (
+    <section className="flex h-dvh min-w-0 flex-col bg-card-surface-area">
+      <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-card-border px-4 py-2.5 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2">
+          <button type="button" aria-label={backLabel} title={backLabel} onClick={onCancel}
+            className="-ml-1.5 grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border-0 bg-transparent text-icon-primary hover:bg-background-gray-secondary">
+            <ArrowLeft size={20} aria-hidden="true" />
+          </button>
+          <h1 className="m-0 min-w-0 truncate text-lg font-semibold text-text-primary">{headingLabel}</h1>
+          {quizSnapshot && <StatusBadge tone={statusTone(quizSnapshot.status)}>{statusLabel(quizSnapshot.status)}</StatusBadge>}
+        </div>
+        <div className="order-last w-full lg:order-none lg:w-auto lg:flex-1">
+          <ExamEditorSteps current={step} onSelect={goToStep} disabled={busy} />
+        </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button appearance="ghost" className={ambiguousCreate || ambiguousQuestionSave ? undefined : 'max-sm:hidden'} onClick={onCancel} disabled={busy}>
+            {ambiguousCreate || ambiguousQuestionSave ? 'Quay về danh sách' : 'Hủy'}
+          </Button>
+          <Button
+            appearance="outline"
+            onClick={() => ambiguousCreate ? void checkPendingCreate() : void save(false)}
+            disabled={busy || publishedQuiz || ambiguousQuestionSave}
+          >
+            {ambiguousCreate ? <ClipboardCheck size={15} /> : <Clock3 size={15} />}
+            {busy ? 'Đang kiểm tra...' : ambiguousCreate ? 'Kiểm tra danh sách' : initialQuiz || hasCreatedQuiz ? 'Lưu thay đổi' : 'Lưu bản nháp'}
+          </Button>
+          {quizSnapshot?.status !== 'ARCHIVED' && step === LAST_EXAM_STEP && (
+            <Button onClick={() => void save(true)} disabled={busy || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave}>
+              <Send size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {(error || ambiguousQuestionSave || ambiguousCreate) && (
+        <div className="flex shrink-0 flex-col gap-3 px-4 pt-3 sm:px-6">
+          {error && <Notice tone="danger" role="alert" className="font-medium">{error}</Notice>}
+          {ambiguousQuestionSave && (
+            <Notice tone="warning" role="alert" aria-live="assertive">
+              Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
+            </Notice>
+          )}
+          {ambiguousCreate && (
+            <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
+              <p className="m-0 text-sm text-text-tertiary">Kết quả tạo đề chưa rõ. Kiểm tra lại danh sách trước khi gửi thao tác tạo lần nữa.</p>
+              <Button appearance="outline" onClick={() => void checkPendingCreate()} disabled={busy}>
+                {busy ? 'Đang kiểm tra...' : 'Kiểm tra kết quả tạo'}
+              </Button>
+            </Card>
+          )}
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1">
+        <ScrollArea hidden={step !== 0} className="h-full">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4 sm:p-6">
+      <Card as="section" padding="lg" aria-label={placement ? 'Thông tin bài đánh giá' : 'Cấu hình đề thi'}>
+        <div className="grid gap-4 md:grid-cols-3">
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-3">
             {placement ? 'Tên bài đánh giá đầu vào' : 'Tên đề thi thử'}
             <input
               className={fieldControlClass}
               value={settings.title}
               onChange={(event) => updateSettings('title', event.target.value)}
               placeholder={placement ? 'Ví dụ: Đánh giá năng lực đầu vào' : 'Ví dụ: Đề thi thử V-ACT số 02'}
-              disabled={publishedQuiz || busy || aiReading}
+              disabled={publishedQuiz || busy}
               maxLength={500}
             />
           </label>
-          {placement && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
+          {placement && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-3">
             Mô tả
-            <textarea aria-label="Mô tả" className={textareaControlClass} value={settings.description} disabled={publishedQuiz || busy || aiReading}
+            <textarea aria-label="Mô tả" className={textareaControlClass} value={settings.description} disabled={publishedQuiz || busy}
               onChange={event => updateSettings('description', event.target.value)} />
             <span className="text-xs font-normal text-text-tertiary">Không gắn khóa học. Student được xem đáp án sau khi bài đã chấm; kết quả được phân loại theo môn.</span>
           </label>}
           {!placement && !initialQuiz && (
-            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-2">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary md:col-span-3">
               Khóa học chính
               <DropdownField
                 ariaLabel="Khóa học chính"
@@ -1152,10 +1276,10 @@ function TeacherMockExamForm({
             </label>
           )}
           {!placement && initialQuiz && (
-            <div className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm md:col-span-2">
+            <p className="m-0 text-sm md:col-span-3">
               <span className="block text-xs font-medium text-text-tertiary">Khóa học</span>
-              <strong className="mt-1 block text-text-primary">{serverCourseName}</strong>
-            </div>
+              <strong className="text-text-primary">{serverCourseName}</strong>
+            </p>
           )}
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
             Thời gian làm bài (phút)
@@ -1177,49 +1301,43 @@ function TeacherMockExamForm({
               disabled={fieldsLocked || busy}
             />
           </label>
-          {!placement && <><label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-            Điểm đạt (%)
-            <input
-              className={fieldControlClass}
-              type="number" min="0" max="100" step="0.01"
-              value={settings.passingPercentage}
-              onChange={(event) => updateSettings('passingPercentage', event.target.value)}
-              disabled={fieldsLocked || busy}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-            Bắt đầu làm bài
-            <input
-              className={fieldControlClass}
-              type="datetime-local"
-              value={settings.availableFrom}
-              onChange={(event) => updateSettings('availableFrom', event.target.value)}
-              disabled={fieldsLocked || busy}
-              required={Boolean(quizSnapshot?.availableFrom)}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-            Hạn làm bài
-            <input
-              className={fieldControlClass}
-              type="datetime-local"
-              value={settings.availableUntil}
-              onChange={(event) => updateSettings('availableUntil', event.target.value)}
-              disabled={fieldsLocked || busy}
-              required={Boolean(quizSnapshot?.availableUntil)}
-            />
-          </label></>}
+          {!placement && <>
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
+              Điểm đạt (%)
+              <input
+                className={fieldControlClass}
+                type="number" min="0" max="100" step="0.01"
+                value={settings.passingPercentage}
+                onChange={(event) => updateSettings('passingPercentage', event.target.value)}
+                disabled={fieldsLocked || busy}
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2 md:col-span-3">
+              <DateTimeField
+                label="Bắt đầu làm bài"
+                value={settings.availableFrom}
+                onChange={(value) => updateSettings('availableFrom', value)}
+                disabled={fieldsLocked || busy}
+                required={Boolean(quizSnapshot?.availableFrom)}
+              />
+              <DateTimeField
+                label="Hạn làm bài"
+                value={settings.availableUntil}
+                onChange={(value) => updateSettings('availableUntil', value)}
+                disabled={fieldsLocked || busy}
+                required={Boolean(quizSnapshot?.availableUntil)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-x-8 gap-y-3 md:col-span-3">
+              <Checkbox isSelected={settings.showAnswers} onChange={(checked) => updateSettings('showAnswers', checked)} isDisabled={fieldsLocked || busy} className="text-sm text-text-primary">
+                Cho phép xem đáp án sau khi nộp
+              </Checkbox>
+              <Checkbox isSelected={settings.practiceAllowed} onChange={(checked) => updateSettings('practiceAllowed', checked)} isDisabled={fieldsLocked || busy} className="text-sm text-text-primary">
+                Cho phép học viên luyện tập lại
+              </Checkbox>
+            </div>
+          </>}
         </div>
-        {!placement && <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-card-border px-3 py-2 text-sm text-text-primary">
-            <input type="checkbox" checked={settings.showAnswers} onChange={(event) => updateSettings('showAnswers', event.target.checked)} disabled={fieldsLocked || busy} />
-            Cho phép xem đáp án sau khi nộp
-          </label>
-          <label className="flex min-h-11 items-center gap-2 rounded-lg border border-card-border px-3 py-2 text-sm text-text-primary">
-            <input type="checkbox" checked={settings.practiceAllowed} onChange={(event) => updateSettings('practiceAllowed', event.target.checked)} disabled={fieldsLocked || busy} />
-            Cho phép học viên luyện tập lại
-          </label>
-        </div>}
         {settingsLocked && (
           <p className="mt-3 mb-0 rounded-lg bg-badge-warning-bg px-3 py-2 text-xs text-badge-warning-text">
             Đề đã có lượt thi. Các quy định và câu hỏi được khóa; bạn vẫn có thể đổi tên đề.
@@ -1231,262 +1349,62 @@ function TeacherMockExamForm({
           </p>
         )}
       </Card>
+          </div>
+        </ScrollArea>
 
-      <Card as="section" padding="lg" aria-labelledby="exam-sections-title">
-        {placement && <div className="mb-4 space-y-2">
-          <p className="text-sm text-text-tertiary">Gắn môn/nhóm đánh giá cho từng câu để có kết quả theo môn. Câu chưa gắn môn vẫn được tính điểm tổng.</p>
-          {categories.status === 'loading' && <p role="status" className="text-sm">Đang tải môn học...</p>}
-          {['error', 'forbidden', 'not-found'].includes(categories.status) && <Notice tone="warning">{categories.errorMessage || 'Không tải được các môn bạn được phép xem. Có thể lưu nháp và bổ sung sau.'}<Button appearance="outline" onClick={categories.reload}>Thử tải môn học</Button></Notice>}
-        </div>}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardEyebrow>{placement ? 'NỘI DUNG ĐÁNH GIÁ' : 'NỘI DUNG ĐỀ THI'}</CardEyebrow>
-            <CardTitle id="exam-sections-title" className="mb-0 text-base">Các phần và câu hỏi</CardTitle>
-          </div>
-          <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload}
-            getCreateRequest={getImportCreateRequest} onCreated={onCreated} onUncertainCreate={() => setAmbiguousCreate(true)} onBusyChange={setBusy} />
-          {canEditQuestions && (
-            <Button appearance="outline" className="min-h-11" onClick={addSection} disabled={busy}>
-              <Plus size={15} />Thêm phần thi
-            </Button>
-          )}
-        </div>
-        {canEditQuestions && <p className="mb-4 text-xs text-text-tertiary">Kéo biểu tượng cạnh số câu hoặc dùng nút lên/xuống để sắp xếp trong cùng phần thi. Nhấn lưu để giữ thứ tự mới.</p>}
-        {serverQuizId && initial?.latestJob?.kind === 'EXAM_FILE' && <QuizPdfImportPanel quizId={serverQuizId} jobId={initial.latestJob.id}
-          blockedReason={hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi áp dụng.' : publishedQuiz || settingsLocked ? 'Chỉ áp dụng vào bản nháp chưa có lượt làm.' : ambiguousQuestionSave ? 'Tải lại bài để kiểm tra kết quả lưu.' : ''}
-          busy={busy} onBusyChange={setBusy} onReload={onReload} />}
-        {structureReadOnly && (
-          <div className="mb-4 rounded-xl border border-badge-warning-text/20 bg-badge-warning-bg p-3 text-sm text-badge-warning-text" role="status">
-            Đề này có nhóm câu hỏi hoặc phần lồng nhau. Nội dung đang ở chế độ chỉ xem để giữ nguyên cấu trúc; bạn vẫn có thể lưu các thông tin đề thi được phép sửa.
-          </div>
-        )}
-        {sections.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
-            Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {sections.map((section, sectionIndex) => (
-              <section key={section.clientId} className="rounded-xl border border-card-border bg-background-gray-secondary p-4">
-                <div className="mb-3 flex items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    {section.unassigned ? (
-                      <div>
-                        <h3 className="m-0 text-sm font-medium text-text-primary">{section.title}</h3>
-                        <p className="mt-1 mb-0 text-xs text-text-tertiary">Các câu hỏi này chưa được gán vào phần thi nào.</p>
-                      </div>
-                    ) : (
-                      <label className="flex flex-col gap-1.5 text-xs font-medium text-text-tertiary">
-                        <span>Phần {sectionIndex + 1} · {section.questions.length} câu</span>
-                        <input
-                          className={fieldControlClass}
-                          value={section.title}
-                          onChange={(event) => updateSection(section.clientId, { title: event.target.value })}
-                          placeholder="Tên phần thi, ví dụ: Tư duy định lượng"
-                          disabled={!canEditQuestions || busy}
-                        />
-                      </label>
-                    )}
-                  </div>
-                  {canEditQuestions && !section.unassigned && (
-                    <div className="flex shrink-0 gap-1">
-                      <Button appearance="outline" size="icon" aria-label="Đưa phần lên" disabled={busy || sectionIndex === 0} onClick={() => moveSection(section.clientId, -1)}><ArrowUp size={15} /></Button>
-                      <Button appearance="outline" size="icon" aria-label="Đưa phần xuống" disabled={busy || sections[sectionIndex + 1]?.unassigned === true || sectionIndex === sections.filter((item) => !item.unassigned).length - 1} onClick={() => moveSection(section.clientId, 1)}><ArrowDown size={15} /></Button>
-                      <Button variant="danger" appearance="ghost" size="icon" aria-label={'Xóa phần ' + (sectionIndex + 1)} disabled={busy} onClick={() => removeSection(section)}><Trash2 size={15} /></Button>
-                    </div>
-                  )}
+        <div hidden={step !== 1} className="flex h-full flex-col lg:grid lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
+          <aside aria-label="Mục lục đề" className="hidden min-h-0 flex-col border-r border-card-border bg-card-background lg:flex">
+            {rail()}
+          </aside>
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 px-4 pt-3 sm:px-6"><QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={() => { onStepChange(step); onReload() }} onBusyChange={setBusy} /></div>
+            <div className="flex shrink-0 border-b border-card-border px-4 py-2 sm:px-6 lg:hidden">
+              <Button appearance="outline" size="sm" onClick={() => setRailOpen(true)}>Danh sách câu</Button>
+            </div>
+            <ScrollArea aria-label="Nội dung đề" className="min-h-0 flex-1">
+              {placement && ['loading', 'error', 'forbidden', 'not-found'].includes(categories.status) && (
+                <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-4 sm:px-6">
+                  {categories.status === 'loading' && <Skeleton className="h-4 w-44" role="status" aria-label="Đang tải môn học" />}
+                  {['error', 'forbidden', 'not-found'].includes(categories.status) && <Notice tone="warning">{categories.errorMessage || 'Không tải được các môn bạn được phép xem. Có thể lưu nháp và bổ sung sau.'}<Button appearance="outline" onClick={categories.reload}>Thử tải môn học</Button></Notice>}
                 </div>
-
-                {section.questions.length > 0 ? (
-                  <div className="flex flex-col gap-3">
-                    {section.questions.map((question, questionIndex) => {
-                      const editable = canEditQuestions && question.editable && (!placement || question.questionType === 'SINGLE_CHOICE')
-                      const typeLabel = QUESTION_TYPE_OPTIONS.find((option) => option.id === question.questionType)?.label ??
-                        (question.questionType === 'TRUE_FALSE' ? 'Đúng / sai' : 'Trả lời ngắn')
-                      return (
-                        <article key={question.clientId}
-                          {...(canEditQuestions && !busy ? questionDrag.rowProps(question.clientId) : {})}
-                          className={cn('rounded-xl border border-card-border bg-card-background p-4', questionDrag.rowProps(question.clientId).className)}>
-                          <div className="mb-3 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-1">
-                              {editable && <DragHandle {...questionDrag.handleProps(question.clientId, `câu ${questionIndex + 1} trong phần ${sectionIndex + 1}`, busy)} />}
-                              <strong className="text-sm text-primary">Câu {questionIndex + 1}</strong>
-                            </div>
-                            <div className="flex gap-1">
-                              {editable && (
-                                <>
-                                  <Button appearance="outline" size="icon" aria-label="Đưa câu hỏi lên" disabled={busy || questionIndex === 0} onClick={() => moveQuestion(section.clientId, question.clientId, -1)}><ArrowUp size={14} /></Button>
-                                  <Button appearance="outline" size="icon" aria-label="Đưa câu hỏi xuống" disabled={busy || questionIndex === section.questions.length - 1} onClick={() => moveQuestion(section.clientId, question.clientId, 1)}><ArrowDown size={14} /></Button>
-                                  <Button variant="danger" appearance="ghost" size="icon" aria-label="Xóa câu hỏi" disabled={busy} onClick={() => updateSection(section.clientId, { questions: section.questions.filter((item) => item.clientId !== question.clientId) })}><Trash2 size={14} /></Button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <div className="grid gap-3">
-                            {!question.editable && (
-                              <p className="rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm text-text-tertiary">{typeLabel} · chỉ xem</p>
-                            )}
-                            <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-                              Nội dung câu hỏi
-                              <textarea
-                                className={textareaControlClass}
-                                value={question.questionText}
-                                onChange={(event) => updateQuestion(section.clientId, question.clientId, { questionText: event.target.value })}
-                                placeholder="Nhập nội dung câu hỏi"
-                                disabled={!editable || busy}
-                              />
-                            </label>
-                            {placement && <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-                              Môn/nhóm đánh giá
-                              <DropdownField ariaLabel={`Môn cho câu ${questionIndex + 1} trong ${section.title}`}
-                                options={categoryOptions.some(option => option.id === question.categoryId) || !question.categoryId ? categoryOptions : [...categoryOptions, { id: question.categoryId, label: 'Môn đã gắn' }]}
-                                value={question.categoryId} placeholder="Chọn môn (không bắt buộc)"
-                                isLoading={categories.status === 'loading'} emptyMessage="Chưa có môn khả dụng."
-                                isDisabled={!editable || busy || categories.status !== 'ready'}
-                                onChange={value => updateQuestion(section.clientId, question.clientId, { categoryId: value })} />
-                            </label>}
-                            {CHOICE_TYPES.includes(question.questionType) ? (
-                              <div>
-                                <div className="mb-2 flex items-center justify-between gap-3">
-                                  <span className="text-xs font-medium text-text-tertiary">Lựa chọn · đánh dấu đáp án đúng</span>
-                                  {editable && question.options.length < 8 && (
-                                    <Button appearance="ghost" size="sm" onClick={() => updateQuestion(section.clientId, question.clientId, { options: [...question.options, { text: '', correct: false }] })} disabled={busy}>
-                                      <Plus size={14} />Thêm lựa chọn
-                                    </Button>
-                                  )}
-                                </div>
-                                <div className="grid gap-2 md:grid-cols-2">
-                                  {question.options.map((option, optionIndex) => (
-                                    <label key={question.clientId + '-option-' + optionIndex} className={'flex min-w-0 items-center gap-2 rounded-lg border p-2 ' + (option.correct ? 'border-badge-success-text/40 bg-badge-success-bg' : 'border-card-border bg-card-background')}>
-                                      <input
-                                        type={question.questionType === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
-                                        name={'correct-' + question.clientId}
-                                        checked={option.correct}
-                                        onChange={(event) => {
-                                          const options = question.options.map((item, index) => ({
-                                            ...item,
-                                            correct: index === optionIndex
-                                              ? event.target.checked
-                                              : question.questionType === 'SINGLE_CHOICE' ? false : item.correct,
-                                          }))
-                                          updateQuestion(section.clientId, question.clientId, { options })
-                                        }}
-                                        disabled={!editable || busy}
-                                        aria-label={'Đánh dấu lựa chọn ' + String.fromCharCode(65 + optionIndex) + ' là đáp án đúng'}
-                                      />
-                                      <span className="grid size-6 shrink-0 place-items-center rounded-md bg-badge-blue-background text-xs font-medium text-primary">{String.fromCharCode(65 + optionIndex)}</span>
-                                      <input
-                                        className={`${fieldControlClass} min-w-0 flex-1`}
-                                        value={option.text}
-                                        onChange={(event) => {
-                                          const options = question.options.map((item, index) => index === optionIndex ? { ...item, text: event.target.value } : item)
-                                          updateQuestion(section.clientId, question.clientId, { options })
-                                        }}
-                                        placeholder={'Lựa chọn ' + String.fromCharCode(65 + optionIndex)}
-                                        disabled={!editable || busy}
-                                      />
-                                      {editable && question.options.length > 2 && (
-                                        <button
-                                          type="button"
-                                          className="grid size-8 shrink-0 place-items-center rounded-md text-text-tertiary hover:bg-badge-danger-bg hover:text-badge-error-text"
-                                          aria-label={'Bỏ lựa chọn ' + String.fromCharCode(65 + optionIndex)}
-                                          disabled={busy}
-                                          onClick={() => updateQuestion(section.clientId, question.clientId, { options: question.options.filter((_, index) => index !== optionIndex) })}
-                                        ><X size={14} /></button>
-                                      )}
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-                                Đáp án / hướng dẫn chấm
-                                <textarea
-                                  className={textareaControlClass}
-                                  value={question.explanation}
-                                  onChange={(event) => updateQuestion(section.clientId, question.clientId, { explanation: event.target.value })}
-                                  placeholder="Nhập đáp án gợi ý hoặc tiêu chí chấm điểm"
-                                  disabled={!editable || busy}
-                                />
-                              </label>
-                            )}
-                            {question.imageUrl && (
-                              <a className="text-xs font-medium text-primary underline" href={question.imageUrl} target="_blank" rel="noreferrer">Xem ảnh đính kèm</a>
-                            )}
-                            {editable && (
-                              <div className="rounded-lg border border-card-border bg-background-gray-secondary p-3">
-                                <label className="flex items-center gap-2 text-xs font-medium text-text-primary">
-                                  <input type="checkbox" checked={question.needsReview} onChange={(event) => updateQuestion(section.clientId, question.clientId, { needsReview: event.target.checked })} disabled={busy} />
-                                  Câu hỏi cần rà soát trước khi xuất bản
-                                </label>
-                                {question.needsReview && (
-                                  <textarea
-                                    className="mt-2 min-h-16 w-full rounded-lg border border-card-border bg-card-background px-3 py-2 text-sm font-normal text-text-primary outline-none focus-visible:border-primary"
-                                    value={question.reviewNote}
-                                    onChange={(event) => updateQuestion(section.clientId, question.clientId, { reviewNote: event.target.value })}
-                                    placeholder="Ghi chú nội bộ về nội dung cần rà soát"
-                                    disabled={busy}
-                                  />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </article>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className="m-0 rounded-lg border border-dashed border-card-border px-3 py-4 text-center text-xs text-text-tertiary">Phần này chưa có câu hỏi.</p>
-                )}
-                {canEditQuestions && (
-                  <Button appearance="outline" className="mt-3 min-h-10" onClick={() => updateSection(section.clientId, { questions: [...section.questions, createDraftQuestion()] })} disabled={busy}>
-                    <Plus size={15} />Thêm câu hỏi
-                  </Button>
-                )}
-              </section>
-            ))}
+              )}
+              {activeSection && canEditQuestions && !activeSection.unassigned && sectionBar(activeSection)}
+              {activeEntry ? questionEditor(activeEntry.section, activeEntry.question) : (
+                <div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-3 p-4 sm:p-6">
+                  <p className="m-0 w-full rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
+                    {sections.length === 0 ? 'Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.' : 'Phần này chưa có câu hỏi.'}
+                  </p>
+                  {canEditQuestions && (sections.length === 0
+                    ? <Button appearance="outline" onClick={addSection} disabled={busy}><Plus size={15} />Thêm phần thi</Button>
+                    : activeSection && <Button appearance="outline" onClick={() => addQuestion(activeSection.clientId)} disabled={busy}><Plus size={15} />Thêm câu hỏi đầu tiên</Button>)}
+                </div>
+              )}
+            </ScrollArea>
           </div>
-        )}
-      </Card>
-
-      {error && <p className="m-0 rounded-xl border border-badge-danger-text/25 bg-badge-danger-bg p-3 text-sm font-medium text-badge-danger-text" role="alert">{error}</p>}
-      {ambiguousQuestionSave && (
-        <Notice tone="warning" role="alert" aria-live="assertive">
-          Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn hoặc dữ liệu trả về chưa hợp lệ. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
-        </Notice>
-      )}
-      {ambiguousCreate && (
-        <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="alert">
-          <p className="m-0 text-sm text-text-tertiary">Kết quả tạo đề chưa rõ. Kiểm tra lại danh sách trước khi gửi thao tác tạo lần nữa.</p>
-          <Button appearance="outline" className="min-h-11" onClick={() => void checkPendingCreate()} disabled={busy}>
-            {busy ? 'Đang kiểm tra...' : 'Kiểm tra kết quả tạo'}
-          </Button>
-        </Card>
-      )}
-      <Card as="section" padding="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="m-0 text-xs leading-5 text-text-tertiary">
-          Đề mới được lưu ở trạng thái bản nháp. Có thể xuất bản sau khi đã đủ câu hỏi và đáp án.
-        </p>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button appearance="ghost" className="min-h-11" onClick={onCancel} disabled={busy}>
-            {ambiguousCreate || ambiguousQuestionSave ? 'Quay về danh sách' : 'Hủy'}
-          </Button>
-          <Button
-            appearance="outline"
-            className="min-h-11"
-            onClick={() => ambiguousCreate ? void checkPendingCreate() : void save(false)}
-            disabled={busy || aiReading || publishedQuiz || ambiguousQuestionSave}
-          >
-            {ambiguousCreate ? <ClipboardCheck size={15} /> : <Clock3 size={15} />}
-            {busy ? 'Đang kiểm tra...' : ambiguousCreate ? 'Kiểm tra danh sách' : initialQuiz || hasCreatedQuiz ? 'Lưu thay đổi' : 'Lưu bản nháp'}
-          </Button>
-          {quizSnapshot?.status !== 'ARCHIVED' && (
-            <Button className="min-h-11" onClick={() => void save(true)} disabled={busy || aiReading || settingsLocked || publishedQuiz || ambiguousCreate || ambiguousQuestionSave}>
-              <Send size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
-            </Button>
-          )}
         </div>
-      </Card>
+      </div>
+
+      {step < LAST_EXAM_STEP && (
+        <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-card-border px-4 py-3 sm:px-6">
+          <div>
+            {step > 0 && (
+              <Button appearance="outline" onClick={() => goToStep(step - 1)} disabled={busy}>
+                <ArrowLeft size={15} />Quay lại
+              </Button>
+            )}
+          </div>
+          <Button onClick={() => goToStep(step + 1)} disabled={busy}>
+            Tiếp tục<ArrowRight size={15} />
+          </Button>
+        </footer>
+      )}
+
+      <SheetOverlay isOpen={railOpen} onOpenChange={setRailOpen}>
+        <SheetContent side="left" showCloseButton={false} className="w-80! max-w-80! border-r border-card-border bg-card-background p-0">
+          <SheetTitle className="sr-only">Danh sách câu hỏi</SheetTitle>
+          {rail(() => setRailOpen(false))}
+        </SheetContent>
+      </SheetOverlay>
     </section>
   )
 }

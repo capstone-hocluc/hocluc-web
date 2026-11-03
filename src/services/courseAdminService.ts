@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { ExamSessionSummary } from './examYearService'
 
 export type CourseType = 'MAIN' | 'SECTION'
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
@@ -19,11 +20,15 @@ export interface CourseAdmin {
   status: CourseStatus
   paid: boolean
   price: number | null
+  /** Study time the author states, in minutes. */
+  estimatedDurationMinutes?: number | null
   track: string | null
   startDate: string | null
   endDate: string | null
   targetExam: string | null
   examSessionDate: string | null
+  /** The exam sitting a MAIN course prepares for (absent on older backends). */
+  examSession?: ExamSessionSummary | null
   accessMode: AccessMode | null
   accessDays: number | null
   publishedAt: string | null
@@ -49,6 +54,7 @@ export interface CourseAdminPhase {
 }
 /** A course that comes with this one (a gift). */
 export interface CourseAdminSection {
+  phaseId: string | null
   id: string
   sectionCourseId: string
   title: string
@@ -90,6 +96,7 @@ export type SaveCourseRequest = Pick<
   | 'categoryId'
   | 'paid'
   | 'price'
+  | 'estimatedDurationMinutes'
   | 'track'
   | 'startDate'
   | 'endDate'
@@ -97,7 +104,12 @@ export type SaveCourseRequest = Pick<
   | 'examSessionDate'
   | 'accessMode'
   | 'accessDays'
-> & { slug?: string; expectedUpdatedAt?: string }
+> & {
+  slug?: string
+  /** MAIN only: the sitting the course prepares for; the exam date then comes from it. */
+  examSessionId?: string | null
+  expectedUpdatedAt?: string
+}
 
 const path = (id?: string) => `/api/v1/admin/courses${id ? `/${encodeURIComponent(id)}` : ''}`
 const requireData = <T>(response: { data?: T }): T => {
@@ -161,4 +173,12 @@ export async function mutateCourse(
   return requireData(
     await request<CourseAdmin>(`${path(id)}/${resource}`, { auth: true, method, body })
   )
+}
+
+export function attachSection(courseId: string, sectionCourseId: string, phaseId: string | null = null): Promise<CourseAdmin> {
+  return mutateCourse(courseId, 'sections', 'POST', { sectionCourseId, phaseId })
+}
+
+export function assignSectionPhase(courseId: string, linkId: string, phaseId: string | null): Promise<CourseAdmin> {
+  return mutateCourse(courseId, `sections/${encodeURIComponent(linkId)}/phase`, 'PUT', { phaseId })
 }

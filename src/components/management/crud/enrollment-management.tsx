@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
+import PageHeading from '../../console/page-heading'
 import { FilterGroup, FilterSelect, FilterToolbar } from '../../console/filter-toolbar'
 import Status from '../../console/status'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
@@ -37,7 +38,13 @@ const EXPIRY_WINDOWS = [
   { id: '90', label: 'Hết hạn trong 90 ngày' },
 ]
 
-export default function EnrollmentManagement({ readOnly = false }: { readOnly?: boolean }) {
+export default function EnrollmentManagement({
+  readOnly = false,
+  title,
+}: {
+  readOnly?: boolean
+  title: string
+}) {
   const [query, setQuery] = useState<EnrollmentQuery>({ page: 0, size: 20 })
   const [editing, setEditing] = useState<{ kind: 'status' | 'expiry'; row: EnrollmentAdmin } | null>(
     null
@@ -142,19 +149,18 @@ export default function EnrollmentManagement({ readOnly = false }: { readOnly?: 
 
   return (
     <section className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-text-tertiary">
-          Quyền học của học viên, kèm nguồn ghi danh và hạn truy cập.
-        </p>
-        <div className="flex gap-2">
-          {!readOnly && (
+      <PageHeading
+        title={title}
+        readOnly={readOnly}
+        action={
+          !readOnly && (
             <Button onClick={() => setEnrolling(true)}>
               <Plus size={16} />
               Ghi danh
             </Button>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
         <FilterToolbar className="justify-start">
           <FilterGroup>

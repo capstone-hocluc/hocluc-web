@@ -13,6 +13,8 @@ import { useSavedIndicator } from '../../../hooks/useSavedIndicator'
 import { getErrorMessage, getFieldErrors } from '../../../lib/errors'
 import { showErrorToast } from '../../../lib/toastBus'
 import { updateStudentProfile } from '../../../services/userService'
+import { getExamYears } from '../../../services/examYearService'
+import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import type { StudentProfile } from '../../../services/userService'
 
 function buildDraft(studentProfile: StudentProfile | undefined) {
@@ -73,13 +75,21 @@ const personalFields: FieldConfig[] = [
   { key: 'academicTrack', label: 'Khối học', options: academicTrackOptions },
 ]
 
-const goalFields: FieldConfig[] = [
-  { key: 'targetExam', label: 'Kỳ thi mục tiêu', options: targetExamOptions },
-  { key: 'targetExamYear', label: 'Năm thi', type: 'number' },
-  { key: 'targetUniversity', label: 'Trường đại học mục tiêu' },
-  { key: 'targetMajor', label: 'Ngành học mục tiêu' },
-  { key: 'targetScore', label: 'Điểm mục tiêu', type: 'number' },
-]
+// The exam year is picked from the published exam years ("Năm thi 2026-2027" = 2027); typed only
+// while that list is empty or unavailable.
+function goalFields(examYearOptions: readonly DropdownOption[] | undefined): FieldConfig[] {
+  return [
+    { key: 'targetExam', label: 'Kỳ thi mục tiêu', options: targetExamOptions },
+    examYearOptions?.length
+      ? { key: 'targetExamYear', label: 'Năm thi', options: examYearOptions }
+      : { key: 'targetExamYear', label: 'Năm thi', type: 'number' },
+    { key: 'targetUniversity', label: 'Trường đại học mục tiêu' },
+    { key: 'targetMajor', label: 'Ngành học mục tiêu' },
+    { key: 'targetScore', label: 'Điểm mục tiêu', type: 'number' },
+  ]
+}
+
+const GOAL_KEYS = new Set<keyof Draft>(goalFields(undefined).map((field) => field.key))
 
 function toNumberOrUndefined(value: string) {
   if (value.trim() === '') return undefined
@@ -96,11 +106,22 @@ function StudentInfoTab() {
   const currentDraft = buildDraft(studentProfile)
   const { saved, flash, clear } = useSavedIndicator()
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const examYears = useScheduleResource('student-exam-years', getExamYears)
+  const savedYear = studentProfile?.targetExamYear
+  const examYearOptions: DropdownOption[] | undefined = examYears.data?.length
+    ? [
+        ...examYears.data.map((year) => ({ id: String(year.examYear), label: year.name })),
+        // A year saved before it was listed (or since removed) stays selectable.
+        ...(savedYear != null && !examYears.data.some((year) => year.examYear === savedYear)
+          ? [{ id: String(savedYear), label: String(savedYear) }]
+          : []),
+      ]
+    : undefined
 
   const updateField = (key: keyof Draft, value: string) => {
     setDraft((current) => ({ ...current, [key]: value }))
     setErrors((current) => ({ ...current, [key]: '' }))
-    if (goalFields.some((field) => field.key === key)) setDirtyGoals((current) => new Set(current).add(key))
+    if (GOAL_KEYS.has(key)) setDirtyGoals((current) => new Set(current).add(key))
     clear()
   }
 
@@ -186,7 +207,7 @@ function StudentInfoTab() {
         {renderFields(personalFields)}
 
         <FormGroupTitle>Mục tiêu học tập</FormGroupTitle>
-        {renderFields(goalFields)}
+        {renderFields(goalFields(examYearOptions))}
 
         {(studentProfile?.selfReportedWeakCategoryName ||
           studentProfile?.selfReportedStrongCategoryName) && (

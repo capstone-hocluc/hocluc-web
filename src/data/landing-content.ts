@@ -17,6 +17,7 @@ export type LandingIconName =
   | 'log-out'
   | 'package'
   | 'shopping-cart'
+  | 'smartphone'
   | 'user-round'
   | 'menu'
   | 'message-square-quote'
@@ -36,6 +37,11 @@ export interface LandingLink {
 
 export interface HeroSlide {
   id: string
+  /**
+   * `rise`: a cut-out of students in front of the logo's rising shape (smaller copy: `-720.webp`).
+   * `photo`: a photo that fills the right of the hero (smaller copy: `-800.webp`).
+   */
+  kind: 'rise' | 'photo'
   src: string
   alt: string
   /** Theme of the photograph, also announced by screen readers. */
@@ -46,8 +52,9 @@ export interface HeroSlide {
 export interface LandingHero {
   titleLines: [string, string]
   description: string
-  primaryCta: string
-  secondaryCta: string
+  coursesCta: string
+  /** Label of every link to the free placement assessment (home, catalog and course pages). */
+  assessmentCta: string
   slides: HeroSlide[]
 }
 
@@ -62,16 +69,21 @@ export interface ExamPart {
   soft: string
 }
 
+/** One figure of the exam at a glance: the value is shown large, the label says what it counts. */
+export interface ExamFact {
+  value: string
+  label: string
+}
+
 export interface ExamIntro {
   eyebrow: string
   title: string
   summary: string
   sheetCaption: string
   structureTitle: string
+  /** Key figures of the paper, each taken from the official ĐHQG-HCM exam page (see `source`). */
+  facts: ExamFact[]
   parts: ExamPart[]
-  totalQuestions: number
-  durationMinutes: number
-  totalScore: string
   scoringNote: string
   seasonTitle: string
   season: { title: string; text: string }[]
@@ -86,23 +98,10 @@ export interface CourseModule {
   summary: string
 }
 
-export type DomainArt =
-  | { kind: 'sprite'; symbol: string }
-  | { kind: 'image'; src: string; alt: string; width: number; height: number }
-
+/** A V-ACT subject with its study modules; the quick suggestion recommends one module. */
 export interface Domain {
   id: string
   title: string
-  part: string
-  questions: number
-  hours: number
-  color: string
-  soft: string
-  art: DomainArt
-  label: string
-  labelFontSize?: number
-  doodle: { icon: LandingIconName; text: string }
-  desc: string
   modules: CourseModule[]
 }
 
@@ -115,60 +114,66 @@ export interface PracticeOperation {
   summary: string
 }
 
-export interface SampleQuestion {
-  group: string
-  title: string
-  context: string
-  answers: string[]
-  correct: number
-  explain: string
+/** One screen of the HocLuc student app, rendered at 2x from the app's design. */
+export interface AppScreen {
+  src: string
+  alt: string
 }
 
 export const landingNav: LandingLink[] = [
   { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
-  { label: 'Chương trình học', href: '#chuong-trinh' },
+  { label: 'Ứng dụng', href: '#ung-dung' },
   { label: 'Cách học', href: '#lo-trinh' },
-  { label: 'Bài học mẫu', href: '#hoc-thu' },
   { label: 'V-ACT', href: '#ky-thi' },
 ]
 
 export const landingFooterNav: LandingLink[] = [
   { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
-  { label: 'Chương trình học', href: '#chuong-trinh' },
+  { label: 'Ứng dụng', href: '#ung-dung' },
   { label: 'Cách học', href: '#lo-trinh' },
-  { label: 'Bài học mẫu', href: '#hoc-thu' },
   { label: 'Tìm hiểu V-ACT', href: '#ky-thi' },
-  { label: 'Hỗ trợ', href: '#faq' },
+  { label: 'Câu hỏi thường gặp', href: '#faq' },
 ]
 
 const landingAssets = '/landing-v2/assets'
 
 export const landingHero: LandingHero = {
-  titleLines: ['Ôn đúng trọng tâm.', 'Vững bước vào V-ACT.'],
-  description: 'Tìm phần cần học tiếp theo, luyện đúng trọng tâm.',
-  primaryCta: 'Làm đánh giá miễn phí',
-  secondaryCta: 'Xem khóa học',
+  titleLines: ['Luyện thi V-ACT', 'theo từng môn.'],
+  description: 'Chọn lộ trình trọn gói cho cả bài thi, hoặc học riêng môn bạn còn yếu.',
+  coursesCta: 'Xem khóa học',
+  assessmentCta: 'Làm đánh giá miễn phí',
   slides: [
     {
       id: 'hero-slide-0',
-      src: `${landingAssets}/hero-self-study-v2.webp`,
-      alt: 'Nam sinh Việt Nam tự học với sách bài tập trong không gian học tập sáng bên cửa sổ',
-      label: 'Tự học có định hướng',
-      caption: 'Tập trung từng phần, hiểu sâu từng bài.',
+      kind: 'rise',
+      src: `${landingAssets}/hero-students-cutout.webp`,
+      alt: 'Ba học sinh lớp 12, hai nam sinh áo sơ mi trắng và một nữ sinh áo dài trắng, tươi cười ôm vở và máy tính bảng',
+      label: 'Cùng nhau vươn lên',
+      caption: 'Chọn môn còn yếu, học đúng phần cần học.',
     },
     {
       id: 'hero-slide-1',
-      src: `${landingAssets}/hero-mentor-group-v2.webp`,
-      alt: 'Hai học sinh Việt Nam trao đổi cách giải bài cùng mentor tại bàn học nhóm trong phòng học sáng',
-      label: 'Cùng trao đổi, cùng tiến bộ',
-      caption: 'Thêm một góc nhìn để hiểu rõ cách làm.',
+      kind: 'photo',
+      src: `${landingAssets}/hero-home-study-v4.webp`,
+      alt: 'Nữ sinh tự học buổi sáng bên bàn trắng cạnh cửa sổ, ghi chép vào sổ bên máy tính xách tay',
+      label: 'Tự học có định hướng',
+      caption: 'Xem bài giảng, ghi chép theo lộ trình.',
     },
     {
       id: 'hero-slide-2',
-      src: `${landingAssets}/hero-exam-practice-v2.webp`,
-      alt: 'Nữ sinh Việt Nam tập trung đọc đề và làm bài trắc nghiệm trên giấy trong lớp học',
+      kind: 'photo',
+      src: `${landingAssets}/hero-classroom-v4.webp`,
+      alt: 'Ba học sinh lớp 12, hai nam sinh áo sơ mi trắng và một nữ sinh áo dài trắng, cùng xem bài trong vở ở một lớp học sáng sủa, cửa sổ lớn',
+      label: 'Học nhóm, hiểu sâu',
+      caption: 'Cùng bạn bè trao đổi cách giải từng bài.',
+    },
+    {
+      id: 'hero-slide-3',
+      kind: 'photo',
+      src: `${landingAssets}/hero-mock-exam-v4.webp`,
+      alt: 'Nữ sinh mặc áo dài trắng tập trung làm bài thi thử trên giấy, phía sau là các dãy bàn trong phòng học sáng sủa',
       label: 'Luyện đề, vững tâm thế',
-      caption: 'Làm quen cách thi, chủ động nhịp làm bài.',
+      caption: 'Làm quen với nhịp thi trên giấy.',
     },
   ],
 }
@@ -180,6 +185,18 @@ export const examIntro: ExamIntro = {
     'Đánh giá năng lực (ĐGNL) là tên gọi chung của các kỳ thi tuyển sinh sớm do đại học tổ chức. V-ACT là kỳ thi ĐGNL của Đại học Quốc gia TP.HCM: bài thi trắc nghiệm trên giấy, đo năng lực cốt lõi cần cho việc học đại học và được hơn 100 trường đại học, cao đẳng dùng để xét tuyển.',
   sheetCaption: 'Minh họa phiếu trả lời trắc nghiệm',
   structureTitle: 'Cấu trúc đề thi',
+  // Verified on 02/11/2026 against the exam pages of the Trung tâm Khảo thí và Đánh giá Chất lượng
+  // Đào tạo, ĐHQG-HCM (cetqa.vnuhcm.edu.vn/danh-gia-nang-luc, "Thông tin kỳ thi" and "Câu hỏi thường gặp").
+  // Only what those pages state goes here; the sittings are those of 2026 because later years are not
+  // announced yet.
+  facts: [
+    { value: '120', label: 'Câu hỏi trắc nghiệm' },
+    { value: '150', label: 'Phút làm bài' },
+    { value: '1.200', label: 'Điểm tối đa' },
+    { value: 'Trên giấy', label: 'Hình thức thi' },
+    { value: '2', label: 'Đợt thi năm 2026' },
+    { value: 'Hơn 100', label: 'Trường dùng kết quả để xét tuyển' },
+  ],
   parts: [
     {
       id: 'language',
@@ -211,21 +228,27 @@ export const examIntro: ExamIntro = {
       soft: '#f0ebff',
     },
   ],
-  totalQuestions: 120,
-  durationMinutes: 150,
-  totalScore: '1.200',
   scoringNote:
-    'Điểm được tính theo lý thuyết ứng đáp câu hỏi (IRT): mỗi câu có trọng số khác nhau tùy độ khó.',
+    'Điểm tính theo lý thuyết ứng đáp câu hỏi (IRT): mỗi câu có trọng số riêng, tùy theo độ khó.',
   seasonTitle: 'Một mùa thi diễn ra thế nào?',
   season: [
     { title: 'Đăng ký', text: 'Đăng ký và đóng lệ phí trực tuyến.' },
-    { title: 'Dự thi', text: 'Mỗi năm thường có 2 đợt thi.' },
-    { title: 'Nhận kết quả', text: 'Điểm công bố trực tuyến.' },
-    { title: 'Xét tuyển', text: 'Nộp điểm cho trường bạn chọn.' },
+    {
+      title: 'Dự thi',
+      text: 'Tự in giấy báo dự thi từ tài khoản; khi đi thi, mang theo căn cước hoặc hộ chiếu còn hạn.',
+    },
+    {
+      title: 'Nhận kết quả',
+      text: 'Xem điểm và tải giấy chứng nhận kết quả trong tài khoản đăng ký.',
+    },
+    {
+      title: 'Xét tuyển',
+      text: 'Dùng kết quả để đăng ký xét tuyển vào trường bạn chọn. Cách xét và thời hạn dùng điểm do từng trường quy định.',
+    },
   ],
   source: {
     href: 'https://cetqa.vnuhcm.edu.vn/danh-gia-nang-luc',
-    updatedAt: '14/10/2026',
+    updatedAt: '02/11/2026',
   },
 }
 
@@ -233,15 +256,6 @@ export const domains: Domain[] = [
   {
     id: 'tieng-viet',
     title: 'Tiếng Việt',
-    part: 'Phần 1A',
-    questions: 30,
-    hours: 42,
-    color: '#a85a17',
-    soft: '#fff1dc',
-    art: { kind: 'sprite', symbol: 'star' },
-    label: 'Ă a',
-    doodle: { icon: 'book-open', text: 'Đọc hiểu' },
-    desc: 'Đọc sâu, hiểu đúng. Làm chủ ngôn ngữ và tìm ra điều văn bản thực sự muốn nói.',
     modules: [
       {
         code: 'TV01',
@@ -272,15 +286,6 @@ export const domains: Domain[] = [
   {
     id: 'tieng-anh',
     title: 'Tiếng Anh',
-    part: 'Phần 1B',
-    questions: 30,
-    hours: 46,
-    color: '#b94266',
-    soft: '#fceaf0',
-    art: { kind: 'sprite', symbol: 'mai-english' },
-    label: 'Hello!',
-    doodle: { icon: 'languages', text: 'Ngôn ngữ' },
-    desc: 'Từ vựng trong ngữ cảnh, ngữ pháp dễ hiểu. Từng bước đọc nhanh và suy luận tốt hơn.',
     modules: [
       {
         code: 'EN01',
@@ -311,15 +316,6 @@ export const domains: Domain[] = [
   {
     id: 'toan',
     title: 'Toán & Tư duy định lượng',
-    part: 'Phần 2',
-    questions: 30,
-    hours: 80,
-    color: '#087dbd',
-    soft: '#e7f5ff',
-    art: { kind: 'sprite', symbol: 'ui-calculator' },
-    label: 'x + y',
-    doodle: { icon: 'calculator', text: 'Giải bài' },
-    desc: 'Hiểu bản chất, tìm cách giải. Kết nối kiến thức Toán, tư duy định lượng và kỹ năng Casio.',
     modules: [
       {
         code: 'MA01',
@@ -351,23 +347,13 @@ export const domains: Domain[] = [
         level: 'Tích hợp',
         hours: 16,
         summary:
-          'Toán hỗn hợp, toán thực tế, chiến thuật máy tính, suy luận định lượng, bài có thời gian và ôn lỗi theo kiến thức cùng kỹ năng.',
+          'Toán hỗn hợp, toán thực tế, chiến thuật máy tính, suy luận định lượng, bài có thời gian và ôn lỗi theo kiến thức và kỹ năng.',
       },
     ],
   },
   {
     id: 'logic',
     title: 'Logic & Phân tích số liệu',
-    part: 'Phần 3A',
-    questions: 12,
-    hours: 44,
-    color: '#7652bf',
-    soft: '#f0ebff',
-    art: { kind: 'sprite', symbol: 'nam-analysis' },
-    label: 'Nếu… thì?',
-    labelFontSize: 36,
-    doodle: { icon: 'chart-column-increasing', text: 'Phân tích' },
-    desc: 'Nhìn ra quy luật, kết nối dữ kiện và lập luận chặt chẽ. Mỗi bài toán là một câu đố đáng khám phá.',
     modules: [
       {
         code: 'RM00',
@@ -390,15 +376,6 @@ export const domains: Domain[] = [
   {
     id: 'khoa-hoc',
     title: 'Suy luận Khoa học',
-    part: 'Phần 3B',
-    questions: 18,
-    hours: 42,
-    color: '#27735b',
-    soft: '#e8f6ee',
-    art: { kind: 'sprite', symbol: 'bot' },
-    label: 'Vì sao?',
-    doodle: { icon: 'flask-conical', text: 'Khám phá' },
-    desc: 'Suy nghĩ như nhà khoa học. Đọc dữ liệu, khám phá thí nghiệm và kiểm chứng giả thuyết bằng bằng chứng.',
     modules: [
       {
         code: 'SR00',
@@ -428,12 +405,12 @@ export const practiceOperations: PracticeOperation[] = [
     hours: 3,
     title: 'Định hướng & Chiến lược thi V-ACT',
     summary:
-      'Làm quen cấu trúc 120 câu/150 phút, phân bổ thời gian, chiến thuật 3 vòng, đánh dấu câu, loại trừ và tô phiếu.',
+      'Làm quen với cấu trúc 120 câu/150 phút, phân bổ thời gian, chiến thuật 3 vòng, đánh dấu câu, loại trừ đáp án và tô phiếu.',
   },
   {
     id: 'PR00',
     label: 'Luyện tổng hợp',
-    tagline: 'Kết nối 5 nhóm học',
+    tagline: 'Kết nối 5 nhóm kiến thức',
     hours: 18,
     title: 'Luyện tập Tổng hợp V-ACT',
     summary:
@@ -484,7 +461,7 @@ export const journey = {
     },
     {
       title: 'Chọn phần cần học',
-      text: 'Đọc kết quả theo từng phần để hiểu mình nên tập trung vào đâu.',
+      text: 'Xem kết quả theo từng phần để biết bạn nên tập trung vào đâu.',
     },
     {
       title: 'Học và luyện mỗi ngày',
@@ -500,85 +477,60 @@ export const journey = {
   },
 }
 
-export const sampleLesson = {
-  title: 'Thử một câu. Hiểu thêm một chút.',
-  intro: '3 câu ngắn, có giải thích sau mỗi câu.',
-  disclaimer: 'Câu luyện mẫu · không phải bài thi V-ACT đầy đủ',
-  featureTitle: 'Hiểu cách làm,',
-  featureAccent: 'nhìn ra cách học.',
-  features: [
-    {
-      title: 'Biết câu hỏi thuộc nhóm nào',
-      text: 'Nội dung gắn với nhóm kiến thức và kỹ năng cụ thể trong chương trình V-ACT.',
-    },
-    {
-      title: 'Đọc lời giải để hiểu cách làm',
-      text: 'Giải thích giúp bạn theo dõi hướng suy luận, không chỉ nhìn đáp án đúng.',
-    },
+const appScreens = `${landingAssets}/app`
+
+// The HocLuc Android app (com.hocluc.app). The download link always serves the newest APK from the
+// app's GitHub releases. The screens are renders of the app's own design and show its example data,
+// not a real student's.
+export const studentApp = {
+  badge: 'Ứng dụng Android',
+  title: 'Học mọi lúc, mọi nơi',
+  text: 'Ứng dụng Hocluc đưa khóa học, lịch học và công cụ giải Toán lên điện thoại của bạn.',
+  facts: [
+    'Mở ra là học tiếp đúng bài đang dở',
+    'Lịch học, bài kiểm tra và thông báo ở cùng một nơi',
+    'Máy tính CW-880 dùng được cả khi không có mạng',
   ],
-}
-
-export const sampleQuestions: SampleQuestion[] = [
-  {
-    group: 'Logic & Phân tích số liệu · Nhận diện quy luật',
-    title: 'Số nào tiếp theo trong dãy?',
-    context: '2 → 6 → 12 → 20 → ?',
-    answers: ['28', '30', '32', '36'],
-    correct: 1,
-    explain:
-      'Hiệu giữa các số lần lượt là 4, 6, 8. Hiệu tiếp theo là 10, nên 20 + 10 = 30. Bạn cũng có thể nhận ra quy luật n × (n + 1).',
+  download: {
+    label: 'Tải ứng dụng cho Android',
+    href: 'https://github.com/nguyenquocan0101/HocLuc-Releases/releases/latest/download/hocluc.apk',
+    note: 'Tệp APK cài trực tiếp trên máy Android. Đăng nhập bằng tài khoản học sinh Hocluc.',
   },
-  {
-    group: 'Toán & Tư duy định lượng · Tỷ lệ phần trăm',
-    title: 'Một cuốn sách giá 80.000đ được giảm 25%.',
-    context: 'Giá cuốn sách sau khi giảm là bao nhiêu?',
-    answers: ['20.000đ', '55.000đ', '60.000đ', '75.000đ'],
-    correct: 2,
-    explain:
-      'Số tiền giảm là 80.000 × 25% = 20.000đ. Giá sau giảm bằng 80.000 − 20.000 = 60.000đ. Chú ý phân biệt số tiền giảm với số tiền phải trả.',
-  },
-  {
-    group: 'Suy luận Khoa học · Kiểm soát biến',
-    title: 'Muốn kiểm tra ảnh hưởng của ánh sáng đến cây,',
-    context: 'hai nhóm cây nên khác nhau ở yếu tố nào?',
-    answers: ['Loại cây', 'Lượng nước', 'Loại đất', 'Lượng ánh sáng'],
-    correct: 3,
-    explain:
-      'Thay đổi lượng ánh sáng và giữ các yếu tố còn lại giống nhau. Ánh sáng là biến độc lập; loại cây, lượng nước và đất cần được kiểm soát để so sánh có ý nghĩa.',
-  },
-]
-
-export const calculatorLink = {
-  label: 'Công cụ học tập · Toán',
-  title: 'Muốn luyện thao tác trên fx-580VN X?',
-  text: 'Mở trình mô phỏng ClassWiz chính thức của CASIO ở ClassPad.net.',
-  cta: 'Mở ClassPad.net',
-  href: 'https://classpad.net/intl/',
+  screens: [
+    {
+      src: `${appScreens}/app-home.webp`,
+      alt: 'Trang chủ ứng dụng Hocluc: học tiếp bài Hàm số bậc ba và cực trị, lịch học hôm nay và công cụ nhanh',
+    },
+    {
+      src: `${appScreens}/app-calculator.webp`,
+      alt: 'Máy tính CW-880 trong ứng dụng Hocluc, màn hình hiện 1/2 + 1/3 = 5/6',
+    },
+  ] satisfies AppScreen[],
 }
 
 export const faq = {
   title: 'Trước khi bắt đầu',
-  text: 'Thông tin ngắn gọn để bạn biết Học Lực phù hợp với bước nào trong hành trình ôn V-ACT.',
+  text: 'Thông tin ngắn gọn để bạn biết Hocluc phù hợp với bước nào trong hành trình ôn V-ACT.',
   items: [
     {
       question: 'Bài đánh giá đầu vào có mất phí không?',
       answer:
-        'Bài đánh giá đầu vào của Học Lực miễn phí. Bạn cần đăng nhập để làm bài và xem lộ trình gợi ý.',
+        'Không. Bài đánh giá đầu vào của Hocluc miễn phí; bạn chỉ cần đăng nhập để làm bài và xem lộ trình gợi ý.',
     },
     {
-      question: 'Chưa mua khóa học thì có thể xem nội dung nào?',
+      question: 'Chưa mua khóa học thì bạn xem được những gì?',
       answer:
-        'Lộ trình có thể gợi ý cả học phần bạn chưa mua. Bạn vẫn xem được danh mục, thông tin chi tiết và bài học mở ở chế độ xem trước; nội dung đầy đủ cần quyền truy cập khóa học.',
+        'Bạn vẫn xem được danh mục, thông tin chi tiết và các bài học mở xem trước. Lộ trình gợi ý có thể gồm cả khóa học bạn chưa mua; muốn học toàn bộ nội dung, bạn cần sở hữu khóa học đó.',
     },
     {
       question: 'Kết quả đánh giá có phải điểm thi V-ACT chính thức không?',
       answer:
-        'Không. Đây là kết quả đánh giá trên Học Lực để hỗ trợ việc học, không thay thế kết quả kỳ thi V-ACT.',
+        'Không. Kết quả này chỉ giúp bạn định hướng việc học trên Hocluc, không thay thế kết quả kỳ thi V-ACT.',
     },
     {
-      question: 'Khóa học có thời hạn và hình thức học thế nào?',
+      question: 'Thời hạn và hình thức học của khóa học ra sao?',
       answer:
-        'Thời hạn, nội dung và hình thức học được ghi trong thông tin từng khóa. Bạn nên xem chi tiết trước khi đăng ký.',
+        'Mỗi khóa ghi rõ thời hạn, nội dung và hình thức học trong trang thông tin. Bạn nên xem kỹ trước khi đăng ký.',
     },
   ],
 }
@@ -593,7 +545,7 @@ export const startDialogOptions = {
     { value: 'tieng-anh', label: 'Tiếng Anh' },
     { value: 'toan', label: 'Toán học & Tư duy định lượng' },
     { value: 'logic', label: 'Logic & Phân tích số liệu' },
-    { value: 'khoa-hoc', label: 'Suy luận Khoa học' },
+    { value: 'khoa-hoc', label: 'Suy luận khoa học' },
   ],
   defaultDomain: 'toan',
   levels: [
@@ -603,53 +555,3 @@ export const startDialogOptions = {
   ],
 } as const
 
-export const examFacts = {
-  label: 'Kỳ thi V-ACT · ĐGNL ĐHQG-HCM',
-  link: 'Tìm hiểu kỳ thi',
-}
-
-export interface SupportItem {
-  id: string
-  icon: LandingIconName
-  title: string
-  text: string
-  note: string
-  tone: string
-  soft: string
-  link?: { label: string; href: string }
-}
-
-export const support: { title: string; text: string; items: SupportItem[] } = {
-  title: 'Có người đồng hành khi học.',
-  text: 'Những hỗ trợ đi kèm khóa học, cùng một công cụ miễn phí cho phần Toán.',
-  items: [
-    {
-      id: 'mentor',
-      icon: 'message-circle',
-      title: 'Hỏi Mentor',
-      text: 'Nhắn câu hỏi theo môn cho mentor ngay trong khu học tập.',
-      note: 'Dành cho học viên đã có khóa học.',
-      tone: '#087dbd',
-      soft: '#e7f5ff',
-    },
-    {
-      id: 'ai-tutor',
-      icon: 'sparkles',
-      title: 'Gia sư AI',
-      text: 'Hỏi lại phần chưa hiểu và nhận thêm giải thích trong lúc học.',
-      note: 'Cần ít nhất một khóa học đã mua còn hiệu lực.',
-      tone: '#6a52d0',
-      soft: '#efeafd',
-    },
-    {
-      id: 'calculator',
-      icon: 'calculator',
-      title: 'Máy tính fx-580VN X',
-      text: 'Luyện thao tác trên trình mô phỏng ClassWiz chính thức của CASIO.',
-      note: 'Miễn phí · mở trang ClassPad.net của CASIO.',
-      tone: '#23845a',
-      soft: '#e5f5ec',
-      link: { label: 'Mở ClassPad.net', href: 'https://classpad.net/intl/' },
-    },
-  ],
-}

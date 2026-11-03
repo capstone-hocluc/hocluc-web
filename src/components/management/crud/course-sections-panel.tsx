@@ -16,11 +16,12 @@ interface Props {
   busy: boolean
   mutate: CourseMutation
   remove: CourseRemoval
+  assignPhase: (linkId: string, phaseId: string | null) => Promise<boolean>
 }
 
 // Gifts: other courses the student also gets when buying this one. Any course may come with any
 // other, never with itself. The backend keeps the table name `course_sections`, hence the file name.
-export default function CourseSectionsPanel({ course, readOnly, busy, mutate, remove }: Props) {
+export default function CourseSectionsPanel({ course, readOnly, busy, mutate, remove, assignPhase }: Props) {
   const [page, setPage] = useState(0)
   const [selected, setSelected] = useState('NONE')
   const candidates = useScheduleResource(
@@ -45,7 +46,7 @@ export default function CourseSectionsPanel({ course, readOnly, busy, mutate, re
         >
           <div className="flex flex-col gap-3 border-b border-card-border pb-5">
             <div className="grid items-end gap-3 sm:grid-cols-[1fr_auto]">
-              <Field label="Khóa tặng kèm" hint="Học viên mua khóa này sẽ được học cả khóa được chọn.">
+              <Field label="Khóa tặng kèm">
                 <SelectField
                   ariaLabel="Khóa để tặng kèm"
                   value={selected}
@@ -107,68 +108,94 @@ export default function CourseSectionsPanel({ course, readOnly, busy, mutate, re
           Chưa tặng kèm khóa nào. Phần này là tùy chọn: khóa vẫn bán được nếu có chương đã xuất bản.
         </p>
       ) : (
-        <ol className="divide-y divide-card-border">
-          {course.sections.map((section, index) => (
-            <li
-              key={section.id}
-              className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
-            >
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                <h3 className="font-medium text-text-primary">{section.title}</h3>
-                <Status tone={section.status === 'PUBLISHED' ? 'success' : 'neutral'}>
-                  {COURSE_STATUS_LABELS[section.status]}
-                </Status>
-              </div>
-              {!readOnly && (
-                <div className="flex flex-wrap items-center gap-1">
-                  <Button
-                    size="icon"
-                    appearance="ghost"
-                    aria-label={`Đưa ${section.title} lên`}
-                    disabled={busy || index === 0}
-                    onClick={() =>
-                      void mutate('sections/order', 'PUT', {
-                        ids: movedIds(
-                          course.sections.map((s) => s.id),
-                          index,
-                          -1
-                        ),
-                      })
-                    }
-                  >
-                    <ArrowUp size={16} />
-                  </Button>
-                  <Button
-                    size="icon"
-                    appearance="ghost"
-                    aria-label={`Đưa ${section.title} xuống`}
-                    disabled={busy || index === course.sections.length - 1}
-                    onClick={() =>
-                      void mutate('sections/order', 'PUT', {
-                        ids: movedIds(
-                          course.sections.map((s) => s.id),
-                          index,
-                          1
-                        ),
-                      })
-                    }
-                  >
-                    <ArrowDown size={16} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    appearance="ghost"
-                    variant="danger"
-                    disabled={busy}
-                    onClick={() => remove(`sections/${section.id}`, section.title)}
-                  >
-                    Gỡ
-                  </Button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ol>
+        <div>
+          {[
+            ...course.phases.map((phase) => ({ id: phase.id, name: phase.name })),
+            { id: null, name: 'Xuyên suốt lộ trình' },
+          ].map((group) => {
+            const items = course.sections.filter((section) => section.phaseId === group.id)
+            if (!items.length) return null
+            return (
+              <section key={group.id ?? 'unphased'} className="mt-4">
+                {course.phases.length > 0 && (
+                  <h3 className="font-semibold text-text-primary">{group.name}</h3>
+                )}
+                <ol className="divide-y divide-card-border">
+                  {items.map((section) => {
+                    const index = course.sections.findIndex((item) => item.id === section.id)
+                    return (
+                      <li
+                        key={section.id}
+                        className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
+                      >
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                          <h3 className="font-medium text-text-primary">{section.title}</h3>
+                          <Status tone={section.status === 'PUBLISHED' ? 'success' : 'neutral'}>
+                            {COURSE_STATUS_LABELS[section.status]}
+                          </Status>
+                        </div>
+                        {!readOnly && (
+                          <div className="flex flex-wrap items-center gap-1">
+                            <SelectField
+                              ariaLabel={`Giai đoạn của ${section.title}`}
+                              value={section.phaseId ?? 'NONE'}
+                              onChange={(value) =>
+                                void assignPhase(section.id, value === 'NONE' ? null : value)
+                              }
+                              disabled={busy}
+                              options={[
+                                { id: 'NONE', label: 'Xuyên suốt lộ trình' },
+                                ...course.phases.map((phase) => ({
+                                  id: phase.id,
+                                  label: phase.name,
+                                })),
+                              ]}
+                            />
+                            <Button
+                              size="icon"
+                              appearance="ghost"
+                              aria-label={`Đưa ${section.title} lên`}
+                              disabled={busy || index === 0}
+                              onClick={() =>
+                                void mutate('sections/order', 'PUT', {
+                                  ids: movedIds(course.sections.map((s) => s.id), index, -1),
+                                })
+                              }
+                            >
+                              <ArrowUp size={16} />
+                            </Button>
+                            <Button
+                              size="icon"
+                              appearance="ghost"
+                              aria-label={`Đưa ${section.title} xuống`}
+                              disabled={busy || index === course.sections.length - 1}
+                              onClick={() =>
+                                void mutate('sections/order', 'PUT', {
+                                  ids: movedIds(course.sections.map((s) => s.id), index, 1),
+                                })
+                              }
+                            >
+                              <ArrowDown size={16} />
+                            </Button>
+                            <Button
+                              size="sm"
+                              appearance="ghost"
+                              variant="danger"
+                              disabled={busy}
+                              onClick={() => remove(`sections/${section.id}`, section.title)}
+                            >
+                              Gỡ
+                            </Button>
+                          </div>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ol>
+              </section>
+            )
+          })}
+        </div>
       )}
     </Panel>
   )

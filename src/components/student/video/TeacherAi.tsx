@@ -44,7 +44,7 @@ export function TeacherAiPanel({
       <div className="flex shrink-0 items-center justify-between gap-2.5 bg-primary px-4 py-4 text-white">
         <Bot size={24} className="shrink-0" />
         <div className="min-w-0 flex-1">
-          <strong className="block text-lg font-bold">Trợ lý AI HocLuc</strong>
+          <strong className="block text-lg font-bold">Trợ lý AI Hocluc</strong>
           <span className="mt-[3px] block text-[13px] leading-[1.35] font-bold">
             <i className="mr-1.5 inline-block size-2 rounded-full bg-success" /> Đang hoạt động
           </span>
@@ -62,7 +62,7 @@ export function TeacherAiPanel({
         </Button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-[9px] overflow-y-auto bg-lock-soft px-[18px] py-[22px]">
+      <div className="flex min-h-0 flex-1 flex-col gap-[9px] app-scroll overflow-y-auto bg-lock-soft px-[18px] py-[22px]">
         {messages.map((message) => (
           <p
             key={message.id}

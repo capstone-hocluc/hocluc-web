@@ -1,3 +1,4 @@
+import DateField from '../date-field'
 import { CalendarDays, List, Search } from '../icons'
 import Button from '../button'
 import { fieldControlClass } from '../form-field'
@@ -29,17 +30,7 @@ export default function ScheduleFilters({ date, onDateChange, query, onQueryChan
           placeholder="Tìm buổi hoặc lớp"
         />
       </label>
-      <label className="flex items-center gap-2 text-sm text-text-tertiary">
-        <span className="sr-only">Tuần chứa ngày</span>
-        <input
-          name="scheduleDate"
-          autoComplete="off"
-          type="date"
-          value={date}
-          onChange={(event) => onDateChange(event.target.value)}
-          className={fieldControlClass}
-        />
-      </label>
+      <DateField label="Tuần chứa ngày" hideLabel name="scheduleDate" value={date} onChange={onDateChange} className="sm:w-44" />
       <div className="flex gap-1 rounded-lg border border-card-border p-1" role="group" aria-label="Cách xem lịch">
         <Button size="sm" appearance={view === 'agenda' ? 'fill' : 'ghost'} aria-pressed={view === 'agenda'} onClick={() => onViewChange('agenda')}>
           <List size={15} />

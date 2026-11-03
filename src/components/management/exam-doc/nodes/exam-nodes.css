@@ -1,0 +1,107 @@
+/* Exam blocks on the paper: black ink on white, the same on screen and in print. */
+
+/* Options A-D: the node view sets data-columns (4, 2 or 1) from the widest option. */
+.exam-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 12px;
+  row-gap: 0;
+  text-align: left;
+}
+
+.exam-choice-grid[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.exam-choice-grid[data-columns='1'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.exam-choice-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
+  min-width: 0;
+}
+
+.exam-choice-label {
+  flex: none;
+  font-weight: 700;
+  user-select: none;
+}
+
+/* An option running over several lines is set flush on both sides, like the rest of the exam's text. */
+.exam-choice-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: justify;
+}
+
+/* Measuring pass (one synchronous layout, never painted): every option on one line at its natural width. */
+.exam-choice-grid[data-measuring] {
+  display: block;
+}
+
+.exam-choice-grid[data-measuring] > .exam-choice-cell {
+  width: max-content;
+}
+
+.exam-choice-grid[data-measuring] .exam-choice-body {
+  flex: none;
+  white-space: pre;
+}
+
+/* Exam header: two borderless columns, left (school) narrower than right (exam). */
+.exam-header {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  column-gap: 12px;
+  align-items: start;
+  line-height: 1.35;
+  margin-bottom: 0.6em;
+}
+
+.exam-header-column {
+  min-width: 0;
+}
+
+.exam-header-column > p {
+  margin: 0;
+}
+
+/* Chart: its drawing at a share of the text width (set by the node view), centred. Its edit button shows on the
+   selected chart of an editable document only: not on a read-only exam variant, nor on a page copied for the PDF. */
+.exam-chart {
+  position: relative;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.exam-chart-edit {
+  display: none;
+}
+
+.exam-doc-content[contenteditable='true'] .exam-chart.ProseMirror-selectednode > .exam-chart-edit {
+  display: inline-flex;
+}
+
+.exam-choice-grid.ProseMirror-selectednode,
+.exam-header.ProseMirror-selectednode,
+.exam-chart.ProseMirror-selectednode {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+@media print {
+  .exam-choice-grid,
+  .exam-header,
+  .exam-chart {
+    break-inside: avoid;
+  }
+
+  .exam-choice-grid.ProseMirror-selectednode,
+  .exam-header.ProseMirror-selectednode,
+  .exam-chart.ProseMirror-selectednode {
+    outline: 0;
+  }
+}

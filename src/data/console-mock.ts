@@ -2,23 +2,6 @@
 
 export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
-export const BLUEPRINTS = [
-  { id: 'bp-01', name: 'V-ACT đầy đủ', type: 'Thi thử', questions: 120, minutes: 150, version: 'v2.1', status: 'Đang dùng' },
-  { id: 'bp-02', name: 'Tư duy định lượng', type: 'Theo phần', questions: 50, minutes: 60, version: 'v1.4', status: 'Đang dùng' },
-  { id: 'bp-03', name: 'Tư duy khoa học', type: 'Theo phần', questions: 50, minutes: 60, version: 'v1.2', status: 'Đang dùng' },
-  { id: 'bp-04', name: 'Test đầu vào', type: 'Placement', questions: 120, minutes: 120, version: 'v1.0', status: 'Đang dùng' },
-  { id: 'bp-05', name: 'Luyện chùm theo kỹ năng', type: 'Luyện tập', questions: 20, minutes: 30, version: 'v0.3', status: 'Nháp' },
-]
-
-export const TAXONOMY = [
-  { id: 'dm-01', domain: 'Đại số', questionTypes: 18, skills: 22, questions: 640, version: 'v2.0' },
-  { id: 'dm-02', domain: 'Hình học không gian', questionTypes: 12, skills: 14, questions: 380, version: 'v2.0' },
-  { id: 'dm-03', domain: 'Xác suất - Thống kê', questionTypes: 9, skills: 11, questions: 270, version: 'v2.0' },
-  { id: 'dm-04', domain: 'Hàm số và đồ thị', questionTypes: 14, skills: 16, questions: 410, version: 'v2.0' },
-  { id: 'dm-05', domain: 'Tư duy logic', questionTypes: 11, skills: 13, questions: 300, version: 'v2.0' },
-  { id: 'dm-06', domain: 'Khoa học tự nhiên', questionTypes: 16, skills: 19, questions: 520, version: 'v2.0' },
-]
-
 export const AUDIT_LOG = [
   { id: 'lg-01', time: '10/10/2026 08:42', actor: 'Admin User', role: 'Quản trị viên', action: 'Cấp vai trò Mentor', target: 'long.nguyen@hocluc.local' },
   { id: 'lg-02', time: '10/10/2026 08:15', actor: 'Staff User', role: 'Nhân viên', action: 'Duyệt câu hỏi', target: 'Q-2041' },
@@ -26,13 +9,6 @@ export const AUDIT_LOG = [
   { id: 'lg-04', time: '09/10/2026 16:05', actor: 'Teacher User', role: 'Giáo viên', action: 'Xuất bản quiz', target: 'Hàm số bậc hai - Bài 06' },
   { id: 'lg-05', time: '09/10/2026 10:12', actor: 'Admin User', role: 'Quản trị viên', action: 'Khóa tài khoản', target: 'wynnhu13@gmail.com' },
   { id: 'lg-06', time: '08/10/2026 14:48', actor: 'Staff User', role: 'Nhân viên', action: 'Ghi danh thủ công', target: 'Như Nguyễn · ĐGNL 12A' },
-]
-
-export const GROUPS = [
-  { id: 'gr-01', name: 'Nhóm A1', course: 'ĐGNL 12A · K24', mentor: 'Nam Lê', students: 12, progress: 74 },
-  { id: 'gr-02', name: 'Nhóm A2', course: 'ĐGNL 12A · K24', mentor: 'Mai Trần', students: 11, progress: 61 },
-  { id: 'gr-03', name: 'Nhóm B1', course: 'ĐGNL 12B · K24', mentor: 'Long Nguyễn', students: 13, progress: 55 },
-  { id: 'gr-04', name: 'Nhóm C1', course: 'ĐGNL 11A · K25', mentor: 'Nam Lê', students: 10, progress: 42 },
 ]
 
 export const MENTOR_STUDENTS = [

@@ -2,18 +2,17 @@ import { useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { TeacherQuizRecord } from '../../../services/teacherQuizService'
 import type { ResourceStatus } from '../../../hooks/usePageResource'
-import { CheckCircle2, ClipboardCheck, Users } from '../../console/icons'
 import ListCard from '../../console/list-card'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import Status from '../../console/status'
-import StatCard from '../../ui/StatCard'
 import { formatAbsolute, parseInstant } from '../../console/detail/detail-format'
 import { FilterSelect } from '../../console/filter-toolbar'
 import { COURSE_QUIZ_TYPES, quizTypeLabel } from '../../../lib/quiz-types'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
+import { describePublishProblems } from './publish-problems'
+import { stoppedLast } from '../../../lib/stopped-last'
 
 const labels = { DRAFT: 'Bản nháp', PUBLISHED: 'Đã xuất bản', ARCHIVED: 'Đã lưu trữ' }
-const statClass = 'p-3 text-xs sm:p-5 sm:text-sm [&_b]:text-xl sm:[&_b]:text-2xl'
 
 type CatalogFilters = { query: string; status: string; type: string }
 function readFilters(key: string): CatalogFilters {
@@ -53,7 +52,9 @@ export default function QuizCatalog({ items, status, errorMessage, onRetry, read
     try { sessionStorage.setItem(storageKey, JSON.stringify(next)) } catch { /* Optional persistence. */ }
   }
   const typeFilter = filters.type
-  const filteredItems = exam || typeFilter === 'ALL' ? items : items.filter(quiz => quiz.type === typeFilter)
+  // archived ones sink to the bottom
+  const filteredItems = stoppedLast(exam || typeFilter === 'ALL' ? items : items.filter(quiz => quiz.type === typeFilter),
+    quiz => quiz.status === 'ARCHIVED')
   const published = placement ? items.filter(quiz => quiz.status === 'PUBLISHED') : []
   const newestTime = Math.max(...published.map(quiz => Date.parse(quiz.createdAt ?? '')))
   const newest = published.filter(quiz => Date.parse(quiz.createdAt ?? '') === newestTime)
@@ -65,7 +66,7 @@ export default function QuizCatalog({ items, status, errorMessage, onRetry, read
         {placement && newest.some(item => item.id === quiz.id) && <Status tone="info">{newest.length === 1 ? 'Đang dùng cho Student' : 'Cùng thời điểm tạo mới nhất'}</Status>}
         {!exam && <Status tone="info">{quizTypeLabel(quiz.type)}</Status>}
         {quiz.status === 'DRAFT' && Boolean(quiz.publishProblems?.length) &&
-          <p className="text-xs leading-5 text-text-tertiary">Cần hoàn thiện: {quiz.publishProblems?.join(', ')}</p>}
+          <p className="text-xs leading-5 text-text-tertiary">Cần hoàn thiện: {describePublishProblems(quiz.publishProblems)}</p>}
       </div>,
     },
     ...(placement ? [] : [{ accessorKey: 'courseTitle', header: 'Vị trí',
@@ -90,13 +91,7 @@ export default function QuizCatalog({ items, status, errorMessage, onRetry, read
     { id: 'actions', header: 'Thao tác', enableSorting: false,
       meta: { className: 'text-right' }, cell: ({ row }) => renderActions(row.original) },
   ]
-  const ready = status === 'ready'
   return <>
-    <div className="grid grid-cols-3 gap-2 sm:gap-3">
-      <StatCard className={statClass} label={placement ? 'Tổng bài đầu vào' : exam ? 'Tổng đề thi thử' : 'Tổng bài kiểm tra'} value={ready ? items.length : '—'} icon={ClipboardCheck} />
-      <StatCard className={statClass} label="Đã xuất bản" value={ready ? items.filter(item => item.status === 'PUBLISHED').length : '—'} icon={CheckCircle2} tone="success" />
-      <StatCard className={statClass} label="Lượt làm bài" value={ready ? items.reduce((sum, item) => sum + item.attemptCount, 0) : '—'} icon={Users} />
-    </div>
     <ScheduleResourceState status={status} errorMessage={errorMessage} onRetry={onRetry} skeleton="table">
       <p className="-mb-3 text-xs text-text-tertiary sm:hidden">Vuốt ngang bảng để xem đầy đủ thông tin và thao tác.</p>
       <ListCard data={filteredItems} columns={columns} getRowKey={quiz => quiz.id}

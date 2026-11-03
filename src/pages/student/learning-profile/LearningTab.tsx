@@ -151,7 +151,7 @@ function LearningTab({ onAction, panelId, labelledBy }) {
           subtitle="Hoạt động trong 30 ngày gần đây"
           className="relative z-1 mb-3 border-b border-[var(--color-line)] bg-surface pb-3"
         />
-        <div className="flex max-h-[300px] flex-col gap-3.5 overflow-y-auto pr-2 [scrollbar-color:var(--color-line-brand)_var(--color-surface-sky)] [scrollbar-width:thin] max-[760px]:max-h-[260px] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border [&::-webkit-scrollbar-thumb]:border-[var(--color-surface-sky)] [&::-webkit-scrollbar-thumb]:bg-[var(--color-line-brand)] [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-[var(--color-surface-sky)]">
+        <div className="flex max-h-[300px] flex-col gap-3.5 app-scroll overflow-y-auto pr-2 max-[760px]:max-h-[260px]">
           {learningProfilePage.learningHistory.map((item) => (
             <div
               key={`${item.date}-${item.title}`}

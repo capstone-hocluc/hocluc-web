@@ -4,6 +4,7 @@ import { bySequence } from '../../lib/sequence'
 import { cn } from '../../lib/cn'
 import Card from '../ui/Card'
 import StatusBadge from '../ui/StatusBadge'
+import MathText from '../ui/MathText'
 
 interface QuizReviewQuestionCardProps {
   question: QuizReviewQuestion
@@ -56,7 +57,7 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
       )}
 
       <p className="mb-4 text-base leading-[1.6] font-bold text-text-heading">
-        {question.questionText}
+        <MathText>{question.questionText}</MathText>
       </p>
 
       <div className="flex flex-col gap-2.5">
@@ -88,7 +89,7 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
               >
                 {String.fromCharCode(65 + optionIndex)}
               </span>
-              <span className="min-w-0 flex-1">{option.optionText}</span>
+              <span className="min-w-0 flex-1"><MathText>{option.optionText}</MathText></span>
               {option.correct && <CheckCircle2 size={18} className="shrink-0" />}
               {isWrongPick && <XCircle size={18} className="shrink-0" />}
             </div>
@@ -99,7 +100,7 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
       {question.explanation && (
         <div className="mt-4 rounded-xl border border-line-brand bg-surface-brand px-4 py-3.5 text-[15px]">
           <strong className="mb-1 block font-bold text-text-heading">Giải thích</strong>
-          <p className="leading-[1.6] text-text-body">{question.explanation}</p>
+          <p className="leading-[1.6] text-text-body"><MathText>{question.explanation}</MathText></p>
         </div>
       )}
     </Card>

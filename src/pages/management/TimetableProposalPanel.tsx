@@ -1,3 +1,4 @@
+import DateField from '../../components/console/date-field'
 import SelectField from '../../components/console/select-field'
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../../lib/api'
@@ -10,6 +11,7 @@ import {
 } from '../../services/timetableProposalService'
 import type { DeliveryMode, TimetableProposalResponse } from '../../types/scheduling'
 import type { ScheduleResourceStatus } from '../../hooks/useScheduleResource'
+import { Checkbox } from '../../components/tailgrids/core/checkbox'
 import Button from '../../components/console/button'
 import { fieldControlClass } from '../../components/console/form-field'
 import Card from '../../components/console/card'
@@ -206,39 +208,8 @@ export default function TimetableProposalPanel({
 
       <form className="space-y-4" onSubmit={(event) => void generate(event)}>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-sm font-medium text-text-primary">
-            Từ ngày
-            <input
-              name="proposalStartDate"
-              autoComplete="off"
-              type="date"
-              value={startDate}
-              onChange={(event) => {
-                setStartDate(event.target.value)
-                clearResult()
-              }}
-              className={fieldClass + ' mt-1 w-full'}
-              disabled={controlsDisabled}
-              required
-            />
-          </label>
-          <label className="text-sm font-medium text-text-primary">
-            Đến ngày
-            <input
-              name="proposalEndDate"
-              autoComplete="off"
-              type="date"
-              min={startDate || undefined}
-              value={endDate}
-              onChange={(event) => {
-                setEndDate(event.target.value)
-                clearResult()
-              }}
-              className={fieldClass + ' mt-1 w-full'}
-              disabled={controlsDisabled}
-              required
-            />
-          </label>
+          <DateField label="Từ ngày" name="proposalStartDate" value={startDate} onChange={(value) => { setStartDate(value); clearResult() }} disabled={controlsDisabled} required />
+          <DateField label="Đến ngày" name="proposalEndDate" value={endDate} onChange={(value) => { setEndDate(value); clearResult() }} min={startDate} disabled={controlsDisabled} required />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -308,18 +279,14 @@ export default function TimetableProposalPanel({
           </Button>
           <div className="grid gap-2 sm:grid-cols-2">
             {sections.map((section) => (
-              <label
+              <Checkbox
                 key={section.sectionCourseId}
-                className="flex min-h-11 items-center gap-3 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm text-text-primary"
+                isSelected={selectedSectionIds.includes(section.sectionCourseId)}
+                onChange={() => toggleSection(section.sectionCourseId)}
+                className="min-h-11 rounded-xl border border-card-border bg-card-background px-3 py-2 text-sm text-text-primary"
               >
-                <input
-                  type="checkbox"
-                  checked={selectedSectionIds.includes(section.sectionCourseId)}
-                  onChange={() => toggleSection(section.sectionCourseId)}
-                  className="size-4 accent-primary"
-                />
-                <span>{section.title}</span>
-              </label>
+                {section.title}
+              </Checkbox>
             ))}
           </div>
         </fieldset>

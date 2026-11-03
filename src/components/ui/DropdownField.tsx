@@ -268,7 +268,7 @@ export function DropdownField({
             tabIndex={isSearchable ? -1 : 0}
             aria-label={`Danh sách ${ariaLabel.toLocaleLowerCase('vi-VN')}`}
             aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
-            className="max-h-64 overflow-auto p-1.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus-ring"
+            className="max-h-64 app-scroll overflow-auto p-1.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus-ring"
           >
             {visibleOptions.map((option, index) => {
               const isSelected = option.id === (value ?? null)

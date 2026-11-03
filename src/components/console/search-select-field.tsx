@@ -224,7 +224,7 @@ export default function SearchSelectField({
         </button>
       </div>
 
-      <Command.List className="max-h-56 overflow-y-auto border-t border-card-border p-1">
+      <Command.List className="max-h-56 app-scroll overflow-y-auto border-t border-card-border p-1">
         {failed && (
           <Command.Empty className="px-3 py-2 text-sm text-text-tertiary">
             Không tải được danh sách.

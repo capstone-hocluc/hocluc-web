@@ -7,6 +7,7 @@ import ConfirmDialog from '../../components/console/confirm-dialog'
 import SelectField from '../../components/console/select-field'
 import Notice from '../../components/console/notice'
 import ConsoleSheet from '../../components/console/sheet'
+import DateTimeField from '../../components/console/date-time-field'
 import Field, { fieldControlClass, textareaControlClass } from '../../components/console/form-field'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
 
@@ -129,30 +130,8 @@ export default function ScheduleEditor({
             <input name="title" autoComplete="off" required disabled={busy} defaultValue={initial?.title ?? ''} className={fieldControlClass} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Bắt đầu">
-              <input
-                name="startDateTime"
-                autoComplete="off"
-                type="datetime-local"
-                required
-                disabled={busy}
-                value={startDateTime}
-                onChange={(event) => setStartDateTime(event.target.value)}
-                className={fieldControlClass}
-              />
-            </Field>
-            <Field label="Kết thúc">
-              <input
-                name="endDateTime"
-                autoComplete="off"
-                type="datetime-local"
-                required
-                disabled={busy}
-                value={endDateTime}
-                onChange={(event) => setEndDateTime(event.target.value)}
-                className={fieldControlClass}
-              />
-            </Field>
+            <DateTimeField label="Bắt đầu" name="startDateTime" required disabled={busy} value={startDateTime} onChange={setStartDateTime} />
+            <DateTimeField label="Kết thúc" name="endDateTime" required disabled={busy} value={endDateTime} onChange={setEndDateTime} />
           </div>
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-text-primary">Giáo viên</span>

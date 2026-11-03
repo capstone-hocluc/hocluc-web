@@ -110,10 +110,20 @@ export function buildDashboardViewModel(api: StudentApiSnapshot) {
         bySequence(section.chapters).flatMap((chapter) => bySequence(chapter.lessons))
       )
     )
-    const target =
-      lessons.find((lesson) => lesson.id === continueStudy.continueLessonId) ||
-      findFirstLesson(continueStudy.phases)
-    if (target) {
+    const target = continueStudy.continueLessonId
+      ? lessons.find((lesson) => lesson.id === continueStudy.continueLessonId)
+      : findFirstLesson(continueStudy.phases)
+    if (continueStudy.continueLessonId && continueStudy.continueLessonTitle) {
+      recentLesson = {
+        lessonNo: target ? String(lessons.findIndex((lesson) => lesson.id === target.id) + 1).padStart(2, '0') : '',
+        title: continueStudy.continueLessonTitle,
+        course: continueStudy.title,
+        meta: `${continueStudy.completedLessons}/${continueStudy.totalLessons} bài học`,
+        score: mockRecentLesson.score,
+        courseId: continueStudy.continueSectionCourseId ?? continueEnrollment.course.id,
+        lessonId: continueStudy.continueLessonId,
+      }
+    } else if (target) {
       recentLesson = {
         lessonNo: String(lessons.findIndex((lesson) => lesson.id === target.id) + 1).padStart(
           2,

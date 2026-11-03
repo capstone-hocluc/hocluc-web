@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { X } from '../console/icons'
 import { cn } from '../../lib/cn'
 import Button from './Button'
+import ScrollArea from './ScrollArea'
 
 interface SheetProps {
   open: boolean
@@ -66,5 +67,5 @@ export type SheetBodyProps = ComponentProps<'div'>
 
 // Scrollable content area under the sheet header.
 export function SheetBody({ className, ...props }: SheetBodyProps) {
-  return <div className={cn('min-h-0 flex-1 overflow-y-auto', className)} {...props} />
+  return <ScrollArea className={cn('min-h-0 flex-1', className)} {...props} />
 }

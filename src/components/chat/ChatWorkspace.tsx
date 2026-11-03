@@ -460,7 +460,7 @@ export default function ChatWorkspace({
               </>
             )}
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 app-scroll overflow-y-auto">
             {chat.loading && !chat.inbox.length && (
               <p role="status" className={`p-5 text-sm ${muted}`}>
                 Đang tải hội thoại…
@@ -643,7 +643,7 @@ export default function ChatWorkspace({
                     }
                   }
                 }}
-                className={`min-h-[240px] flex-1 space-y-4 overflow-y-auto p-4 md:min-h-0 ${isConsole ? '' : 'bg-surface-soft'}`}
+                className={`min-h-[240px] flex-1 space-y-4 app-scroll overflow-y-auto p-4 md:min-h-0 ${isConsole ? '' : 'bg-surface-soft'}`}
                 aria-live="polite"
                 aria-busy={chat.detailLoading}
               >

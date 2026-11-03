@@ -132,12 +132,14 @@ export function Select<T extends object>({ className, children, ...props }: Sele
     );
   }
 
+  // react-aria's Select also accepts value/onChange; passing them through as well would fire every change twice.
+  const { value, onChange, ...single } = props;
   return (
     <AriaSelect
-      {...(props as any)}
+      {...(single as any)}
       className={cn("group flex w-full flex-col gap-2", className)}
-      selectedKey={props.value as Key}
-      onSelectionChange={props.onChange}
+      selectedKey={value as Key}
+      onSelectionChange={onChange}
     >
       {children}
     </AriaSelect>
@@ -226,7 +228,7 @@ function SelectContent({ children, className, ...props }: SelectContentProps) {
     return (
       <Popover
         className={cn(
-          "w-(--trigger-width) overflow-auto rounded-lg bg-dropdowns-background shadow-md",
+          "w-(--trigger-width) app-scroll overflow-auto rounded-lg bg-dropdowns-background shadow-md",
           "entering:animate-in entering:fade-in-0 entering:zoom-in-95",
           "exiting:animate-out exiting:fade-out-0 exiting:zoom-out-95",
           className,
@@ -257,7 +259,7 @@ function SelectContent({ children, className, ...props }: SelectContentProps) {
   return (
     <Popover
       className={cn(
-        "w-(--trigger-width) overflow-auto rounded-lg border border-card-border bg-background-white-secondary",
+        "w-(--trigger-width) app-scroll overflow-auto rounded-lg border border-card-border bg-background-white-secondary",
         "entering:animate-in entering:fade-in-0 entering:zoom-in-95",
         "exiting:animate-out exiting:fade-out-0 exiting:zoom-out-95",
         className,

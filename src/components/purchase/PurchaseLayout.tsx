@@ -16,7 +16,7 @@ export default function PurchaseLayout({
       <PublicHeader />
       <main className="purchase-container">
         <header className="purchase-heading">
-          <p className="purchase-eyebrow">HỌC LỰC / {step || 'KHÓA HỌC'}</p>
+          <p className="purchase-eyebrow">HOCLUC / {step || 'KHÓA HỌC'}</p>
           <h1>{title}</h1>
         </header>
         {children}

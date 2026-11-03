@@ -1,3 +1,4 @@
+import DateField from '../../console/date-field'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import ConsoleDialog from '../../console/dialog'
 import Button from '../../console/button'
@@ -12,6 +13,9 @@ import {
   type CourseType,
 } from '../../../services/courseAdminService'
 import type { Category } from '../../../services/categoryService'
+import { getAdminExamYears } from '../../../services/examYearService'
+import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { examDateRange, examSessionLabel, formatExamDate } from './exam-year-labels'
 import { getFieldErrors } from '../../../lib/errors'
 import { COURSE_TYPE_LABELS } from './course-labels'
 import { crudError, unknownMutation } from './crud-errors'
@@ -38,10 +42,12 @@ const FIELD_STEP: Record<string, StepId> = {
   paid: 'pricing',
   price: 'pricing',
   targetExam: 'pricing',
+  estimatedDurationMinutes: 'pricing',
   track: 'schedule',
   startDate: 'schedule',
   endDate: 'schedule',
   examSessionDate: 'schedule',
+  examSessionId: 'schedule',
   accessMode: 'access',
   accessDays: 'access',
 }
@@ -58,18 +64,33 @@ function StepPanel({ id, active, children }: { id: StepId; active: boolean; chil
 interface Props {
   course: CourseAdmin | null
   categories: Category[]
+  /** Subject of the rail selection, used when a new course is created from that subject. */
+  initialCategoryId?: string
   onClose: () => void
   onSaved: () => void
 }
 
-export default function CourseEditorDialog({ course, categories, onClose, onSaved }: Props) {
+export default function CourseEditorDialog({
+  course,
+  categories,
+  initialCategoryId,
+  onClose,
+  onSaved,
+}: Props) {
+  const [startDate, setStartDate] = useState(course?.startDate ?? '')
+  const [endDate, setEndDate] = useState(course?.endDate ?? '')
   const [courseType, setCourseType] = useState<CourseType>(course?.courseType ?? 'MAIN')
-  const [categoryId, setCategoryId] = useState(course?.categoryId ?? 'NONE')
+  const [categoryId, setCategoryId] = useState(course?.categoryId ?? initialCategoryId ?? 'NONE')
   const [paid, setPaid] = useState(course?.paid ?? false)
   const [track, setTrack] = useState(course?.track ?? 'NONE')
   const [targetExam, setTargetExam] = useState(course?.targetExam ?? 'VNUHCM_DGNL')
   const [price, setPrice] = useState(course?.price ? String(Math.round(course.price)) : '')
   const [accessMode, setAccessMode] = useState<AccessMode>(course?.accessMode ?? 'FIXED_END_DATE')
+  // A course saved before exam sittings existed keeps its typed date (LEGACY) until a sitting is picked.
+  const [examSessionChoice, setExamSessionChoice] = useState(
+    course?.examSession?.id ?? (course?.examSessionDate ? 'LEGACY' : 'NONE')
+  )
+  const examYears = useScheduleResource(courseType === 'MAIN' ? 'course-editor-exam-years' : null, getAdminExamYears)
   const [stepIndex, setStepIndex] = useState(0)
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -118,12 +139,20 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
         categoryId: categoryId === 'NONE' ? null : categoryId,
         paid,
         price: paid ? Number(price) : 0,
+        estimatedDurationMinutes: text('estimatedDurationHours')
+          ? Math.round(Number(text('estimatedDurationHours')) * 60)
+          : null,
         track: courseType === 'MAIN' ? (track === 'NONE' ? null : track) : (course?.track ?? null),
         startDate: courseType === 'MAIN' ? text('startDate') : (course?.startDate ?? null),
         endDate: courseType === 'MAIN' ? text('endDate') : (course?.endDate ?? null),
         targetExam,
+        examSessionId: courseType === 'MAIN' && !['NONE', 'LEGACY'].includes(examSessionChoice) ? examSessionChoice : null,
         examSessionDate:
-          courseType === 'MAIN' ? text('examSessionDate') : (course?.examSessionDate ?? null),
+          courseType === 'MAIN'
+            ? examSessionChoice === 'LEGACY'
+              ? (course?.examSessionDate ?? null)
+              : null
+            : (course?.examSessionDate ?? null),
         accessMode,
         accessDays: accessMode === 'DAYS_FROM_PURCHASE' ? Number(data.get('accessDays')) : null,
         expectedUpdatedAt: course?.updatedAt,
@@ -242,7 +271,10 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
                 options={[
                   { id: 'NONE', label: 'Chưa phân loại' },
                   ...categories
-                    .filter((c) => c.active || c.id === course?.categoryId)
+                    .filter(
+                      (c) =>
+                        c.active || c.id === course?.categoryId || c.id === initialCategoryId
+                    )
                     .map((c) => ({
                       id: c.id,
                       label: `${c.name}${c.active ? '' : ' · Ngừng dùng'}`,
@@ -319,15 +351,30 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
               </Field>
             )}
           </div>
-          <Field label="Kỳ thi">
-            <SelectField
-              ariaLabel="Kỳ thi khóa học"
-              value={targetExam}
-              onChange={setTargetExam}
-              disabled={busy}
-              options={[{ id: 'VNUHCM_DGNL', label: 'ĐGNL ĐHQG TP.HCM' }]}
-            />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Kỳ thi">
+              <SelectField
+                ariaLabel="Kỳ thi khóa học"
+                value={targetExam}
+                onChange={setTargetExam}
+                disabled={busy}
+                options={[{ id: 'VNUHCM_DGNL', label: 'ĐGNL ĐHQG TP.HCM' }]}
+              />
+            </Field>
+            <Field label="Thời lượng dự kiến (giờ)">
+              <input
+                name="estimatedDurationHours"
+                type="number"
+                inputMode="decimal"
+                min={0.5}
+                max={1600}
+                step={0.5}
+                defaultValue={course?.estimatedDurationMinutes ? course.estimatedDurationMinutes / 60 : ''}
+                className={fieldControlClass}
+                aria-invalid={!!fields.estimatedDurationMinutes}
+              />
+            </Field>
+          </div>
         </StepPanel>
         {courseType === 'MAIN' && (
           <StepPanel id="schedule" active={currentStep === 'schedule'}>
@@ -346,30 +393,48 @@ export default function CourseEditorDialog({ course, categories, onClose, onSave
                   ]}
                 />
               </Field>
-              <Field label="Ngày thi">
-                <input
-                  name="examSessionDate"
-                  type="date"
-                  defaultValue={course?.examSessionDate ?? ''}
-                  className={fieldControlClass}
+              <Field
+                label="Đợt thi"
+                hint={
+                  examYears.status === 'ready' && (examYears.data ?? []).length === 0
+                    ? 'Chưa có năm thi: tạo ở trang “Năm thi & đợt thi”.'
+                    : 'Ngày thi lấy theo đợt thi đã chọn.'
+                }
+              >
+                <SelectField
+                  ariaLabel="Đợt thi khóa học"
+                  value={examSessionChoice}
+                  onChange={setExamSessionChoice}
+                  disabled={busy}
+                  invalid={!!fields.examSessionId}
+                  options={[
+                    { id: 'NONE', label: 'Chưa chọn đợt thi' },
+                    ...(course?.examSessionDate && !course.examSession
+                      ? [{ id: 'LEGACY', label: `Ngày thi cũ ${formatExamDate(course.examSessionDate)} (chưa gắn đợt)` }]
+                      : []),
+                    // Still loading, or its year is gone from the list: keep the current sitting choosable.
+                    ...(course?.examSession &&
+                    !(examYears.data ?? []).some((year) => year.sessions.some((s) => s.id === course.examSession?.id))
+                      ? [{ id: course.examSession.id, label: examSessionLabel(course.examSession) }]
+                      : []),
+                    ...(examYears.data ?? []).flatMap((year) =>
+                      year.sessions
+                        .filter(
+                          (session) =>
+                            session.id === examSessionChoice ||
+                            (year.status !== 'CLOSED' &&
+                              (track === 'NONE' || (track === 'SPRINT_ROUND2') === (session.roundNo === 2)))
+                        )
+                        .map((session) => ({
+                          id: session.id,
+                          label: `${year.name} · ${session.name} · ${examDateRange(session)}${session.dateConfirmed ? '' : ' (dự kiến)'}`,
+                        }))
+                    ),
+                  ]}
                 />
               </Field>
-              <Field label="Ngày bắt đầu">
-                <input
-                  name="startDate"
-                  type="date"
-                  defaultValue={course?.startDate ?? ''}
-                  className={fieldControlClass}
-                />
-              </Field>
-              <Field label="Ngày kết thúc">
-                <input
-                  name="endDate"
-                  type="date"
-                  defaultValue={course?.endDate ?? ''}
-                  className={fieldControlClass}
-                />
-              </Field>
+              <DateField label="Ngày bắt đầu" name="startDate" value={startDate} onChange={setStartDate} disabled={busy} />
+              <DateField label="Ngày kết thúc" name="endDate" value={endDate} onChange={setEndDate} disabled={busy} />
             </div>
           </StepPanel>
         )}

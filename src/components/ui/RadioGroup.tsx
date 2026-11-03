@@ -32,4 +32,19 @@ function RadioGroupItem({
   )
 }
 
-export { RadioGroup, RadioGroupItem }
+// A bare round radio for rows that hold their own fields, where a card-style item cannot wrap them.
+function RadioGroupMark({ className, ...props }: ComponentProps<typeof RadioGroupPrimitive.Item>) {
+  return (
+    <RadioGroupPrimitive.Item
+      className={cn(
+        'grid size-5 shrink-0 cursor-pointer place-items-center rounded-full border border-border-primary bg-surface transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-75 data-[state=checked]:border-primary data-[state=checked]:bg-primary',
+        className
+      )}
+      {...props}
+    >
+      <RadioGroupPrimitive.Indicator className="size-2 rounded-full bg-white" />
+    </RadioGroupPrimitive.Item>
+  )
+}
+
+export { RadioGroup, RadioGroupItem, RadioGroupMark }

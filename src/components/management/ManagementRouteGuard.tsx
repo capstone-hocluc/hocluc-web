@@ -1,12 +1,13 @@
 import { ROLE_LABELS } from '../../lib/role-home'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { AlertTriangle, LoaderCircle } from '../console/icons'
+import { LoaderCircle } from '../console/icons'
 import { getAccessToken } from '../../lib/api'
 import { useSessionRestore } from '../../hooks/useSessionRestore'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useActiveRole } from '../../hooks/useActiveRole'
 import type { UserRole } from '../../services/userService'
 import Button from '../console/button'
+import { AuthErrorStatusPage, MaintenanceStatusPage, NoAccessStatusPage } from '../console/status-page'
 
 export type ManagementRole = Extract<
   UserRole,
@@ -18,47 +19,6 @@ interface ManagementRouteGuardProps {
   onLogin: () => void
   onExit: () => void
   children: ReactNode
-}
-
-function AccessState({
-  title,
-  description,
-  actionLabel,
-  onAction,
-  danger = false,
-}: {
-  title: string
-  description: string
-  actionLabel: string
-  onAction: () => void
-  danger?: boolean
-}) {
-  return (
-    <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-      <section className="w-full max-w-[460px] rounded-2xl border border-border-subtle bg-surface p-8 text-center">
-        <span
-          className={
-            danger
-              ? 'mx-auto grid size-12 place-items-center rounded-full bg-badge-danger-bg text-danger'
-              : 'mx-auto grid size-12 place-items-center rounded-full bg-badge-info-bg text-primary'
-          }
-        >
-          <AlertTriangle size={24} aria-hidden="true" />
-        </span>
-        <h1 className="mt-5 text-xl font-semibold text-text-heading">{title}</h1>
-        <p className="mt-2 text-sm leading-6 text-text-muted">{description}</p>
-        <Button
-          variant={danger ? 'danger' : 'primary'}
-          appearance="fill"
-          size="md"
-          className="mt-6"
-          onClick={onAction}
-        >
-          {actionLabel}
-        </Button>
-      </section>
-    </main>
-  )
 }
 
 function LoadingState() {
@@ -99,9 +59,9 @@ function ManagementRouteGuard({
   }, [loadCurrentUser, onLogin, status, session.checking, session.error])
 
   if (session.checking) return <LoadingState />
-  if (session.error || status === 'error') return <AccessState title="Chưa xác thực được tài khoản"
-    description="Kiểm tra kết nối mạng rồi thử lại." actionLabel="Thử lại"
-    onAction={() => { if (session.error) session.retry(); else void loadCurrentUser().catch(() => undefined) }} />
+  if (session.unavailable) return <MaintenanceStatusPage onRetry={session.retry} />
+  if (session.error || status === 'error') return <AuthErrorStatusPage
+    onRetry={() => { if (session.error) session.retry(); else void loadCurrentUser().catch(() => undefined) }} />
   if (!getAccessToken()) return <LoadingState />
 
   if (status === 'idle' || status === 'loading' || !profile) return <LoadingState />
@@ -109,27 +69,19 @@ function ManagementRouteGuard({
   if (!allowedRoles.includes((activeRole ?? profile.role) as ManagementRole)) {
     const available = roles.filter((role) => allowedRoles.includes(role as ManagementRole))
     if (available.length) return (
-      <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-        <section className="w-full max-w-[460px] rounded-2xl border border-border-subtle bg-surface p-8 text-center">
-          <h1 className="text-xl font-semibold text-text-heading">Chuyển vai trò để tiếp tục</h1>
-          <p className="mt-2 text-sm text-text-muted">Bạn đang dùng vai trò {ROLE_LABELS[profile.role]}. Chuyển vai trò sẽ kết thúc các phiên đăng nhập khác.</p>
+      <main className="grid min-h-screen place-items-center bg-card-background px-5 py-10">
+        <section className="w-full max-w-[460px] rounded-xl border border-card-border bg-card-background p-8 text-center">
+          <h1 className="text-xl font-semibold text-text-primary">Chuyển vai trò để tiếp tục</h1>
+          <p className="mt-2 text-sm text-text-tertiary">Bạn đang dùng vai trò {ROLE_LABELS[profile.role]}. Chuyển vai trò sẽ kết thúc các phiên đăng nhập khác.</p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {available.map((role) => <Button key={role} disabled={switching} onClick={() => switchRole(role)}>{switching ? 'Đang chuyển...' : ROLE_LABELS[role]}</Button>)}
           </div>
-          {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
+          {error && <p role="alert" className="mt-3 text-sm text-badge-error-text">{error}</p>}
           <Button appearance="outline" className="mt-4" disabled={switching} onClick={onExit}>Đăng xuất</Button>
         </section>
       </main>
     )
-    return (
-      <AccessState
-        title="Bạn không có quyền truy cập"
-        description="Tài khoản hiện tại không được phép mở khu vực quản lý này."
-        actionLabel="Đăng xuất"
-        onAction={onExit}
-        danger
-      />
-    )
+    return <NoAccessStatusPage onExit={onExit} />
   }
 
   return <>{children}</>

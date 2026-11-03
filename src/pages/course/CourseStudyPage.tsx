@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import CourseOverview from '../../components/student/course/CourseOverview'
 import NextLiveClassCard from '../../components/student/course/NextLiveClassCard'
-import StudyGroupCard from '../../components/student/course/StudyGroupCard'
 import StudyCurriculum from '../../components/student/course/StudyCurriculum'
 import CourseLiveClassesTab from '../../components/student/course/CourseLiveClassesTab'
 import CourseEnrollmentPlanTab from '../../components/student/course/CourseEnrollmentPlanTab'
@@ -17,7 +16,8 @@ interface CourseStudyPageProps {
   courseId: string
   onBackToMyCourses: () => void
   onViewCourseInfo: () => void
-  onOpenLesson: (lessonId: string) => void
+  onOpenLesson: (lessonId: string, courseId?: string) => void
+  onOpenGiftStudy: (courseId: string) => void
   onOpenQuiz: (quizId: string) => void
   onOpenCourse: (course: Course) => void
   onEditProfile: () => void
@@ -45,6 +45,7 @@ function CourseStudyPage({
   onBackToMyCourses,
   onViewCourseInfo,
   onOpenLesson,
+  onOpenGiftStudy,
   onOpenQuiz,
   onOpenCourse,
   onEditProfile,
@@ -132,18 +133,11 @@ function CourseStudyPage({
                 <NextLiveClassCard liveClass={study.nextLiveClass} />
               </div>
             )}
-            {!isSection && (
-              <StudyGroupCard
-                key={`${courseId}-${study.activeStudyGroupId ?? 'none'}`}
-                courseId={courseId}
-                initialGroupId={study.activeStudyGroupId}
-                onCompleteProfile={onEditProfile}
-                onRefreshStudy={reload}
-              />
-            )}
             <StudyCurriculum
               phases={study.phases}
               currentLessonId={study.continueLessonId}
+              currentCourseId={study.continueSectionCourseId}
+              onOpenGiftStudy={onOpenGiftStudy}
               onOpenLesson={onOpenLesson}
               onOpenQuiz={onOpenQuiz}
             />

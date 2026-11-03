@@ -1,23 +1,20 @@
 import type { ComponentProps } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '../../lib/cn'
+import { AlertIcon, alertSurface } from './alert'
 
-// Inline banner: a short message (+ optional action) on a tinted background.
-const notice = cva('flex flex-wrap items-center gap-2.5 rounded-lg px-4 py-3 text-sm', {
-  variants: {
-    tone: {
-      danger: 'bg-badge-error-background text-badge-error-text',
-      warning: 'bg-badge-warning-background text-badge-warning-text',
-      info: 'bg-badge-blue-background text-badge-blue-text',
-    },
-  },
-  defaultVariants: { tone: 'info' },
-})
+// One-line console message (+ optional inline buttons): the Alert card without a title, so short
+// errors and hints look the same as full alerts.
+type NoticeProps = ComponentProps<'div'> & { tone?: 'danger' | 'warning' | 'info' }
 
-type NoticeProps = ComponentProps<'div'> & VariantProps<typeof notice>
-
-function Notice({ tone, className, ...props }: NoticeProps) {
-  return <div role="status" className={cn(notice({ tone }), className)} {...props} />
+function Notice({ tone = 'info', className, children, ...props }: NoticeProps) {
+  return (
+    <div role="status" className={cn(alertSurface, 'py-3 has-[button]:items-center', className)} {...props}>
+      <AlertIcon tone={tone} />
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-2 leading-5 text-text-primary">
+        {children}
+      </div>
+    </div>
+  )
 }
 
 export default Notice

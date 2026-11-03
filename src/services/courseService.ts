@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { ExamSessionSummary } from './examYearService'
 
 export interface Course {
   id: string
@@ -10,6 +11,8 @@ export interface Course {
   startDate?: string
   endDate?: string
   examSessionDate?: string
+  /** The exam sitting (Đợt 1/2 of an exam year) it prepares for; absent on SECTION courses. */
+  examSession?: ExamSessionSummary | null
   imageUrl?: string
   price?: number
   targetExam?: string
@@ -26,8 +29,6 @@ export interface MyCourseEnrollment {
   enrolledAt?: string
   enrollmentType?: string
   progressPercentage?: number
-  activeStudyGroupId?: string
-  activeStudyGroupName?: string
 }
 
 export async function getMyCourses() {
@@ -82,23 +83,35 @@ export interface CourseSection {
 }
 
 export interface CoursePhase {
-  id: string
-  name: string
-  description?: string
-  sequence?: number
+  id: string | null
+  name: string | null
+  description?: string | null
+  sequence?: number | null
+  gifts: GiftCourse[]
   sections: CourseSection[]
 }
 
 /** A SECTION course given with a MAIN course; it is studied as a course of its own. */
 export interface GiftCourse {
   courseId: string
+  phaseId: string | null
   title: string
   description?: string
   categoryId?: string
   categoryName?: string
   chapterCount: number
   lessonCount: number
+  completedLessonCount: number
   progressPercentage?: number | null
+}
+
+/** A course learning outcome (CLO), as the public course page shows it. */
+export interface CourseOutcomeView {
+  id: string
+  code: string
+  description: string
+  sequence: number
+  skills: { code: string; name: string | null }[]
 }
 
 export interface CourseDetail {
@@ -113,9 +126,13 @@ export interface CourseDetail {
   startDate?: string
   endDate?: string
   examSessionDate?: string
+  /** The exam sitting (Đợt 1/2 of an exam year) it prepares for; absent on SECTION courses. */
+  examSession?: ExamSessionSummary | null
   targetExam?: string
   paid?: boolean
   price?: number
+  /** Study time the author states, in minutes. */
+  estimatedDurationMinutes?: number | null
   purchased?: boolean
   inCart?: boolean
   phaseCount?: number
@@ -125,7 +142,9 @@ export interface CourseDetail {
   quizCount?: number
   totalDurationSeconds?: number
   phases?: CoursePhase[]
-  gifts?: GiftCourse[]
+  giftCount: number
+  /** What a student can do once the course is done (absent on older backends). */
+  outcomes?: CourseOutcomeView[]
 }
 
 // Public course detail. Same opportunistic-auth rationale as getMainCourses -
@@ -210,6 +229,7 @@ export interface CourseStudyChapter {
 }
 
 export interface CourseStudySection {
+  contentSectionId: string | null
   sectionCourseId: string
   title: string
   categoryId?: string | null
@@ -222,10 +242,14 @@ export interface CourseStudySection {
 }
 
 export interface CourseStudyPhase {
-  id: string
-  name: string
+  id: string | null
+  name: string | null
   description?: string | null
-  sequence: number
+  sequence: number | null
+  lessonCount: number
+  completedLessonCount: number
+  progressPercentage: number
+  gifts: GiftCourse[]
   sections: CourseStudySection[]
 }
 
@@ -258,8 +282,6 @@ export interface CourseStudy {
   continueLessonId: string | null
   continueLessonTitle: string | null
   continueSectionCourseId: string | null
-  activeStudyGroupId: string | null
-  activeStudyGroupName: string | null
   nextLiveClass: CourseStudyLiveClass | null
   phases: CourseStudyPhase[]
 }

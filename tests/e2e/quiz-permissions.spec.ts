@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Locator } from '@playwright/test'
-import { installQuizFixture, QUIZ_IDS, quizToken } from './quiz-permissions-fixture'
+import { installQuizFixture, QUIZ_IDS, quizToken, showEditorStep } from './quiz-permissions-fixture'
 
 const writes = (state: Awaited<ReturnType<typeof installQuizFixture>>) => state.requests.filter(r => r.path.startsWith('/api/v1/teacher/') && r.method !== 'GET')
 
@@ -37,7 +37,11 @@ for (const mode of ['unchanged', 'edited', 'invalid-response'] as const) {
     })
     await page.goto(`/console/staff/placements/${QUIZ_IDS.quiz}/edit`)
     await expect(page.getByLabel('Tên bài đánh giá đầu vào', { exact: true })).toBeVisible()
-    if (mode !== 'unchanged') await page.getByPlaceholder('Nhập nội dung câu hỏi', { exact: true }).fill('Câu hỏi vừa chỉnh sửa')
+    await showEditorStep(page, 'Các phần và câu hỏi')
+    if (mode !== 'unchanged') {
+      await page.getByRole('button', { name: 'Sửa', exact: true }).click()
+      await page.getByPlaceholder('Nhập nội dung câu hỏi', { exact: true }).fill('Câu hỏi vừa chỉnh sửa')
+    }
     await page.getByRole('button', { name: 'Lưu và xuất bản', exact: true }).click()
     if (mode === 'invalid-response') {
       await expect(page.getByText('Máy chủ có thể đã nhận một phần thay đổi câu hỏi', { exact: false })).toBeVisible()
@@ -63,6 +67,8 @@ for (const [path, id, label] of [
     const state = await installQuizFixture(page, 'STAFF')
     if (path === 'placements') Object.assign(state.quizzes[0], { type: 'PLACEMENT', courseId: null, chapterId: null, lessonId: null })
     await page.goto(`/console/staff/${path}/${id}/edit`)
+    if (path !== 'quizzes') await showEditorStep(page, 'Các phần và câu hỏi')
+    if (path !== 'quizzes') await page.getByRole('button', { name: 'Sửa', exact: true }).click()
     await expect(page.getByRole('button', { name: new RegExp(`${label}$`) })).toHaveCount(0)
     await expect(page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true })).toBeChecked()
     expect(state.questions[0].questionType).toBe('SINGLE_CHOICE')
@@ -80,9 +86,13 @@ for (const type of ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWE
     const original = JSON.stringify(state.questions[0])
     for (const [path, id] of [['quizzes', QUIZ_IDS.quiz], ['mock-exams', QUIZ_IDS.exam]]) {
       await page.goto(`/console/staff/${path}/${id}/edit`)
+      if (path === 'mock-exams') await showEditorStep(page, 'Các phần và câu hỏi')
       await expect(page.getByRole('button', { name: /Dạng đáp án$|Loại câu hỏi$/ })).toHaveCount(0)
       if (path === 'quizzes') await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
-      else await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toBeDisabled()
+      else {
+        await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
+        await expect(page.getByRole('button', { name: 'Sửa', exact: true })).toHaveCount(0)
+      }
       await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
       await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
       expect(JSON.stringify(state.questions[0])).toBe(original)
@@ -178,18 +188,12 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
   })
 
-  test(`${role}: exam authoring and review use shared screens`, async ({ page }) => {
+  test(`${role}: exam authoring uses shared screens`, async ({ page }) => {
     const state = await installQuizFixture(page, role)
-    state.questions[0].needsReview = true; state.quizzes[0].needsReviewCount = 1
     await page.goto(`/console/${area}/mock-exams/new`)
     await expect(page.getByLabel('Tên đề thi thử', { exact: true })).toBeVisible()
     await select(page, 'Khóa học chính', 'Khóa được phân công')
     expect(state.requests.find(r => r.path === '/api/v1/admin/courses')?.query).toContain('type=MAIN')
-    await page.goto(`/console/${area}/question-review`)
-    await page.getByRole('button', { name: 'Thao tác duyệt câu hỏi' }).first().click()
-    await page.getByRole('menuitem', { name: 'Đánh dấu đã duyệt' }).click()
-    await expect(page.getByText('Không có câu hỏi nào chờ duyệt.')).toBeVisible()
-    expect(writes(state).some(r => r.path.endsWith('/questions/reviewed'))).toBe(true)
     expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
   })
 
@@ -291,8 +295,9 @@ for (const [type, reason, message] of [
 }
 
 test('Teacher reads quiz/exam/questions/attempts with no write controls or write requests', async ({ page }) => {
+  test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
-  state.quizzes[0].attemptCount = 1; state.quizzes[0].needsReviewCount = 1; state.questions[0].needsReview = true
+  state.quizzes[0].attemptCount = 1
   await page.goto('/console/teacher/quizzes')
   await expect(page.getByRole('heading', { name: 'Quiz được giao', exact: true })).toBeVisible()
   await expect(page.getByText('Quiz ngoài phân công', { exact: true })).toHaveCount(0)
@@ -303,11 +308,9 @@ test('Teacher reads quiz/exam/questions/attempts with no write controls or write
   await page.goto('/console/teacher/mock-exams')
   await expect(page.getByRole('heading', { name: 'Đề thi được giao', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Tạo đề|Chỉnh sửa|Xuất bản|Thao tác khác/ })).toHaveCount(0)
-  await page.goto('/console/teacher/question-review')
-  await expect(page.getByText('Câu hỏi được phân công', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Thao tác duyệt câu hỏi' })).toHaveCount(0)
   await page.goto('/console/teacher/attempts')
-  await expect(page.getByText('Student QA', { exact: true })).toBeVisible()
+  // the attempts screen loads its rows after the console chunk, which is slow when the whole suite runs
+  await expect(page.getByText('Student QA', { exact: true })).toBeVisible({ timeout: 20_000 })
   expect(writes(state)).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
@@ -325,6 +328,8 @@ test('Teacher course list uses BE assignment scope and the course quiz shortcut 
 })
 
 test('Teacher direct editor URLs, including the legacy URL, fail before mounting editors', async ({ page }) => {
+  // five full page loads, each fetching every dev module through the fixture's route
+  test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
   for (const url of ['/console/teacher/quizzes/new', `/console/teacher/quizzes/${QUIZ_IDS.quiz}/edit`,
     '/console/teacher/mock-exams/new', `/console/teacher/mock-exams/${QUIZ_IDS.exam}/edit`,
@@ -563,15 +568,19 @@ test('quiz with attempts disables bottom add and removes reorder controls', asyn
   expect(writes(state)).toEqual([])
 })
 
-test('exam drag reorders questions within the existing section and persists on save', async ({ page }) => {
+test('exam workspace moves a question up inside its section and persists the order on save', async ({ page }) => {
   test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'STAFF')
   state.questions.push({ ...state.questions[0], id: '60000000-0000-0000-0000-000000000009', sequence: 2, questionText: 'Câu thi thứ hai' })
   await page.setViewportSize({ width: 1440, height: 950 })
   await page.goto(`/console/staff/mock-exams/${QUIZ_IDS.exam}/edit`, { waitUntil: 'domcontentloaded' })
-  const cards = page.getByRole('article')
-  await dragQuestionCard(page, page.getByRole('button', { name: /Sắp xếp câu 2 trong phần 1:/ }), cards.first())
-  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).first()).toHaveValue('Câu thi thứ hai')
+  await showEditorStep(page, 'Các phần và câu hỏi')
+  await page.getByRole('navigation').getByRole('button', { name: /^Câu 2(,|$)/ }).click()
+  await page.getByRole('button', { name: 'Sửa', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveValue('Câu thi thứ hai')
+  await page.getByRole('button', { name: 'Đưa câu hỏi lên', exact: true }).click()
+  await expect(page.getByRole('article', { name: 'Câu 1' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveValue('Câu thi thứ hai')
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
   expect(writes(state).find(request => request.path.endsWith('/questions/order'))?.body.questionIds).toEqual(['60000000-0000-0000-0000-000000000009', QUIZ_IDS.question])

@@ -1,3 +1,4 @@
+import DateField from '../../components/console/date-field'
 import { useRef, useState, type FormEvent } from 'react'
 import { CalendarPlus, Clock3, Trash2 } from '../../components/console/icons'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
@@ -10,6 +11,7 @@ import {
 import type { AvailabilityExceptionResponse, AvailabilitySlot, DayOfWeek } from '../../types/scheduling'
 import { getErrorMessage } from '../../lib/errors'
 import { localDateLabel } from '../../lib/scheduling'
+import { Checkbox } from '../../components/tailgrids/core/checkbox'
 import Button from '../../components/console/button'
 import { fieldControlClass } from '../../components/console/form-field'
 import Card from '../../components/console/card'
@@ -37,6 +39,7 @@ export default function TeacherAvailabilityPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [availabilityDirty, setAvailabilityDirty] = useState(false)
+  const [exceptionDate, setExceptionDate] = useState('')
   const [exceptionDirty, setExceptionDirty] = useState(false)
   const [exceptionToDelete, setExceptionToDelete] = useState<AvailabilityExceptionResponse | null>(null)
   const exceptionFormRef = useRef<HTMLFormElement>(null)
@@ -96,6 +99,7 @@ export default function TeacherAvailabilityPage() {
         reason: String(form.get('reason') || ''),
       })
       formElement.reset()
+      setExceptionDate('')
       setExceptionDirty(false)
       setNotice('Đã thêm ngoại lệ.')
       resource.reload()
@@ -174,10 +178,11 @@ export default function TeacherAvailabilityPage() {
             )
           }}
         >
-          <label className="text-sm font-medium text-text-primary">
-            Ngày
-            <input name="exceptionDate" autoComplete="off" type="date" required disabled={busy} className={fieldClass + ' mt-1 w-full'} />
-          </label>
+          <DateField label="Ngày" name="exceptionDate" value={exceptionDate} onChange={(value) => {
+            setExceptionDate(value)
+            const form = exceptionFormRef.current ? new FormData(exceptionFormRef.current) : null
+            setExceptionDirty(!!value || ['startTime', 'endTime', 'reason', 'isAvailable'].some((name) => String(form?.get(name) ?? '').trim() !== ''))
+          }} required disabled={busy} />
           <label className="text-sm font-medium text-text-primary">
             Bắt đầu
             <input name="startTime" autoComplete="off" type="time" disabled={busy} className={fieldClass + ' mt-1 w-full'} />
@@ -191,10 +196,9 @@ export default function TeacherAvailabilityPage() {
             <input name="reason" autoComplete="off" disabled={busy} className={fieldClass + ' mt-1 w-full'} />
           </label>
           <div className="flex flex-col justify-end gap-2">
-            <label className="flex items-center gap-2 text-sm text-text-tertiary">
-            <input name="isAvailable" autoComplete="off" type="checkbox" disabled={busy} className="size-5 accent-primary" />
+            <Checkbox name="isAvailable" isDisabled={busy} className="text-sm text-text-tertiary">
               Tôi rảnh thêm giờ này
-            </label>
+            </Checkbox>
             <Button type="submit" disabled={busy || availabilityDirty || resource.status !== 'ready'}><CalendarPlus size={15} />Thêm ngoại lệ</Button>
           </div>
         </form>

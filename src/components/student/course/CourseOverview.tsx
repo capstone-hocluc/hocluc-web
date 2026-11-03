@@ -5,12 +5,12 @@ import { formatDate, prettifyEnum } from '../../../lib/courseFormat'
 import Button from '../../ui/Button'
 import Progress from '../../ui/Progress'
 import StatusBadge from '../../ui/StatusBadge'
-import { findFirstLesson } from './studyUtils'
+import { findFirstLesson, formatStudyPercent } from './studyUtils'
 
 interface CourseOverviewProps {
   study: CourseStudy
   onBack: () => void
-  onOpenLesson: (lessonId: string) => void
+  onOpenLesson: (lessonId: string, courseId?: string) => void
 }
 
 function MetaChip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
@@ -83,12 +83,12 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
               {completed}/{total} bài học
             </small>
             <strong className="text-4xl leading-none font-bold text-primary-text">
-              {progress}%
+              {formatStudyPercent(progress)}
             </strong>
           </div>
           <Progress value={progress} aria-label="Tiến độ khóa học" />
           {targetLessonId && (
-            <Button size="lg" onClick={() => onOpenLesson(targetLessonId)}>
+            <Button size="lg" onClick={() => onOpenLesson(targetLessonId, hasContinueTarget ? study.continueSectionCourseId ?? undefined : undefined)}>
               {hasContinueTarget ? 'Tiếp tục học' : 'Bắt đầu học'}
               <Play size={18} />
             </Button>

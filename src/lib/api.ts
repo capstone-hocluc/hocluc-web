@@ -60,12 +60,18 @@ export class ApiError extends Error {
   status: number
   errors?: Record<string, string>
   code?: string
+  /** The response's `data` on a failure, when the backend sends one (a validation report, say). */
+  data?: unknown
+  /** Backwards-compatible alias used by older callers. */
+  details?: unknown
 
-  constructor(message: string, status: number, errors?: Record<string, string>, code?: string) {
+  constructor(message: string, status: number, errors?: Record<string, string>, code?: string, details?: unknown) {
     super(message)
     this.status = status
     this.errors = errors
     this.code = code
+    this.details = details
+    this.data = details
   }
 }
 
@@ -217,7 +223,8 @@ export async function request<T = unknown>(
       data?.message || `Request failed with status ${response.status}`,
       response.status,
       data?.errors,
-      data?.code
+      data?.code,
+      data?.data
     )
   }
   return data
@@ -334,6 +341,16 @@ async function refreshStoredTokens(optionalAuth = false) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return false
     throw error
   }
+}
+
+/**
+ * For a long-lived connection (a server-sent event stream) that got 401: refreshes the session the way a request
+ * does. True when there is a fresh token to connect again with; false sends the user to log in again.
+ */
+export async function refreshAfterUnauthorized(): Promise<boolean> {
+  const refreshed = await refreshStoredTokens()
+  if (!refreshed) handleSessionExpired()
+  return refreshed
 }
 
 export interface TokenData {

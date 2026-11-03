@@ -85,7 +85,7 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
           </InputGroup>
         </div>
 
-        <Command.List className="scrollbar-thin max-h-96 overflow-y-auto p-2">
+        <Command.List className="max-h-96 app-scroll overflow-y-auto p-2">
           <Command.Empty className="py-8 text-center text-sm text-text-tertiary">Không tìm thấy trang phù hợp.</Command.Empty>
           {groups.map((section) => (
             <Command.Group
