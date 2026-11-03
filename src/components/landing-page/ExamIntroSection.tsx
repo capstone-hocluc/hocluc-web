@@ -25,7 +25,7 @@ export default function ExamIntroSection({ exam }: { exam: ExamIntro }) {
             rel="noopener noreferrer"
           >
             Thông tin từ ĐHQG-HCM <Icon name="arrow-up-right" />
-            <span className="sr-only"> (mở tab mới)</span>
+            <span className="sr-only"> (mở trong thẻ mới)</span>
           </a>
         </div>
 
@@ -114,8 +114,8 @@ export default function ExamIntroSection({ exam }: { exam: ExamIntro }) {
         </div>
 
         <p className="exam-source text-[0.8125rem]">
-          Theo thông tin kỳ thi năm 2026 của ĐHQG-HCM, cập nhật {exam.source.updatedAt}. Lịch thi và lệ
-          phí xem tại nguồn chính thức.
+          Theo thông tin kỳ thi năm 2026 của ĐHQG-HCM, cập nhật {exam.source.updatedAt}. Xem lịch thi và
+          lệ phí tại nguồn chính thức.
         </p>
       </div>
     </section>

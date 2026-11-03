@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import CourseCatalogSection, { ROADMAP_TAB } from '../components/landing-page/CourseCatalogSection'
+import { COURSE_TAB_PARAM } from '../components/landing-page/course-subjects'
 import DetailDialog, { type LandingDetail } from '../components/landing-page/DetailDialog'
 import ExamIntroSection from '../components/landing-page/ExamIntroSection'
 import { useScrollReveal } from '../components/landing-page/use-scroll-reveal'
@@ -36,9 +37,15 @@ function LandingPage() {
   useLearnerTheme()
   const [detail, setDetail] = useState<LandingDetail | null>(null)
   const [startOpen, setStartOpen] = useState(false)
-  const [courseTab, setCourseTab] = useState(ROADMAP_TAB)
+  // `/?mon=toan#khoa-hoc` (from the header on another page) opens the catalog on that subject.
+  const [linkedTab] = useState(() => new URLSearchParams(window.location.search).get(COURSE_TAB_PARAM))
+  const [courseTab, setCourseTab] = useState(linkedTab || ROADMAP_TAB)
   const rootRef = useRef<HTMLDivElement>(null)
   useScrollReveal(rootRef)
+
+  useEffect(() => {
+    if (linkedTab) scrollToSection('khoa-hoc')
+  }, [linkedTab])
 
   // Opens one subject's courses from anywhere on the page.
   const showSubject = (subjectKey: string) => {
@@ -60,10 +67,10 @@ function LandingPage() {
   return (
     <div id="top" ref={rootRef} className={`landing-page${detail || startOpen ? ' modal-open' : ''}`}>
       <a className="skip-link" href="#main">
-        Đến nội dung chính
+        Chuyển đến nội dung chính
       </a>
       <LandingSprite />
-      <LandingHeader />
+      <LandingHeader onSelectCourseTab={showSubject} />
       <main id="main">
         <HeroSection hero={landingHero} />
         <CourseCatalogSection activeTab={courseTab} onTabChange={setCourseTab} />

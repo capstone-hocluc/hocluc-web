@@ -49,8 +49,8 @@ export function LearningSupportSection() {
             <div className="flex min-w-0 flex-col gap-1.5">
               <h3 className={supportTitle}>Trao đổi cùng Mentor</h3>
               <p className="text-[0.9375rem] leading-relaxed">
-                Trao đổi những phần chưa hiểu trong quá trình học. Quyền hỗ trợ tùy khóa học, xem
-                trong thông tin từng khóa.
+                Hỏi mentor những phần bạn chưa hiểu trong lúc học. Mức hỗ trợ tùy từng khóa, ghi rõ
+                trong thông tin khóa học.
               </p>
             </div>
           </li>
@@ -61,8 +61,8 @@ export function LearningSupportSection() {
             <div className="flex min-w-0 flex-col gap-1.5">
               <h3 className={supportTitle}>Khám phá cùng gia sư AI</h3>
               <p className="text-[0.9375rem] leading-relaxed">
-                Dành cho học viên có khóa đã mua còn hiệu lực. Xem điều kiện sử dụng trong tài khoản
-                học tập.
+                Dùng được khi bạn có khóa học đã mua và còn hạn. Xem điều kiện sử dụng trong tài
+                khoản học tập.
               </p>
             </div>
           </li>
@@ -76,11 +76,10 @@ export function LearningSupportSection() {
               </span>
               <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
                 <span className="text-[1.125rem] leading-snug font-semibold tracking-[-0.02em] text-(--ink)">
-                  Học trên ứng dụng HocLuc
+                  Học trên ứng dụng Hocluc
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-(--blue-soft) px-2.5 py-0.5 text-[0.8125rem] font-semibold text-(--blue-text)">
-                  <span aria-hidden="true" className="size-1.5 rounded-full bg-(--blue)" />
-                  Đang phát triển
+                <span className="text-[0.9375rem] leading-relaxed text-(--muted)">
+                  Khóa học, lịch học và máy tính CW-880 trên điện thoại Android.
                 </span>
               </span>
               <span className="text-(--blue-text) transition-transform duration-200 group-hover:translate-x-1">
@@ -127,9 +126,9 @@ export function ClosingCtaSection() {
       <div className="container closing-cta-inner">
         <div>
           <h2 id="closing-cta-title">
-            Bước tiếp theo,
+            Sẵn sàng ôn V-ACT?
             <br />
-            bắt đầu từ hôm nay.
+            Bắt đầu ngay hôm nay.
           </h2>
         </div>
         <div className="closing-cta-actions">

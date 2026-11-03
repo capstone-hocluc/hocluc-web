@@ -35,10 +35,9 @@ function Phone({ screen }: { screen: AppScreen }) {
   )
 }
 
-// Introduces the HocLuc student app: learning from the phone, anytime. The app is not released, so
-// the section has no download button or link.
+// Introduces the HocLuc Android app (learning from the phone, anytime) and links to its newest APK.
 export default function StudentAppSection() {
-  const { status, title, text, facts, screens } = studentApp
+  const { badge, title, text, facts, download, screens } = studentApp
   const [front, back] = screens
   // The pointer is tracked over the whole stage; only the phones read the tilt it writes.
   const stageRef = usePointerTilt<HTMLDivElement>(6)
@@ -52,9 +51,11 @@ export default function StudentAppSection() {
       <div className="container">
         <div className="app-preview grid items-center gap-10 md:grid-cols-2 md:gap-12">
           <div className="flex flex-col items-start gap-5">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-(--ink) ring-1 ring-(--line)">
-              <span aria-hidden="true" className="size-2 rounded-full bg-(--blue) motion-safe:animate-pulse" />
-              {status}
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-(--ink) ring-1 ring-(--line) [&_.ui-icon]:size-4!">
+              <span aria-hidden="true" className="text-(--blue)">
+                <Icon name="smartphone" />
+              </span>
+              {badge}
             </span>
             <h2 id="app-title">{title}</h2>
             <p className="max-w-[44ch] text-lg">{text}</p>
@@ -71,6 +72,13 @@ export default function StudentAppSection() {
                 </li>
               ))}
             </ul>
+            <div className="flex flex-col items-start gap-2 pt-1">
+              <a className="btn btn-primary" href={download.href}>
+                <Icon name="smartphone" />
+                {download.label}
+              </a>
+              <p className="max-w-[44ch] text-sm! text-(--muted)!">{download.note}</p>
+            </div>
           </div>
 
           <div ref={stageRef} className="relative isolate mx-auto w-full max-w-[360px]">

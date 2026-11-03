@@ -17,7 +17,7 @@ function DetailDialog({ detail, onClose }: DetailDialogProps) {
       open={detail !== null}
       onClose={onClose}
       title={operation?.title ?? ''}
-      subtitle={operation ? `${operation.tagline} · ${operation.hours} giờ dự kiến` : ''}
+      subtitle={operation ? `${operation.tagline} · Dự kiến ${operation.hours} giờ` : ''}
       closeLabel="Đóng chi tiết"
     >
       <div className="dialog-body" id="detail-body">

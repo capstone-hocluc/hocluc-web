@@ -37,6 +37,11 @@ export interface LandingLink {
 
 export interface HeroSlide {
   id: string
+  /**
+   * `rise`: a cut-out of students in front of the logo's rising shape (smaller copy: `-720.webp`).
+   * `photo`: a photo that fills the right of the hero (smaller copy: `-800.webp`).
+   */
+  kind: 'rise' | 'photo'
   src: string
   alt: string
   /** Theme of the photograph, also announced by screen readers. */
@@ -127,7 +132,7 @@ export const landingFooterNav: LandingLink[] = [
   { label: 'Ứng dụng', href: '#ung-dung' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Tìm hiểu V-ACT', href: '#ky-thi' },
-  { label: 'Hỗ trợ', href: '#faq' },
+  { label: 'Câu hỏi thường gặp', href: '#faq' },
 ]
 
 const landingAssets = '/landing-v2/assets'
@@ -140,24 +145,35 @@ export const landingHero: LandingHero = {
   slides: [
     {
       id: 'hero-slide-0',
-      src: `${landingAssets}/hero-classroom-v3.webp`,
-      alt: 'Ba học sinh lớp 12 mặc đồng phục trắng cùng xem bài luyện tập bên bàn gỗ trong lớp học có bảng xanh',
-      label: 'Học nhóm, hiểu sâu',
-      caption: 'Cùng bạn trao đổi cách giải từng bài.',
+      kind: 'rise',
+      src: `${landingAssets}/hero-students-cutout.webp`,
+      alt: 'Ba học sinh lớp 12, hai nam sinh áo sơ mi trắng và một nữ sinh áo dài trắng, tươi cười ôm vở và máy tính bảng',
+      label: 'Cùng nhau vươn lên',
+      caption: 'Chọn môn còn yếu, học đúng phần cần học.',
     },
     {
       id: 'hero-slide-1',
-      src: `${landingAssets}/hero-home-study-v3.webp`,
-      alt: 'Nữ sinh tự học trực tuyến bên bàn học buổi tối, cạnh sổ ghi chép và máy tính cầm tay',
+      kind: 'photo',
+      src: `${landingAssets}/hero-home-study-v4.webp`,
+      alt: 'Nữ sinh tự học buổi sáng bên bàn trắng cạnh cửa sổ, ghi chép vào sổ bên máy tính xách tay',
       label: 'Tự học có định hướng',
-      caption: 'Học bài giảng, ghi chép theo lộ trình.',
+      caption: 'Xem bài giảng, ghi chép theo lộ trình.',
     },
     {
       id: 'hero-slide-2',
-      src: `${landingAssets}/hero-mock-exam-v3.webp`,
-      alt: 'Nữ sinh mặc áo dài trắng tập trung tô phiếu trắc nghiệm trong buổi thi thử',
+      kind: 'photo',
+      src: `${landingAssets}/hero-classroom-v4.webp`,
+      alt: 'Ba học sinh lớp 12, hai nam sinh áo sơ mi trắng và một nữ sinh áo dài trắng, cùng xem bài trong vở ở một lớp học sáng sủa, cửa sổ lớn',
+      label: 'Học nhóm, hiểu sâu',
+      caption: 'Cùng bạn bè trao đổi cách giải từng bài.',
+    },
+    {
+      id: 'hero-slide-3',
+      kind: 'photo',
+      src: `${landingAssets}/hero-mock-exam-v4.webp`,
+      alt: 'Nữ sinh mặc áo dài trắng tập trung làm bài thi thử trên giấy, phía sau là các dãy bàn trong phòng học sáng sủa',
       label: 'Luyện đề, vững tâm thế',
-      caption: 'Làm quen nhịp thi trên giấy.',
+      caption: 'Làm quen với nhịp thi trên giấy.',
     },
   ],
 }
@@ -213,13 +229,13 @@ export const examIntro: ExamIntro = {
     },
   ],
   scoringNote:
-    'Điểm được tính theo lý thuyết ứng đáp câu hỏi (IRT): mỗi câu có trọng số khác nhau tùy độ khó.',
+    'Điểm tính theo lý thuyết ứng đáp câu hỏi (IRT): mỗi câu có trọng số riêng, tùy theo độ khó.',
   seasonTitle: 'Một mùa thi diễn ra thế nào?',
   season: [
     { title: 'Đăng ký', text: 'Đăng ký và đóng lệ phí trực tuyến.' },
     {
       title: 'Dự thi',
-      text: 'Tự in giấy báo dự thi từ tài khoản, mang theo căn cước hoặc hộ chiếu còn hạn.',
+      text: 'Tự in giấy báo dự thi từ tài khoản; khi đi thi, mang theo căn cước hoặc hộ chiếu còn hạn.',
     },
     {
       title: 'Nhận kết quả',
@@ -227,7 +243,7 @@ export const examIntro: ExamIntro = {
     },
     {
       title: 'Xét tuyển',
-      text: 'Dùng kết quả đăng ký xét tuyển vào trường bạn chọn. Cách xét và thời hạn dùng điểm do từng trường quy định.',
+      text: 'Dùng kết quả để đăng ký xét tuyển vào trường bạn chọn. Cách xét và thời hạn dùng điểm do từng trường quy định.',
     },
   ],
   source: {
@@ -331,7 +347,7 @@ export const domains: Domain[] = [
         level: 'Tích hợp',
         hours: 16,
         summary:
-          'Toán hỗn hợp, toán thực tế, chiến thuật máy tính, suy luận định lượng, bài có thời gian và ôn lỗi theo kiến thức cùng kỹ năng.',
+          'Toán hỗn hợp, toán thực tế, chiến thuật máy tính, suy luận định lượng, bài có thời gian và ôn lỗi theo kiến thức và kỹ năng.',
       },
     ],
   },
@@ -389,12 +405,12 @@ export const practiceOperations: PracticeOperation[] = [
     hours: 3,
     title: 'Định hướng & Chiến lược thi V-ACT',
     summary:
-      'Làm quen cấu trúc 120 câu/150 phút, phân bổ thời gian, chiến thuật 3 vòng, đánh dấu câu, loại trừ và tô phiếu.',
+      'Làm quen với cấu trúc 120 câu/150 phút, phân bổ thời gian, chiến thuật 3 vòng, đánh dấu câu, loại trừ đáp án và tô phiếu.',
   },
   {
     id: 'PR00',
     label: 'Luyện tổng hợp',
-    tagline: 'Kết nối 5 nhóm học',
+    tagline: 'Kết nối 5 nhóm kiến thức',
     hours: 18,
     title: 'Luyện tập Tổng hợp V-ACT',
     summary:
@@ -445,7 +461,7 @@ export const journey = {
     },
     {
       title: 'Chọn phần cần học',
-      text: 'Đọc kết quả theo từng phần để hiểu mình nên tập trung vào đâu.',
+      text: 'Xem kết quả theo từng phần để biết bạn nên tập trung vào đâu.',
     },
     {
       title: 'Học và luyện mỗi ngày',
@@ -463,52 +479,58 @@ export const journey = {
 
 const appScreens = `${landingAssets}/app`
 
-// The student app is still in development, so there is nothing to download yet. The screens are
-// renders of the app's own design and show its example data, not a real student's.
+// The HocLuc Android app (com.hocluc.app). The download link always serves the newest APK from the
+// app's GitHub releases. The screens are renders of the app's own design and show its example data,
+// not a real student's.
 export const studentApp = {
-  status: 'Đang phát triển',
+  badge: 'Ứng dụng Android',
   title: 'Học mọi lúc, mọi nơi',
-  text: 'Ứng dụng HocLuc đưa khóa học, lịch học và công cụ làm Toán lên điện thoại. Mở ra là học tiếp.',
+  text: 'Ứng dụng Hocluc đưa khóa học, lịch học và công cụ giải Toán lên điện thoại của bạn.',
   facts: [
-    'Học tiếp đúng bài đang dở',
-    'Lịch học, bài kiểm tra và thông báo ở một chỗ',
+    'Mở ra là học tiếp đúng bài đang dở',
+    'Lịch học, bài kiểm tra và thông báo ở cùng một nơi',
     'Máy tính CW-880 dùng được cả khi không có mạng',
   ],
+  download: {
+    label: 'Tải ứng dụng cho Android',
+    href: 'https://github.com/nguyenquocan0101/HocLuc-Releases/releases/latest/download/hocluc.apk',
+    note: 'Tệp APK cài trực tiếp trên máy Android. Đăng nhập bằng tài khoản học sinh Hocluc.',
+  },
   screens: [
     {
       src: `${appScreens}/app-home.webp`,
-      alt: 'Trang chủ ứng dụng HocLuc: học tiếp bài Hàm số bậc ba và cực trị, lịch học hôm nay và công cụ nhanh',
+      alt: 'Trang chủ ứng dụng Hocluc: học tiếp bài Hàm số bậc ba và cực trị, lịch học hôm nay và công cụ nhanh',
     },
     {
       src: `${appScreens}/app-calculator.webp`,
-      alt: 'Máy tính CW-880 trong ứng dụng HocLuc, màn hình hiện 1/2 + 1/3 = 5/6',
+      alt: 'Máy tính CW-880 trong ứng dụng Hocluc, màn hình hiện 1/2 + 1/3 = 5/6',
     },
   ] satisfies AppScreen[],
 }
 
 export const faq = {
   title: 'Trước khi bắt đầu',
-  text: 'Thông tin ngắn gọn để bạn biết Học Lực phù hợp với bước nào trong hành trình ôn V-ACT.',
+  text: 'Thông tin ngắn gọn để bạn biết Hocluc phù hợp với bước nào trong hành trình ôn V-ACT.',
   items: [
     {
       question: 'Bài đánh giá đầu vào có mất phí không?',
       answer:
-        'Bài đánh giá đầu vào của Học Lực miễn phí. Bạn cần đăng nhập để làm bài và xem lộ trình gợi ý.',
+        'Không. Bài đánh giá đầu vào của Hocluc miễn phí; bạn chỉ cần đăng nhập để làm bài và xem lộ trình gợi ý.',
     },
     {
-      question: 'Chưa mua khóa học thì có thể xem nội dung nào?',
+      question: 'Chưa mua khóa học thì bạn xem được những gì?',
       answer:
-        'Lộ trình có thể gợi ý cả học phần bạn chưa mua. Bạn vẫn xem được danh mục, thông tin chi tiết và bài học mở ở chế độ xem trước; nội dung đầy đủ cần quyền truy cập khóa học.',
+        'Bạn vẫn xem được danh mục, thông tin chi tiết và các bài học mở xem trước. Lộ trình gợi ý có thể gồm cả khóa học bạn chưa mua; muốn học toàn bộ nội dung, bạn cần sở hữu khóa học đó.',
     },
     {
       question: 'Kết quả đánh giá có phải điểm thi V-ACT chính thức không?',
       answer:
-        'Không. Đây là kết quả đánh giá trên Học Lực để hỗ trợ việc học, không thay thế kết quả kỳ thi V-ACT.',
+        'Không. Kết quả này chỉ giúp bạn định hướng việc học trên Hocluc, không thay thế kết quả kỳ thi V-ACT.',
     },
     {
-      question: 'Khóa học có thời hạn và hình thức học thế nào?',
+      question: 'Thời hạn và hình thức học của khóa học ra sao?',
       answer:
-        'Thời hạn, nội dung và hình thức học được ghi trong thông tin từng khóa. Bạn nên xem chi tiết trước khi đăng ký.',
+        'Mỗi khóa ghi rõ thời hạn, nội dung và hình thức học trong trang thông tin. Bạn nên xem kỹ trước khi đăng ký.',
     },
   ],
 }
@@ -523,7 +545,7 @@ export const startDialogOptions = {
     { value: 'tieng-anh', label: 'Tiếng Anh' },
     { value: 'toan', label: 'Toán học & Tư duy định lượng' },
     { value: 'logic', label: 'Logic & Phân tích số liệu' },
-    { value: 'khoa-hoc', label: 'Suy luận Khoa học' },
+    { value: 'khoa-hoc', label: 'Suy luận khoa học' },
   ],
   defaultDomain: 'toan',
   levels: [

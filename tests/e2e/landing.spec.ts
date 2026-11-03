@@ -153,15 +153,19 @@ test('signup and login actions have matching destinations', async ({ page }) => 
   await expect(page.getByRole('dialog')).toBeVisible()
 })
 
-test('app section introduces the HocLuc app on phones and offers no download', async ({ page }) => {
+test('app section introduces the Hocluc app on phones and links to its newest APK', async ({ page }) => {
   await page.goto('/')
   const section = page.locator('#ung-dung')
   await expect(section.getByRole('heading', { name: 'Học mọi lúc, mọi nơi' })).toBeVisible()
-  await expect(section).toContainText('Đang phát triển')
-  // Not released yet: nothing to download, open or pick.
-  await expect(section.getByRole('link')).toHaveCount(0)
+  await expect(section).not.toContainText('Đang phát triển')
+  // The one action is the download: the newest release on GitHub, always the same address.
+  await expect(section.getByRole('link')).toHaveCount(1)
+  await expect(section.getByRole('link', { name: 'Tải ứng dụng cho Android' })).toHaveAttribute(
+    'href',
+    'https://github.com/nguyenquocan0101/HocLuc-Releases/releases/latest/download/hocluc.apk'
+  )
   await expect(section.getByRole('button')).toHaveCount(0)
-  await expect(section.getByRole('img', { name: /Trang chủ ứng dụng HocLuc/ })).toBeVisible()
+  await expect(section.getByRole('img', { name: /Trang chủ ứng dụng Hocluc/ })).toBeVisible()
   await expect(section.getByRole('img', { name: /Máy tính CW-880/ })).toBeVisible()
 })
 
@@ -398,9 +402,9 @@ test('support section lists three ways to get help, with the app item leading to
     'Trao đổi cùng Mentor',
     'Khám phá cùng gia sư AI',
   ])
-  const app = section.getByRole('link', { name: /Học trên ứng dụng HocLuc/ })
+  const app = section.getByRole('link', { name: /Học trên ứng dụng Hocluc/ })
   await expect(app).toHaveAttribute('href', '#ung-dung')
-  await expect(app).toContainText('Đang phát triển')
+  await expect(app).not.toContainText('Đang phát triển')
   await expect(section.locator('li')).toHaveCount(3)
 
   // The photo sits beside the text on a wide screen and under the heading on a phone, and the heading
@@ -436,12 +440,173 @@ test('carousel keeps looping after a slide is picked by hand', async ({ page }) 
   await page.clock.install()
   await page.goto('/')
   const slides = page.locator('.hero-slide')
-  const dot = page.locator('.hero-slide-buttons button').nth(2)
+  const dots = page.locator('.hero-slide-buttons button')
+  const last = (await dots.count()) - 1
+  const dot = dots.nth(last)
   await dot.click()
   await expect(dot).toHaveAttribute('aria-pressed', 'true')
-  await expect(slides.nth(2)).toHaveAttribute('aria-hidden', 'false')
+  await expect(slides.nth(last)).toHaveAttribute('aria-hidden', 'false')
   // The last slide wraps around to the first instead of stopping.
   await page.clock.runFor(6500)
   await expect(slides.nth(0)).toHaveAttribute('aria-hidden', 'false')
   await expect(page.getByRole('button', { name: /chuyển hình tự động/ })).toHaveCount(0)
+})
+
+// One roadmap built from two Toán courses and one Tiếng Việt course.
+async function routeSubjectCatalog(page: import('@playwright/test').Page) {
+  const roadmap = { id: 'fixture-roadmap', title: 'Lộ trình kiểm thử', price: 2990000 }
+  const gift = (courseId: string, title: string, categoryName: string) => ({
+    courseId,
+    title,
+    categoryName,
+    chapterCount: 2,
+    lessonCount: 6,
+  })
+  await page.route(catalog, (route) => respond(route, [roadmap]))
+  await page.route('**/api/v1/courses/fixture-roadmap', (route) =>
+    respond(route, {
+      ...roadmap,
+      phases: [
+        {
+          id: 'phase-1',
+          name: 'Giai đoạn 1',
+          sections: [],
+          gifts: [
+            gift('fixture-math', 'Khóa Toán kiểm thử', 'Toán học'),
+            gift('fixture-math-2', 'Khóa Toán luyện đề kiểm thử', 'Toán học'),
+            gift('fixture-viet', 'Khóa Tiếng Việt kiểm thử', 'Tiếng Việt'),
+          ],
+        },
+      ],
+    })
+  )
+}
+
+const coursesButton = (page: import('@playwright/test').Page) =>
+  page.locator('.nav-links').getByRole('button', { name: 'Khóa học theo môn' })
+const coursesPanel = (page: import('@playwright/test').Page) => page.locator('#courses-nav-panel')
+
+test('header course menu lists the subjects that have courses, with counts', async ({ page }) => {
+  await routeSubjectCatalog(page)
+  await page.goto('/')
+  const button = coursesButton(page)
+  const panel = coursesPanel(page)
+  await expect(button).toHaveAttribute('aria-expanded', 'false')
+  await expect(button).toHaveAttribute('aria-controls', 'courses-nav-panel')
+  await expect(panel).toBeHidden()
+  // The "Khóa học" link keeps its own destination next to the button.
+  await expect(page.locator('.nav-links a').first()).toHaveAttribute('href', '#khoa-hoc')
+
+  await button.click()
+  await expect(button).toHaveAttribute('aria-expanded', 'true')
+  await expect(panel).toBeVisible()
+  await expect(panel.getByRole('link', { name: /Toán học/ })).toContainText('2 khóa')
+  await expect(panel.getByRole('link', { name: /Tiếng Việt/ })).toContainText('1 khóa')
+  await expect(panel.getByRole('link', { name: /Suy luận khoa học/ })).toHaveCount(0)
+  await expect(panel.getByRole('link', { name: /Lộ trình trọn gói/ })).toContainText('1 khóa')
+  await expect(panel.getByRole('link', { name: 'Xem tất cả khóa học' })).toHaveAttribute('href', '/courses')
+
+  // A click outside closes it.
+  await page.locator('#main h1').click()
+  await expect(panel).toBeHidden()
+})
+
+test('choosing a subject in the header menu filters the course list on the home page', async ({ page }) => {
+  await routeSubjectCatalog(page)
+  await page.goto('/')
+  await coursesButton(page).click()
+  await coursesPanel(page).getByRole('link', { name: /Toán học/ }).click()
+  await expect(coursesPanel(page)).toBeHidden()
+  await expect(page.getByRole('tab', { name: /Toán/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tabpanel')).toContainText('Khóa Toán kiểm thử')
+  await expect
+    .poll(() => page.locator('#khoa-hoc').evaluate((el) => Math.round(el.getBoundingClientRect().top)))
+    .toBeLessThan(200)
+
+  await coursesButton(page).click()
+  await coursesPanel(page).getByRole('link', { name: /Lộ trình trọn gói/ }).click()
+  await expect(page.getByRole('tab', { name: 'Lộ trình trọn gói' })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('from another page a subject opens the home page with that filter in the URL', async ({ page }) => {
+  await routeSubjectCatalog(page)
+  await page.goto('/courses')
+  await coursesButton(page).click()
+  const math = coursesPanel(page).getByRole('link', { name: /Toán học/ })
+  await expect(math).toHaveAttribute('href', '/?mon=toan#khoa-hoc')
+  await math.click()
+  await expect(page).toHaveURL(/\/\?mon=toan#khoa-hoc$/)
+  await expect(page.getByRole('tab', { name: /Toán/ })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('header course menu works from the keyboard and closes on Esc', async ({ page }) => {
+  await routeSubjectCatalog(page)
+  await page.goto('/')
+  const button = coursesButton(page)
+  const panel = coursesPanel(page)
+  // Tabbing onto the button leaves the panel closed, and the next Tab goes on to the next nav item.
+  await page.locator('.nav-links a').first().focus()
+  await page.keyboard.press('Tab')
+  await expect(button).toBeFocused()
+  await expect(panel).toBeHidden()
+  await page.keyboard.press('Tab')
+  await expect(page.locator('.nav-links').getByRole('link', { name: 'Ứng dụng' })).toBeFocused()
+
+  // Enter and Space toggle it; Down opens it on its first item.
+  await button.focus()
+  await page.keyboard.press('Enter')
+  await expect(panel).toBeVisible()
+  await page.keyboard.press('Space')
+  await expect(panel).toBeHidden()
+  await page.keyboard.press('ArrowDown')
+  await expect(panel).toBeVisible()
+  const links = panel.getByRole('link')
+  await expect(links.first()).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(links.nth(1)).toBeFocused()
+  await page.keyboard.press('End')
+  await expect(links.last()).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(links.first()).toBeFocused()
+
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+  await expect(button).toHaveAttribute('aria-expanded', 'false')
+  await expect(button).toBeFocused()
+})
+
+test('header course menu opens when the mouse rests on it and closes when it leaves', async ({ page }) => {
+  await routeSubjectCatalog(page)
+  await page.goto('/')
+  const panel = coursesPanel(page)
+  await page.locator('.nav-links a').first().hover()
+  await expect(panel).toBeVisible()
+  await panel.getByRole('link', { name: /Tiếng Việt/ }).hover()
+  await expect(panel).toBeVisible()
+  // The first click on the button after hovering keeps the panel open.
+  await coursesButton(page).click()
+  await expect(panel).toBeVisible()
+  await page.mouse.move(700, 700)
+  await expect(panel).toBeHidden()
+})
+
+test('phone menu shows the courses as a group that expands', async ({ page }) => {
+  await routeSubjectCatalog(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Mở menu' }).click()
+  const mobileNav = page.locator('#mobile-nav')
+  const group = mobileNav.getByRole('button', { name: 'Khóa học' })
+  await expect(group).toHaveAttribute('aria-expanded', 'false')
+  await expect(mobileNav.getByRole('link', { name: /Toán học/ })).toHaveCount(0)
+  await group.click()
+  await expect(group).toHaveAttribute('aria-expanded', 'true')
+  await expect(mobileNav.getByRole('link', { name: /Toán học/ })).toContainText('2 khóa')
+  await expect(mobileNav.getByRole('link', { name: 'Xem tất cả khóa học' })).toBeVisible()
+  const fit = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
+  expect(fit).toBe(false)
+
+  await mobileNav.getByRole('link', { name: /Tiếng Việt/ }).click()
+  await expect(mobileNav).toBeHidden()
+  await expect(page.getByRole('tab', { name: /Tiếng Việt/ })).toHaveAttribute('aria-selected', 'true')
 })

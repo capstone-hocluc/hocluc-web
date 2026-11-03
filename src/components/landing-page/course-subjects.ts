@@ -68,12 +68,19 @@ export const SUBJECTS: SubjectStyle[] = [
     key: 'chung',
     label: 'Chiến lược & Luyện đề',
     short: 'Luyện đề',
-    part: 'Dùng cho cả bài thi V-ACT',
+    part: 'Dùng cho toàn bộ bài thi V-ACT',
     icon: 'trending-up',
     tone: '#0b3a82',
     soft: '#edf5ff',
   },
 ]
+
+/** Query parameter the home page reads to open its course catalog on one tab. */
+export const COURSE_TAB_PARAM = 'mon'
+
+/** Home page address with the course catalog open on one tab (a subject key or the roadmaps). */
+export const courseTabHref = (tab: string) =>
+  `/?${COURSE_TAB_PARAM}=${encodeURIComponent(tab)}#khoa-hoc`
 
 const plain = (value: string) =>
   value

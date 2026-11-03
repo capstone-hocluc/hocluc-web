@@ -19,7 +19,7 @@ const previewCourses: Course[] = import.meta.env.DEV
         title: 'V-ACT: Xây nền tảng, vững tư duy',
         description:
           'Củng cố 5 nhóm kiến thức, luyện tập theo chủ đề và hiểu cách giải qua từng bài học.',
-        imageUrl: '/landing-v2/assets/hero-classroom-v3.webp',
+        imageUrl: '/landing-v2/assets/hero-classroom-v4.webp',
         targetExam: 'V-ACT',
         price: 1490000,
         startDate: '2026-11-01',
@@ -95,7 +95,7 @@ function RoadmapPanel({
           <Icon name="book-open" />
           <div>
             <h3>Chưa tải được khóa học</h3>
-            <p>Kiểm tra kết nối rồi thử lại.</p>
+            <p>Kiểm tra kết nối mạng rồi thử lại.</p>
             <button className="btn btn-secondary" type="button" onClick={retry}>
               Thử lại <Icon name="rotate-ccw" />
             </button>
@@ -113,7 +113,7 @@ function RoadmapPanel({
       {status === 'ready' && courses.length > 0 && (
         <>
           {!isPreview && (
-            <p className="text-sm md:text-center">Mỗi lộ trình gồm đủ các môn của bài thi, khác nhau ở thời gian ôn và nhịp học.</p>
+            <p className="text-sm md:text-center">Lộ trình nào cũng gồm đủ các môn của bài thi, chỉ khác nhau ở thời gian ôn và nhịp học.</p>
           )}
           <div className="course-grid">
             {courses.slice(0, 3).map((course, index) => (

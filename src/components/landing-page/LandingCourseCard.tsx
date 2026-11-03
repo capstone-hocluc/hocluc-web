@@ -13,7 +13,7 @@ function CourseCover({ course }: { course: Course }) {
       ) : (
         <div className="course-cover-fallback">
           <Icon name="book-open" />
-          <span>{course.targetExam || 'Học Lực'}</span>
+          <span>{course.targetExam || 'Hocluc'}</span>
         </div>
       )}
       {course.purchased ? (

@@ -8,6 +8,33 @@ export type SubjectsStatus = 'idle' | 'loading' | 'ready'
 const asDetail = (data: unknown): CourseDetail | null =>
   data && typeof data === 'object' && !Array.isArray(data) ? (data as CourseDetail) : null
 
+// Roadmap details shared by the home catalog and the header's course menu, so opening the menu
+// on the home page reuses what the catalog already loaded. A failed request is forgotten.
+const roadmapDetails = new Map<string, Promise<CourseDetail | null>>()
+function loadRoadmapDetail(id: string) {
+  let pending = roadmapDetails.get(id)
+  if (!pending) {
+    pending = getCourseDetail(id).then(
+      (response) => asDetail(response?.data),
+      (error) => {
+        roadmapDetails.delete(id)
+        throw error
+      }
+    )
+    roadmapDetails.set(id, pending)
+  }
+  return pending
+}
+
+/** The subject groups of these roadmaps; a roadmap whose detail fails adds nothing. */
+export async function loadSubjectGroups(roadmaps: Course[]): Promise<SubjectGroup[]> {
+  const results = await Promise.allSettled(roadmaps.map((course) => loadRoadmapDetail(course.id)))
+  const details = results.flatMap((result) =>
+    result.status === 'fulfilled' && result.value ? [result.value] : []
+  )
+  return groupSubjectCourses(details)
+}
+
 // The home page catalog: the roadmaps (MAIN courses) plus the courses each roadmap is made of,
 // grouped by subject. There is no public list of standalone courses, so the subjects come from
 // the roadmaps' own details; a roadmap whose detail fails simply adds no subject courses.
@@ -19,13 +46,8 @@ export function useCourseCatalog(preview?: Course[]) {
   useEffect(() => {
     if (!wantsSubjects) return
     let cancelled = false
-    Promise.allSettled(courses.map((course) => getCourseDetail(course.id))).then((results) => {
-      if (cancelled) return
-      const details = results.flatMap((result) => {
-        const detail = result.status === 'fulfilled' ? asDetail(result.value?.data) : null
-        return detail ? [detail] : []
-      })
-      setLoaded({ source: courses, groups: groupSubjectCourses(details) })
+    loadSubjectGroups(courses).then((groups) => {
+      if (!cancelled) setLoaded({ source: courses, groups })
     })
     return () => {
       cancelled = true

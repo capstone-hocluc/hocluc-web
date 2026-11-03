@@ -10,7 +10,7 @@ Students preparing for the V-ACT competency assessment who need a clear place to
 
 ## Product Purpose
 
-Học Lực helps learners prepare for V-ACT through structured subject content, guided practice, and approachable study tools. Success means learners can find a useful next step and understand what to practice.
+Hocluc helps learners prepare for V-ACT through structured subject content, guided practice, and approachable study tools. Success means learners can find a useful next step and understand what to practice.
 
 ## Brand Personality
 

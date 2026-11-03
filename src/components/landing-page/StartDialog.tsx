@@ -43,16 +43,16 @@ function StartDialog({ open, domains, onClose, onViewSubject }: StartDialogProps
       titleId="start-title"
       open={open}
       onClose={onClose}
-      title="Chào bạn, mình bắt đầu nhé!"
-      subtitle="Chọn một mục tiêu nhỏ để khám phá cách học phù hợp."
-      closeLabel="Đóng chọn lộ trình"
+      title="Chào bạn, cùng bắt đầu nhé!"
+      subtitle="Chọn môn và mục tiêu để nhận gợi ý học phần phù hợp."
+      closeLabel="Đóng gợi ý lộ trình"
     >
       <div className="dialog-body">
         <form className="start-form" id="start-form" onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="start-domain">Bạn muốn bắt đầu với nhóm nào?</label>
+            <label htmlFor="start-domain">Bạn muốn bắt đầu với môn nào?</label>
             <SelectField
-              ariaLabel="Bạn muốn bắt đầu với nhóm nào?"
+              ariaLabel="Bạn muốn bắt đầu với môn nào?"
               id="start-domain"
               name="domain"
               value={domainId}
@@ -96,7 +96,7 @@ function StartDialog({ open, domains, onClose, onViewSubject }: StartDialogProps
         >
           {recommended && (
             <>
-              <h3>Gợi ý học tập: {recommended.module.title}</h3>
+              <h3>Gợi ý cho bạn: {recommended.module.title}</h3>
               <p>{recommended.module.summary}</p>
               <button
                 type="button"
@@ -110,7 +110,7 @@ function StartDialog({ open, domains, onClose, onViewSubject }: StartDialogProps
           )}
         </div>
         <p className="demo-label">
-          Gợi ý tham khảo. Đánh giá đầu vào sẽ giúp xác định lộ trình phù hợp hơn.
+          Đây chỉ là gợi ý tham khảo. Làm bài đánh giá đầu vào để có lộ trình sát với bạn hơn.
         </p>
       </div>
     </LandingDialog>
