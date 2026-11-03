@@ -59,6 +59,12 @@
   margin: 0;
 }
 
+/* Each question, and the passage leading a group of them, starts a little apart from the one before it. */
+.exam-doc-content > p[data-exam-item],
+.exam-doc-content > p[data-exam-group] {
+  margin-top: 0.7em;
+}
+
 .exam-doc-content h1 {
   font-size: 15pt;
   font-weight: 700;

@@ -30,9 +30,11 @@
   user-select: none;
 }
 
+/* An option running over several lines is set flush on both sides, like the rest of the exam's text. */
 .exam-choice-body {
   flex: 1 1 auto;
   min-width: 0;
+  text-align: justify;
 }
 
 /* Measuring pass (one synchronous layout, never painted): every option on one line at its natural width. */

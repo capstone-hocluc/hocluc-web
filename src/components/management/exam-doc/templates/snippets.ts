@@ -46,7 +46,7 @@ function line(content: Cell, align?: Align): JSONContent {
   }
 }
 
-const heading = (level: 1 | 2, value: string, align: Align = 'left'): JSONContent => ({
+const heading = (level: 1 | 2 | 3, value: string, align: Align = 'left'): JSONContent => ({
   type: 'heading',
   attrs: { level, textAlign: align },
   content: [text(value)],
@@ -96,7 +96,64 @@ const frame = (lines = 7): JSONContent => ({
 
 const caption = (value = 'Hình …') => line([text(value, 'italic')], 'center')
 
+/** The answer table of `count` questions, ten to a row: "Câu | 1 … 10" over "Đáp án | …", as answer keys print it. */
+function answerTable(count: number): JSONContent {
+  const rows: Cell[][] = []
+  for (let first = 1; first <= count; first += 10) {
+    const numbers = Array.from({ length: Math.min(10, count - first + 1) }, (_, index) => String(first + index))
+    rows.push(['Câu', ...numbers], ['Đáp án', ...numbers.map(() => '')])
+  }
+  return table(rows, { align: 'center' })
+}
+
+/**
+ * The parts of the ĐGNL ĐHQG-HCM paper (VACT, from 2025): 120 multiple-choice questions in 150 minutes, as the
+ * official sample paper lays them out.
+ */
+const DGNL_PARTS: Array<{ section?: string; title: string; first: number; last: number; passage?: boolean }> = [
+  { section: 'PHẦN 1. SỬ DỤNG NGÔN NGỮ', title: '1.1. Tiếng Việt', first: 1, last: 30 },
+  { title: '1.2. Tiếng Anh', first: 31, last: 60 },
+  { section: 'PHẦN 2. TOÁN HỌC', title: '', first: 61, last: 90 },
+  { section: 'PHẦN 3. TƯ DUY KHOA HỌC', title: '3.1. Logic, phân tích số liệu', first: 91, last: 102 },
+  { title: '3.2. Suy luận khoa học', first: 103, last: 120, passage: true },
+]
+
+/** A whole ĐGNL paper to fill in: its header, the parts with their question ranges, the end line and the key. */
+function dgnlPaper(): JSONContent[] {
+  const blocks: JSONContent[] = [
+    examHeaderContent(),
+    heading(1, 'ĐỀ THI ĐÁNH GIÁ NĂNG LỰC', 'center'),
+    line([text('Thời gian làm bài: 150 phút – 120 câu hỏi trắc nghiệm', 'italic')], 'center'),
+    line(
+      [text('Họ và tên thí sinh: ', 'bold'), text('……………………………………'), text('    Số báo danh: ', 'bold'), text('……………')],
+      'left'
+    ),
+  ]
+  for (const part of DGNL_PARTS) {
+    const range = `câu ${part.first}–${part.last}`
+    if (part.section) blocks.push(heading(2, part.title ? part.section : `${part.section} (${range})`))
+    if (part.title) blocks.push(heading(3, `${part.title} (${range})`))
+    if (part.passage) {
+      blocks.push(line([text(`Dựa vào thông tin dưới đây để trả lời câu ${part.first}–${part.first + 2}`, 'bold', 'italic')]))
+      blocks.push(line([text('……………………………………', 'italic')]))
+    }
+    blocks.push(question(part.first, 'Viết câu dẫn.'), choices('auto'))
+  }
+  blocks.push(
+    line([text('--- HẾT ---', 'bold')], 'center'),
+    { type: 'pageBreak' },
+    heading(2, 'BẢNG ĐÁP ÁN', 'center'),
+    answerTable(120)
+  )
+  return blocks
+}
+
 export const SNIPPET_GROUPS: SnippetGroup[] = [
+  {
+    id: 'papers',
+    title: 'Đề trọn bộ',
+    snippets: [{ id: 'dgnl', title: 'ĐGNL', build: dgnlPaper }],
+  },
   {
     id: 'heading',
     title: 'Tiêu đề & thông tin',

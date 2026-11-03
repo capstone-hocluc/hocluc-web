@@ -52,36 +52,42 @@ export default function DocSheet() {
   }
 
   return (
-    <div ref={paper} className="exam-doc-paper mx-auto w-fit px-4 pt-3 pb-10 print:p-0" style={{ zoom }}>
+    <>
+      {/* The ruler stays put above the scrolling sheets. It sits outside the zoomed paper: a sticky box inside a
+          zoomed one drifts a few pixels as the sheet scrolls. It is zoomed on its own, so its marks match the sheet. */}
       {showRuler && (
-        <div className="sticky top-0 z-10 mb-2 bg-background-gray-secondary/95 py-1 backdrop-blur-sm print:hidden">
-          <Ruler />
+        <div className="sticky top-0 z-10 bg-background-gray-secondary/95 py-1 backdrop-blur-sm print:hidden">
+          <div className="mx-auto w-fit px-4" style={{ zoom }}>
+            <Ruler />
+          </div>
         </div>
       )}
-      <div
-        className="exam-doc-pages"
-        style={{ minHeight: `calc(${pages} * var(--exam-doc-page-pitch) - var(--exam-doc-page-gap))` }}
-        onMouseDown={onSheetMouseDown}
-      >
-        {Array.from({ length: pages }, (_, index) => (
-          <div key={index} aria-hidden className="exam-doc-page" style={{ top: `calc(${index} * var(--exam-doc-page-pitch))` }} />
-        ))}
-        <div className="exam-doc-sheet" aria-busy={!ready || undefined}>
-          {ready ? (
-            <EditorContent editor={editor} />
-          ) : (
-            <div aria-hidden className="flex flex-col gap-3">
-              <div className="mx-auto h-5 w-2/5 animate-pulse rounded bg-background-gray-secondary" />
-              <div className="mx-auto h-4 w-1/4 animate-pulse rounded bg-background-gray-secondary" />
-              {Array.from({ length: 6 }, (_, index) => (
-                <div key={index} className="h-4 animate-pulse rounded bg-background-gray-secondary" style={{ width: `${90 - index * 7}%` }} />
-              ))}
-            </div>
-          )}
+      <div ref={paper} className="exam-doc-paper mx-auto w-fit px-4 pt-2 pb-10 print:p-0" style={{ zoom }}>
+        <div
+          className="exam-doc-pages"
+          style={{ minHeight: `calc(${pages} * var(--exam-doc-page-pitch) - var(--exam-doc-page-gap))` }}
+          onMouseDown={onSheetMouseDown}
+        >
+          {Array.from({ length: pages }, (_, index) => (
+            <div key={index} aria-hidden className="exam-doc-page" style={{ top: `calc(${index} * var(--exam-doc-page-pitch))` }} />
+          ))}
+          <div className="exam-doc-sheet" aria-busy={!ready || undefined}>
+            {ready ? (
+              <EditorContent editor={editor} />
+            ) : (
+              <div aria-hidden className="flex flex-col gap-3">
+                <div className="mx-auto h-5 w-2/5 animate-pulse rounded bg-background-gray-secondary" />
+                <div className="mx-auto h-4 w-1/4 animate-pulse rounded bg-background-gray-secondary" />
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div key={index} className="h-4 animate-pulse rounded bg-background-gray-secondary" style={{ width: `${90 - index * 7}%` }} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+        {/* The dialog charts on the sheet open to be edited (it renders outside the paper, over the page). */}
+        <ChartEditorHost editor={editor} />
       </div>
-      {/* The dialog charts on the sheet open to be edited (it renders outside the paper, over the page). */}
-      <ChartEditorHost editor={editor} />
-    </div>
+    </>
   )
 }
