@@ -15,9 +15,10 @@ import {
   SearchPlus,
   Table2,
 } from '@tailgrids/icons'
-import { Calculator, NotebookPen } from '../../../console/icons'
+import { BarChart3, Calculator, NotebookPen } from '../../../console/icons'
 import { LINE_HEIGHTS, ZOOM_LEVELS, useExamDoc, type DocMode } from '../exam-doc-context'
 import { downloadDocument, downloadVariants, openDocumentFile, type DownloadFormat } from '../export'
+import { insertChartAndEdit } from '../nodes/chart'
 import {
   MenuCheckboxItem,
   MenuItem,
@@ -247,6 +248,12 @@ export function InsertMenu({ run, onPickImage, onOpenLink }: InsertMenuProps) {
         }
       />
       <MenuItem label="Hình" icon={Gallery} disabled={!editable} onSelect={onPickImage} />
+      <MenuItem
+        label="Biểu đồ"
+        icon={BarChart3}
+        disabled={!editable}
+        onSelect={() => run((target) => insertChartAndEdit(target))}
+      />
       <MenuSeparator />
       <MenuItem
         label="Liên kết"

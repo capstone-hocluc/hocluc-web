@@ -7,7 +7,7 @@ import {
   type ExamPaperPart,
   type ExamPaperQuestion,
 } from '../ai-assistant/exam-format'
-import { chartAlt, chartImageSrc } from './chart-svg'
+import { chartBlock } from './chart-data'
 import { CHOICE_LABELS, choiceGridContent } from './nodes/choice-grid'
 
 /** Plain text with `$…$` formulas as editor inline content: text runs and math nodes, line breaks kept. */
@@ -119,7 +119,7 @@ function groupBlocks(group: ExamPaperGroup, numbers: number[] | null): JSONConte
     paragraph(inlineContent(title, [{ type: 'bold' }, { type: 'italic' }]), { examGroup: group.id }),
     ...(group.passage ? textBlocks(group.passage) : []),
     ...image(group.passageImageUrl, range ? `Hình minh hoạ ngữ liệu ${range}` : 'Hình minh hoạ ngữ liệu'),
-    ...(group.chart ? image(chartImageSrc(group.chart), chartAlt(group.chart)) : []),
+    ...(group.chart ? [chartBlock(group.chart)] : []),
   ]
 }
 
@@ -149,7 +149,7 @@ function questionBlocks(question: ExamPaperQuestion, number: number): JSONConten
     ...(first && first.type !== 'paragraph' ? [first] : []),
     ...rest,
     ...image(question.imageUrl, `Hình minh hoạ câu ${number}`),
-    ...(question.chart ? image(chartImageSrc(question.chart), chartAlt(question.chart)) : []),
+    ...(question.chart ? [chartBlock(question.chart)] : []),
     ...optionBlocks(question.options),
   ]
 }

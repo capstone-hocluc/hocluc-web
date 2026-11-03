@@ -86,6 +86,7 @@ export {
   Globe2 as Languages,
   Layers2 as Layers,
   TrendUp2 as LineChart,
+  PieChart1 as PieChart,
   DoubleCheckMark as ListChecks,
   MenuFriesLeft1 as ListTree,
   Reload as Loader2,

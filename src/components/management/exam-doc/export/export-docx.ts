@@ -25,6 +25,7 @@ import {
   type IRunOptions,
   type ParagraphChild,
 } from 'docx'
+import { chartPicture, normalizeChart } from '../chart-data'
 import { CHOICE_LABELS } from '../nodes/choice-grid'
 import { loadImage, shownSize, type LoadedImage } from './docx-images'
 import { formulaRun, type FormulaReport } from './docx-math'
@@ -244,6 +245,17 @@ class DocxWriter {
             children: [await this.image(node, place)],
           }),
         ]
+      case 'chart': {
+        // The chart's drawing as a picture, as wide a share of the place as on the sheet.
+        const picture = chartPicture(normalizeChart(node.attrs), place.width / TWIPS_PER_PX)
+        return [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: em(0.4), after: em(0.4) },
+            children: [await this.image({ type: 'image', attrs: picture }, place)],
+          }),
+        ]
+      }
       case 'pageBreak':
         return [new Paragraph({ children: [new PageBreak()] })]
       case 'horizontalRule':

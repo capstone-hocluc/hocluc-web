@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import { EditorContent } from '@tiptap/react'
+import ChartEditorHost from './chart-editor/ChartEditorHost'
 import { useExamDoc } from './exam-doc-context'
 import { placeCaretNear, repaginate } from './pagination'
 import './exam-doc.css'
@@ -131,6 +132,8 @@ export default function DocSheet() {
           )}
         </div>
       </div>
+      {/* The dialog charts on the sheet open to be edited (it renders outside the paper, over the page). */}
+      <ChartEditorHost editor={editor} />
     </div>
   )
 }

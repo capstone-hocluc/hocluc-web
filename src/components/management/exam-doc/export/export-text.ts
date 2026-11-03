@@ -1,4 +1,5 @@
 import type { Editor, JSONContent } from '@tiptap/core'
+import { chartPicture, normalizeChart } from '../chart-data'
 import { normalizeLinkHref } from '../link-url'
 import { CHOICE_LABELS } from '../nodes/choice-grid'
 import { downloadBlob, fileNameFor, plainText } from './file-name'
@@ -153,6 +154,12 @@ function listMarkdown(node: JSONContent, ordered: boolean): string {
     .join('\n')
 }
 
+/** A picture as a Markdown image; a chart as the picture of its drawing (the JSON export keeps its data). */
+function imageMarkdown(block: JSONContent, table: boolean): string {
+  const { src, alt } = block.type === 'chart' ? chartPicture(normalizeChart(block.attrs)) : { src: block.attrs?.src, alt: block.attrs?.alt }
+  return `![${escapeText(String(alt ?? ''), table)}](${linkTarget(String(src ?? ''))})`
+}
+
 /** A cell as one table line: its blocks' text joined by <br>. */
 function cellMarkdown(cell: JSONContent): string {
   const parts: string[] = []
@@ -160,8 +167,8 @@ function cellMarkdown(cell: JSONContent): string {
     if (block.type === 'paragraph' || block.type === 'heading' || block.type === 'choiceCell') {
       const text = inlineMarkdown(block.content, true).replace(/\n/g, '<br>')
       if (text) parts.push(text)
-    } else if (block.type === 'image') {
-      parts.push(`![${escapeText(String(block.attrs?.alt ?? ''), true)}](${linkTarget(String(block.attrs?.src ?? ''))})`)
+    } else if (block.type === 'image' || block.type === 'chart') {
+      parts.push(imageMarkdown(block, true))
     } else {
       block.content?.forEach(visit)
     }
@@ -203,7 +210,8 @@ function blockMarkdown(node: JSONContent): string[] {
     case 'table':
       return [tableMarkdown(node)]
     case 'image':
-      return [`![${escapeText(String(node.attrs?.alt ?? ''), false)}](${linkTarget(String(node.attrs?.src ?? ''))})`]
+    case 'chart':
+      return [imageMarkdown(node, false)]
     case 'horizontalRule':
       return ['---']
     case 'pageBreak':

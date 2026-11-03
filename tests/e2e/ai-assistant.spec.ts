@@ -1366,6 +1366,16 @@ test('a run still going when the exam is opened is followed again, from right be
   await expect(stop).toHaveCount(0, { timeout: 12_000 })
 })
 
+/** The charts of a sheet: chart nodes, each showing its drawing as a picture. */
+const sheetCharts = (sheet: Locator) => sheet.locator('[data-chart-node]')
+
+/** The chart blocks of a saved document, in order. */
+const savedCharts = (body: Record<string, unknown> | undefined) =>
+  (((body?.content as DocNode | undefined)?.content as DocNode[] | undefined) ?? []).filter((node) => node.type === 'chart')
+
+/** The SVG a chart's picture draws. */
+const drawingOf = async (image: Locator) => decodeURIComponent((await image.getAttribute('src')) ?? '')
+
 test('a science passage and a data question show the charts the AI drew, one per passage', async ({ page }) => {
   const passageChart = {
     type: 'line', title: 'Nhiệt độ trung bình', xLabel: 'Tháng', yLabel: '°C',
@@ -1397,20 +1407,25 @@ test('a science passage and a data question show the charts the AI drew, one per
   })
   await openSavedDocument(page, 'Tháng nào nóng nhất?')
 
+  // Each chart is a chart node, its data kept to be edited, showing its drawing.
   const sheet = docEditor(page)
-  const line = sheet.getByRole('img', { name: 'Biểu đồ đường: Nhiệt độ trung bình' })
-  const bars = sheet.getByRole('img', { name: 'Biểu đồ cột: Doanh thu' })
+  await expect(sheetCharts(sheet)).toHaveCount(2)
+  const line = sheetCharts(sheet).getByRole('img', { name: 'Biểu đồ đường: Nhiệt độ trung bình' })
+  const bars = sheetCharts(sheet).getByRole('img', { name: 'Biểu đồ cột: Doanh thu' })
   await expect(line).toHaveCount(1)
   await expect(bars).toHaveCount(1)
-  const src = decodeURIComponent((await line.getAttribute('src')) ?? '')
+  const src = await drawingOf(line)
   expect(src).toContain('<polyline')
+  expect(src).toContain('16,5')
   expect(src).toContain('21')
-  // The chart is a picture the browser can draw, so print and the Word export keep it.
+  // The drawing is a picture the browser can draw, so printing and the PDF keep it.
   expect(await line.evaluate((image: HTMLImageElement) => image.decode().then(() => image.naturalWidth))).toBeGreaterThan(0)
-  expect(decodeURIComponent((await bars.getAttribute('src')) ?? '')).toContain('<rect')
+  expect(await drawingOf(bars)).toContain('<rect')
+  // Nothing to edit until a chart is selected.
+  await expect(sheet.getByRole('button', { name: 'Sửa biểu đồ', exact: true })).toHaveCount(0)
 })
 
-test('a chart saved with an older drawing is drawn again from its data when the exam opens', async ({ page }) => {
+test('a chart saved as a picture becomes a chart holding the draft\'s data when the exam opens', async ({ page }) => {
   const passageChart = {
     type: 'line', title: 'Nhiệt độ trung bình', categories: ['Tháng 1', 'Tháng 2', 'Tháng 3'],
     series: [{ name: 'Hà Nội', values: [16.5, 18, 21] }],
@@ -1442,6 +1457,8 @@ test('a chart saved with an older drawing is drawn again from its data when the 
             paragraph(run('Đo nhiệt độ theo tháng.')),
             { type: 'image', attrs: { src: old, alt: 'Biểu đồ đường: Nhiệt độ trung bình' } },
             { type: 'paragraph', attrs: { examItem: 'item-1' }, content: [run('Câu 1. ', 'bold'), run('Tháng nào nóng nhất?')] },
+            // A drawing no chart of the draft is named for (the teacher put it in): it stays a picture.
+            { type: 'image', attrs: { src: old, alt: 'Biểu đồ cột: Khác' } },
             paragraph(run('--- HẾT ---', 'bold')),
           ],
         },
@@ -1450,13 +1467,192 @@ test('a chart saved with an older drawing is drawn again from its data when the 
   })
   await openSavedDocument(page, 'Tháng nào nóng nhất?')
 
-  const chart = docEditor(page).getByRole('img', { name: 'Biểu đồ đường: Nhiệt độ trung bình' })
-  await expect.poll(async () => decodeURIComponent((await chart.getAttribute('src')) ?? '')).toContain('<polyline')
-  // Saved once with the new drawing; nothing else in the document changed.
+  const sheet = docEditor(page)
+  const chart = sheetCharts(sheet).getByRole('img', { name: 'Biểu đồ đường: Nhiệt độ trung bình' })
+  await expect(chart).toHaveCount(1)
+  expect(await drawingOf(chart)).toContain('<polyline')
+  // Saved once, the picture replaced by a chart with the draft's data; nothing else in the document changed.
   await expect.poll(() => documentSaves(state, 'conv-9').length).toBe(1)
-  const saved = JSON.stringify(documentSaves(state, 'conv-9')[0].content)
-  expect(saved).toContain('polyline')
-  expect(savedBlocks(documentSaves(state, 'conv-9')[0])).toContain('Câu 1. Tháng nào nóng nhất?')
+  const [save] = documentSaves(state, 'conv-9')
+  expect(savedCharts(save)).toEqual([
+    {
+      type: 'chart',
+      attrs: {
+        data: {
+          columns: [{ id: 'label', label: 'Nhãn', role: 'label' }, { id: 's1', label: 'Hà Nội', role: 'series' }],
+          rows: [['Tháng 1', 16.5], ['Tháng 2', 18], ['Tháng 3', 21]],
+        },
+        spec: { type: 'line', title: 'Nhiệt độ trung bình', xLabel: '', yLabel: '', legend: true, palette: 'print', width: 0.85 },
+      },
+    },
+  ])
+  const savedImages = (((save.content as DocNode | undefined)?.content as DocNode[] | undefined) ?? []).filter((node) => node.type === 'image')
+  expect(savedImages.map((node) => (node.attrs as DocNode | undefined)?.alt)).toEqual(['Biểu đồ cột: Khác'])
+  expect(savedBlocks(save)).toEqual(['ĐỀ KIỂM TRA TOÁN 10', 'Đo nhiệt độ theo tháng.', '', 'Câu 1. Tháng nào nóng nhất?', '', '--- HẾT ---'])
+  // Not an edit of the teacher's: Ctrl+Z does not bring the picture back.
+  await caretAtEndOf(page, 'Đo nhiệt độ theo tháng.')
+  await page.keyboard.press('Control+z')
+  await expect(sheetCharts(sheet)).toHaveCount(1)
+  await expect(sheet.locator(':scope > img')).toHaveCount(1)
+  await expect(sheet.locator(':scope > img')).toHaveAttribute('alt', 'Biểu đồ cột: Khác')
+})
+
+/** A line chart of three months as the editor stores a chart: a data table (labels, then a series) and its settings. */
+const temperatureChart: DocNode = {
+  type: 'chart',
+  attrs: {
+    data: {
+      columns: [{ id: 'label', label: 'Tháng', role: 'label' }, { id: 's1', label: 'Hà Nội', role: 'series' }],
+      rows: [['1', 16.5], ['2', 18], ['3', 21]],
+    },
+    spec: { type: 'line', title: 'Nhiệt độ trung bình', xLabel: 'Tháng', yLabel: '°C', legend: true, palette: 'print', width: 0.85 },
+  },
+}
+
+const chartDocument = (): FixtureDocument => ({
+  mode: 'FREE',
+  version: 3,
+  updatedAt: stamp,
+  content: tiptapDoc(
+    heading(1, 'ĐỀ KIỂM TRA TOÁN 10'),
+    paragraph(run('Đo nhiệt độ theo tháng.')),
+    temperatureChart,
+    paragraph(run('Câu 1. ', 'bold'), run('Tháng nào nóng nhất?')),
+    paragraph(run('--- HẾT ---', 'bold'))
+  ),
+})
+
+test('a chart is edited in its dialog, the edit saved as one undo step', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': chartDocument() } })
+  await openSavedDocument(page, 'Tháng nào nóng nhất?')
+  const sheet = docEditor(page)
+  const drawing = sheetCharts(sheet).getByRole('img')
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ đường: Nhiệt độ trung bình')
+
+  // A selected chart shows its edit button.
+  const edit = sheet.getByRole('button', { name: 'Sửa biểu đồ', exact: true })
+  await expect(edit).toHaveCount(0)
+  await drawing.click()
+  await expect(edit).toBeVisible()
+  await edit.click()
+  const dialog = page.getByRole('dialog', { name: 'Sửa biểu đồ', exact: true })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('textbox', { name: 'Tiêu đề', exact: true })).toHaveValue('Nhiệt độ trung bình')
+  const first = dialog.getByRole('textbox', { name: 'Hà Nội, dòng 1', exact: true })
+  await expect(first).toHaveValue('16,5')
+
+  // A value with a Vietnamese decimal comma and another kind of chart, previewed; the sheet waits for "Lưu".
+  await first.fill('16,8')
+  const bars = dialog.getByRole('button', { name: 'Cột', exact: true })
+  await bars.click()
+  await expect(bars).toHaveAttribute('aria-pressed', 'true')
+  await expect(dialog.getByRole('img', { name: 'Biểu đồ cột: Nhiệt độ trung bình' })).toBeVisible()
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ đường: Nhiệt độ trung bình')
+  await dialog.getByRole('button', { name: 'Lưu', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ cột: Nhiệt độ trung bình')
+  expect(await drawingOf(drawing)).toContain('<rect')
+  expect(await drawingOf(drawing)).toContain('16,8')
+  await expect
+    .poll(() => savedCharts(documentSaves(state, 'conv-9').at(-1))[0]?.attrs)
+    .toMatchObject({ spec: { type: 'bar', title: 'Nhiệt độ trung bình' }, data: { rows: [['1', 16.8], ['2', 18], ['3', 21]] } })
+
+  // Focus is back in the document: one Ctrl+Z takes the whole edit back, and nothing before it.
+  await expect(sheet).toBeFocused()
+  await page.keyboard.press('Control+z')
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ đường: Nhiệt độ trung bình')
+  expect(await drawingOf(drawing)).toContain('<polyline')
+  expect(await drawingOf(drawing)).toContain('16,5')
+  await page.keyboard.press('Control+z')
+  await expect(sheetCharts(sheet)).toHaveCount(1)
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ đường: Nhiệt độ trung bình')
+
+  // A double click opens it too; "Huỷ" changes nothing.
+  await drawing.dblclick()
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('textbox', { name: 'Tiêu đề', exact: true }).fill('Lượng mưa')
+  await dialog.getByRole('button', { name: 'Huỷ', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ đường: Nhiệt độ trung bình')
+
+  // So does Enter on the selected chart; a cell that is not a number keeps the chart from being saved.
+  await drawing.click()
+  await page.keyboard.press('Enter')
+  await expect(dialog).toBeVisible()
+  const second = dialog.getByRole('textbox', { name: 'Hà Nội, dòng 2', exact: true })
+  await second.fill('mười tám')
+  await dialog.getByRole('button', { name: 'Lưu', exact: true }).click()
+  await expect(dialog).toBeVisible()
+  await expect(second).toHaveAttribute('aria-invalid', 'true')
+  await expect(second).toBeFocused()
+  await expect(dialog.getByText('Có ô số liệu trống hoặc không phải là số.', { exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ đường: Nhiệt độ trung bình')
+
+  // Copied, the chart is its picture carrying its data; pasted, that picture is a chart again, not an image.
+  await drawing.click()
+  const copied = await sheet.evaluate((root) => {
+    const data = new DataTransfer()
+    root.dispatchEvent(new ClipboardEvent('copy', { clipboardData: data, bubbles: true, cancelable: true }))
+    return data.getData('text/html')
+  })
+  expect(copied).toMatch(/<img [^>]*data-chart=/)
+  await caretAtEndOf(page, 'Tháng nào nóng nhất?')
+  await sheet.evaluate((root, html) => {
+    const data = new DataTransfer()
+    data.setData('text/html', html)
+    root.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+  }, copied)
+  await expect(sheetCharts(sheet)).toHaveCount(2)
+  await expect(sheetCharts(sheet).getByRole('img', { name: 'Biểu đồ đường: Nhiệt độ trung bình' })).toHaveCount(2)
+  await expect(sheet.locator(':scope > img')).toHaveCount(0)
+})
+
+test('Chèn ▸ Biểu đồ puts a sample chart after the caret\'s line and opens it to be edited', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': noteDocument(3) } })
+  await openSavedDocument(page, NOTE)
+  await caretAtEndOf(page, NOTE)
+
+  await page.getByRole('menubar', { name: 'Menu đề thi' }).getByRole('menuitem', { name: 'Chèn', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Biểu đồ', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Sửa biểu đồ', exact: true })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('textbox', { name: 'Tiêu đề', exact: true })).toBeFocused()
+  await page.keyboard.type('Số học sinh')
+  await dialog.getByRole('button', { name: 'Lưu', exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+
+  const sheet = docEditor(page)
+  const drawing = sheetCharts(sheet).getByRole('img')
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ cột: Số học sinh')
+  await expect(sheet.locator(':scope > p', { hasText: NOTE }).locator('xpath=following-sibling::*[1]')).toHaveAttribute('data-chart-node', '')
+  // Inserting and editing are an undo step each.
+  await expect(sheet).toBeFocused()
+  await page.keyboard.press('Control+z')
+  await expect(drawing).toHaveAttribute('alt', 'Biểu đồ cột')
+  await page.keyboard.press('Control+z')
+  await expect(sheetCharts(sheet)).toHaveCount(0)
+})
+
+test('a chart goes into the Word file as a picture of its drawing, and into Markdown and JSON', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': chartDocument() } })
+  await openSavedDocument(page, 'Tháng nào nóng nhất?')
+
+  const json = await downloadFromFileMenu(page, 'JSON (.json)')
+  const exported = JSON.parse(await readFile(await json.path(), 'utf8')) as { content: DocNode }
+  expect(((exported.content.content as DocNode[] | undefined) ?? []).filter((node) => node.type === 'chart')).toEqual([temperatureChart])
+
+  const markdown = await downloadFromFileMenu(page, 'Markdown (.md)')
+  expect(await readFile(await markdown.path(), 'utf8')).toMatch(/!\[Biểu đồ đường: Nhiệt độ trung bình\]\(<?data:image\/svg\+xml/)
+
+  const word = await downloadFromFileMenu(page, 'Word (.docx)')
+  const zip = await JSZip.loadAsync(await readFile(await word.path()))
+  expect(Object.keys(zip.files).filter((name) => /^word\/media\/.+\.png$/.test(name))).toHaveLength(1)
+  const body = await zip.file('word/document.xml')?.async('string')
+  expect(body).toContain('descr="Biểu đồ đường: Nhiệt độ trung bình"')
+  expect(body).toContain('Tháng nào nóng nhất?')
 })
 
 test('reopening a document writes in only the draft questions it has never received', async ({ page }) => {

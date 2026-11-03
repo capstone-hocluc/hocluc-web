@@ -67,20 +67,39 @@
   margin: 0;
 }
 
+/* Chart: its drawing at a share of the text width (set by the node view), centred. Its edit button shows on the
+   selected chart of an editable document only: not on a read-only exam variant, nor on a page copied for the PDF. */
+.exam-chart {
+  position: relative;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.exam-chart-edit {
+  display: none;
+}
+
+.exam-doc-content[contenteditable='true'] .exam-chart.ProseMirror-selectednode > .exam-chart-edit {
+  display: inline-flex;
+}
+
 .exam-choice-grid.ProseMirror-selectednode,
-.exam-header.ProseMirror-selectednode {
+.exam-header.ProseMirror-selectednode,
+.exam-chart.ProseMirror-selectednode {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
 }
 
 @media print {
   .exam-choice-grid,
-  .exam-header {
+  .exam-header,
+  .exam-chart {
     break-inside: avoid;
   }
 
   .exam-choice-grid.ProseMirror-selectednode,
-  .exam-header.ProseMirror-selectednode {
+  .exam-header.ProseMirror-selectednode,
+  .exam-chart.ProseMirror-selectednode {
     outline: 0;
   }
 }
