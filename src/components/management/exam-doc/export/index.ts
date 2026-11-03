@@ -1,11 +1,13 @@
+import { useSyncExternalStore } from 'react'
 import type { Editor } from '@tiptap/core'
 import { showErrorToast } from '../../../../lib/toastBus'
 import type { VariantDoc } from '../variants/build-variants'
 import type { FormulaReport } from './docx-math'
+import type * as PdfExport from './export-pdf'
 
 /*
- * What Tệp ▸ Mở file / Tải xuống call. The converters (docx, mammoth, the Markdown parser) load on first use, so
- * the editor screen does not carry them.
+ * What Tệp ▸ Mở file / Tải xuống call. The converters (docx, mammoth, the Markdown parser, the PDF capture) load on
+ * first use, so the editor screen does not carry them.
  */
 
 export type DownloadFormat = 'docx' | 'md' | 'json'
@@ -43,6 +45,63 @@ export async function downloadVariants(variants: VariantDoc[]) {
   } catch {
     showErrorToast('Không tạo được tệp tải xuống')
   }
+}
+
+/** The PDF being made: the whole sheet, or the exam without its answer key. */
+export type PdfJob = 'full' | 'examOnly'
+
+let pdfJob: PdfJob | null = null
+const pdfListeners = new Set<() => void>()
+
+function setPdfJob(job: PdfJob | null) {
+  pdfJob = job
+  pdfListeners.forEach((listener) => listener())
+}
+
+function subscribePdfJob(listener: () => void) {
+  pdfListeners.add(listener)
+  return () => {
+    pdfListeners.delete(listener)
+  }
+}
+
+/** The PDF being made, if any: the menu item that started it says so, and no PDF item takes a second click. */
+export function usePdfJob(): PdfJob | null {
+  return useSyncExternalStore(subscribePdfJob, () => pdfJob, () => null)
+}
+
+/** True while a PDF is being made: the menu item and the chat's button say so and take no second click. */
+export function usePdfBusy(): boolean {
+  return usePdfJob() !== null
+}
+
+/**
+ * Downloads what the sheet shows (the original, or the variant `code` being viewed) as a PDF, one at a time; with
+ * `examOnly`, the exam without its answer key.
+ */
+export async function downloadPdf(editor: Editor, options: PdfExport.PdfOptions = {}) {
+  if (pdfJob || editor.isDestroyed) return
+  setPdfJob(options.examOnly ? 'examOnly' : 'full')
+  let pdf: typeof PdfExport | null = null
+  try {
+    pdf = await import('./export-pdf')
+    const { missingImages } = await pdf.exportPdf(editor, options)
+    if (missingImages) showErrorToast(`Không tải được ${missingImages} hình; tệp PDF ghi tên hình ở chỗ đó`)
+  } catch (error) {
+    showErrorToast(pdf && error instanceof pdf.PdfError ? error.message : 'Không tạo được tệp PDF')
+  } finally {
+    setPdfJob(null)
+  }
+}
+
+/** The document holds an answer key (the blocks the key writer tags), so it can also be downloaded without it. */
+export function hasAnswerKey(editor: Editor | null): boolean {
+  if (!editor || editor.isDestroyed) return false
+  let found = false
+  editor.state.doc.forEach((node) => {
+    if (node.attrs.examKey) found = true
+  })
+  return found
 }
 
 const ACCEPT = [

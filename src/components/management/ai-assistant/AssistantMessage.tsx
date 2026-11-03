@@ -13,6 +13,7 @@ import {
 import { FileFormatPdf } from '@tailgrids/icons'
 import Button from '../../console/button'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
+import { usePdfBusy } from '../exam-doc/export'
 import AiMarkdown from './AiMarkdown'
 import AiOrb from './AiOrb'
 import StageTrace from './StageTrace'
@@ -35,6 +36,7 @@ export default function AssistantMessage({
 }) {
   const [copied, setCopied] = useState(false)
   const [traceOpen, setTraceOpen] = useState(false)
+  const pdfBusy = usePdfBusy()
   const hasStages = Boolean(message.stages?.length)
   const hasTrace = Boolean(message.trace?.length)
   const addedIds = message.addedItemIds ?? []
@@ -148,7 +150,7 @@ export default function AssistantMessage({
               <FileText size={15} aria-hidden />
               Tải Word
             </Button>
-            <Button size="sm" appearance="outline" onClick={() => onDownload('pdf')}>
+            <Button size="sm" appearance="outline" disabled={pdfBusy} onClick={() => onDownload('pdf')}>
               <FileFormatPdf aria-hidden className="size-[15px]" />
               Tải PDF
             </Button>

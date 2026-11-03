@@ -17,8 +17,17 @@ import {
 } from '@tailgrids/icons'
 import { BarChart3, Calculator, NotebookPen } from '../../../console/icons'
 import { LINE_HEIGHTS, ZOOM_LEVELS, useExamDoc, type DocMode } from '../exam-doc-context'
-import { downloadDocument, downloadVariants, openDocumentFile, type DownloadFormat } from '../export'
 import { insertChartAndEdit } from '../nodes/chart'
+import {
+  downloadDocument,
+  downloadPdf,
+  downloadVariants,
+  hasAnswerKey,
+  openDocumentFile,
+  usePdfJob,
+  type DownloadFormat,
+} from '../export'
+import { downloadExamOnlyDocx } from '../answer-key'
 import {
   MenuCheckboxItem,
   MenuItem,
@@ -66,12 +75,21 @@ function setBlockLineHeight(editor: Editor, value: string | null) {
 
 export function FileMenu({ onNew }: { onNew: () => void }) {
   const { editor, sourceEditor, activeVariant, variantDocs, mode, setMode } = useExamDoc()
-  // Files are written from and read into the free document, so in the structured mode only printing is left.
+  const pdfJob = usePdfJob()
+  // The menu mounts when it opens, so the answer key is looked for now.
+  const answerKey = hasAnswerKey(editor)
+  // Files are written from and read into the free document (the PDF is a picture of its sheets, which the structured
+  // mode does not show), so in the structured mode only printing is left.
   const structured = mode === 'STRUCTURED'
   const freeOnly = structured ? FREE_MODE_ONLY : undefined
   // Downloads take what the sheet shows (the original or the code being viewed); a file opens into the original.
   const download = (format: DownloadFormat) => {
     if (editor) void downloadDocument(editor, format, activeVariant)
+  }
+  const pdf = (examOnly: boolean) => (event: Event) => {
+    // The menu stays open while the file is made, so the item can show it.
+    event.preventDefault()
+    if (editor) void downloadPdf(editor, { code: activeVariant, examOnly })
   }
   return (
     <>
@@ -94,11 +112,33 @@ export function FileMenu({ onNew }: { onNew: () => void }) {
           title={freeOnly}
           onSelect={() => download('docx')}
         />
+        {answerKey && (
+          <MenuItem
+            label="Word không đáp án (.docx)"
+            icon={FileText}
+            disabled={structured}
+            title={freeOnly}
+            onSelect={() => {
+              if (editor) void downloadExamOnlyDocx(editor, activeVariant)
+            }}
+          />
+        )}
         <MenuItem
-          label="PDF (in ra PDF)"
+          label={pdfJob === 'full' ? 'Đang tạo PDF…' : 'PDF (.pdf)'}
           icon={FileFormatPdf}
-          onSelect={() => window.setTimeout(() => window.print(), 0)}
+          disabled={structured || pdfJob !== null}
+          title={freeOnly}
+          onSelect={pdf(false)}
         />
+        {answerKey && (
+          <MenuItem
+            label={pdfJob === 'examOnly' ? 'Đang tạo PDF…' : 'PDF không đáp án (.pdf)'}
+            icon={FileFormatPdf}
+            disabled={structured || pdfJob !== null}
+            title={freeOnly}
+            onSelect={pdf(true)}
+          />
+        )}
         <MenuItem
           label="Markdown (.md)"
           icon={FileTextMultiple}

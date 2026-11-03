@@ -28,7 +28,8 @@ import { scrollToPos } from '../exam-doc/doc-outline'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
 import { deliveredItems, findTagged, partHeadingPlace, questionInsertPos } from '../exam-doc/exam-tags'
 import { refreshChartImages } from '../exam-doc/chart-refresh'
-import { downloadDocument } from '../exam-doc/export'
+import { showErrorToast } from '../../../lib/toastBus'
+import { downloadDocument, downloadPdf } from '../exam-doc/export'
 import { liveDraftView } from '../exam-doc/live-draft'
 import { useFollowWriting } from '../exam-doc/use-follow-writing'
 import { liveDraftKey } from '../exam-doc/nodes/live-draft-widget'
@@ -272,10 +273,12 @@ export default function AiAssistantScreen({
 
   const numberOf = useMemo(() => questionNumbers(ai.paper), [ai.paper])
 
-  /** The finished exam from the chat: a Word file, or PDF through the print dialog (the sheet prints as A4 pages). */
+  /** The finished exam from the chat: a Word file, or a PDF of the A4 sheets (which only the free document is on). */
   function downloadExam(format: 'docx' | 'pdf') {
     if (format === 'pdf') {
-      window.setTimeout(() => window.print(), 0)
+      // The sheet's editor: the original, or the read-only variant being viewed.
+      if (examDoc.mode !== 'FREE') showErrorToast('Tải PDF chỉ có ở chế độ Văn bản tự do')
+      else if (shownEditor) void downloadPdf(shownEditor, { code: variants.activeVariant ?? null })
       return
     }
     if (editor) void downloadDocument(editor, 'docx', variants.activeVariant ?? null)

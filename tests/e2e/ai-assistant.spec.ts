@@ -1732,13 +1732,13 @@ test('switching a saved free document to question cards saves the mode and turns
   await openFileMenu(page)
   await expect(page.getByRole('menuitem', { name: 'Mở file (Word, Markdown, JSON)…', exact: true })).toHaveAttribute('aria-disabled', 'true')
   await page.getByRole('menuitem', { name: 'Tải xuống', exact: true }).press('ArrowRight')
-  for (const label of ['Word (.docx)', 'Markdown (.md)', 'JSON (.json)']) {
+  // The PDF is a picture of the free document's sheets, which question cards do not show.
+  for (const label of ['Word (.docx)', 'PDF (.pdf)', 'Markdown (.md)', 'JSON (.json)']) {
     await expect(page.getByRole('menuitem', { name: label, exact: true })).toHaveAttribute('aria-disabled', 'true')
     await expect(page.getByRole('menuitem', { name: label, exact: true })).toHaveAttribute('title', freeOnly)
   }
-  await expect(page.getByRole('menuitem', { name: 'PDF (in ra PDF)', exact: true })).not.toHaveAttribute('aria-disabled', 'true')
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('menuitem', { name: 'PDF (in ra PDF)', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('menuitem', { name: 'PDF (.pdf)', exact: true })).toHaveCount(0)
   await expect(page.getByRole('menuitemradio', { name: 'Văn bản tự do', exact: true })).toHaveCount(0)
 
   // Back to the free document, as it was, saved in that mode over the next version.
@@ -2171,3 +2171,159 @@ for (const { width, outlineMax, chatMax } of [
     expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.innerWidth)
   })
 }
+
+// The PDF: the server prints it (real text) when it can; any failure falls back to the browser's picture of the sheets.
+test.describe('PDF from the server', () => {
+  const EXAM_PDF = '**/api/v1/exam-docs/pdf'
+  const KEY_TEXT = 'Lời giải chỉ thầy cô được xem'
+  /** A small but well-formed PDF, standing in for the server's. */
+  const SERVER_PDF = Buffer.from(
+    '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n' +
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n',
+    'latin1'
+  )
+
+  const math = (latex: string, display = false): DocNode => ({ type: 'math', attrs: { latex, display } })
+  const cell = (text: string): DocNode => ({ type: 'tableCell', content: [paragraph(run(text))] })
+  const keyed = (node: DocNode, kind: 'table' | 'guide'): DocNode => ({ ...node, attrs: { ...((node.attrs as object) ?? {}), examKey: kind } })
+
+  /** A real exam's blocks: header, formulas (chemistry too), options, a chart, a table and the answer key after a break. */
+  const pdfExamContent = tiptapDoc(
+    {
+      type: 'examHeader',
+      content: [
+        { type: 'headerColumn', content: [paragraph(run('SỞ GIÁO DỤC VÀ ĐÀO TẠO')), paragraph(run('TRƯỜNG THPT NGUYỄN DU', 'bold'))] },
+        { type: 'headerColumn', content: [paragraph(run('ĐỀ KIỂM TRA GIỮA KỲ I', 'bold')), paragraph(run('Thời gian làm bài: 45 phút', 'italic'))] },
+      ],
+    },
+    heading(1, 'ĐỀ KIỂM TRA TOÁN 10'),
+    heading(2, 'PHẦN I. TRẮC NGHIỆM'),
+    paragraph(run('Câu 1. ', 'bold'), run('Rút gọn biểu thức '), math('\\frac{a^2-b^2}{a-b}'), run(' với '), math('a \\ne b'), run('.')),
+    choiceGrid('a + b', 'a − b', 'a² + b²', 'Không rút gọn được'),
+    paragraph(run('Câu 2. ', 'bold'), run('Phương trình hoá học '), math('\\ce{2H2 + O2 -> 2H2O}'), run(' cho biết điều gì?')),
+    choiceGrid('Hai phân tử hiđro phản ứng với một phân tử oxi', 'Nước bị phân huỷ', 'Oxi là chất xúc tác', 'Không có phản ứng'),
+    paragraph(run('Câu 3. ', 'bold'), run('Tính tích phân sau.')),
+    paragraph(math('\\int_0^1 x^2\\,dx = \\frac{1}{3}', true)),
+    paragraph(run('Câu 4. ', 'bold'), run('Quan sát biểu đồ điểm trung bình các lớp.')),
+    {
+      type: 'chart',
+      attrs: {
+        data: {
+          columns: [
+            { id: 'label', label: 'Lớp', role: 'label' },
+            { id: 'score', label: 'Điểm', role: 'series' },
+          ],
+          rows: [['10A', 7.5], ['10B', 8.1], ['10C', 6.9]],
+        },
+        spec: { type: 'bar', title: 'Điểm trung bình các lớp', xLabel: 'Lớp', yLabel: 'Điểm', legend: false, palette: 'print', width: 0.7 },
+      },
+    },
+    {
+      type: 'table',
+      content: [
+        { type: 'tableRow', content: [cell('Lớp'), cell('Sĩ số'), cell('Điểm trung bình')] },
+        { type: 'tableRow', content: [cell('10A'), cell('40'), cell('7,5')] },
+        { type: 'tableRow', content: [cell('10B'), cell('42'), cell('8,1')] },
+      ],
+    },
+    paragraph(run('--- HẾT ---', 'bold')),
+    keyed({ type: 'pageBreak' }, 'guide'),
+    keyed(heading(2, 'HƯỚNG DẪN GIẢI'), 'guide'),
+    keyed(paragraph(run('Câu 1. ', 'bold'), run('Chọn A. '), run(KEY_TEXT)), 'guide')
+  )
+  const pdfExam = (): FixtureDocument => ({ mode: 'FREE', content: pdfExamContent, version: 3, updatedAt: stamp })
+
+  async function openPdfExam(page: Page) {
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': pdfExam() } })
+    // The browser's capture reads the page's web font style sheets to embed them; offline here, they are empty.
+    await page.route('https://fonts.googleapis.com/**', (route) => route.fulfill({ contentType: 'text/css', body: '' }))
+    // The browser renderer's capture library is fetched only when it draws the PDF.
+    const capture: string[] = []
+    page.on('request', (request) => {
+      if (request.url().includes('modern-screenshot')) capture.push(request.url())
+    })
+    await openSavedDocument(page, 'Rút gọn biểu thức')
+    return capture
+  }
+
+  /** The bodies the page posted to the PDF endpoint; it answers with `answer`. */
+  async function routePdf(page: Page, answer: (route: import('@playwright/test').Route) => Promise<void>) {
+    const bodies: Array<{ html: string; title: string }> = []
+    await page.route(EXAM_PDF, async (route) => {
+      bodies.push(route.request().postDataJSON() as { html: string; title: string })
+      await answer(route)
+    })
+    return bodies
+  }
+
+  test('the server PDF is downloaded as it comes, and the browser draws nothing', async ({ page }) => {
+    const capture = await openPdfExam(page)
+    const bodies = await routePdf(page, (route) => route.fulfill({ status: 200, contentType: 'application/pdf', body: SERVER_PDF }))
+
+    const file = await downloadFromFileMenu(page, 'PDF (.pdf)')
+    expect(file.suggestedFilename()).toBe('ĐỀ-KIỂM-TRA-TOÁN-10.pdf')
+    expect((await readFile(await file.path())).equals(SERVER_PDF)).toBe(true)
+    expect(capture).toEqual([])
+
+    expect(bodies).toHaveLength(1)
+    const [{ html, title }] = bodies
+    expect(title).toBe('ĐỀ KIỂM TRA TOÁN 10')
+    // Formulas as MathML (no LaTeX copy), the chart as inline SVG, options and header as tables, the break as CSS
+    expect(html).toContain('<math')
+    expect(html).not.toContain('<annotation')
+    expect(html).toContain('<svg')
+    expect(html).toContain('viewBox=')
+    expect(html).toContain('class="exam-choice-grid"')
+    expect(html).toContain('class="exam-header"')
+    expect(html).toContain('class="exam-page-break"')
+    expect(html).toContain('Điểm trung bình')
+    expect(html).toContain(KEY_TEXT)
+    expect(html).not.toContain('data-')
+    expect(html).not.toContain('data:image/svg+xml')
+    // Kept for rendering through the backend renderer by hand (see the backend's ExamPdfRealRenderTest)
+    if (process.env.EXAM_PDF_BODY_OUT) {
+      const { writeFile } = await import('node:fs/promises')
+      await writeFile(process.env.EXAM_PDF_BODY_OUT, JSON.stringify(bodies[0]), 'utf8')
+    }
+  })
+
+  // A refused session (401/403) must not sign the person out either: the fallback is quiet in every case.
+  for (const failure of [401, 403, 404, 500, 'network'] as const) {
+    test(`a ${failure} failure from the server still downloads the PDF the browser draws`, async ({ page }) => {
+      const capture = await openPdfExam(page)
+      const bodies = await routePdf(page, (route) =>
+        failure === 'network'
+          ? route.abort('failed')
+          : route.fulfill({ status: failure, json: { success: false, status: failure, message: `HTTP ${failure}` } })
+      )
+      const before = page.url()
+
+      const file = await downloadFromFileMenu(page, 'PDF (.pdf)')
+      expect(file.suggestedFilename()).toBe('ĐỀ-KIỂM-TRA-TOÁN-10.pdf')
+      const bytes = await readFile(await file.path())
+      expect(bytes.subarray(0, 5).toString('latin1')).toBe('%PDF-')
+      expect(bytes.equals(SERVER_PDF)).toBe(false)
+      expect(bodies).toHaveLength(1)
+      expect(capture.length).toBeGreaterThan(0)
+      // No error is shown, and the person stays signed in on the same page
+      await expect(page.getByText('Không tạo được tệp PDF')).toHaveCount(0)
+      expect(page.url()).toBe(before)
+      expect(await page.evaluate(() => localStorage.getItem('hocluc.accessToken'))).toBeTruthy()
+    })
+  }
+
+  test('the exam without its key is sent without the key', async ({ page }) => {
+    await openPdfExam(page)
+    const bodies = await routePdf(page, (route) => route.fulfill({ status: 200, contentType: 'application/pdf', body: SERVER_PDF }))
+
+    const file = await downloadFromFileMenu(page, 'PDF không đáp án (.pdf)')
+    expect(file.suggestedFilename()).toBe('ĐỀ-KIỂM-TRA-TOÁN-10-khong-dap-an.pdf')
+    expect(bodies).toHaveLength(1)
+    expect(bodies[0].html).toContain('Rút gọn biểu thức')
+    expect(bodies[0].html).toContain('--- HẾT ---')
+    expect(bodies[0].html).not.toContain(KEY_TEXT)
+    expect(bodies[0].html).not.toContain('HƯỚNG DẪN GIẢI')
+    // The key's page break went with it: nothing after the end line starts a new sheet
+    expect(bodies[0].html).not.toContain('exam-page-break')
+  })
+})
