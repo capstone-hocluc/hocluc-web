@@ -7,7 +7,8 @@ import { END_LINE, TAIL_HEADING } from './variants/parse-exam'
  * own part, a shared passage is written once, and "Xem trong đề" finds a question:
  * - a part heading carries `examPart` (draft part id);
  * - a passage's lead line carries `examGroup` (draft group id);
- * - a question's "Câu n." line carries `examItem` (draft item id).
+ * - a question's "Câu n." line carries `examItem` (draft item id);
+ * - each block of the answer key after the end line carries `examKey`, so the key can be written again.
  * The document itself keeps `deliveredItems`: every draft item ever written into it. A question the teacher deleted
  * stays in that list, so it is not written back; one that arrived while the document was closed is not in it yet.
  */
@@ -28,6 +29,11 @@ export const ExamTags = Extension.create({
           examGroup: tag('examGroup', 'data-exam-group'),
           examItem: tag('examItem', 'data-exam-item'),
         },
+      },
+      {
+        // The answer key written after the end line: 'table' (BẢNG ĐÁP ÁN) or 'guide' (HƯỚNG DẪN GIẢI).
+        types: ['paragraph', 'heading', 'table', 'pageBreak'],
+        attributes: { examKey: tag('examKey', 'data-exam-key') },
       },
       {
         types: ['doc'],

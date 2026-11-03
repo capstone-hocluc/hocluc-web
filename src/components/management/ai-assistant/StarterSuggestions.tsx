@@ -5,8 +5,8 @@ interface Suggestion {
   prompt: string
 }
 
-// Three starters per mode, each one a request the backend can carry out in that mode.
-const SUGGESTIONS: Record<AiAssistantMode, Suggestion[]> = {
+// Three starters per mode, each one a request the backend can carry out in that mode ("revise" is no mode to pick).
+const SUGGESTIONS: Record<Exclude<AiAssistantMode, 'revise'>, Suggestion[]> = {
   ask: [
     {
       label: 'Giải thích vì sao tại điểm cực trị đạo hàm bằng 0',
@@ -63,7 +63,7 @@ export default function StarterSuggestions({
 }) {
   return (
     <ul aria-label="Gợi ý yêu cầu" className="flex flex-col gap-1.5">
-      {SUGGESTIONS[mode].map((suggestion) => (
+      {(mode === 'revise' ? [] : SUGGESTIONS[mode]).map((suggestion) => (
         <li key={suggestion.label}>
           <button
             type="button"

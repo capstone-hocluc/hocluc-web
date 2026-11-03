@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import SelectField from '../../console/select-field'
-import type { AiDifficulty, AiExamFormat } from '../../../services/aiAssistantService'
+import type { AiDifficulty, AiExamFormat, AiSolutionStyle } from '../../../services/aiAssistantService'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
-import { COMPOSE_COUNTS, DIFFICULTIES, FORMAT_OPTIONS, MOCK_COUNTS, REUSE_RATIOS } from './quiz-config-options'
+import { COMPOSE_COUNTS, DIFFICULTIES, FORMAT_OPTIONS, MOCK_COUNTS, REUSE_RATIOS, SOLUTION_STYLES } from './quiz-config-options'
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -76,6 +76,15 @@ export default function QuizConfigBar({
             options={REUSE_RATIOS}
             value={ratioValue}
             onChange={(value) => onChange({ bankRatio: Number(value) })}
+            triggerClassName="h-9"
+          />
+        </Field>
+        <Field label="Lời giải">
+          <SelectField
+            ariaLabel="Lời giải"
+            options={SOLUTION_STYLES}
+            value={settings.solutionStyle}
+            onChange={(value) => onChange({ solutionStyle: value as AiSolutionStyle })}
             triggerClassName="h-9"
           />
         </Field>

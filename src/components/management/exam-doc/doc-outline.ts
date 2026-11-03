@@ -30,7 +30,10 @@ function blockText(node: ProseMirrorNode): string {
   return node.textContent.normalize('NFC').replace(/\s+/g, ' ').trim()
 }
 
-/** Headings (1-3) and question lines, in document order. Tables are skipped (answer keys repeat "Câu n"). */
+/**
+ * Headings (1-3) and question lines, in document order. Tables and the answer guide are skipped (answer keys repeat
+ * "Câu n").
+ */
 export function outlineOf(doc: ProseMirrorNode): OutlineItem[] {
   const cached = outlineCache.get(doc)
   if (cached) return cached
@@ -46,7 +49,8 @@ export function outlineOf(doc: ProseMirrorNode): OutlineItem[] {
       if (text && level >= 1 && level <= 3) {
         items.push({ id: `outline-${items.length}`, level: level as OutlineLevel, text, pos })
       }
-    } else if (node.type.name === 'paragraph') {
+    } else if (node.type.name === 'paragraph' && !node.attrs.examKey) {
+      // The answer guide's "Câu n. Chọn A." lines name questions already listed; they are no questions.
       const head = node.firstChild?.isText ? (node.firstChild.text ?? '') : ''
       if (QUESTION_HEAD.test(head)) {
         const text = blockText(node)

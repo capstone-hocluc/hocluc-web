@@ -18,7 +18,7 @@ import Notice from '../../console/notice'
 import type { SelectOption } from '../../console/select-field'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import QuizConfigBar from './QuizConfigBar'
-import { COMPOSE_COUNTS, DIFFICULTIES, MOCK_COUNTS } from './quiz-config-options'
+import { COMPOSE_COUNTS, DIFFICULTIES, MOCK_COUNTS, SOLUTION_STYLES } from './quiz-config-options'
 
 /**
  * Closes a floating menu on a click outside `root` or on Escape. Spread the returned handler on `root`: inside
@@ -212,7 +212,7 @@ export default function Composer({
                   hasError={Boolean(mode === 'mock-exam' && papersError)}
                 >
                   <QuizConfigBar
-                    mode={mode}
+                    mode={mode === 'revise' ? 'compose' : mode}
                     settings={settings}
                     onChange={onSettingsChange}
                   />
@@ -334,7 +334,7 @@ const labelOf = (options: readonly SelectOption[], id: string) =>
   options.find((option) => option.id === id)?.label
 
 /**
- * One line telling the current compose settings, e.g. "5 câu · Trung bình". The bank paper of
+ * One line telling the current compose settings, e.g. "5 câu · Trung bình · Lời giải đầy đủ". The bank paper of
  * "Mô phỏng đề" is left out: the sources block above the composer already shows it.
  */
 function settingsSummary(
@@ -343,7 +343,8 @@ function settingsSummary(
 ) {
   const count = labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount))
   const difficulty = mode === 'compose' ? labelOf(DIFFICULTIES, settings.difficulty) : undefined
-  return [count, difficulty].filter(Boolean).join(' · ')
+  const solution = labelOf(SOLUTION_STYLES, settings.solutionStyle)
+  return [count, difficulty, solution && `Lời giải ${solution.toLowerCase()}`].filter(Boolean).join(' · ')
 }
 
 /** The compose settings folded into one chip of the composer; the full settings open above it. */

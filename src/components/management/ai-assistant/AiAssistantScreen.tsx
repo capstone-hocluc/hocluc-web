@@ -1,7 +1,7 @@
 // The AI exam composer, laid out like a document editor: header with menus, formatting toolbar, the document
 // panel (outline, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { AiAssistantMode, AiConversation } from '../../../services/aiAssistantService'
+import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import ThemeProvider from '../../common/ThemeProvider'
 import Button from '../../console/button'
@@ -12,7 +12,7 @@ import { Skeleton } from '../../tailgrids/core/skeleton'
 import ResizeHandle from '../../ui/ResizeHandle'
 import FormulaDialog, { type FormulaValue } from '../../ui/math/FormulaDialog'
 import { DIVIDER_WIDTH, PANEL_LIMITS, usePanelWidths } from './use-panel-widths'
-import { questionNumbers } from './exam-format'
+import { buildPaper, isSoloGroup, questionNumbers } from './exam-format'
 import AiSidebar from './AiSidebar'
 import ChatPanel from './ChatPanel'
 import ExamOutline from './ExamOutline'
@@ -28,6 +28,14 @@ import { scrollToPos } from '../exam-doc/doc-outline'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
 import { deliveredItems, findTagged, partHeadingPlace, questionInsertPos } from '../exam-doc/exam-tags'
 import { refreshChartImages } from '../exam-doc/chart-refresh'
+import { downloadExamOnlyDocx, replaceAnswerKey } from '../exam-doc/answer-key'
+import { restoreSoloPassages } from '../exam-doc/solo-passages'
+import { replaceQuestionBlocks, replaceSheetRange } from '../exam-doc/replace-question'
+import { sheetDocument, sheetQuestion, sheetQuestions } from '../exam-doc/doc-snapshot'
+import AiSelectionMenu from '../exam-doc/ai-selection-menu'
+import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
+import { revisedNumbers } from './revise-request'
+import type { ExamDownload } from './AssistantMessage'
 import { showErrorToast } from '../../../lib/toastBus'
 import { downloadDocument, downloadPdf } from '../exam-doc/export'
 import { liveDraftView } from '../exam-doc/live-draft'
@@ -147,7 +155,8 @@ export default function AiAssistantScreen({
       }
       const shownGroups = new Set<string>()
       if (question.groupId && findTagged(tr.doc, 'examGroup', question.groupId) !== null) shownGroups.add(question.groupId)
-      const nodes = questionsToBlocks(ai.paper, [question], { shownGroups }).map((block) =>
+      // A question's own passage leads only it, so its lead can name it ("trả lời câu 7").
+      const nodes = questionsToBlocks(ai.paper, [question], { shownGroups, complete: isSoloGroup(question.groupId) }).map((block) =>
         editor.schema.nodeFromJSON(block)
       )
       tr.insert(questionInsertPos(tr.doc, question.partId), nodes)
@@ -168,6 +177,8 @@ export default function AiAssistantScreen({
 
   // While the AI writes, the sheet follows it; the teacher scrolling lets go, and a button picks it up again.
   const sheetScroller = useRef<HTMLElement>(null)
+  // Ctrl + wheel or a pinch over the sheet zooms the paper, not the page.
+  useWheelZoom(sheetScroller, zoom, setZoom)
   const followTarget = liveDraft
     ? '[data-live-draft]'
     : ai.lastItemId
@@ -180,12 +191,90 @@ export default function AiAssistantScreen({
     `${ai.lastItemId ?? ''}:${liveDraft?.text.length ?? 0}`
   )
 
+  // A compose run that ends leaves the answer key after the exam: the answer table and the solution guide, written
+  // once every question it added is on the sheet. The teacher's later edits to the key stay until they ask for a new
+  // one ("Cập nhật đáp án").
+  const keyDue = useRef(false)
+  const lastRunMode = useRef(ai.runMode)
+  useEffect(() => {
+    // A revise run only updates a key the exam already has (as each rewritten question arrives, below).
+    if (lastRunMode.current && lastRunMode.current !== 'ask' && lastRunMode.current !== 'revise' && !ai.runMode) {
+      keyDue.current = true
+    }
+    lastRunMode.current = ai.runMode
+  }, [ai.runMode])
+  const solutionStyle = ai.settings.solutionStyle
+  useEffect(() => {
+    if (!keyDue.current || ai.running || !editor || examDoc.loading || ai.draftLoading || examDoc.mode !== 'FREE') return
+    const delivered = deliveredItems(editor.state.doc)
+    if (delivered && ai.paper.questions.some((question) => !delivered.has(question.id))) return
+    keyDue.current = false
+    replaceAnswerKey(editor, ai.paper, solutionStyle)
+  }, [ai.paper, ai.running, ai.runMode, ai.draftLoading, examDoc.loading, examDoc.mode, editor, solutionStyle])
+
+  // A question the AI rewrote ("Sửa câu 2") replaces its blocks where it stands, keeping its number; an exam that has
+  // an answer key gets it written again for the new answer, and the sheet shows the question.
+  const writtenRevisions = useRef(new Map<string, number>())
+  const { addRunStep } = ai
+  useEffect(() => {
+    if (!editor || examDoc.loading || examDoc.mode !== 'FREE') return
+    const rewritten = ai.paper.questions.filter(
+      (question) => question.revision > 0 && writtenRevisions.current.get(question.id) !== question.revision
+    )
+    if (rewritten.length === 0) return
+    let shown: number | null = null
+    for (const question of rewritten) {
+      writtenRevisions.current.set(question.id, question.revision)
+      const at = replaceQuestionBlocks(editor, ai.paper, question)
+      shown ??= at
+    }
+    let hasKey = false
+    editor.state.doc.forEach((node) => {
+      if (node.attrs.examKey) hasKey = true
+    })
+    if (hasKey && replaceAnswerKey(editor, ai.paper, solutionStyle)) addRunStep('Cập nhật đáp án')
+    if (shown !== null) scrollToPos(editor, shown)
+  }, [ai.paper, addRunStep, examDoc.loading, examDoc.mode, editor, solutionStyle])
+
+  // A question only the sheet holds (the teacher typed it), rewritten by the AI: written over that question, keeping its
+  // number; the passage above it stays, so the rewrite brings its own only when the question had none.
+  const sheetContexts = useRef(new Map<number, boolean>())
+  const writtenRewrites = useRef(0)
+  useEffect(() => {
+    if (!editor || examDoc.loading || examDoc.mode !== 'FREE') return
+    const pending = ai.rewrites.filter((rewrite) => rewrite.seq > writtenRewrites.current)
+    if (pending.length === 0) return
+    let shown: number | null = null
+    for (const rewrite of pending) {
+      writtenRewrites.current = Math.max(writtenRewrites.current, rewrite.seq)
+      const target = sheetQuestions(editor.state.doc).filter((question) => question.number === rewrite.number && !question.itemId)
+      const at = target[0] ?? sheetQuestion(sheetQuestions(editor.state.doc), rewrite.number)
+      if (!at) continue
+      const keepsPassage = sheetContexts.current.get(rewrite.number) ?? Boolean(at.context)
+      const question = keepsPassage
+        ? { ...rewrite.question, passage: null, passageImageUrl: null, passageChart: null }
+        : rewrite.question
+      const paper = buildPaper(null, [{ id: `sheet-${rewrite.seq}`, sectionCode: 'SHEET', groupKey: null, position: rewrite.number,
+        question, source: 'AI', kept: true, checkResult: null }], '')
+      replaceSheetRange(editor, at.from, at.to, rewrite.number, questionsToBlocks(paper, paper.questions, { complete: true }))
+      shown ??= at.from
+    }
+    if (shown !== null) scrollToPos(editor, shown)
+  }, [ai.rewrites, examDoc.loading, examDoc.mode, editor])
+
   // Charts are drawn again from their data when an exam opens, so one saved with an older drawing looks current.
   useEffect(() => {
     // A refreshed drawing is saved like an edit, once; later opens find it current and change nothing.
     if (!editor || examDoc.loading || ai.draftLoading) return
     refreshChartImages(editor, ai.paper)
   }, [ai.paper, ai.draftLoading, examDoc.loading, editor])
+
+  // A question's own passage (a bank question's reading text, function or rules) goes back above it in exams
+  // written before such passages were printed; saved like an edit, once.
+  useEffect(() => {
+    if (!editor || examDoc.loading || ai.draftLoading || examDoc.mode !== 'FREE') return
+    restoreSoloPassages(editor, ai.paper)
+  }, [ai.paper, ai.draftLoading, examDoc.loading, examDoc.mode, editor])
 
   const showVariants = useCallback((open: boolean) => {
     if (!open) {
@@ -274,14 +363,91 @@ export default function AiAssistantScreen({
   const numberOf = useMemo(() => questionNumbers(ai.paper), [ai.paper])
 
   /** The finished exam from the chat: a Word file, or a PDF of the A4 sheets (which only the free document is on). */
-  function downloadExam(format: 'docx' | 'pdf') {
-    if (format === 'pdf') {
-      // The sheet's editor: the original, or the read-only variant being viewed.
-      if (examDoc.mode !== 'FREE') showErrorToast('Tải PDF chỉ có ở chế độ Văn bản tự do')
-      else if (shownEditor) void downloadPdf(shownEditor, { code: variants.activeVariant ?? null })
+  function downloadExam(format: ExamDownload) {
+    if (format === 'docx-exam') {
+      // The original exam only: an exam code's sheet has no guide, and its answer table belongs to that code.
+      if (editor) void downloadExamOnlyDocx(editor)
       return
     }
-    if (editor) void downloadDocument(editor, 'docx', variants.activeVariant ?? null)
+    if (format === 'pdf' || format === 'pdf-exam') {
+      // The sheet's editor: the original, or the read-only variant being viewed.
+      if (examDoc.mode !== 'FREE') showErrorToast('Tải PDF chỉ có ở chế độ Văn bản tự do')
+      else if (shownEditor) {
+        void downloadPdf(shownEditor, { code: variants.activeVariant ?? null, examOnly: format === 'pdf-exam' })
+      }
+      return
+    }
+    // What the sheet shows: the original, or the exam code being viewed (named after it).
+    if (shownEditor) void downloadDocument(shownEditor, 'docx', variants.activeVariant ?? null)
+  }
+
+  /**
+   * Sends the composer's text. "Sửa câu 2 …" in compose mode rewrites those questions: each number is the one the sheet
+   * prints (or the question cards show), looked up to its draft question before anything is sent.
+   */
+  function sendMessage() {
+    const onSheet = examDoc.mode === 'FREE' && editor ? editor : null
+    // A question about the exam reads the sheet the teacher sees.
+    if (ai.mode === 'ask') {
+      ai.send(onSheet ? { document: sheetDocument(onSheet.state.doc) } : undefined)
+      return
+    }
+    const numbers = ai.mode === 'compose' ? revisedNumbers(ai.value) : null
+    if (!numbers) {
+      ai.send()
+      return
+    }
+    const targets: AiRevisedItem[] = []
+    const missing: number[] = []
+    if (onSheet) {
+      // Any question the sheet prints, typed by the teacher or written by the AI, as it reads now.
+      const questions = sheetQuestions(onSheet.state.doc)
+      for (const number of numbers) {
+        const found = sheetQuestion(questions, number)
+        if (!found) missing.push(number)
+        else {
+          sheetContexts.current.set(number, Boolean(found.context))
+          targets.push({ number, ...(found.itemId ? { itemId: found.itemId } : {}), text: found.text, ...(found.context ? { context: found.context } : {}) })
+        }
+      }
+    } else {
+      const byNumber = new Map<number, string>()
+      numberOf.forEach((number, id) => byNumber.set(number, id))
+      for (const number of numbers) {
+        const itemId = byNumber.get(number)
+        if (itemId) targets.push({ number, itemId })
+        else missing.push(number)
+      }
+    }
+    if (missing.length > 0) {
+      ai.setNotice(`Đề không có câu ${missing.join(', ')} để sửa.`)
+      return
+    }
+    ai.send({ revise: targets })
+  }
+
+  /** "Nhờ AI sửa" on a selection: the exam's conversation (made now for a new exam) asks the AI for the new words. */
+  async function rewriteSelection(request: { selection: string; context: string; instruction: string }) {
+    const id = ai.activeId ?? (await ai.ensureConversation(ai.activeConversation?.title || 'Đề thi mới'))
+    if (!id) throw new Error('Chưa mở được đề để nhờ trợ lý AI sửa.')
+    return rewriteAiSelection(id, request)
+  }
+
+  /** The answer key written again from the questions the sheet holds now, in the chosen solution style. */
+  function writeAnswerKey() {
+    setChatSheet(false)
+    if (!editor || examDoc.mode !== 'FREE') {
+      showErrorToast('Đáp án chỉ ghi được ở chế độ Văn bản tự do')
+      return
+    }
+    variants.setActiveVariant(null)
+    replaceAnswerKey(editor, ai.paper, solutionStyle)
+    let at: number | null = null
+    editor.state.doc.forEach((node, pos) => {
+      if (at === null && node.attrs.examKey && node.type.name === 'heading') at = pos
+    })
+    if (at === null) showErrorToast('Đề chưa có câu nào của trợ lý AI để làm đáp án')
+    else scrollToPos(editor, at)
   }
 
   function jumpToQuestion(id: string) {
@@ -358,7 +524,7 @@ export default function AiAssistantScreen({
     onReloadPapers: ai.reloadPapers,
     onModeChange: ai.setMode,
     onValueChange: ai.setValue,
-    onSend: ai.send,
+    onSend: sendMessage,
     onStop: ai.cancel,
     onRegenerate: ai.regenerate,
     onStartNew: startNew,
@@ -370,12 +536,19 @@ export default function AiAssistantScreen({
     },
     onPickPrompt: pickPrompt,
     onDownload: downloadExam,
+    onAnswerKey: writeAnswerKey,
   }
 
   return (
     <ThemeProvider>
       <ExamDocContext.Provider value={docContext}>
       <div className="flex h-dvh w-full flex-col overflow-hidden bg-background-gray-secondary_alt_2 font-sans text-text-primary">
+        <AiSelectionMenu
+          editor={editor}
+          enabled={editable && !variants.activeDoc}
+          onRewrite={rewriteSelection}
+          onError={showErrorToast}
+        />
         <DocHeader
           title={ai.activeConversation?.title ?? ''}
           editable={Boolean(ai.activeConversation)}

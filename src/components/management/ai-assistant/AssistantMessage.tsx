@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Copy,
   FileText,
+  ListChecks,
   RotateCcw,
   XCircle,
   type LucideIcon,
@@ -13,35 +14,44 @@ import {
 import { FileFormatPdf } from '@tailgrids/icons'
 import Button from '../../console/button'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
-import { usePdfBusy } from '../exam-doc/export'
+import { usePdfBusy, usePdfJob } from '../exam-doc/export'
 import AiMarkdown from './AiMarkdown'
 import AiOrb from './AiOrb'
 import StageTrace from './StageTrace'
 import type { AiChatMessage } from './exam-format'
 
+export type ExamDownload = 'docx' | 'pdf' | 'docx-exam' | 'pdf-exam'
+
 const MODE_LABEL: Record<AiAssistantMode, string> = {
   ask: 'Hỏi đáp',
   compose: 'Soạn câu hỏi',
   'mock-exam': 'Mô phỏng đề',
+  revise: 'Sửa câu hỏi',
 }
 
 export default function AssistantMessage({
   message,
   onRegenerate,
   onDownload,
+  onAnswerKey,
 }: {
   message: AiChatMessage
   onRegenerate: () => void
-  onDownload: (format: 'docx' | 'pdf') => void
+  /** Word or PDF of the exam with its answer key, or Word of the exam alone ('docx-exam'). */
+  onDownload: (format: ExamDownload) => void
+  /** Writes the answer key after the exam again from the questions it holds now. */
+  onAnswerKey: () => void
 }) {
   const [copied, setCopied] = useState(false)
   const [traceOpen, setTraceOpen] = useState(false)
   const pdfBusy = usePdfBusy()
+  const pdfJob = usePdfJob()
   const hasStages = Boolean(message.stages?.length)
   const hasTrace = Boolean(message.trace?.length)
   const addedIds = message.addedItemIds ?? []
   // A compose or mock-exam answer that finished (not an error): its exam is ready to take away.
-  const composed = !message.error && (message.mode === 'compose' || message.mode === 'mock-exam')
+  const composed = !message.error && (message.mode === 'compose' || message.mode === 'mock-exam' || message.mode === 'revise')
+  const revised = message.mode === 'revise'
 
   async function copy() {
     try {
@@ -141,20 +151,33 @@ export default function AssistantMessage({
             <div className="mb-2.5 flex items-start gap-2">
               <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-badge-success-text" aria-hidden />
               <p className="min-w-0 flex-1 text-sm font-medium text-text-primary">
-                Đã thêm {addedIds.length} câu vào đề
+                {revised ? `Đã sửa ${addedIds.length} câu trong đề` : `Đã thêm ${addedIds.length} câu vào đề`}
               </p>
             </div>
           )}
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" appearance="outline" onClick={() => onDownload('docx')}>
+          {/* Two by two: the exam with its key, then the exam alone. */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button size="sm" appearance="outline" className="justify-start" onClick={() => onDownload('docx')}>
               <FileText size={15} aria-hidden />
               Tải Word
             </Button>
-            <Button size="sm" appearance="outline" disabled={pdfBusy} onClick={() => onDownload('pdf')}>
+            <Button size="sm" appearance="outline" className="justify-start" disabled={pdfBusy} onClick={() => onDownload('pdf')}>
               <FileFormatPdf aria-hidden className="size-[15px]" />
-              Tải PDF
+              {pdfJob === 'full' ? 'Đang tạo PDF…' : 'Tải PDF'}
+            </Button>
+            <Button size="sm" appearance="outline" className="justify-start" onClick={() => onDownload('docx-exam')}>
+              <FileText size={15} aria-hidden />
+              Word không đáp án
+            </Button>
+            <Button size="sm" appearance="outline" className="justify-start" disabled={pdfBusy} onClick={() => onDownload('pdf-exam')}>
+              <FileFormatPdf aria-hidden className="size-[15px]" />
+              {pdfJob === 'examOnly' ? 'Đang tạo PDF…' : 'PDF không đáp án'}
             </Button>
           </div>
+          <Button size="sm" appearance="ghost" className="mt-2" onClick={onAnswerKey}>
+            <ListChecks size={15} aria-hidden />
+            Cập nhật đáp án
+          </Button>
         </div>
       )}
 

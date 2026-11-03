@@ -1,7 +1,8 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import { API_BASE_URL, getAccessToken, refreshAfterUnauthorized, request } from '../lib/api'
 
-export type AiAssistantMode = 'ask' | 'compose' | 'mock-exam'
+/** 'revise' is a compose run that rewrites named questions ("Sửa câu 2"); the composer never offers it as a mode. */
+export type AiAssistantMode = 'ask' | 'compose' | 'mock-exam' | 'revise'
 export type AiDifficulty = 'DE' | 'TB' | 'KHO'
 export type AiExamFormat = 'VACT_2025' | 'VACT_2018'
 export type AiDraftSource = 'AI' | 'BANK' | 'MANUAL'
@@ -68,6 +69,13 @@ export interface AiDraftQuestion {
   text: string
   passage?: string | null
   explanation?: string | null
+  /** The AI could not write this question; it holds its place on the exam with `failure` saying why. */
+  failed?: boolean | null
+  failure?: string | null
+  /** A full solution's method ("Phương pháp giải"); absent from a short one. */
+  method?: string | null
+  /** A full solution's reason each wrong option is wrong, by option label. */
+  eliminations?: Record<string, string> | null
   options?: AiQuestionOption[] | null
   sourceQuestionId?: string | null
   /** Set on a question reused from the bank: the paper it came from. */
@@ -117,6 +125,8 @@ export interface AiDraftItem {
   checkResult: AiCheckResult | null
   createdAt?: string
   updatedAt?: string
+  /** Set on this page when the AI rewrote the item ("Sửa câu 2"); grows with each rewrite, never saved. */
+  revision?: number
 }
 
 export interface AiExamDraftRecord {
@@ -153,7 +163,32 @@ export interface AiSendConfig {
   bankRatio?: number
   instruction?: string
   bankSourceId?: string
+  /** Full: method, step-by-step solution and why each wrong option is wrong. Short: a few sentences. */
+  solutionStyle?: AiSolutionStyle
+  /** The questions a revise run rewrites, each with the number the page prints for it. */
+  items?: AiRevisedItem[]
+  /** Ask mode: the exam on the sheet. */
+  document?: AiSheetDocument
 }
+
+/**
+ * A question to rewrite, by the number the sheet prints: its draft item when the AI wrote it, and its words as the
+ * sheet shows them (with the passage above as `context`), which a question the teacher typed alone has.
+ */
+export interface AiRevisedItem {
+  itemId?: string
+  number: number
+  text?: string
+  context?: string
+}
+
+/** The exam on the teacher's sheet, sent with an ask message so the assistant reads what the teacher sees. */
+export interface AiSheetDocument {
+  outline: string
+  questions: Array<{ number: number; text: string }>
+}
+
+export type AiSolutionStyle = 'full' | 'short'
 
 export interface CreateAiConversation {
   title: string
@@ -188,6 +223,9 @@ export type AiStreamEvent =
         pattern?: string | null
         difficulty?: AiDifficulty | string | null
         source?: AiDraftSource | string | null
+        /** A revise run's slot: the question being rewritten, by its printed number. */
+        revise?: boolean
+        number?: number
       }
     }
   | {
@@ -202,6 +240,9 @@ export type AiStreamEvent =
         source: AiDraftSource
         question: AiDraftQuestion
         check?: AiCheckResult | null
+        /** The item was rewritten in place by a revise run; `number` is the "Câu n" it was asked by. */
+        revised?: boolean
+        number?: number
       }
     }
   | {
@@ -220,6 +261,8 @@ export type AiStreamEvent =
       }
     }
   | { type: 'answer'; data: { messageId: string; text: string } }
+  /** A question only the sheet holds, rewritten ("Sửa câu 5"): the page writes it over that question. */
+  | { type: 'rewrite'; data: { number: number; question: AiDraftQuestion; check?: AiCheckResult | null } }
   | {
       type: 'end'
       data: {
@@ -232,7 +275,7 @@ export type AiStreamEvent =
   | { type: 'error'; data: { message: string } }
 
 const BASE = '/api/v1/ai-assistant'
-const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'item', 'answer', 'end', 'error'])
+const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'item', 'rewrite', 'answer', 'end', 'error'])
 const MAX_RETRIES = 5
 const RETRY_MS = 2000
 
@@ -350,6 +393,22 @@ export async function updateAiDraftQuestion(
     `${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/items/${encodeURIComponent(itemId)}/question`,
     { auth: true, method: 'PATCH', body: { question } }
   )
+}
+
+/** A piece of the sheet the teacher selected, rewritten as they ask ("Nhờ AI sửa"); formulas between $...$. */
+export async function rewriteAiSelection(
+  conversationId: string,
+  body: { selection: string; context?: string; instruction: string }
+): Promise<string> {
+  const result = requireData(
+    await request<{ text: string }>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/rewrite`, {
+      auth: true,
+      method: 'POST',
+      body,
+    }),
+    'Trợ lý AI chưa sửa được đoạn này.'
+  )
+  return result.text
 }
 
 export async function setAiDraftItemKept(

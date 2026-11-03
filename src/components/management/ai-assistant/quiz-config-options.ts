@@ -1,5 +1,5 @@
 import type { SelectOption } from '../../console/select-field'
-import type { AiDifficulty } from '../../../services/aiAssistantService'
+import type { AiDifficulty, AiSolutionStyle } from '../../../services/aiAssistantService'
 import { EXAM_FORMATS } from './exam-format'
 
 // The choices of the compose settings, shared by the settings panel and the composer's summary chip.
@@ -31,6 +31,11 @@ export const REUSE_RATIOS: SelectOption[] = [
   { id: '0.4', label: '40%' },
   { id: '0.6', label: '60%' },
   { id: '0.8', label: '80%' },
+]
+
+export const SOLUTION_STYLES: { id: AiSolutionStyle; label: string }[] = [
+  { id: 'full', label: 'Đầy đủ' },
+  { id: 'short', label: 'Gọn' },
 ]
 
 export const FORMAT_OPTIONS: SelectOption[] = EXAM_FORMATS.map((format) => ({

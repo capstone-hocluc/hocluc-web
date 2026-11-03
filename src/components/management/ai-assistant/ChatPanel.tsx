@@ -7,6 +7,7 @@ import { ChevronRight, Clock, Sparkles, SquarePen, X } from '../../console/icons
 import AssistantSources from './chat/AssistantSources'
 import Composer from './Composer'
 import MessageThread from './MessageThread'
+import type { ExamDownload } from './AssistantMessage'
 import StarterSuggestions from './StarterSuggestions'
 import type { AiChatMessage, AiTraceStage } from './exam-format'
 
@@ -44,7 +45,8 @@ interface ChatPanelProps {
   onOpenConversations: () => void
   onPickPrompt: (mode: AiAssistantMode, prompt: string) => void
   /** Downloads the exam on the sheet: a Word file, or the print dialog to save it as PDF. */
-  onDownload: (format: 'docx' | 'pdf') => void
+  onDownload: (format: ExamDownload) => void
+  onAnswerKey: () => void
   onCollapse?: () => void
   onClose?: () => void
   className?: string
@@ -78,6 +80,7 @@ export default function ChatPanel({
   onOpenConversations,
   onPickPrompt,
   onDownload,
+  onAnswerKey,
   onCollapse,
   onClose,
   className = '',
@@ -164,6 +167,7 @@ export default function ChatPanel({
           loading={loading}
           onRegenerate={onRegenerate}
           onDownload={onDownload}
+          onAnswerKey={onAnswerKey}
         />
       )}
 

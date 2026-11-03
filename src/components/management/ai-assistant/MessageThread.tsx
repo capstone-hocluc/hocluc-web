@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Copy } from '../../console/icons'
 import ScrollArea from '../../ui/ScrollArea'
 import { Skeleton } from '../../tailgrids/core/skeleton'
-import AssistantMessage from './AssistantMessage'
+import AssistantMessage, { type ExamDownload } from './AssistantMessage'
 import AiOrb from './AiOrb'
 import StageTrace from './StageTrace'
 import type { AiChatMessage, AiTraceStage } from './exam-format'
@@ -15,6 +15,7 @@ export default function MessageThread({
   loading,
   onRegenerate,
   onDownload,
+  onAnswerKey,
 }: {
   messages: readonly AiChatMessage[]
   pending: boolean
@@ -23,7 +24,8 @@ export default function MessageThread({
   loading: boolean
   onRegenerate: () => void
   /** Downloads the exam on the sheet: a Word file, or the print dialog to save it as PDF. */
-  onDownload: (format: 'docx' | 'pdf') => void
+  onDownload: (format: ExamDownload) => void
+  onAnswerKey: () => void
 }) {
   const scroll = useRef<HTMLDivElement>(null)
 
@@ -60,6 +62,7 @@ export default function MessageThread({
                 message={message}
                 onRegenerate={onRegenerate}
                 onDownload={onDownload}
+                onAnswerKey={onAnswerKey}
               />
             )
           )

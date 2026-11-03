@@ -23,7 +23,10 @@ import {
   type AiDraftResponse,
   type AiExamFormat,
   type AiMessage,
+  type AiRevisedItem,
   type AiSendConfig,
+  type AiSheetDocument,
+  type AiSolutionStyle,
   type AiStreamEvent,
 } from '../services/aiAssistantService'
 import { getBankSources } from '../services/questionBankService'
@@ -39,6 +42,7 @@ import {
   type AiTraceStage,
 } from '../components/management/ai-assistant/exam-format'
 import { liveDraftTail, liveDraftView, type LiveDraft } from '../components/management/exam-doc/live-draft'
+import { revisedNumbers } from '../components/management/ai-assistant/revise-request'
 
 /** Compose settings. No subject: the request names it, and one naming none is for the whole format. */
 export interface AiComposeSettings {
@@ -47,6 +51,8 @@ export interface AiComposeSettings {
   difficulty: AiDifficulty
   bankRatio: number
   bankSourceId: string
+  /** How much of a solution each question carries, and the answer guide after the exam shows. */
+  solutionStyle: AiSolutionStyle
 }
 
 const DEFAULT_SETTINGS: AiComposeSettings = {
@@ -55,9 +61,17 @@ const DEFAULT_SETTINGS: AiComposeSettings = {
   difficulty: 'TB',
   bankRatio: 0.2,
   bankSourceId: '',
+  solutionStyle: 'full',
 }
 
-const AUDIO_MODES: readonly AiAssistantMode[] = ['ask', 'compose', 'mock-exam']
+const AUDIO_MODES: readonly AiAssistantMode[] = ['ask', 'compose', 'mock-exam', 'revise']
+
+/** A question only the sheet holds ("Sửa câu 5" on a typed question), as the AI rewrote it. */
+export interface SheetRewrite {
+  seq: number
+  number: number
+  question: AiDraftQuestion
+}
 
 interface AiRun {
   mode: AiAssistantMode
@@ -88,6 +102,8 @@ const STAGE_TITLES: Record<string, string> = {
   plan: 'Lập ma trận đề',
   write: 'Soạn câu hỏi',
   lookup: 'Tra cứu',
+  revise: 'Sửa câu hỏi',
+  queue: 'Đang chờ đến lượt',
 }
 
 function errorMessage(error: unknown) {
@@ -107,6 +123,8 @@ function titleFromText(text: string) {
 
 function initialStages(mode: AiAssistantMode): AiTraceStage[] {
   if (mode === 'ask') return [{ id: 'lookup', title: STAGE_TITLES.lookup, items: [], state: 'running' }]
+  // A revise run reports its steps under the write stage, retitled.
+  if (mode === 'revise') return [{ id: 'write', title: STAGE_TITLES.revise, items: [], state: 'running' }]
   return [
     { id: 'explore', title: STAGE_TITLES.explore, state: 'running' },
     { id: 'plan', title: STAGE_TITLES.plan, state: 'pending' },
@@ -127,7 +145,7 @@ function withStage(
 
 /** A later stage starting means the ones before it finished. */
 function finishBefore(stages: AiTraceStage[], id: string): AiTraceStage[] {
-  const order = ['explore', 'plan', 'write']
+  const order = ['queue', 'explore', 'plan', 'write']
   const index = order.indexOf(id)
   if (index < 0) return stages
   return stages.map((stage) =>
@@ -157,6 +175,12 @@ const TOOL_LABELS: Record<string, string> = {
   get_pattern: 'Đọc yêu cầu của dạng câu',
   matrix_stats: 'Đếm câu có sẵn trong ngân hàng',
   search_bank_questions: 'Tìm câu mẫu trong ngân hàng',
+  list_draft_questions: 'Xem các câu của đề',
+  get_draft_question: 'Đọc câu trong đề',
+  list_document_questions: 'Xem các câu của đề',
+  get_document_question: 'Đọc câu trong đề',
+  revise_question: 'Viết lại câu',
+  check_question: 'Soát lại câu',
 }
 
 /** A tool call as one plain line: what it did, and at most a short readable hint (a difficulty, a query). */
@@ -165,7 +189,9 @@ function toolLine(data: { tool: string; arguments?: unknown }) {
   const label = TOOL_LABELS[data.tool] ?? (data.tool ? 'Tra cứu dữ liệu' : 'Công cụ')
   const difficulty = typeof args.difficulty === 'string' ? DIFFICULTY_LABELS[args.difficulty as AiDifficulty] : undefined
   const query = typeof args.query === 'string' ? args.query.trim() : ''
-  const detail = difficulty ? `mức ${difficulty.toLowerCase()}` : query ? (query.length > 60 ? `${query.slice(0, 59)}…` : query) : undefined
+  const number = typeof args.number === 'number' ? `câu ${args.number}` : undefined
+  const detail =
+    number ?? (difficulty ? `mức ${difficulty.toLowerCase()}` : query ? (query.length > 60 ? `${query.slice(0, 59)}…` : query) : undefined)
   return { label, detail }
 }
 
@@ -246,6 +272,10 @@ export function useAiAssistant() {
   /** Questions streamed in since the last paint; they reach the draft (and the document) together. */
   const pendingItemsRef = useRef<AiDraftItem[]>([])
   const itemFlushRef = useRef<number | null>(null)
+  /** Counts the questions the AI rewrote on this page (see `AiDraftItem.revision`). */
+  const revisionRef = useRef(0)
+  /** Questions only the sheet holds that the AI rewrote, in order; the page writes each once (by `seq`). */
+  const [rewrites, setRewrites] = useState<SheetRewrite[]>([])
 
   const updateConversations = useCallback((next: AiConversation[]) => {
     conversationsRef.current = next
@@ -348,7 +378,7 @@ export function useAiAssistant() {
 
       if (event.type === 'error') {
         updateRun(null)
-        if (finished && (finished.mode === 'compose' || finished.mode === 'mock-exam')) {
+        if (finished && finished.mode !== 'ask') {
           await refreshDraft(conversationId)
         }
         return
@@ -391,7 +421,9 @@ export function useAiAssistant() {
         {
           id: `summary-${crypto.randomUUID()}`,
           role: 'assistant',
-          body: endSummary(endEvent.data, finished.itemIds.length),
+          body: finished.mode === 'revise'
+            ? `Đã sửa ${finished.itemIds.length} câu.`
+            : endSummary(endEvent.data, finished.itemIds.length),
           createdAt: new Date().toISOString(),
           mode: finished.mode,
           stages: markAllDone(finished.stages),
@@ -411,7 +443,24 @@ export function useAiAssistant() {
         case 'stage': {
           const stageId = current.mode === 'ask' ? 'lookup' : event.data.stage
           let stages = current.stages
-          if (current.mode !== 'ask' && (stageId === 'plan' || stageId === 'write') && event.data.status !== 'done') {
+          if (stageId === 'queue') {
+            // Queued behind other teachers' runs: shown first, the run's own steps wait until it starts.
+            updateRun({
+              ...current,
+              stages: [
+                { id: 'queue', title: STAGE_TITLES.queue, state: 'running', detail: event.data.summary ?? undefined },
+                ...stages
+                  .filter((stage) => stage.id !== 'queue')
+                  .map((stage) => (stage.state === 'running' ? { ...stage, state: 'pending' as const } : stage)),
+              ],
+            })
+            return
+          }
+          if (
+            current.mode !== 'ask' &&
+            (stageId === 'explore' || stageId === 'plan' || stageId === 'write') &&
+            event.data.status !== 'done'
+          ) {
             stages = finishBefore(stages, stageId)
           }
           let detail: string | undefined
@@ -449,7 +498,9 @@ export function useAiAssistant() {
           return
         }
         case 'slot': {
-          const label = `Đang soạn câu ${event.data.index}/${event.data.total}`
+          const label = event.data.revise && event.data.number
+            ? `Đang sửa câu ${event.data.number}`
+            : `Đang soạn câu ${event.data.index}/${event.data.total}`
           const detail = [
             event.data.section,
             event.data.difficulty ? DIFFICULTY_LABELS[event.data.difficulty as AiDifficulty] : null,
@@ -493,6 +544,8 @@ export function useAiAssistant() {
         }
         case 'item': {
           const item = mapStreamItem(event.data)
+          // A rewritten question gets a new revision, so the sheet knows to replace it where it stands.
+          if (event.data.revised) item.revision = ++revisionRef.current
           pendingItemsRef.current.push(item)
           itemFlushRef.current ??= window.setTimeout(flushItems, 250)
           // The checked question replaces the words shown while it was being written.
@@ -509,6 +562,13 @@ export function useAiAssistant() {
                 }
               : {}),
           })
+          return
+        }
+        case 'rewrite': {
+          // A question only the sheet holds, rewritten: the page writes it over that question.
+          const rewrite: SheetRewrite = { seq: ++revisionRef.current, number: event.data.number, question: event.data.question }
+          setRewrites((previous) => [...previous, rewrite])
+          updateRun({ ...current, itemIds: [...current.itemIds, `sheet-${event.data.number}`] })
           return
         }
         case 'answer': {
@@ -796,8 +856,11 @@ export function useAiAssistant() {
   const numberOf = useMemo(() => questionNumbers(paper), [paper])
 
   const buildConfig = useCallback(
-    (text: string): AiSendConfig | undefined => {
-      if (mode === 'ask') return undefined
+    (text: string, revise?: AiRevisedItem[], document?: AiSheetDocument): AiSendConfig | undefined => {
+      if (revise) {
+        return { examFormat: settings.examFormat, solutionStyle: settings.solutionStyle, instruction: text, items: revise }
+      }
+      if (mode === 'ask') return document ? { document } : undefined
       return {
         examFormat: settings.examFormat,
         questionCount: settings.questionCount === 'full' ? 'full' : settings.questionCount,
@@ -807,6 +870,7 @@ export function useAiAssistant() {
           KHO: settings.difficulty === 'KHO' ? 1 : 0,
         },
         bankRatio: settings.bankRatio,
+        solutionStyle: settings.solutionStyle,
         instruction: text,
         ...(mode === 'mock-exam' && settings.bankSourceId
           ? { bankSourceId: settings.bankSourceId }
@@ -856,7 +920,7 @@ export function useAiAssistant() {
   )
 
   const startRun = useCallback(
-    async (text: string, runMode: AiAssistantMode = mode) => {
+    async (text: string, runMode: AiAssistantMode = mode, revise?: AiRevisedItem[], document?: AiSheetDocument) => {
       if (sendingRef.current || runRef.current) return
       sendingRef.current = true
       cancelRequestedRef.current = false
@@ -899,7 +963,8 @@ export function useAiAssistant() {
           draft: null,
         }
         updateRun(initialRun)
-        if (runMode !== 'ask' && draftRef.current) {
+        // A new compose run replaces the draft; a revise run rewrites some of its questions in place.
+        if (runMode !== 'ask' && runMode !== 'revise' && draftRef.current) {
           updateDraft({ ...draftRef.current, items: [] })
         }
 
@@ -909,7 +974,7 @@ export function useAiAssistant() {
         const sent = await sendAiMessage(conversationId, {
           content: text,
           mode: runMode,
-          config: buildConfig(text),
+          config: buildConfig(text, runMode === 'revise' ? revise : undefined, document),
         })
         const running = runRef.current
         if (running) {
@@ -964,19 +1029,47 @@ export function useAiAssistant() {
     ]
   )
 
-  const send = useCallback(() => {
-    const text = value.trim()
-    if (!text || sendingRef.current || runRef.current) return
-    setValue('')
-    void startRun(text)
-  }, [startRun, value])
+  /**
+   * Sends the composer's text. `revise` (the questions "Sửa câu 2" names) makes it a revise run; `document` (the exam
+   * on the sheet) goes with an ask, so the assistant reads what the teacher sees.
+   */
+  const send = useCallback(
+    (extra?: { revise?: AiRevisedItem[]; document?: AiSheetDocument }) => {
+      const text = value.trim()
+      if (!text || sendingRef.current || runRef.current) return
+      setValue('')
+      const revise = extra?.revise
+      void startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document)
+    },
+    [mode, startRun, value]
+  )
+
+  /** A step the page took for the run going on (the answer key written again), shown with the run's own steps. */
+  const addRunStep = useCallback(
+    (label: string, detail?: string) => {
+      const current = runRef.current
+      if (!current) return
+      updateRun({
+        ...current,
+        stages: addTraceItem(current.stages, { id: `step-${crypto.randomUUID()}`, label, detail, state: 'done' }),
+      })
+    },
+    [updateRun]
+  )
 
   const regenerate = useCallback(() => {
     if (sendingRef.current || runRef.current) return
     const lastAssistant = [...messagesRef.current].reverse().find((message) => message.role === 'assistant')
     const lastUser = [...messagesRef.current].reverse().find((message) => message.role === 'user')
     if (!lastUser) return
-    void startRun(lastUser.body, normalizeMode(lastAssistant?.mode) ?? mode)
+    const lastMode = normalizeMode(lastAssistant?.mode) ?? mode
+    // A request to rewrite numbered questions needs those questions looked up again; composing it anew would
+    // replace the whole exam.
+    if (lastMode === 'revise' || revisedNumbers(lastUser.body)) {
+      setNotice('Hãy nhắn lại yêu cầu sửa câu để trợ lý sửa lại.')
+      return
+    }
+    void startRun(lastUser.body, lastMode)
   }, [mode, startRun])
 
   const cancel = useCallback(() => {
@@ -1269,6 +1362,7 @@ export function useAiAssistant() {
     setNotice,
     send,
     regenerate,
+    addRunStep,
     cancel,
     ensureConversation,
     startNew,
@@ -1283,6 +1377,9 @@ export function useAiAssistant() {
     moveItem,
     addManual,
     stages: run?.stages ?? [],
+    /** What the run going on does (ask, compose, mock exam); null when none is. */
+    runMode: run?.mode ?? null,
+    rewrites,
     /** The unit the AI is writing now, shown on the sheet until its checked question arrives. */
     liveDraft: run?.draft ?? null,
     /** The question this run added last, for following the writing on the sheet. */

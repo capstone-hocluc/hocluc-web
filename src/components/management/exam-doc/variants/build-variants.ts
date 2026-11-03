@@ -358,7 +358,9 @@ export function buildVariant(parsed: ParsedExam, settings: VariantSettings, code
       parsed.answerMatch === 'position' ? parsed.answerCells[position] : parsed.answerMatch === 'number' ? cellOf.get(number) : undefined
     return slot ? [{ slot, value: rows[position].answer }] : []
   })
-  const tail = rewriteAnswerTable(parsed.tail, parsed.answerCells, writes)
+  // The solution guide follows the original's numbers and letters, so an exam code goes without it; its answer
+  // table stays, rewritten for the code.
+  const tail = rewriteAnswerTable(parsed.tail, parsed.answerCells, writes).filter((block) => block.attrs?.examKey !== 'guide')
 
   return {
     code,

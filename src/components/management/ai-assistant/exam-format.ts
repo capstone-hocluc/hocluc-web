@@ -60,6 +60,10 @@ export interface ExamPaperQuestion {
   passage: string | null
   options: ExamPaperOption[]
   explanation: string
+  /** "Phương pháp giải" of a full solution; empty for a short one. */
+  method: string
+  /** Why each wrong option is wrong (full solution), by option label. */
+  eliminations: Record<string, string>
   difficulty: AiDifficulty
   patternCode: string | null
   patternName: string | null
@@ -74,6 +78,10 @@ export interface ExamPaperQuestion {
   kept: boolean
   needsReview: boolean
   reasons: string[]
+  /** How many times the AI rewrote the question on this page ("Sửa câu 2"); 0 when it never did. */
+  revision: number
+  /** Why the AI could not write the question, which holds its place and number; null for a written one. */
+  failure: string | null
 }
 
 export interface ExamPaperPart {
@@ -172,6 +180,43 @@ function optionsOf(item: AiDraftItem) {
     })
 }
 
+function eliminationsOf(value: Record<string, string> | null | undefined): Record<string, string> {
+  if (!value || typeof value !== 'object') return {}
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && Boolean(entry[1].trim()))
+  )
+}
+
+const FAILED_REASON = 'trợ lý AI chưa soạn được'
+
+/**
+ * What the exam prints in place of a question the AI could not write: why, and how to get it written. It keeps its
+ * number, so no question goes missing unnoticed.
+ */
+export function failedPrompt(failure: string | null | undefined) {
+  const reason = failure?.trim() || FAILED_REASON
+  return `⚠ CHƯA SOẠN ĐƯỢC CÂU NÀY (${reason}). Nhắn "Sửa câu" kèm số câu này để trợ lý soạn lại.`
+}
+
+/** The group id of a question's own passage (one that belongs to no shared group). */
+export const soloGroupId = (itemId: string) => `solo:${itemId}`
+
+export const isSoloGroup = (groupId: string | null | undefined) => Boolean(groupId?.startsWith('solo:'))
+
+/**
+ * A question outside any group that carries its own passage, figure of it or chart of it (a bank question whose
+ * paper gave it a reading text, a function or rules to work from): a group of its own, so the passage is printed above
+ * it as a shared passage is. Null for a question without one.
+ */
+function soloGroupOf(item: AiDraftItem): ExamPaperGroup | null {
+  if (item.groupKey) return null
+  const passage = item.question.passage?.trim() ? item.question.passage : null
+  const passageImageUrl = item.question.passageImageUrl?.trim() || null
+  const chart = item.question.passageChart ?? null
+  if (!passage && !passageImageUrl && !chart) return null
+  return { id: soloGroupId(item.id), partId: item.sectionCode, instruction: null, passage, passageImageUrl, chart }
+}
+
 /** The draft the backend stores, as the A4 paper prints it. */
 export function buildPaper(
   record: AiExamDraftRecord | null,
@@ -203,6 +248,11 @@ export function buildPaper(
 
   const groupMap = new Map<string, ExamPaperGroup>()
   for (const item of items) {
+    const solo = soloGroupOf(item)
+    if (solo) {
+      groupMap.set(solo.id, solo)
+      continue
+    }
     if (!item.groupKey) continue
     const passageImageUrl = item.question.passageImageUrl?.trim() || null
     const passageChart = item.question.passageChart ?? null
@@ -230,12 +280,14 @@ export function buildPaper(
     .map((item): ExamPaperQuestion => ({
       id: item.id,
       partId: item.sectionCode,
-      groupId: item.groupKey,
+      groupId: item.groupKey ?? (groupMap.has(soloGroupId(item.id)) ? soloGroupId(item.id) : null),
       position: item.position ?? 0,
-      prompt: item.question.text ?? '',
+      prompt: item.question.failed ? failedPrompt(item.question.failure) : (item.question.text ?? ''),
       passage: item.question.passage?.trim() ? item.question.passage : null,
       options: optionsOf(item),
       explanation: item.question.explanation ?? '',
+      method: item.question.method?.trim() ?? '',
+      eliminations: eliminationsOf(item.question.eliminations),
       difficulty: difficultyOf(item.question.difficulty),
       patternCode: item.question.patternCode?.trim() || null,
       patternName: item.question.patternName?.trim() || null,
@@ -247,6 +299,8 @@ export function buildPaper(
       kept: item.kept,
       needsReview: item.checkResult?.needsReview === true,
       reasons: reviewReasons(item.checkResult),
+      revision: item.revision ?? 0,
+      failure: item.question.failed ? item.question.failure?.trim() || FAILED_REASON : null,
     }))
 
   return {
