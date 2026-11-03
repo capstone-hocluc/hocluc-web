@@ -27,9 +27,9 @@ const previewCourses: Course[] = import.meta.env.DEV
     ]
   : []
 
-// One quiet segmented track: plain labels, and the chosen group lifts out as a white pill.
+// One quiet segmented track, square-cornered and borderless: plain labels, the chosen group lifts out in white.
 const triggerClass =
-  'inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-full px-4 text-[0.9375rem]! font-semibold! text-(--muted) transition-[background-color,color,box-shadow] duration-200 hover:text-(--ink) focus-visible:outline-2! focus-visible:-outline-offset-2! data-[state=active]:bg-white data-[state=active]:text-(--ink) data-[state=active]:shadow-[0_1px_2px_rgba(11,35,72,0.1),0_2px_8px_-2px_rgba(11,35,72,0.14)]'
+  'inline-flex h-10 shrink-0 items-center whitespace-nowrap rounded-lg px-4 text-[0.9375rem]! font-semibold! text-(--muted) transition-[background-color,color,box-shadow] duration-200 hover:text-(--ink) focus-visible:outline-2! focus-visible:-outline-offset-2! data-[state=active]:bg-white data-[state=active]:text-(--ink) data-[state=active]:shadow-[0_1px_2px_rgba(11,35,72,0.1),0_2px_8px_-2px_rgba(11,35,72,0.14)]'
 
 const FADE_CLASS = {
   none: '',
@@ -216,7 +216,7 @@ export default function CourseCatalogSection({
 
         <Tabs.Root value={current} onValueChange={onTabChange} className="flex flex-col gap-6">
           {tabs.length > 0 && (
-            <div className="mx-auto w-fit max-w-full overflow-hidden rounded-full border border-(--line) bg-(--blue-soft)">
+            <div className="mx-auto w-fit max-w-full overflow-hidden rounded-xl bg-(--blue-soft)/60">
               <Tabs.List
                 ref={listRef}
                 aria-label="Nhóm khóa học"
