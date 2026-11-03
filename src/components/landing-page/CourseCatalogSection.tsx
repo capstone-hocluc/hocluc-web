@@ -208,7 +208,7 @@ export default function CourseCatalogSection({
     <section className="section courses-section pt-12!" id="khoa-hoc" aria-labelledby="courses-title">
       <div className="container flex flex-col gap-7">
         <div className="section-heading mb-0!">
-          <h2 id="courses-title">Khóa học luyện thi V-ACT</h2>
+          <h2 id="courses-title">Khóa học luyện thi ĐGNL</h2>
           <LandingLink className="text-link" href="/courses">
             Xem tất cả khóa học <Icon name="arrow-up-right" />
           </LandingLink>

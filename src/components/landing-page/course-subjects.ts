@@ -10,20 +10,20 @@ export interface SubjectStyle {
   label: string
   /** Short name for chips. */
   short: string
-  /** Where the subject sits in the V-ACT paper, shown next to the subject's courses. */
+  /** Where the subject sits in the ĐGNL paper, shown next to the subject's courses. */
   part: string
   icon: LandingIconName
   tone: string
   soft: string
 }
 
-/** The V-ACT subjects in exam order, then the shared strategy and practice courses. */
+/** The ĐGNL subjects in exam order, then the shared strategy and practice courses. */
 export const SUBJECTS: SubjectStyle[] = [
   {
     key: 'tieng-viet',
     label: 'Tiếng Việt',
     short: 'Tiếng Việt',
-    part: 'Phần 1 của đề V-ACT · 30 câu',
+    part: 'Phần 1 của đề ĐGNL · 30 câu',
     icon: 'book-open',
     tone: '#a85a17',
     soft: '#fff1dc',
@@ -32,7 +32,7 @@ export const SUBJECTS: SubjectStyle[] = [
     key: 'tieng-anh',
     label: 'Tiếng Anh',
     short: 'Tiếng Anh',
-    part: 'Phần 1 của đề V-ACT · 30 câu',
+    part: 'Phần 1 của đề ĐGNL · 30 câu',
     icon: 'languages',
     tone: '#b94266',
     soft: '#fceaf0',
@@ -41,7 +41,7 @@ export const SUBJECTS: SubjectStyle[] = [
     key: 'toan',
     label: 'Toán học',
     short: 'Toán',
-    part: 'Phần 2 của đề V-ACT · 30 câu',
+    part: 'Phần 2 của đề ĐGNL · 30 câu',
     icon: 'calculator',
     tone: '#087dbd',
     soft: '#e7f5ff',
@@ -50,7 +50,7 @@ export const SUBJECTS: SubjectStyle[] = [
     key: 'logic',
     label: 'Logic & Số liệu',
     short: 'Logic & Số liệu',
-    part: 'Phần 3 của đề V-ACT · 12 câu',
+    part: 'Phần 3 của đề ĐGNL · 12 câu',
     icon: 'chart-column-increasing',
     tone: '#7652bf',
     soft: '#f0ebff',
@@ -59,7 +59,7 @@ export const SUBJECTS: SubjectStyle[] = [
     key: 'khoa-hoc',
     label: 'Suy luận khoa học',
     short: 'Suy luận khoa học',
-    part: 'Phần 3 của đề V-ACT · 18 câu',
+    part: 'Phần 3 của đề ĐGNL · 18 câu',
     icon: 'flask-conical',
     tone: '#27735b',
     soft: '#e8f6ee',
@@ -68,7 +68,7 @@ export const SUBJECTS: SubjectStyle[] = [
     key: 'chung',
     label: 'Chiến lược & Luyện đề',
     short: 'Luyện đề',
-    part: 'Dùng cho toàn bộ bài thi V-ACT',
+    part: 'Dùng cho toàn bộ bài thi ĐGNL',
     icon: 'trending-up',
     tone: '#0b3a82',
     soft: '#edf5ff',

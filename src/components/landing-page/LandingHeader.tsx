@@ -99,7 +99,8 @@ function LandingHeader({ onLanding = true, onSelectCourseTab }: LandingHeaderPro
     <>
       <div className="header-scroll-sentinel" aria-hidden="true" ref={sentinelRef} />
       <header
-        className={`header${solid ? ' is-scrolled' : ''}${menuOpen ? ' is-menu-open' : ''}`}
+        // While the course menu hangs from it, the header takes the menu's colour so the two read as one block.
+        className={`header has-[#courses-nav-panel:not([hidden])]:bg-(--paper)!${solid ? ' is-scrolled' : ''}${menuOpen ? ' is-menu-open' : ''}`}
       >
         <nav className="container nav" aria-label="Điều hướng chính">
           {onLanding ? (
