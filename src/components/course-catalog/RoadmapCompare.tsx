@@ -137,7 +137,7 @@ function PlanCard({
             <li className="flex items-start gap-2">
               <Icon name="check" />
               <span>
-                {subCourses} khóa học thành phần{phases && `, chia ${phases} giai đoạn`}
+                {subCourses} khóa học thành phần{phases && `, chia thành ${phases} giai đoạn`}
               </span>
             </li>
           )}

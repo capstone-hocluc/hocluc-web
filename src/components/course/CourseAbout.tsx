@@ -105,7 +105,7 @@ function Time({ block, startDate }: { block: DescriptionBlock; startDate?: strin
           <span>
             ngày nữa
             <br />
-            khai giảng {courseDate.format(start)}
+            khai giảng vào {courseDate.format(start)}
           </span>
         </div>
       )}

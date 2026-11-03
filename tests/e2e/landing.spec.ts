@@ -156,7 +156,7 @@ test('signup and login actions have matching destinations', async ({ page }) => 
 test('app section introduces the Hocluc app on phones and links to its newest APK', async ({ page }) => {
   await page.goto('/')
   const section = page.locator('#ung-dung')
-  await expect(section.getByRole('heading', { name: 'Học mọi lúc, mọi nơi' })).toBeVisible()
+  await expect(section.getByRole('heading', { name: 'Mở điện thoại là học tiếp' })).toBeVisible()
   await expect(section).not.toContainText('Đang phát triển')
   // The one action is the download: the newest release on GitHub, always the same address.
   await expect(section.getByRole('link')).toHaveCount(1)
@@ -399,8 +399,8 @@ test('support section lists three ways to get help, with the app item leading to
   await page.goto('/')
   const section = page.locator('#ho-tro')
   await expect(section.getByRole('heading', { level: 3 })).toHaveText([
-    'Trao đổi cùng Mentor',
-    'Khám phá cùng gia sư AI',
+    'Hỏi mentor',
+    'Hỏi gia sư AI',
   ])
   const app = section.getByRole('link', { name: /Học trên ứng dụng Hocluc/ })
   await expect(app).toHaveAttribute('href', '#ung-dung')

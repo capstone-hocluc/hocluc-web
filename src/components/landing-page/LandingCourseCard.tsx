@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Course } from '../../services/courseService'
+import { fitFor, prepWeeks } from '../course-catalog/roadmap-compare'
 import Icon from './Icon'
 import LandingLink from './LandingLink'
 import { courseDate, formatCoursePrice, parseCourseDate } from './landing-course-format'
@@ -33,12 +34,15 @@ export default function LandingCourseCard({ course, preview = false }: { course:
   const href = `/courses/${encodeURIComponent(course.id)}`
   const date = parseCourseDate(course.startDate)
   const price = formatCoursePrice(course.price)
+  // The full description is a long sectioned text ("Khoá dành cho ai • …"); a card shows the one line
+  // that says who the roadmap suits, and only falls back to the description when the dates are missing.
+  const summary = fitFor(prepWeeks(course)) ?? course.description
   return (
     <article className="landing-course">
       <CourseCover course={course} />
       <div className="course-info">
         <h3>{preview ? course.title : <LandingLink href={href}>{course.title}</LandingLink>}</h3>
-        {course.description && <p className="course-description">{course.description}</p>}
+        {summary && <p className="course-description">{summary}</p>}
         {date && <p className="course-date">Khai giảng {courseDate.format(date)}</p>}
         <div className="course-bottom">
           <div>

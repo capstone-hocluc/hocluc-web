@@ -67,7 +67,7 @@ function GiftCard({ gift }: { gift: GiftCourse }) {
 function Outcomes({ outcomes }: { outcomes: CourseOutcomeView[] }) {
   return (
     <section className="cd-block" aria-labelledby="cd-outcomes-title">
-      <h2 id="cd-outcomes-title">Học xong bạn sẽ</h2>
+      <h2 id="cd-outcomes-title">Sau khóa học, bạn sẽ</h2>
       <ol className="cd-outcomes">
         {outcomes.map((outcome) => (
           <li key={outcome.id}>
@@ -252,7 +252,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
               <div className="course-empty" role="status">
                 <Icon name="book-open" />
                 <div>
-                  <h3>{status === 'error' ? 'Không thể tải khóa học' : 'Không tìm thấy khóa học'}</h3>
+                  <h3>{status === 'error' ? 'Chưa tải được khóa học' : 'Không tìm thấy khóa học'}</h3>
                   <p>{status === 'error' ? errorMessage : 'Khóa học này không tồn tại hoặc đã ngừng bán.'}</p>
                 </div>
                 {status === 'error' ? (
@@ -268,7 +268,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                   </button>
                 ) : (
                   <button type="button" className="btn btn-secondary" onClick={onBackToCatalog}>
-                    Xem các khóa học
+                    Xem tất cả khóa học
                   </button>
                 )}
               </div>
@@ -399,7 +399,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                         )}
                         {view.bundle && (
                           <p className="-mt-2! text-(length:--small)">
-                            Trọn bộ {view.gifts.length} khóa học, mua một lần học được tất cả.
+                            Trọn bộ {view.gifts.length} khóa học, mua một lần là học được tất cả.
                           </p>
                         )}
                         {buy}
@@ -419,7 +419,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                 <div className="container closing-cta-inner">
                   <div>
                     <h2 id="cd-help-title">
-                      {view.gifts.length > 0 ? 'Chưa chắc lộ trình này hợp với bạn?' : 'Chưa biết nên học phần nào trước?'}
+                      {view.gifts.length > 0 ? 'Chưa chắc lộ trình này có hợp với bạn?' : 'Chưa biết nên bắt đầu từ đâu?'}
                     </h2>
                     <p>Làm bài đánh giá miễn phí để biết phần nào cần ôn trước.</p>
                   </div>

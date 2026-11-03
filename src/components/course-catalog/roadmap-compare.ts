@@ -25,7 +25,7 @@ export function fitFor(weeks: number | null) {
   if (weeks === null) return null
   if (weeks >= 14) return 'Phù hợp nếu bạn muốn ôn sớm, học chắc nền tảng rồi mới luyện đề.'
   if (weeks >= 8) return 'Phù hợp nếu bạn đã có nền cơ bản và cần tăng tốc luyện đề.'
-  return 'Phù hợp nếu bạn cần nước rút, tập trung luyện đề sát ngày thi.'
+  return 'Phù hợp nếu bạn cần ôn nước rút, tập trung luyện đề sát ngày thi.'
 }
 
 /** Shown under the opening date, so it does not repeat "Khai giảng". */
@@ -43,7 +43,7 @@ export type RoadmapBadge = 'suggested' | 'recommended' | 'opening-soon'
 
 export const BADGE_LABELS: Record<RoadmapBadge, string> = {
   suggested: 'Đề xuất cho bạn',
-  recommended: 'Khuyên dùng',
+  recommended: 'Nên chọn',
   'opening-soon': 'Sắp khai giảng',
 }
 
@@ -54,7 +54,7 @@ const OPENING_SOON_DAYS = 30
  * - when the backend suggests roadmaps for this student, those carry "Đề xuất cho bạn" and nothing else
  *   is badged, so the comparison never contradicts the suggestion on the cards above;
  * - otherwise, among roadmaps not owned yet and not opened yet, the one giving the most weeks before
- *   its exam is "Khuyên dùng", and the one opening soonest (within 30 days) is "Sắp khai giảng" when it
+ *   its exam is "Nên chọn", and the one opening soonest (within 30 days) is "Sắp khai giảng" when it
  *   is a different roadmap.
  */
 export function pickBadges(courses: Course[], today: Date) {
