@@ -65,8 +65,9 @@ function moveFocus(event: KeyboardEvent<HTMLElement>) {
   items[next].focus()
 }
 
+// Plain text rows, set like the nav's own links, without icons.
 const itemClass =
-  'flex! min-h-11! w-full items-center gap-3 rounded-xl px-3 py-2 text-[0.9375rem]! font-semibold! whitespace-normal! text-(--ink) hover:bg-(--soft) hover:text-(--ink)! hover:no-underline! focus-visible:bg-(--soft) focus-visible:outline-offset-0!'
+  'flex! min-h-11! w-full items-center gap-3 rounded-xl px-3 py-2 text-[1rem]! font-semibold! whitespace-normal! text-(--ink) hover:bg-(--soft) hover:text-(--ink)! hover:no-underline! focus-visible:bg-(--soft) focus-visible:outline-offset-0!'
 
 interface ListProps {
   data: MenuData | null
@@ -90,10 +91,9 @@ function CourseMenuList({ data, onSelect, onNavigate }: ListProps) {
     onSelect(tab)
   }
 
-  const row = (key: string, icon: ReactNode, label: string, count?: number) => (
+  const row = (key: string, label: string, count?: number) => (
     <li key={key}>
       <a className={itemClass} href={courseTabHref(key)} onClick={choose(key)}>
-        {icon}
         <span className="min-w-0 flex-1">{label}</span>
         {count !== undefined && (
           <span className="shrink-0 text-sm font-medium text-(--muted)">{count} khóa</span>
@@ -106,35 +106,15 @@ function CourseMenuList({ data, onSelect, onNavigate }: ListProps) {
     <>
       {subjects.length > 0 && (
         <ul className="flex flex-col gap-0.5">
-          {subjects.map(({ subject, count }) =>
-            row(
-              subject.key,
-              <span className="flex shrink-0" style={{ color: subject.tone }}>
-                <Icon name={subject.icon} />
-              </span>,
-              subject.label,
-              count
-            )
-          )}
+          {subjects.map(({ subject, count }) => row(subject.key, subject.label, count))}
         </ul>
       )}
       <ul
         className={`flex flex-col gap-0.5 ${subjects.length > 0 ? 'mt-1 border-t border-(--line) pt-1' : ''}`}
       >
-        {showBundles &&
-          row(
-            ROADMAP_TAB,
-            <span className="flex shrink-0 text-(--blue-text)">
-              <Icon name="package" />
-            </span>,
-            'Lộ trình trọn gói',
-            data?.bundles
-          )}
+        {showBundles && row(ROADMAP_TAB, 'Lộ trình trọn gói', data?.bundles)}
         <li>
           <AppLink className={itemClass} href="/courses" onClick={onNavigate}>
-            <span className="flex shrink-0">
-              <Icon name="arrow-right" />
-            </span>
             <span className="min-w-0 flex-1">Xem tất cả khóa học</span>
           </AppLink>
         </li>
@@ -164,10 +144,16 @@ export function CoursesNavMenu({ trigger, onSelect }: MenuProps) {
   const timer = useRef<number | undefined>(undefined)
   // Opened by resting the mouse on it: the first click on the chevron then keeps it open.
   const openedByHover = useRef(false)
+  // The panel hangs from the header's bottom edge, not from the link: this is the space between them, which the
+  // panel's wrapper covers so the mouse can cross it without closing the menu.
+  const [gap, setGap] = useState(8)
 
   const clearTimer = () => window.clearTimeout(timer.current)
   const show = useCallback(() => {
     load()
+    const root = rootRef.current
+    const header = root?.closest('header')
+    if (root && header) setGap(Math.max(0, header.getBoundingClientRect().bottom - root.getBoundingClientRect().bottom))
     setOpen(true)
   }, [load])
   const close = useCallback(() => {
@@ -254,11 +240,13 @@ export function CoursesNavMenu({ trigger, onSelect }: MenuProps) {
         ref={panelRef}
         id="courses-nav-panel"
         hidden={!open}
-        className="absolute top-full -left-3 z-30 pt-2"
+        // -left-5: the panel's padding (p-2) and a row's (px-3) put each label right under the "Khóa học" link.
+        className="absolute top-full -left-5 z-30"
+        style={{ paddingTop: gap }}
       >
         <nav
           aria-label="Khóa học theo môn"
-          className="w-[300px] rounded-2xl border border-(--line) bg-(--paper) p-2 shadow-[0_22px_55px_rgb(11_35_72/16%)]"
+          className="w-[300px] rounded-b-2xl bg-(--paper) p-2 shadow-[0_24px_40px_-20px_rgb(11_58_130/22%)]"
           onKeyDown={moveFocus}
         >
           <CourseMenuList

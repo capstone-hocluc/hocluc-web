@@ -2,12 +2,12 @@ import { closingCta, faq, landingFooterNav } from '../../data/landing-content'
 import Icon from './Icon'
 import LandingLogo from './LandingLogo'
 import AuthLink from './AuthLink'
+import CutoutStage from './CutoutStage'
 import LandingLink from './LandingLink'
 
-// Icon tile and title shared by the three ways to get help. The title is an h3 for the first two, so
-// it needs `!` to beat the landing's element rule for h3.
-const supportTile =
-  'grid size-11 shrink-0 place-items-center rounded-xl bg-(--blue-soft) text-(--blue-text)'
+// The three ways to get help are separate white cards on the section's blue, without icons or outlines; a
+// faint shadow lifts them. The title is an h3 for the first two, so it needs `!` to beat the landing's h3 rule.
+const supportCard = 'rounded-3xl bg-white shadow-[0_10px_30px_-22px_rgba(11,35,72,0.35)]'
 const supportTitle = 'text-[1.125rem]! leading-snug!'
 
 // Where learners can get help understanding a lesson. The photo sits left at desktop width through grid
@@ -21,31 +21,25 @@ export function LearningSupportSection() {
     >
       <div className="container support-layout grid gap-8 lg:grid-cols-2 lg:grid-rows-[auto_1fr] lg:gap-x-16 xl:gap-x-24">
         <h2 id="support-title" className="lg:col-start-2 lg:row-start-1">
-          Bí bài?
+          Bí bài đừng lo.
           <br />
-          Luôn có người cùng gỡ.
+          Có người chỉ cho.
         </h2>
 
-        {/* The image fills its box instead of sizing it, so at desktop width the photo takes the height of
-            the heading and the list beside it. */}
-        <div className="relative aspect-[16/10] overflow-hidden rounded-3xl shadow-[0_30px_60px_-36px_rgba(11,35,72,0.5)] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:aspect-auto">
-          <img
-            src="/landing-v2/assets/mentor-session-v3.webp"
-            srcSet="/landing-v2/assets/mentor-session-v3-800.webp 800w, /landing-v2/assets/mentor-session-v3.webp 1365w"
-            sizes="(max-width: 1023px) 100vw, 580px"
-            alt="Cô giáo hướng dẫn một nam sinh giải bài toán bên bàn học"
-            width={1365}
-            height={1024}
-            loading="lazy"
-            className="absolute inset-0 size-full object-cover"
-          />
-        </div>
+        {/* The teacher, the student and the AI tutor on a tablet stand on the section background, as the hero's
+            students do. */}
+        <CutoutStage
+          src="/landing-v2/assets/cutouts/support-mentor-ai.webp"
+          small="/landing-v2/assets/cutouts/support-mentor-ai-800.webp"
+          width={1527}
+          height={1016}
+          sizes="(max-width: 1023px) 100vw, 580px"
+          alt="Cô giáo chỉ bài cho một nam sinh trên vở, bên cạnh là máy tính bảng mở khung trò chuyện với gia sư AI"
+          className="relative self-center lg:col-start-1 lg:row-span-2 lg:row-start-1"
+        />
 
-        <ul className="support-items flex flex-col divide-y divide-(--line) overflow-hidden rounded-3xl bg-white ring-1 ring-(--line) lg:col-start-2 lg:row-start-2">
-          <li className="flex items-start gap-4 p-5 sm:p-6">
-            <span className={supportTile}>
-              <Icon name="message-circle" />
-            </span>
+        <ul className="support-items flex flex-col gap-3 lg:col-start-2 lg:row-start-2">
+          <li className={`${supportCard} p-5 sm:p-6`}>
             <div className="flex min-w-0 flex-col gap-1.5">
               <h3 className={supportTitle}>Hỏi mentor</h3>
               <p className="text-[0.9375rem] leading-relaxed">
@@ -54,10 +48,7 @@ export function LearningSupportSection() {
               </p>
             </div>
           </li>
-          <li className="flex items-start gap-4 p-5 sm:p-6">
-            <span className={supportTile}>
-              <Icon name="sparkles" />
-            </span>
+          <li className={`${supportCard} p-5 sm:p-6`}>
             <div className="flex min-w-0 flex-col gap-1.5">
               <h3 className={supportTitle}>Hỏi gia sư AI</h3>
               <p className="text-[0.9375rem] leading-relaxed">
@@ -66,14 +57,11 @@ export function LearningSupportSection() {
               </p>
             </div>
           </li>
-          <li>
+          <li className={supportCard}>
             <a
-              className="group flex items-center gap-4 rounded-b-3xl p-5 transition-colors hover:bg-(--soft) focus-visible:-outline-offset-4! sm:p-6"
+              className="group flex items-center gap-4 rounded-3xl p-5 transition-colors hover:bg-(--soft) focus-visible:-outline-offset-4! sm:p-6"
               href="#ung-dung"
             >
-              <span className={supportTile}>
-                <Icon name="smartphone" />
-              </span>
               <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
                 <span className="text-[1.125rem] leading-snug font-semibold tracking-[-0.02em] text-(--ink)">
                   Học trên ứng dụng Hocluc
@@ -126,7 +114,7 @@ export function ClosingCtaSection() {
       <div className="container closing-cta-inner">
         <div>
           <h2 id="closing-cta-title">
-            Sẵn sàng ôn V-ACT?
+            Sẵn sàng ôn ĐGNL?
             <br />
             Bắt đầu ngay hôm nay.
           </h2>
