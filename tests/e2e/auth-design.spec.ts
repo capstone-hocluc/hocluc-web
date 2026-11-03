@@ -65,13 +65,79 @@ test('management form preserves console audience, password visibility and theme 
   await page.locator('#admin-password').press('Enter')
   await expect(page.getByRole('alert')).toHaveText('Thông tin đăng nhập chưa đúng.')
   expect(audience).toBe('CONSOLE')
-  const theme = await page.locator('main').getAttribute('data-auth-theme')
-  await page.locator('.brand-auth-theme').click()
-  await expect(page.locator('main')).toHaveAttribute(
-    'data-auth-theme',
-    theme === 'dark' ? 'light' : 'dark'
-  )
-  await expect(page.locator('.brand-auth-card')).toBeVisible()
+  const html = page.locator('html')
+  const theme = await html.getAttribute('data-theme')
+  await page.getByRole('button', { name: /^Chuyển sang giao diện/ }).click()
+  await expect(html).toHaveAttribute('data-theme', theme === 'dark' ? 'light' : 'dark')
+  await expect(page.locator('[data-auth-card]')).toBeVisible()
+  // The console palette is raised for this page only and dropped again on the way out.
+  await expect(html).toHaveAttribute('data-console', '')
+  await page.getByRole('button', { name: 'Quay lại trang chủ' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(html).not.toHaveAttribute('data-console', /.*/)
+})
+
+test('management form checks the fields before calling the API and focuses the one to fix', async ({
+  page,
+}) => {
+  let loginRequests = 0
+  await page.route('**/api/v1/auth/login', (route) => {
+    loginRequests += 1
+    return route.abort()
+  })
+  await page.goto('/console/login')
+  const email = page.locator('#admin-email')
+  const password = page.locator('#admin-password')
+  const submit = page.getByRole('button', { name: 'Đăng nhập', exact: true })
+  await expect(email).toBeFocused()
+
+  await submit.click()
+  await expect(email).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.locator('#admin-email-error')).toHaveText('Vui lòng nhập email.')
+  await expect(email).toBeFocused()
+
+  await email.fill('not-an-email')
+  await submit.click()
+  await expect(page.locator('#admin-email-error')).toHaveText('Email không hợp lệ.')
+
+  // Editing a field clears its own message.
+  await email.fill('manager@example.test')
+  await expect(page.locator('#admin-email-error')).toBeHidden()
+  await submit.click()
+  await expect(page.locator('#admin-password-error')).toHaveText('Vui lòng nhập mật khẩu.')
+  await expect(password).toBeFocused()
+  expect(loginRequests).toBe(0)
+})
+
+test('management form stays busy while signing in and explains rejected credentials', async ({
+  page,
+}) => {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let loginRequests = 0
+  await page.route('**/api/v1/auth/login', async (route) => {
+    loginRequests += 1
+    await gate
+    await route.fulfill({
+      status: 401,
+      json: { success: false, message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
+    })
+  })
+  await page.goto('/console/login')
+  const password = page.locator('#admin-password')
+  await page.locator('#admin-email').fill('manager@example.test')
+  await password.fill('FixturePass123!')
+  await password.press('Enter')
+  await expect(page.getByRole('button', { name: 'Đang đăng nhập...' })).toBeDisabled()
+  await expect(page.locator('form[aria-busy="true"]')).toBeVisible()
+  await password.press('Enter')
+  release()
+  await expect(page.getByRole('alert')).toHaveText('Email hoặc mật khẩu không đúng.')
+  await expect(password).toBeFocused()
+  await expect(page.getByRole('button', { name: 'Đăng nhập', exact: true })).toBeEnabled()
+  expect(loginRequests).toBe(1)
 })
 
 test('management sign-in rejects a student profile and clears its session', async ({ page }) => {
@@ -112,10 +178,12 @@ test('authentication stays usable across desktop widths and related learner step
     '/console/login',
   ]) {
     await page.goto(path)
+    // The learner steps share the dialog card; the management sign-in is its own console page.
+    const card = page.locator(path === '/console/login' ? '[data-auth-card]' : '.brand-auth-card')
     for (const width of [1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 800 })
-      await expect(page.locator('.brand-auth-card')).toBeVisible()
-      const layout = await page.locator('.brand-auth-card').evaluate((el) => {
+      await expect(card).toBeVisible()
+      const layout = await card.evaluate((el) => {
         const b = el.getBoundingClientRect()
         return {
           overflow: document.documentElement.scrollWidth > innerWidth,
