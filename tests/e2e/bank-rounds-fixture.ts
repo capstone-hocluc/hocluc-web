@@ -71,11 +71,12 @@ const queuedPaper = {
   duplicateCount: 0,
   needsReviewCount: 0,
   unlabelledCount: 0,
+  createdAt: stamp,
   finishedAt: null,
   retryable: false,
 }
 
-/** A question bank with nothing in it yet, and one exam year that has two sittings. */
+/** A question bank with nothing in it yet, and one exam year that has two sittings; papers are loaded in the AI workspace. */
 export async function installBankRoundFixture(page: Page) {
   const state = await installQuizFixture(page, 'STAFF')
   let upload: string | null = null
@@ -105,6 +106,10 @@ export async function installBankRoundFixture(page: Page) {
       json: { success: false, status: 404, message: `Unhandled ${request.method()} ${path}` },
     })
   })
+  // the workspace the paper is loaded in, with no exam composed yet
+  await page.route('**/api/v1/ai-assistant/conversations?*', (route) =>
+    route.fulfill({ json: { success: true, status: 200, message: 'OK', data: emptyPage } })
+  )
   await page.route('**/api/v1/admin/exam-years', async (route) => {
     await route.fulfill({
       json: { success: true, status: 200, message: 'OK', data: [examYear] },

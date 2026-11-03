@@ -258,6 +258,11 @@ interface AiFixtureOptions {
   askAnswer?: string
   /** A compose run already going when the page opens: the draft reports it, with the last event before it began. */
   runningAfter?: string
+  /** Papers loaded into the bank, listed with the exams. */
+  bankSources?: Record<string, unknown>[]
+  /** What a paper's reading answers, and its stream (null: the stream cannot be opened). */
+  bankReading?: (sourceId: string) => unknown
+  bankStream?: (sourceId: string) => string | null
 }
 
 /** The running test's fixture; after the test every request must have had a handler and the page must not have thrown. */
@@ -594,7 +599,87 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
     return unhandled()
   })
 
-  return { quiz, state }
+  // The papers loaded into the bank: listed with the exams, loaded and read in the workspace.
+  const bank = { sources: [...(options.bankSources ?? [])], upload: null as string | null }
+  await page.route('**/api/v1/question-bank/**', async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    const method = request.method()
+    const reply = (data: unknown, status = 200) =>
+      route.fulfill({ status, json: { success: status < 400, status, data, message: 'OK' } })
+    if (path === '/api/v1/question-bank/labelling') return reply({ ready: true, reason: null })
+    if (path === '/api/v1/question-bank/sources') {
+      if (method === 'GET') return reply(bank.sources)
+      bank.upload = request.postData()
+      const queued = bankSource('src-new', 'Đề vừa nạp', 'PENDING')
+      bank.sources = [queued, ...bank.sources]
+      return reply(queued, 202)
+    }
+    const paper = path.match(/^\/api\/v1\/question-bank\/sources\/([^/]+)\/(reading|stream)$/)
+    if (paper && method === 'GET') {
+      const id = decodeURIComponent(paper[1])
+      if (paper[2] === 'reading') return reply(options.bankReading?.(id) ?? bankReading(id, 'PENDING', []))
+      const stream = options.bankStream?.(id) ?? null
+      if (stream === null) return reply(null, 404)
+      return route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: stream })
+    }
+    quiz.unmatched.push(`${method} ${path}`)
+    return reply(null, 501)
+  })
+
+  return { quiz, state, bank }
+}
+
+/** A paper loaded into the bank, as the list of papers shows it. */
+function bankSource(id: string, title: string, status: string, questionCount = 0) {
+  return {
+    id, code: id, title, year: 2021, round: null, answerSource: 'REFERENCE_KEY', status,
+    progress: status === 'DONE' ? null : 'Đang đọc đề', error: null, questionCount, duplicateCount: 0,
+    needsReviewCount: 0, unlabelledCount: 0, createdAt: stamp, finishedAt: status === 'DONE' ? stamp : null, retryable: true,
+  }
+}
+
+const paperQuestion = (number: number, text: string) => ({
+  number, sectionKey: 'P1', groupKey: null, text, explanation: null, subject: null, sourcePage: 1, hasFigure: false,
+  figureIds: [], imageUrl: null, hasFormula: false, confidence: 0.9, reviewNote: null,
+  options: [{ label: 'A', text: '2', correct: true }, { label: 'B', text: '3', correct: false }],
+})
+
+/** What is stored of a paper's reading: one part, the questions read so far. */
+function bankReading(sourceId: string, status: string, questions: ReturnType<typeof paperQuestion>[]) {
+  return {
+    sourceId, status, stage: status === 'DONE' ? 'DONE' : 'QUESTIONS', progress: null, error: null, finished: status === 'DONE',
+    pageCount: 0, groups: [], questions, regions: [],
+    sections: [{ key: 'P1', parentKey: null, title: 'Phần 1', subject: null, suggestedMinutes: null, fromQuestion: 1, toQuestion: 3 }],
+  }
+}
+
+/** A server-sent event stream as the server writes it. */
+const sseEvents = (...events: [string, unknown][]) =>
+  events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join('')
+
+/** An empty bank behind the entry screen; registered after installAiFixture so it answers before its catch-all. */
+async function installBankFixture(page: Page) {
+  await page.route('**/api/v1/question-bank/**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    const ok = (data: unknown) => route.fulfill({ json: { success: true, status: 200, data, message: 'OK' } })
+    if (path.endsWith('/me/scopes')) {
+      return ok({ administrator: false, authorSubjectIds: ['category-1'], reviewerSubjectIds: [] })
+    }
+    if (path.endsWith('/stats')) {
+      return ok({
+        total: 0, needsReview: 0, unlabelled: 0, byPart: {}, byYear: {},
+        byAnswerSource: { PUBLISHED_KEY: 0, REFERENCE_KEY: 0, NONE: 0 }, bySubject: [],
+      })
+    }
+    if (path.endsWith('/patterns')) return ok([])
+    if (path.endsWith('/sources')) return ok([])
+    if (path.endsWith('/labelling')) return ok({ ready: false, reason: 'Chưa cấu hình khoá Jev.' })
+    if (path.endsWith('/questions')) {
+      return ok({ content: [], pageNumber: 0, pageSize: 20, totalElements: 0, totalPages: 0, last: true })
+    }
+    return route.fulfill({ status: 404, json: { success: false, status: 404, message: 'unmatched' } })
+  })
 }
 
 type AiFixtureState = Awaited<ReturnType<typeof installAiFixture>>['state']
@@ -643,12 +728,106 @@ async function chooseStructuredMode(page: Page) {
   await expect(docEditor(page)).toHaveCount(0)
 }
 
-test('the console menu opens the assistant, whose compose settings ask for no subject', async ({ page }) => {
-  const { state } = await installAiFixture(page)
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/console/manager/dashboard')
+/** The read-only sheet a loaded paper is shown on. */
+const readingSheet = (page: Page) => page.locator('[aria-label="Đề đang đọc (chỉ đọc)"]')
 
-  await page.locator('aside nav').getByRole('button', { name: 'Trợ lý AI', exact: true }).click()
+test('a paper is loaded from the workspace and opens there, read as an exam is written', async ({ page }) => {
+  const { bank } = await installAiFixture(page)
+  await page.route('**/api/v1/admin/exam-years', (route) =>
+    route.fulfill({ json: { success: true, status: 200, message: 'OK', data: [] } })
+  )
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant')
+
+  await page.getByRole('button', { name: 'Nạp đề', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog
+    .getByLabel('File đề (PDF)')
+    .setInputFiles({ name: 'de-2021.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') })
+  await dialog.getByRole('button', { name: 'Tiếp tục' }).click()
+  await dialog.getByRole('button', { name: 'Xác nhận nhập' }).click()
+  await expect(dialog).toBeHidden()
+  expect(bank.upload).toContain('de-2021.pdf')
+
+  // the paper takes the sheet's place: same header, the run's progress where the chat was
+  await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('Đề vừa nạp')
+  await expect(page.getByRole('complementary', { name: 'Tiến trình đọc đề' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tiến trình', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Hỏi AI' })).toHaveCount(0)
+
+  // it is listed with the exams, lit as the open one and still waiting to be read
+  const exams = page.getByRole('list', { name: 'Đề của tôi', exact: true })
+  await expect(exams.getByRole('button', { name: 'Đề vừa nạp', exact: true })).toHaveAttribute('aria-current', 'location')
+  await expect(exams.getByRole('listitem').filter({ hasText: 'Đề vừa nạp' }).first()).toContainText('Đang chờ')
+})
+
+test('a paper being read shows on the sheet word by word, with the stages of the run', async ({ page }) => {
+  const writing = sseEvents(
+    ['snapshot', {
+      sourceId: 'src-1', live: true, status: 'RUNNING', stage: 'QUESTIONS', progress: 'Đang đọc Phần 1 (câu 1-3)...', error: null,
+      labelled: 0, labelTotal: 0, reviewed: 0, reviewTotal: 0, rereading: 0, needsPerson: 0,
+      parts: [{ id: '1-3', title: 'Phần 1', fromQuestion: 1, toQuestion: 3, firstPage: 1, lastPage: 1, attempt: 1, status: 'READING', text: '', questions: 0 }],
+    }],
+    ['text', { partId: '1-3', attempt: 1, text: '{"questions": [{"number": 2, "text": "Câu 2: Tính 3 + 4", "options": [{"label": "A", "text": "7"}]}, ' }],
+    ['text', { partId: '1-3', attempt: 1, text: '{"number": 3, "text": "Câu 3: Tìm giá trị lớn nhất của' }],
+  )
+  await installAiFixture(page, 'MANAGER', {
+    bankSources: [bankSource('src-1', 'Đề mẫu 2021', 'RUNNING')],
+    bankReading: (id) => bankReading(id, 'RUNNING', [paperQuestion(1, 'Giải x + 1 = 3')]),
+    bankStream: () => writing,
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant')
+  await page.getByRole('list', { name: 'Đề của tôi', exact: true }).getByRole('button', { name: 'Đề mẫu 2021', exact: true }).click()
+
+  const sheet = readingSheet(page)
+  // the stored question and the one finished in the stream are on the paper, numbered as printed
+  await expect(sheet).toContainText('PHẦN 1')
+  await expect(sheet).toContainText('Câu 1. Giải x + 1 = 3')
+  await expect(sheet).toContainText('Câu 2. Tính 3 + 4')
+  // the one being written shows in the live box the compose run uses
+  const live = sheet.locator('[data-live-draft]')
+  await expect(live).toContainText('AI đang đọc đề…')
+  await expect(live).toContainText('Câu 3. Tìm giá trị lớn nhất của')
+  await expect(sheet).toHaveAttribute('contenteditable', 'false')
+
+  const panel = page.getByRole('complementary', { name: 'Tiến trình đọc đề' })
+  await expect(panel.getByText('AI đang đọc đề', { exact: true })).toBeVisible()
+  await expect(panel.getByText('Đọc câu hỏi')).toBeVisible()
+  await expect(panel.getByText('0/1 phần')).toBeVisible()
+  await expect(panel.getByText('Phần 1 · câu 1–3')).toBeVisible()
+  // the paper's outline hangs under it in the list, its questions by their printed numbers
+  const exams = page.getByRole('list', { name: 'Đề của tôi', exact: true })
+  await expect(exams.getByRole('button', { name: 'Đề mẫu 2021', exact: true })).toHaveAttribute('aria-current', 'location')
+  await expect(exams.getByRole('button', { name: 'Tới câu 1', exact: true })).toBeVisible()
+  await expect(exams.getByRole('button', { name: 'Tới câu 2', exact: true })).toBeVisible()
+})
+
+test('a teacher opens loaded papers in the workspace but cannot load one', async ({ page }) => {
+  await installAiFixture(page, 'TEACHER', {
+    bankSources: [bankSource('src-1', 'Đề mẫu 2021', 'DONE', 1)],
+    bankReading: (id) => bankReading(id, 'DONE', [paperQuestion(1, 'Giải x + 1 = 3')]),
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/teacher/ai-assistant')
+  await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nạp đề', exact: true })).toHaveCount(0)
+
+  const panel = page.getByRole('complementary', { name: 'Mục lục đề thi' })
+  await expect(panel.getByRole('button', { name: 'Nạp đề vào kho', exact: true })).toHaveCount(0)
+  await panel.getByRole('list', { name: 'Đề của tôi', exact: true }).getByRole('button', { name: 'Đề mẫu 2021', exact: true }).click()
+  await expect(readingSheet(page)).toContainText('Câu 1. Giải x + 1 = 3')
+  await expect(page.getByRole('button', { name: 'Gán nhãn' })).toHaveCount(0)
+})
+
+test('the question bank opens the assistant, whose compose settings ask for no subject, and its back control returns to the bank', async ({ page }) => {
+  const { state } = await installAiFixture(page)
+  await installBankFixture(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/question-bank')
+
+  await expect(page.getByRole('button', { name: 'Soạn đề với AI', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Soạn đề với AI', exact: true }).click()
 
   await expect(page).toHaveURL(/\/console\/manager\/ai-assistant$/)
   await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toBeVisible()
@@ -659,6 +838,55 @@ test('the console menu opens the assistant, whose compose settings ask for no su
   await expect(page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })).toHaveAttribute('placeholder', /Soạn 10 câu Toán/)
   await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toBeDisabled()
   expect(state.requests.some((entry) => entry.method === 'GET' && entry.path === `${BASE}/conversations`)).toBe(true)
+
+  await page.getByRole('link', { name: 'Về ngân hàng câu hỏi', exact: true }).click()
+  await expect(page).toHaveURL(/\/console\/manager\/question-bank$/)
+  await expect(page.getByRole('heading', { name: 'Ngân hàng câu hỏi', exact: true })).toBeVisible()
+})
+
+test('a teacher opens the assistant from the bank, and its back control returns to the bank', async ({ page }) => {
+  await installAiFixture(page, 'TEACHER')
+  await installBankFixture(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/teacher/question-bank')
+
+  // A teacher's bank is read-only, but the assistant entry is still offered.
+  await expect(page.getByRole('heading', { name: 'Ngân hàng câu hỏi', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Soạn đề với AI', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Soạn đề với AI', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/console\/teacher\/ai-assistant$/)
+  await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toBeVisible()
+
+  await page.getByRole('link', { name: 'Về ngân hàng câu hỏi', exact: true }).click()
+  await expect(page).toHaveURL(/\/console\/teacher\/question-bank$/)
+  await expect(page.getByRole('heading', { name: 'Ngân hàng câu hỏi', exact: true })).toBeVisible()
+})
+
+test('the assistant entry stays visible after switching to the bank\'s "Đề đã nạp" tab', async ({ page }) => {
+  await installAiFixture(page)
+  await installBankFixture(page)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/question-bank')
+
+  const entry = page.getByRole('button', { name: 'Soạn đề với AI', exact: true })
+  await expect(entry).toBeVisible()
+  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
+  await expect(page.getByRole('tab', { name: 'Đề đã nạp' })).toHaveAttribute('aria-selected', 'true')
+  await expect(entry).toBeVisible()
+})
+
+// MENTOR has no grant for the bank page (src/lib/permissions.ts), so there is no bank screen
+// to carry the button: the route is refused before any assistant entry can be shown.
+test('a role with no bank page is refused the bank instead of seeing the assistant entry', async ({ page }) => {
+  const state = await installQuizFixture(page, 'MENTOR')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/mentor/question-bank')
+
+  await expect(page.getByRole('heading', { name: 'Không có quyền truy cập', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Soạn đề với AI', exact: true })).toHaveCount(0)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
 })
 
 test('a compose run streams its stages and items into the paper', async ({ page }) => {
@@ -933,14 +1161,17 @@ test('opening a saved conversation loads its messages, title and paper', async (
   await expect(page.locator('#exam-question-saved-1')).toContainText('Câu đã lưu trong bản nháp.')
   await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('Đề đã lưu')
 
-  // The conversation list and a new conversation are opened from the chat's own header.
+  // The exams are listed in the left panel, the open one lit with its outline under it; the chat's list button
+  // brings that panel back when it was folded away.
   const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
   await expect(page.getByRole('banner').getByRole('button', { name: 'Cuộc trò chuyện', exact: true })).toHaveCount(0)
+  const exams = page.getByRole('list', { name: 'Đề của tôi', exact: true })
+  await expect(exams.getByRole('button', { name: 'Đề đã lưu', exact: true })).toHaveAttribute('aria-current', 'location')
+  await expect(exams.getByRole('button', { name: 'Tới câu 1', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Thu gọn mục lục', exact: true }).click()
+  await expect(exams).toBeHidden()
   await chat.getByRole('button', { name: 'Cuộc trò chuyện', exact: true }).click()
-  await expect(page.getByLabel('Cuộc trò chuyện trợ lý AI')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Đề đã lưu/ })).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(page.getByLabel('Cuộc trò chuyện trợ lý AI')).toBeHidden()
+  await expect(exams).toBeVisible()
 
   await chat.getByRole('button', { name: 'Cuộc trò chuyện mới', exact: true }).click()
   await expect(page.getByText('Soạn giúp tôi một câu đại số.')).toHaveCount(0)
@@ -1692,7 +1923,7 @@ test('an exam opened while a new exam is still being created never receives the 
 
   // Meanwhile the saved exam is picked in the list; then the new exam's conversation is created.
   await page.getByRole('button', { name: 'Cuộc trò chuyện', exact: true }).click()
-  await page.getByLabel('Cuộc trò chuyện trợ lý AI').getByRole('button', { name: /Đề kiểm tra Toán 10/ }).click()
+  await page.getByLabel('Đề của tôi', { exact: true }).getByRole('button', { name: /Đề kiểm tra Toán 10/ }).click()
   await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue(savedExam.title)
   release()
   await page.waitForTimeout(1_600)

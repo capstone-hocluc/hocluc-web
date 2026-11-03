@@ -5,9 +5,8 @@ test('the round choices of an imported paper include the sample paper and it is 
   page,
 }) => {
   const fixture = await installBankRoundFixture(page)
-  await page.goto('/console/staff/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp', exact: true }).click()
-  await page.getByRole('button', { name: 'Nhập đề', exact: true }).click()
+  await page.goto('/console/staff/ai-assistant')
+  await page.getByRole('button', { name: 'Nạp đề', exact: true }).click()
   const dialog = page.getByRole('dialog')
 
   await dialog

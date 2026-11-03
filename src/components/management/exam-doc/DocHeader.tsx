@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
 import {
@@ -7,6 +8,7 @@ import {
   Check,
   Layers,
   List,
+  ListChecks,
   LoaderCircle,
   Pencil,
   Sparkles,
@@ -27,6 +29,13 @@ interface DocHeaderProps {
   outlineOpen: boolean
   onToggleOutline: () => void
   onNew: () => void
+  /**
+   * `paper`: a loaded paper is shown read-only: no save state, no menus, no exam codes, and the right panel is the
+   * reading's progress instead of the AI chat.
+   */
+  variant?: 'compose' | 'paper'
+  /** Buttons for the open paper, before the panel toggles. */
+  actions?: ReactNode
 }
 
 const PRESSED_CLASS = 'border-primary-text/30 bg-badge-primary-background text-primary-text'
@@ -72,7 +81,10 @@ export default function DocHeader({
   outlineOpen,
   onToggleOutline,
   onNew,
+  variant = 'compose',
+  actions,
 }: DocHeaderProps) {
+  const paper = variant === 'paper'
   const { saveState, saveError, loading, mode, sourceEditor, variantsOpen, setVariantsOpen } =
     useExamDoc()
   const structured = mode === 'STRUCTURED'
@@ -92,8 +104,8 @@ export default function DocHeader({
           event.preventDefault()
           onBack()
         }}
-        aria-label="Về bảng điều khiển"
-        title="Về bảng điều khiển"
+        aria-label="Về ngân hàng câu hỏi"
+        title="Về ngân hàng câu hỏi"
         className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
       >
         <ArrowLeft size={17} strokeWidth={1.7} className="shrink-0" />
@@ -133,8 +145,9 @@ export default function DocHeader({
             placeholder="Đề thi mới"
             className="h-7 max-w-[min(420px,100%)] min-w-[8ch] rounded-md border border-transparent bg-transparent px-2 text-[15px] font-medium text-text-primary outline-none field-sizing-content placeholder:text-text-tertiary hover:border-card-border focus:border-input-primary-focus-border focus:bg-input-background disabled:hover:border-transparent"
           />
-          {!loading && <SaveIndicator state={saveState} error={saveError} />}
+          {!loading && !paper && <SaveIndicator state={saveState} error={saveError} />}
         </div>
+        {!paper && (
         <DocMenubar
           onNew={onNew}
           outlineOpen={outlineOpen}
@@ -142,9 +155,11 @@ export default function DocHeader({
           chatOpen={chatOpen}
           onToggleChat={onToggleChat}
         />
+        )}
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
+        {actions}
         <Button
           appearance="ghost"
           size="sm"
@@ -168,6 +183,7 @@ export default function DocHeader({
           <List size={15} />
           <span className="hidden lg:inline">Mục lục</span>
         </Button>
+        {!paper && (
         <Button
           appearance={variantsOpen ? 'outline' : 'ghost'}
           size="sm"
@@ -185,17 +201,18 @@ export default function DocHeader({
           <Layers size={15} />
           <span className="hidden md:inline">Mã đề</span>
         </Button>
+        )}
         <Button
           appearance={chatOpen ? 'outline' : 'ghost'}
           size="sm"
           aria-pressed={chatOpen}
           onClick={onToggleChat}
-          aria-label="Hỏi AI"
-          title="Hỏi AI"
+          aria-label={paper ? 'Tiến trình' : 'Hỏi AI'}
+          title={paper ? 'Tiến trình' : 'Hỏi AI'}
           className={cn(chatOpen && PRESSED_CLASS)}
         >
-          <Sparkles size={15} />
-          <span className="hidden md:inline">Hỏi AI</span>
+          {paper ? <ListChecks size={15} /> : <Sparkles size={15} />}
+          <span className="hidden md:inline">{paper ? 'Tiến trình' : 'Hỏi AI'}</span>
         </Button>
       </div>
     </header>

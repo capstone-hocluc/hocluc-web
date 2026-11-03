@@ -35,12 +35,24 @@ type Source = Record<string, unknown> & { status: string }
 const source = (status: string, questionCount = 0): Source => ({
   id: 'src-1', code: '2021-mau', title: 'Đề mẫu 2021', year: 2021, round: 'mẫu', answerSource: 'REFERENCE_KEY', status,
   progress: status === 'DONE' ? null : 'Đang đọc đề', error: null, questionCount, duplicateCount: 0, needsReviewCount: 0,
-  unlabelledCount: 0, finishedAt: null, retryable: true,
+  unlabelledCount: 0, createdAt: '2026-10-17T00:00:00Z', finishedAt: null, retryable: true,
 })
 const failed = (retryable: boolean): Source => ({
   ...source('FAILED'), progress: null, retryable,
   error: "The model did not return valid JSON: Unrecognized token '$'",
 })
+
+/** The read-only sheet of the AI workspace a paper opens on, and the run's progress beside it. */
+const readingSheet = (page: Page) => page.locator('[aria-label="Đề đang đọc (chỉ đọc)"]')
+const readingPanel = (page: Page) => page.getByRole('complementary', { name: 'Tiến trình đọc đề' })
+
+/** Opens the first paper of the loaded-papers tab, which shows it in the AI workspace. */
+async function openPaper(page: Page) {
+  await page.goto('/console/staff/question-bank')
+  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
+  await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
+  await expect(page).toHaveURL(/\/console\/staff\/ai-assistant\?paper=src-1$/)
+}
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64')
 const readQuestion = (number: number, text: string) => ({
@@ -136,6 +148,8 @@ async function install(page: Page, role: 'MANAGER' | 'TEACHER' | 'STAFF', source
   })
   // A labelled question reads its subject's active label set (for the taxonomy links) and the lessons
   // that skill teaches. Empty answers keep the label names the question itself already carries.
+  await page.route('**/api/v1/ai-assistant/conversations?*', route =>
+    route.fulfill({ json: { success: true, status: 200, data: { content: [], pageNumber: 0, pageSize: 50, totalElements: 0, totalPages: 1, last: true } } }))
   await page.route('**/api/v1/master-data/**', route => route.fulfill({ json: { success: true, status: 200, data: [] } }))
   await page.route('**/api/v1/authoring/lessons/by-label**', route => route.fulfill({ json: { success: true, status: 200, data: [] } }))
   // The import dialog offers the years the admin has configured, not a free-text year.
@@ -296,35 +310,16 @@ test('a teacher can read the bank but not change a label', async ({ page }) => {
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('staff upload a paper after confirming the AI cost and follow it until it is read', async ({ page }) => {
-  // Empty until the upload, then running for two reads, then read.
-  let readsAfterUpload = 0
-  const fixture = await install(page, 'STAFF', () =>
-    !fixture.upload() ? [] : readsAfterUpload++ < 2 ? [source('RUNNING')] : [source('DONE', 120)]
-  )
+test('staff load papers in the AI workspace, which the loaded-papers tab links to', async ({ page }) => {
+  const fixture = await install(page, 'STAFF')
   await page.goto('/console/staff/question-bank')
   await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
   await expect(page.getByText('Chưa nạp đề nào.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nhập đề' })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Nhập đề' }).click()
-  const dialog = page.getByRole('dialog')
-  await dialog.getByLabel('File đề (PDF)').setInputFiles({ name: 'de-2021.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') })
-  await dialog.getByLabel('File đáp án').setInputFiles({ name: 'dap-an.txt', mimeType: 'text/plain', buffer: Buffer.from('1A 2B') })
-  await dialog.getByRole('button', { name: / Năm$/ }).click()
-  await page.getByRole('option', { name: 'Năm thi 2021', exact: true }).click()
-  await dialog.getByRole('button', { name: 'Tiếp tục' }).click()
-  await expect(dialog.getByText(/tốn token/)).toBeVisible()
-  expect(fixture.upload()).toBeNull()
-
-  await dialog.getByRole('button', { name: 'Xác nhận nhập' }).click()
-  await expect(dialog).toBeHidden()
-  const body = fixture.upload() ?? ''
-  expect(body).toContain('de-2021.pdf')
-  expect(body).toContain('REFERENCE_KEY')
-  await expect(page.getByText('Đang đọc', { exact: true })).toBeVisible()
-  const statsBefore = fixture.seen.filter(entry => entry.endsWith('/stats')).length
-  await expect(page.getByText('Xong', { exact: true })).toBeVisible({ timeout: 15_000 })
-  await expect.poll(() => fixture.seen.filter(entry => entry.endsWith('/stats')).length).toBeGreaterThan(statsBefore)
+  await page.getByRole('button', { name: 'Nạp đề trong Trợ lý AI' }).click()
+  await expect(page).toHaveURL(/\/console\/staff\/ai-assistant$/)
+  await expect(page.getByRole('button', { name: 'Nạp đề', exact: true })).toBeVisible()
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
 })
 
@@ -333,11 +328,11 @@ test('a teacher sees the loaded papers but cannot upload one', async ({ page }) 
   await page.goto('/console/teacher/question-bank')
   await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
   await expect(page.getByText('Xong', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Nhập đề' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Nạp đề trong Trợ lý AI' })).toHaveCount(0)
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('the reading view streams what the AI writes onto the page and lights the pipeline', async ({ page }) => {
+test('a paper being read opens in the workspace, written onto the sheet as the AI reads it', async ({ page }) => {
   // question 1 is written whole, question 2 is still being written when the stream is looked at
   const writing = sse(
     ['snapshot', snapshot(true, 'RUNNING', 'QUESTIONS', [streamPart('READING', '')])],
@@ -345,26 +340,19 @@ test('the reading view streams what the AI writes onto the page and lights the p
     ['text', { partId: '1-2', attempt: 1, text: '"options": [{"label": "A", "text": "2"}]}, {"number": 2, "text": "Tính 2 + 2 bằng' }],
   )
   const { state } = await install(page, 'STAFF', () => [source('RUNNING')], () => reading('RUNNING', []), () => writing)
-  await page.goto('/console/staff/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
-  await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
+  await openPaper(page)
 
-  const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
-  // the reading view is a lazy chunk fetched on first open; the paper then waits for the stored reading
-  await expect(view).toBeVisible({ timeout: 15_000 })
-  const paper = view.getByRole('article', { name: 'Bản đề AI đọc được' })
-  await expect(paper).toBeVisible()
-  // question 2 is the one being written: it is the question followed, and it says who is writing it
-  await expect(paper.getByRole('button', { name: 'Câu 2' })).toHaveAttribute('aria-pressed', 'true')
-  await expect(paper.getByRole('button', { name: 'Câu 2' }).getByText('Luna đang viết')).toBeVisible()
-  await expect(paper.getByText('Tính 2 + 2 bằng')).toBeVisible()
-  await expect(paper.getByText('Giải x + 1 = 3')).toBeVisible()
-  const steps = view.getByRole('list', { name: 'Các bước nạp đề' })
-  await expect(steps.getByRole('listitem').filter({ hasText: 'Cấu trúc' })).toContainText('Xong')
-  await expect(steps.getByRole('listitem').filter({ hasText: 'Câu hỏi' })).toContainText('Đang làm')
-  const pipeline = view.getByLabel('Pipeline nạp đề')
-  await expect(pipeline.getByText('Phần 1 · câu 1–2')).toBeVisible()
-  await expect(view.getByText('Đã kết nối, đang theo dõi AI đọc đề')).toBeVisible()
+  const sheet = readingSheet(page)
+  await expect(sheet).toContainText('Câu 1. Giải x + 1 = 3', { timeout: 15_000 })
+  // question 2 is the one being written: it shows in the live box, numbered as printed
+  const live = sheet.locator('[data-live-draft]')
+  await expect(live).toContainText('AI đang đọc đề…')
+  await expect(live).toContainText('Câu 2. Tính 2 + 2 bằng')
+  const panel = readingPanel(page)
+  await expect(panel.getByText('Đọc cấu trúc đề')).toBeVisible()
+  await expect(panel.getByText('Đọc câu hỏi')).toBeVisible()
+  await expect(panel.getByText('Phần 1 · câu 1–2')).toBeVisible()
+  await expect(panel.getByText('Đã kết nối, đang theo dõi AI đọc đề')).toBeVisible()
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
@@ -377,16 +365,14 @@ test('a stream that ends is not opened again, and the end is told in the log', a
     ['end', { status: 'DONE', error: null }],
   )
   const fixture = await install(page, 'STAFF', () => [source('DONE', 2)], () => reading('DONE', [readQuestion(1, 'Một'), readQuestion(2, 'Hai')]), () => done)
-  await page.goto('/console/staff/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
-  await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
+  await openPaper(page)
 
-  const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
-  await expect(view.getByText('Nạp đề xong')).toBeVisible()
-  await expect(view.getByText('AI viết xong Phần 1 · câu 1–2: 2 câu')).toBeVisible()
+  const panel = readingPanel(page)
+  await expect(panel.getByText('Nạp đề xong')).toBeVisible()
+  await expect(panel.getByText('AI viết xong Phần 1 · câu 1–2: 2 câu')).toBeVisible()
   // every question of the paper was labelled, as the label step shows
-  const steps = view.getByRole('list', { name: 'Các bước nạp đề' })
-  await expect(steps.getByRole('listitem').filter({ hasText: 'Gán nhãn' })).toContainText('2/2')
+  await expect(panel.getByText('2/2 câu')).toBeVisible()
+  await expect(readingSheet(page)).toContainText('Câu 2. Hai')
   // in development React opens it twice (the first is dropped at once); what matters is that it is not opened again
   const opened = fixture.streams()
   await page.waitForTimeout(3000)
@@ -395,15 +381,12 @@ test('a stream that ends is not opened again, and the end is told in the log', a
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
 })
 
-test('without the stream the reading view falls back to asking now and then', async ({ page }) => {
+test('without the stream the workspace falls back to asking now and then', async ({ page }) => {
   const fixture = await install(page, 'STAFF', () => [source('RUNNING')], () => reading('RUNNING', [readQuestion(1, 'Một')]), () => null)
-  await page.goto('/console/staff/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
-  await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
+  await openPaper(page)
 
-  const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
-  await expect(view.getByText(/đang cập nhật 4 giây một lần/)).toBeVisible()
-  await expect(view.getByRole('article', { name: 'Bản đề AI đọc được' }).getByRole('button', { name: 'Câu 1' })).toBeVisible()
+  await expect(readingPanel(page).getByText(/đang cập nhật 4 giây một lần/)).toBeVisible()
+  await expect(readingSheet(page)).toContainText('Câu 1. Một')
   const opened = fixture.streams()
   await page.waitForTimeout(3000)
   expect(fixture.streams()).toBe(opened)
@@ -449,15 +432,13 @@ test('a failed paper loaded before its files were kept opens the upload with its
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
 })
 
-test('the reading view of a failed paper offers to load it again', async ({ page }) => {
+test('a failed paper opened in the workspace offers to load it again', async ({ page }) => {
   const broken = { ...reading('FAILED', []), error: failed(true).error, pageCount: 0, regions: [] }
   const fixture = await install(page, 'STAFF', () => [failed(true)], () => broken, () => storedStream('FAILED', failed(true).error as string))
-  await page.goto('/console/staff/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
-  await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
-  const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
-  await expect(view.getByText(/AI trả về dữ liệu hỏng/)).toBeVisible()
-  await view.getByRole('button', { name: 'Nạp lại' }).click()
+  await openPaper(page)
+  const panel = readingPanel(page)
+  await expect(panel.getByText(/AI trả về dữ liệu hỏng/)).toBeVisible()
+  await panel.getByRole('button', { name: 'Nạp lại' }).click()
   await expect(page.getByRole('heading', { name: 'Nạp lại đề Đề mẫu 2021?' })).toBeVisible()
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
 })
@@ -490,50 +471,50 @@ test('a finished paper with unlabelled questions is labelled after a confirmatio
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
 })
 
-test('a paper opens in the page, not in a popup, and back returns to the list', async ({ page }) => {
+test('a paper opens in the AI workspace, and back returns to the bank', async ({ page }) => {
   const { state } = await install(page, 'STAFF', () => [source('DONE', 2)], () => reading('DONE', [readQuestion(1, 'Một')]))
   await page.goto('/console/staff/question-bank')
   await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
   await page.getByRole('row', { name: /Đề mẫu 2021/ }).click()
 
-  const view = page.getByRole('region', { name: 'Đề Đề mẫu 2021' })
-  await expect(view.getByLabel('Pipeline nạp đề')).toBeVisible()
+  await expect(page).toHaveURL(/\/console\/staff\/ai-assistant\?paper=src-1$/)
+  await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('Đề mẫu 2021')
+  await expect(readingSheet(page)).toContainText('Câu 1. Một')
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByRole('table')).toHaveCount(0)
 
-  await view.getByRole('button', { name: 'Danh sách đề' }).click()
-  await expect(view).toHaveCount(0)
-  await expect(page.getByRole('row', { name: /Đề mẫu 2021/ })).toBeVisible()
+  // the address keeps the paper: a reload opens it again
+  await page.reload()
+  await expect(readingSheet(page)).toContainText('Câu 1. Một')
+
+  await page.getByRole('link', { name: 'Về ngân hàng câu hỏi' }).click()
+  await expect(page).toHaveURL(/\/console\/staff\/question-bank$/)
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('without the PDF the paper is shown as HTML from what the AI read, a question it gave back empty said so', async ({ page }) => {
+test('without the PDF the paper is laid out from what the AI read, a question it gave back empty said so', async ({ page }) => {
   const noPdf = {
     ...reading('DONE', [readQuestion(1, 'Giải phương trình'), { ...readQuestion(2, ''), options: [] }]),
     pageCount: 0, regions: [],
     sections: [{ key: 'P2', parentKey: null, title: 'PHẦN 2. TOÁN HỌC', subject: null, suggestedMinutes: null, fromQuestion: 1, toQuestion: 2 }],
   }
   const { state } = await install(page, 'STAFF', () => [source('DONE', 1)], () => noPdf)
-  await page.goto('/console/staff/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
-  await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
+  await openPaper(page)
 
-  const paper = page.getByRole('article', { name: 'Bản đề AI đọc được' })
-  await expect(paper.getByRole('heading', { name: 'PHẦN 2. TOÁN HỌC' })).toBeVisible()
-  await expect(paper.getByText('Giải phương trình')).toBeVisible()
-  await expect(paper.getByText('(AI chưa đọc được câu này)')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Trang gốc' })).toHaveCount(0)
+  const sheet = readingSheet(page)
+  await expect(sheet).toContainText('PHẦN 2. TOÁN HỌC')
+  await expect(sheet).toContainText('Câu 1. Giải phương trình')
+  await expect(sheet).toContainText('Câu 2. (AI chưa đọc được câu này)')
+  await expect(readingPanel(page).getByRole('tab', { name: 'Trang gốc' })).toBeDisabled()
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('a paper with its PDF is shown as HTML from what the AI read', async ({ page }) => {
+test('a paper with its PDF is laid out from what the AI read, its pages one tab away', async ({ page }) => {
   const { state } = await install(page, 'STAFF', () => [source('DONE', 1)], () => reading('DONE', [readQuestion(1, 'Giải phương trình')]))
-  await page.goto('/console/staff/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
-  await page.getByRole('button', { name: 'Xem AI đọc đề' }).click()
+  await openPaper(page)
 
-  const paper = page.getByRole('article', { name: 'Bản đề AI đọc được' })
-  await expect(paper.getByText('Giải phương trình')).toBeVisible()
+  await expect(readingSheet(page)).toContainText('Câu 1. Giải phương trình')
   await expect(page.getByRole('img', { name: 'Trang 1 của đề' })).toHaveCount(0)
+  await readingPanel(page).getByRole('tab', { name: 'Trang gốc' }).click()
+  await expect(page.getByRole('img', { name: 'Trang 1 của đề' })).toBeVisible()
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })

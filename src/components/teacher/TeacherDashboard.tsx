@@ -107,7 +107,7 @@ function TeacherDashboard({
   ]
   if (allowed && menuPageOf(view) === 'ai-assistant') {
     return (
-      <AiAssistantScreen onBack={() => navigate('dashboard')} backHref={roleHome('TEACHER')} />
+      <AiAssistantScreen onBack={() => navigate('question-bank')} backHref={roleHome('TEACHER').replace('/dashboard', '/question-bank')} />
     )
   }
   return (

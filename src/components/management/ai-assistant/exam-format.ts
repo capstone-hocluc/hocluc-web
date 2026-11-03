@@ -56,6 +56,8 @@ export interface ExamPaperQuestion {
   partId: string
   groupId: string | null
   position: number
+  /** The number printed on the paper it was read from; set only for a loaded paper, whose numbers may skip. */
+  printedNumber?: number
   prompt: string
   passage: string | null
   options: ExamPaperOption[]
@@ -325,10 +327,10 @@ export function questionNumbers(paper: ExamPaper): Map<string, number> {
     paper.questions
       .filter((question) => question.partId === part.id)
       .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
-      .forEach((question) => numbers.set(question.id, next++))
+      .forEach((question) => numbers.set(question.id, question.printedNumber ?? next++))
   }
   for (const question of paper.questions) {
-    if (!numbers.has(question.id)) numbers.set(question.id, next++)
+    if (!numbers.has(question.id)) numbers.set(question.id, question.printedNumber ?? next++)
   }
   return numbers
 }
