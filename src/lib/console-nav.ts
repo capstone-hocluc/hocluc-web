@@ -118,6 +118,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   },
   {
     page: 'ai-assistant',
+    tabOf: 'question-bank',
     label: 'Trợ lý AI',
     icon: Sparkles,
     group: 'training',

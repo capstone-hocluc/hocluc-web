@@ -210,6 +210,34 @@ export const Indent = Extension.create({
   },
 })
 
+export type ParagraphStyle = 'title' | 'subtitle'
+
+/**
+ * The "Tiêu đề" and "Phụ đề" paragraph styles of a word processor: a paragraph attribute (not a heading), so they
+ * stay out of the outline and an exam's own headings keep their levels.
+ */
+export const ParagraphStyles = Extension.create({
+  name: 'paragraphStyles',
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['paragraph'],
+        attributes: {
+          paragraphStyle: {
+            default: null,
+            parseHTML: (element) => {
+              const value = element.getAttribute('data-paragraph-style')
+              return value === 'title' || value === 'subtitle' ? value : null
+            },
+            renderHTML: (attributes) =>
+              attributes.paragraphStyle ? { 'data-paragraph-style': attributes.paragraphStyle } : {},
+          },
+        },
+      },
+    ]
+  },
+})
+
 /** Paragraph line spacing (1.0, 1.15, 1.5, 2.0…), a block attribute like in a word processor, not a text style. */
 export const LineSpacing = Extension.create({
   name: 'lineSpacing',

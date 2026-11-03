@@ -13,6 +13,8 @@ export interface ToolbarOption {
   icon?: LucideIcon
   /** Shows the option in its own typeface (font list). */
   fontFamily?: string
+  /** Shows the option the way it looks on the sheet (paragraph styles). */
+  previewClass?: string
 }
 
 export interface Swatch {
@@ -26,7 +28,7 @@ export const DEFAULT_FONT_FAMILY = 'Times New Roman'
 /** Sizes offered when the size field has moved into the "Thêm công cụ" menu. */
 export const FONT_SIZE_PRESETS = [8, 9, 10, 11, 11.5, 12, 13, 14, 16, 18, 24, 36]
 
-export type BlockStyle = 'paragraph' | 'h1' | 'h2' | 'h3'
+export type BlockStyle = 'paragraph' | 'title' | 'subtitle' | 'h1' | 'h2' | 'h3' | 'h4'
 export type TextAlignValue = 'left' | 'center' | 'right' | 'justify'
 /** Radio value for "no line height set" (Radix radio values are strings). */
 export const LINE_HEIGHT_DEFAULT = 'default'
@@ -36,11 +38,15 @@ export const ZOOM_OPTIONS: ToolbarOption[] = ZOOM_LEVELS.map((level) => ({
   label: `${Math.round(level * 100)}%`,
 }))
 
+// Each style is listed the way it looks on the sheet (sizes scaled down to fit the menu), as a word processor does.
 export const BLOCK_OPTIONS: ToolbarOption[] = [
-  { value: 'paragraph', label: 'Văn bản thường' },
-  { value: 'h1', label: 'Tiêu đề 1' },
-  { value: 'h2', label: 'Tiêu đề 2' },
-  { value: 'h3', label: 'Tiêu đề 3' },
+  { value: 'paragraph', label: 'Văn bản thường', previewClass: 'text-[13px]' },
+  { value: 'title', label: 'Tiêu đề', previewClass: 'text-[24px] leading-none' },
+  { value: 'subtitle', label: 'Phụ đề', previewClass: 'text-[17px] leading-none text-text-tertiary' },
+  { value: 'h1', label: 'Tiêu đề 1', previewClass: 'text-[19px] leading-none font-bold' },
+  { value: 'h2', label: 'Tiêu đề 2', previewClass: 'text-[16px] leading-none font-bold' },
+  { value: 'h3', label: 'Tiêu đề 3', previewClass: 'text-[14px] leading-none font-bold text-text-secondary' },
+  { value: 'h4', label: 'Tiêu đề 4', previewClass: 'text-[13px] leading-none font-semibold italic text-text-tertiary' },
 ]
 
 export const FONT_SIZE_OPTIONS: ToolbarOption[] = FONT_SIZE_PRESETS.map((pt) => ({

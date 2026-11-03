@@ -8,6 +8,10 @@ import type { LiveDraftView } from '../live-draft'
 export interface LiveDraftShown {
   partId: string
   view: LiveDraftView
+  /** The line above the words; "Trợ lý AI đang viết…" when not given. */
+  label?: string
+  /** The printed number of each question, when it is known (a paper being read); "…" otherwise. */
+  numbers?: number[]
 }
 
 export const liveDraftKey = new PluginKey<LiveDraftShown | null>('examLiveDraft')
@@ -19,18 +23,18 @@ function text(tag: string, className: string, content: string) {
   return element
 }
 
-function draftElement({ view }: LiveDraftShown) {
+function draftElement({ view, label = 'Trợ lý AI đang viết…', numbers }: LiveDraftShown) {
   const box = document.createElement('div')
   box.setAttribute('data-live-draft', '')
   box.setAttribute('contenteditable', 'false')
   box.setAttribute('aria-live', 'polite')
   box.className =
     'my-2 select-none rounded-md border border-dashed border-primary-text/35 bg-badge-primary-background/40 px-3 py-2 text-text-secondary'
-  box.append(text('p', 'mb-1 text-[0.85em] font-semibold italic text-primary-text', 'Trợ lý AI đang viết…'))
+  box.append(text('p', 'mb-1 text-[0.85em] font-semibold italic text-primary-text', label))
   if (view.passage) box.append(text('p', 'mb-1 whitespace-pre-line', view.passage))
   view.questions.forEach((question, index) => {
     const stem = text('p', 'mb-0.5', '')
-    stem.append(text('strong', '', 'Câu … '), document.createTextNode(question.stem))
+    stem.append(text('strong', '', numbers?.[index] !== undefined ? `Câu ${numbers[index]}. ` : 'Câu … '), document.createTextNode(question.stem))
     box.append(stem)
     question.options.forEach((option, at) => {
       const line = text('p', 'mb-0.5 pl-4', '')

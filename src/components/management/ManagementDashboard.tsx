@@ -91,7 +91,7 @@ export function ManagementScreen({
     case 'audit-log':
       return <AdminAuditLog />
     case 'question-bank':
-      return <QuestionBankScreen title={title} readOnly={readOnly} />
+      return <QuestionBankScreen title={title} readOnly={readOnly} onNavigate={onNavigate} />
     case 'taxonomy':
       return <MasterDataManagement title={title} reader={readOnly} role={role} />
     case 'exam-years':
@@ -176,8 +176,10 @@ function ManagementDashboard({
   if (page === 'ai-assistant' && canAccessPage(role, page)) {
     return (
       <AiAssistantScreen
-        onBack={() => onNavigate('dashboard')}
-        backHref={roleHome(role)}
+        onBack={() => onNavigate('question-bank')}
+        // The backend lets staff and above load a paper (it costs tokens); a teacher only opens loaded ones.
+        canImport={role === 'STAFF' || role === 'MANAGER' || role === 'ADMINISTRATOR'}
+        backHref={roleHome(role).replace('/dashboard', '/question-bank')}
       />
     )
   }

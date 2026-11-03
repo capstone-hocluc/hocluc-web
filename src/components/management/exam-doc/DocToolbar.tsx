@@ -172,9 +172,11 @@ export default function DocToolbar() {
 
   const setBlock = (value: string) =>
     exec((chain) =>
-      value === 'paragraph'
-        ? chain.setParagraph()
-        : chain.setHeading({ level: Number(value.slice(1)) as 1 | 2 | 3 })
+      value === 'paragraph' || value === 'title' || value === 'subtitle'
+        ? chain
+            .setParagraph()
+            .updateAttributes('paragraph', { paragraphStyle: value === 'paragraph' ? null : value })
+        : chain.setHeading({ level: Number(value.slice(1)) as 1 | 2 | 3 | 4 })
     )
   const setFontFamily = (family: string) => exec((chain) => chain.setFontFamily(family))
   // No focus here: the size field keeps focus while the user tabs on; Enter hands the caret back itself.
@@ -393,6 +395,7 @@ export default function DocToolbar() {
         onDone={focusEditor}
         disabled={off}
         className="w-[132px]"
+        contentClassName="w-[220px]"
       />
       <ToolbarSeparator />
       <ToolbarSelect
@@ -529,7 +532,7 @@ export default function DocToolbar() {
     <div
       role="toolbar"
       aria-label="Công cụ soạn thảo"
-      className="flex h-12 w-full min-w-0 items-center overflow-hidden rounded-full bg-background-gray-secondary px-3"
+      className="flex h-9 w-full min-w-0 items-center overflow-hidden rounded-full bg-background-gray-secondary px-2.5"
     >
       <div ref={rowRef} className="flex w-full min-w-0 items-center">
         {rowGroups.map((group, index) => (
@@ -558,7 +561,7 @@ export default function DocToolbar() {
                   type="button"
                   aria-label="Thêm công cụ"
                   title="Thêm công cụ"
-                  className={cn(controlClass, 'w-8 justify-center')}
+                  className={cn(controlClass, 'w-7 justify-center')}
                 >
                   <EllipsisVertical size={18} strokeWidth={1.75} aria-hidden />
                 </button>

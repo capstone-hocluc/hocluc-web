@@ -217,6 +217,8 @@ export interface BankSource {
   duplicateCount: number
   needsReviewCount: number
   unlabelledCount: number
+  /** When the paper was loaded; a paper still being read has no `finishedAt` yet. */
+  createdAt: string
   finishedAt: string | null
   /** Its files are kept: a failed paper can be read again without uploading them. */
   retryable: boolean
