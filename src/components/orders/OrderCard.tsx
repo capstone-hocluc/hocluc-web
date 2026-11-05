@@ -20,7 +20,11 @@ export default function OrderCard({
           <strong>#{order.orderCode}</strong>
           <OrderStatusBadge status={order.status} />
         </div>
-        <p>{order.items.map((item) => item.courseTitle).join(', ')}</p>
+        <p>
+          {order.items
+            .map((item) => (item.credits ? `${item.courseTitle} (${item.credits} Sao)` : item.courseTitle))
+            .join(', ')}
+        </p>
         <span className="purchase-muted">{formatDate(order.createdAt)}</span>
       </div>
       <div className="purchase-order-side">

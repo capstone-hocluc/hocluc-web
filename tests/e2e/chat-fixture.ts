@@ -165,6 +165,9 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
     const answer = (data: unknown, status = 200, message = 'OK') => route.fulfill({ status,
       contentType: 'application/json', body: JSON.stringify({ success: status < 400, status, message, data }) })
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
+    // Every student page shows the star balance and the streak in its top bar.
+    if (path === '/api/v1/credits/me') return answer({ available: 0, bonus: 0, paid: 0, held: 0 })
+    if (path === '/api/v1/credits/streak') return answer({ current: 0, longest: 0, doneToday: false, freezesAvailable: 0, maxFreezes: 2, freezePrice: 10, today: '2026-11-05', days: [] })
     const contentAttachment = path.match(/attachments\/([^/]+)\/content$/)?.[1]
     if (contentAttachment) {
       if (authorization !== `Bearer ${sentinelAccess}`) return answer(null, 401, 'Access token is required.')

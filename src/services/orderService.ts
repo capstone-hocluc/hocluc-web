@@ -1,9 +1,18 @@
 import { request } from '../lib/api'
 
+/** One order line: a course, or a credit pack (`courseId` null, `creditPackId` and `credits` set). */
 export interface OrderItem {
-  courseId: string
+  courseId: string | null
+  /** The course title, or the pack name. */
   courseTitle: string
   unitPrice: number
+  creditPackId?: string | null
+  credits?: number | null
+}
+
+/** An order that only buys credit packs (it opens no course). */
+export function isCreditPackOrder(order: Pick<Order, 'items'>) {
+  return order.items.length > 0 && order.items.every((item) => Boolean(item.creditPackId))
 }
 
 export interface Order {

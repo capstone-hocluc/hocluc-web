@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/PurchaseLayout'
 import PaymentInstructionsCard from '../../components/payment/PaymentInstructionsCard'
-import { getPaymentData, payOrder, type OrderPaymentData } from '../../services/orderService'
+import { getPaymentData, isCreditPackOrder, payOrder, type OrderPaymentData } from '../../services/orderService'
+import { refreshCredits } from '../../lib/credits'
 import { getErrorMessage } from '../../lib/errors'
 import { canPayOrder, getOrderStatusLabel } from '../../lib/orderStatus'
 import { formatCoursePrice } from '../../lib/courseFormat'
@@ -12,11 +13,14 @@ interface Props {
   orderId: string
   onGoToOrderDetail: () => void
   onGoToMyCourses: () => void
+  /** Where a paid credit-pack order leads. */
+  onGoToWallet: () => void
 }
 export default function PaymentInstructionsPage({
   orderId,
   onGoToOrderDetail,
   onGoToMyCourses,
+  onGoToWallet,
 }: Props) {
   const [data, setData] = useState<OrderPaymentData | null>(null)
   const [error, setError] = useState('')
@@ -103,6 +107,12 @@ export default function PaymentInstructionsPage({
   }
   const order = data?.order
   const pending = order?.status === 'PENDING'
+  const creditOrder = order ? isCreditPackOrder(order) : false
+  const creditOrderPaid = creditOrder && order?.status === 'PAID'
+  // The stars land when the payment is confirmed; show the new balance everywhere.
+  useEffect(() => {
+    if (creditOrderPaid) void refreshCredits()
+  }, [creditOrderPaid])
   const seconds = order?.expiresAt
     ? Math.max(0, Math.ceil((Date.parse(order.expiresAt) - now) / 1000))
     : null
@@ -110,7 +120,7 @@ export default function PaymentInstructionsPage({
     pending && data?.accountNumber && data.paymentCode && data.amount !== null && seconds !== 0
   return (
     <PurchaseLayout
-      title={order?.status === 'PAID' ? 'Thanh toán thành công' : 'Thanh toán khóa học'}
+      title={order?.status === 'PAID' ? 'Thanh toán thành công' : creditOrder ? 'Thanh toán gói Sao' : 'Thanh toán khóa học'}
       step="03 / XÁC NHẬN"
     >
       <button className="purchase-link purchase-back" onClick={onGoToOrderDetail}>
@@ -177,13 +187,15 @@ export default function PaymentInstructionsPage({
               <h2>{getOrderStatusLabel(order.status)}</h2>
               <p>
                 {order.status === 'PAID'
-                  ? 'Quyền học đã được cập nhật cho tài khoản của bạn.'
+                  ? creditOrder
+                    ? 'Sao đã được cộng vào ví của bạn.'
+                    : 'Quyền học đã được cập nhật cho tài khoản của bạn.'
                   : 'Kiểm tra trạng thái đơn trước khi tiếp tục thanh toán.'}
               </p>
               <div className="purchase-actions">
                 {order.status === 'PAID' && (
-                  <button className="btn" onClick={onGoToMyCourses}>
-                    Vào khóa học của tôi
+                  <button className="btn" onClick={creditOrder ? onGoToWallet : onGoToMyCourses}>
+                    {creditOrder ? 'Về ví Sao' : 'Vào khóa học của tôi'}
                   </button>
                 )}
                 {canPayOrder(order.status) && (

@@ -114,6 +114,8 @@ export {
 // Management screens do not use these fallbacks.
 export {
   Calculator,
+  ImagePlus,
+  Snowflake,
   Circle,
   CircleDot,
   CornerDownLeft,

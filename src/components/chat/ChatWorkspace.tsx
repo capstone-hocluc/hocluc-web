@@ -21,11 +21,19 @@ import {
 } from '../../hooks/useChatWorkspace'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
 import type { ChatAttachment, ChatStatus, SendChatMessage } from '../../types/chat'
+import { CreditAmount } from '../credits/CreditIcon'
+import { refreshCredits } from '../../lib/credits'
 import MentorHoursEditor from './MentorHoursEditor'
 export interface ChatWorkspaceProps {
   conversationId?: string
   onSelectConversation: (id?: string) => void
   console?: boolean
+}
+// What happened to the stars a question cost, as the student sees it.
+const creditStatusLabels: Record<'HELD' | 'CAPTURED' | 'RELEASED', string> = {
+  HELD: 'đang tạm giữ, chỉ trừ khi mentor trả lời',
+  CAPTURED: 'đã trừ',
+  RELEASED: 'đã hoàn lại',
 }
 const statusLabels: Record<ChatStatus, string> = {
   OPEN: 'Chờ hỗ trợ',
@@ -583,6 +591,12 @@ export default function ChatWorkspace({
                         <p className={`mt-1 text-xs ${muted}`}>
                           {chat.detail.mentorAvailability?.label || 'Chưa thiết lập lịch hỗ trợ'}
                         </p>
+                        {!isConsole && chat.detail.creditCost ? (
+                          <p className={`mt-1 inline-flex items-center gap-1 text-xs ${muted}`}>
+                            <CreditAmount value={chat.detail.creditCost} size={14} />
+                            {creditStatusLabels[chat.detail.creditStatus ?? 'HELD']}
+                          </p>
+                        ) : null}
                       </>
                     )}
                   </div>
@@ -873,6 +887,8 @@ export default function ChatWorkspace({
       {newRequest && (
         <NewRequest
           field={field}
+          price={chat.capabilities?.questionPrice}
+          balance={chat.capabilities?.balance}
           onCancel={() => guard.requestAction(() => setNewRequest(false))}
           onCreated={(id) => {
             setNewRequest(false)
@@ -927,11 +943,16 @@ export default function ChatWorkspace({
 
 function NewRequest({
   field,
+  price,
+  balance,
   onCancel,
   onCreated,
   renderButton,
 }: {
   field: string
+  /** Credits the question costs and the student's balance, from the chat capabilities. */
+  price?: number
+  balance?: number | null
   onCancel: () => void
   onCreated: (id: string) => void
   renderButton: (props: ComponentProps<typeof StudentButton>) => React.ReactNode
@@ -983,6 +1004,7 @@ function NewRequest({
       const result = await chatService.createConversation(payload)
       if (alive.current && scope.current === chatIdentity()) {
         if (!result.data) throw new Error('Yêu cầu chưa được xác nhận.')
+        void refreshCredits()
         onCreated(result.data.id)
       }
     } catch (cause) {
@@ -1054,6 +1076,15 @@ function NewRequest({
         <p className="text-[13px] text-text-body">
           Bạn có thể đính kèm ảnh hoặc PDF sau khi tạo hội thoại.
         </p>
+        {price !== undefined && price > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-surface-hover px-4 py-3 text-[13px] text-text-body">
+            <span className="inline-flex items-center gap-1.5">
+              Câu hỏi này dùng <CreditAmount value={price} />
+              {balance !== undefined && balance !== null && <span className="text-text-muted">· bạn có {balance.toLocaleString('vi-VN')}</span>}
+            </span>
+            <span className="text-text-muted">Chỉ trừ khi mentor trả lời; sau 24 giờ chưa có trả lời sẽ hoàn lại.</span>
+          </div>
+        )}
         <div className="flex justify-end gap-3">
           {renderButton({
             appearance: 'outline',

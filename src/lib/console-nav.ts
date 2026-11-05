@@ -226,6 +226,14 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     writePermission: 'ORDER_WRITE',
   },
   {
+    page: 'credits',
+    label: 'Sao',
+    icon: Sparkles,
+    group: 'learners',
+    permission: 'ORDER_READ',
+    roles: ['ADMINISTRATOR', 'MANAGER', 'STAFF'],
+  },
+  {
     page: 'students',
     label: 'Học viên',
     icon: GraduationCap,

@@ -3,6 +3,8 @@ export interface ChatPerson { id: string; displayName: string }
 export interface ChatCapabilities {
   canCreate: boolean; canSend?: boolean; reason?: string; attachmentsEnabled: boolean
   maxFileBytes?: number; maxAttachments?: number
+  /** Credits one new question costs, and what the student can spend now (null for mentors). */
+  questionPrice?: number; balance?: number | null
 }
 export interface ChatAttachment { id: string; name: string; mimeType: string; sizeBytes: number }
 export interface ChatContextSnapshot {
@@ -16,6 +18,8 @@ export interface ChatConversation {
   canSend: boolean; sendDisabledReason?: string; assignmentVersion: number
   contextSnapshot?: ChatContextSnapshot
   mentorAvailability?: { isWorkingNow: boolean; label: string }; updatedAt: string
+  /** Credits the question cost; HELD until a mentor answers, then CAPTURED, or RELEASED when refunded. */
+  creditCost?: number | null; creditStatus?: 'HELD' | 'CAPTURED' | 'RELEASED' | null
 }
 // Management endpoints deliberately return metadata, never the transcript or snapshot.
 export type ChatManagementConversation = Omit<ChatConversation, 'contextSnapshot' | 'lastMessagePreview' | 'canSend' | 'sendDisabledReason'>

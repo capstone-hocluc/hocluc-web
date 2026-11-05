@@ -3,6 +3,8 @@ import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
 import { studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
 import StudentChatPage from './StudentChatPage'
+import StudentWalletPage from './StudentWalletPage'
+import StudentAiSolvePage from './StudentAiSolvePage'
 import ChatFeatureGate from '../../components/chat-feature-gate'
 import MascotState from '../../components/common/MascotState'
 import StudentDashboard from './StudentDashboard'
@@ -62,12 +64,15 @@ function StudentRoutes({
         return <ChatFeatureGate><StudentChatPage conversationId={route.conversationId} onSelectConversation={(id) => navigate(studentRoutes.chat(id))} /></ChatFeatureGate>
       case 'schedule':
         return <StudentSchedulePage />
+      case 'wallet':
+        return <StudentWalletPage onOpenPayment={(orderId) => navigate(`/orders/${encodeURIComponent(orderId)}/payment`)} />
+      case 'tutor':
+        return <StudentAiSolvePage onOpenWallet={() => navigate(studentRoutes.wallet())} />
       // Listed in the sidebar, not built yet.
       case 'roadmap':
-      case 'tutor':
         return (
           <MascotState
-            title={route.name === 'roadmap' ? 'Lộ trình của tôi đang phát triển' : 'Gia sư AI đang phát triển'}
+            title="Lộ trình của tôi đang phát triển"
             message="Tính năng này đã có trong kế hoạch và sẽ sớm ra mắt."
           />
         )

@@ -80,8 +80,9 @@ export default function OrderManagement({
           <div className="min-w-40 max-w-72 text-text-tertiary">
             {row.original.items.length
               ? row.original.items.map((item) => (
-                  <span key={item.courseId} className="block truncate">
+                  <span key={item.courseId ?? item.creditPackId ?? item.courseTitle} className="block truncate">
                     {item.courseTitle}
+                    {item.credits ? ` (${item.credits} Sao)` : ''}
                   </span>
                 ))
               : EMPTY}

@@ -22,6 +22,8 @@ import PracticeTestCard from '../../components/student/dashboard/PracticeTestCar
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
+import StreakCard from '../../components/credits/StreakCard'
+import { useCredits } from '../../lib/credits'
 
 const getVisibleCounts = () => {
   if (typeof window === 'undefined') {
@@ -117,7 +119,9 @@ function DashboardContent({
   }, [])
 
   const showComingSoon = () => showMessage('Tính năng đang được phát triển.')
-  const { recentLesson, summary } = vm
+  const { recentLesson } = vm
+  const { streak } = useCredits()
+  const summary = streak ? { ...vm.summary, currentStreak: streak.current } : vm.summary
 
   return (
     <>
@@ -210,6 +214,10 @@ function DashboardContent({
         </div>
 
         <aside className="flex h-full min-w-0 flex-col gap-6">
+          <section className="flex flex-col gap-3.5">
+            <SectionHeader title="Chuỗi học tập" />
+            <StreakCard />
+          </section>
           <section className="flex h-full flex-col gap-3.5">
             <SectionHeader
               title="Hồ sơ năng lực"
