@@ -68,6 +68,7 @@ async function install(page: Page, role: 'STAFF' | 'TEACHER', author = role === 
       })
     if (path.endsWith('/stats'))
       return ok({
+        // the same empty counts answer both the whole bank and ?reviewable=true
         total: 0,
         needsReview: 0,
         unlabelled: 0,

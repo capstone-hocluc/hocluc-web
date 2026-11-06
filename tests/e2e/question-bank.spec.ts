@@ -119,7 +119,12 @@ async function install(page: Page, role: 'MANAGER' | 'TEACHER' | 'STAFF', source
       labelled = true
       return route.fulfill({ status: 202, json: { success: true, status: 202, data: source('PENDING') } })
     }
-    if (url.pathname.endsWith('/stats')) return ok(stats)
+    if (url.pathname.endsWith('/stats')) {
+      if (url.searchParams.get('reviewable') === 'true') {
+        return ok({ ...stats, total: 1, needsReview: 1, unlabelled: 0, bySubject: [{ id: 'category-1', name: 'Toán học', count: 1 }, { id: 'category-2', name: 'Ngữ văn', count: 0 }] })
+      }
+      return ok(stats)
+    }
     if (url.pathname.endsWith('/patterns')) return ok(patterns)
     if (url.pathname.endsWith('/label')) {
       relabelBody = request.postDataJSON()
