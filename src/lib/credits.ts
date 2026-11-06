@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { creditService, type CreditBalance, type CreditEntryType, type StreakView } from '../services/creditService'
+import { AUTH_TOKENS_EVENT, accessTokenIdentity, accessTokenRole } from './api'
 
 /** The unit's name on screen. The product has not settled on one; change it here only. */
 export const CREDIT_UNIT = 'Sao'
@@ -39,6 +40,8 @@ interface CreditState {
 
 let state: CreditState = { balance: null, streak: null, loading: false }
 let loaded = false
+/** Bumped on reset so a request that started for the previous account cannot fill the next one's state. */
+let generation = 0
 const listeners = new Set<() => void>()
 
 function set(next: Partial<CreditState>) {
@@ -51,13 +54,15 @@ function set(next: Partial<CreditState>) {
  * a photo, a freeze); every view of the balance updates together.
  */
 export async function refreshCredits() {
+  const started = generation
   set({ loading: true })
   try {
     const [balance, streak] = await Promise.all([creditService.balance(), creditService.streak()])
+    if (started !== generation) return
     loaded = true
     set({ balance, streak, loading: false })
   } catch {
-    set({ loading: false })
+    if (started === generation) set({ loading: false })
   }
 }
 
@@ -78,4 +83,22 @@ export function useCredits() {
     if (!loaded && !state.loading) void refreshCredits()
   }, [])
   return snapshot
+}
+
+/** Forgets the balance and the streak, so the next account never sees the previous one's. */
+export function resetCredits() {
+  generation++
+  loaded = false
+  set({ balance: null, streak: null, loading: false })
+}
+
+// Logout, an expired session, another account or another active role all start from an empty state.
+if (typeof window !== 'undefined') {
+  let owner = `${accessTokenIdentity()}|${accessTokenRole()}`
+  window.addEventListener(AUTH_TOKENS_EVENT, () => {
+    const next = `${accessTokenIdentity()}|${accessTokenRole()}`
+    if (next === owner) return
+    owner = next
+    resetCredits()
+  })
 }

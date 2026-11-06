@@ -47,7 +47,7 @@ async function install(page: Page, role = 'STUDENT') {
     const method = request.method()
     if (path === '/api/v1/auth/refresh') return answer(null, 401)
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
-    if (path === '/api/v1/notifications') return answer({ content: [], totalElements: 0, isLast: true })
+    if (path === '/api/v1/notifications') return answer({ content: [], totalElements: 0, last: true })
     if (path === '/api/v1/users/profiles')
       return answer({ id: USER, role, roles: [role], displayName: 'Học sinh', firstName: 'Học', lastName: 'Sinh',
         email: 'student@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
@@ -61,7 +61,7 @@ async function install(page: Page, role = 'STUDENT') {
         { id: 'h1', type: 'PURCHASE', amount: 30, balanceAfter: 42, refType: 'ORDER', refId: ORDER, expiresAt: null, note: 'Gói 50', createdAt: stamp },
         { id: 'h2', type: 'HOLD', amount: -10, balanceAfter: 12, refType: 'CHAT_QUESTION', refId: 'c1', expiresAt: null, note: null, createdAt: stamp },
         { id: 'h3', type: 'EARN_STREAK', amount: 1, balanceAfter: 22, refType: 'STREAK_DAY', refId: '2026-11-04', expiresAt: '2027-02-02T03:00:00Z', note: null, createdAt: stamp },
-      ], pageNumber: 0, pageSize: 20, totalElements: 3, totalPages: 1, isLast: true })
+      ], pageNumber: 0, pageSize: 20, totalElements: 3, totalPages: 1, last: true })
     if (path === '/api/v1/credits/packs')
       return answer([
         { id: 'p1', code: 'STARTER', name: 'Gói 50', credits: 50, price: 49000, active: true, displayOrder: 1 },
@@ -90,7 +90,7 @@ async function install(page: Page, role = 'STUDENT') {
           steps: ['Tính $\\Delta = 25 - 24 = 1$', 'Nghiệm $x = \\dfrac{5 \\pm 1}{2}$'], answer: '$x = 2$ hoặc $x = 3$' } })
     }
     if (path === '/api/v1/student/ai/requests')
-      return answer({ content: [], pageNumber: 0, pageSize: 20, totalElements: 0, totalPages: 0, isLast: true })
+      return answer({ content: [], pageNumber: 0, pageSize: 20, totalElements: 0, totalPages: 0, last: true })
     if (path === '/api/v1/admin/credit-packs' && method === 'GET')
       return answer([{ id: 'p1', code: 'STARTER', name: 'Gói 50', credits: 50, price: 49000, active: false, displayOrder: 1 }])
     if (path === '/api/v1/admin/credit-packs/p1' && method === 'PUT') {
@@ -105,7 +105,7 @@ async function install(page: Page, role = 'STUDENT') {
     if (path === '/api/v1/admin/credits/users/student-1/history')
       return answer({ content: [{ id: 'a1', type: 'PURCHASE', bonusDelta: 0, paidDelta: 10, heldDelta: 0, balanceAfter: 15,
         refType: 'ORDER', refId: ORDER, expiresAt: null, note: 'Gói 50', actorId: null, createdAt: stamp }],
-        pageNumber: 0, pageSize: 20, totalElements: 1, totalPages: 1, isLast: true })
+        pageNumber: 0, pageSize: 20, totalElements: 1, totalPages: 1, last: true })
     if (path === '/api/v1/admin/credits/users/student-1/adjust' && method === 'POST') {
       state.adminWrites.push({ method, path, body: request.postDataJSON() })
       return answer({ available: 20, bonus: 10, paid: 10, held: 0 })
@@ -132,6 +132,7 @@ test('wallet shows the balance, the packs and the history, and a pack opens its 
   await expect(page.getByRole('button', { name: '42 Sao' })).toBeVisible()
   await expect(page.getByText('12 Sao thưởng · 30 Sao đã mua')).toBeVisible()
   await expect(page.getByText('Tạm giữ · Hỏi mentor')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Xem thêm' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '99.000đ' })).toBeVisible()
   await page.screenshot({ path: 'test-results/credits-wallet.png', fullPage: true })
 

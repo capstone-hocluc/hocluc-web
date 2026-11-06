@@ -157,7 +157,7 @@ function History() {
         if (cancelled) return
         setRows(result.content)
         setPage(0)
-        setLast(result.isLast)
+        setLast(result.last)
         setError(null)
       })
       .catch((e) => !cancelled && setError(getErrorMessage(e)))
@@ -172,7 +172,7 @@ function History() {
       const result = await creditService.history(page + 1, 20)
       setRows((current) => [...(current ?? []), ...result.content])
       setPage(page + 1)
-      setLast(result.isLast)
+      setLast(result.last)
     } catch (e) {
       setError(getErrorMessage(e))
     } finally {

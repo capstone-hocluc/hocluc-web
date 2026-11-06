@@ -40,7 +40,7 @@ export interface PageResult<T> {
   pageSize: number
   totalElements: number
   totalPages: number
-  isLast: boolean
+  last: boolean
 }
 
 export interface CreditPack {
