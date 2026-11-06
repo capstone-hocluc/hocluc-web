@@ -88,6 +88,8 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     icon: ListTree,
     group: 'training',
     permission: 'TAXONOMY_WRITE',
+    // A teacher teaches: the exam framework and the bank are kept by staff.
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
   },
   {
     page: 'exam-years',
@@ -113,8 +115,8 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     icon: FileQuestion,
     group: 'training',
     permission: ['CONTENT_WRITE', 'QUIZ_READ'],
-    // The BE lets STAFF and above correct a label; a teacher only browses.
     writePermission: 'BANK_AUTHOR',
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
   },
   {
     page: 'ai-assistant',
@@ -123,7 +125,16 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     icon: Sparkles,
     group: 'training',
     permission: ['CONTENT_WRITE', 'QUIZ_READ'],
-    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER'],
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
+  },
+  {
+    // A teacher has no bank page to reach the assistant through, so it is a menu entry of its own.
+    page: 'ai-assistant',
+    label: 'Trợ lý AI',
+    icon: Sparkles,
+    group: 'training',
+    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
+    roles: ['TEACHER'],
   },
   {
     page: 'quizzes',

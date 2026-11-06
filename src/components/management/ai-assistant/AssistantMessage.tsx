@@ -8,6 +8,7 @@ import {
   FileText,
   ListChecks,
   RotateCcw,
+  Square,
   XCircle,
   type LucideIcon,
 } from '../../console/icons'
@@ -34,9 +35,15 @@ export default function AssistantMessage({
   onRegenerate,
   onDownload,
   onAnswerKey,
+  onRetry,
+  onChooseSubject,
 }: {
   message: AiChatMessage
   onRegenerate: () => void
+  /** Sends the words of a failed send again. */
+  onRetry: (messageId: string) => void
+  /** Answers the question "Bạn muốn soạn môn nào?" with a subject. */
+  onChooseSubject: (messageId: string, subjectName: string | null) => void
   /** Word or PDF of the exam with its answer key, or Word of the exam alone ('docx-exam'). */
   onDownload: (format: ExamDownload) => void
   /** Writes the answer key after the exam again from the questions it holds now. */
@@ -50,7 +57,8 @@ export default function AssistantMessage({
   const hasTrace = Boolean(message.trace?.length)
   const addedIds = message.addedItemIds ?? []
   // A compose or mock-exam answer that finished (not an error): its exam is ready to take away.
-  const composed = !message.error && (message.mode === 'compose' || message.mode === 'mock-exam' || message.mode === 'revise')
+  const asking = Boolean(message.subjectChoices)
+  const composed = !message.error && !asking && (message.mode === 'compose' || message.mode === 'mock-exam' || message.mode === 'revise')
   const revised = message.mode === 'revise'
 
   async function copy() {
@@ -143,17 +151,52 @@ export default function AssistantMessage({
 
       {hasStages && <StageTrace stages={message.stages!} />}
 
+      {message.subjectChoices && (
+        <ul aria-label="Chọn môn" className="mt-3 flex flex-wrap gap-2">
+          {[
+            ...(message.subjectChoices.whole ? [{ id: 'whole', name: 'Cả đề', value: null }] : []),
+            ...message.subjectChoices.subjects.map((subject) => ({ ...subject, value: subject.name })),
+          ].map((choice) => (
+            <li key={choice.id}>
+              <button
+                type="button"
+                onClick={() => onChooseSubject(message.id, choice.value)}
+                className="rounded-full border border-card-border bg-card-background px-3 py-1.5 text-[13px] font-medium text-text-primary transition-colors hover:border-input-primary-focus-border hover:bg-background-gray-secondary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
+              >
+                {choice.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {/* A finished exam is one step from the teacher's hands: the questions are already on the sheet beside, so the
           card offers the files rather than a jump to them. */}
-      {composed && (
+      {message.stopped && addedIds.length === 0 && (
+        <p className="mt-4 flex items-center gap-2 text-sm font-medium text-text-primary">
+          <Square size={14} className="shrink-0 text-icon-tertiary" aria-hidden />
+          Đã dừng
+        </p>
+      )}
+
+      {composed && (message.stopped ? addedIds.length > 0 : true) && (
         <div className="mt-4 rounded-xl border border-card-border bg-card-background p-3">
-          {addedIds.length > 0 && (
+          {message.stopped ? (
             <div className="mb-2.5 flex items-start gap-2">
-              <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-badge-success-text" aria-hidden />
+              <Square size={14} className="mt-1 shrink-0 text-icon-tertiary" aria-hidden />
               <p className="min-w-0 flex-1 text-sm font-medium text-text-primary">
-                {revised ? `Đã sửa ${addedIds.length} câu trong đề` : `Đã thêm ${addedIds.length} câu vào đề`}
+                {addedIds.length > 0 ? `Đã dừng · giữ ${addedIds.length} câu đã soạn` : 'Đã dừng'}
               </p>
             </div>
+          ) : (
+            addedIds.length > 0 && (
+              <div className="mb-2.5 flex items-start gap-2">
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-badge-success-text" aria-hidden />
+                <p className="min-w-0 flex-1 text-sm font-medium text-text-primary">
+                  {revised ? `Đã sửa ${addedIds.length} câu trong đề` : `Đã thêm ${addedIds.length} câu vào đề`}
+                </p>
+              </div>
+            )
           )}
           {/* Two by two: the exam with its key, then the exam alone. */}
           <div className="grid grid-cols-2 gap-2">
@@ -189,8 +232,14 @@ export default function AssistantMessage({
             onClick={() => void copy()}
           />
         )}
-        {!message.error && (
+        {!message.error && !asking && (
           <ActionButton icon={RotateCcw} label="Tạo lại câu trả lời" onClick={onRegenerate} />
+        )}
+        {message.error && message.retryText && (
+          <Button size="sm" appearance="outline" onClick={() => onRetry(message.id)}>
+            <RotateCcw size={14} aria-hidden />
+            Thử lại
+          </Button>
         )}
       </div>
     </article>

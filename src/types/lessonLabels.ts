@@ -111,3 +111,50 @@ export type FindLessonsByLabelQuery =
 export type LessonSuggestionsQuery =
   | { microSkillCode: string; skillCode?: string }
   | { skillCode: string; microSkillCode?: string }
+
+export type SkillSuggestionStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED'
+
+/** A skill Jev or the model suggested for a lesson; accepting adds it to the lesson's skills. */
+export interface LessonSkillSuggestion {
+  id: string
+  lessonId: string
+  lessonTitle: string
+  chapterId: string
+  chapterTitle: string
+  skillCode: string
+  /** Null when the subject's active label set no longer has the code. */
+  skillName: string | null
+  masterDataVersionId: string
+  /** 0..1 */
+  confidence: number
+  source: 'JEV' | 'LLM'
+  status: SkillSuggestionStatus
+  decidedById: string | null
+  decidedAt: string | null
+  createdAt: string
+}
+
+/** A course's suggestion run, as the AI job queue reports it. */
+export interface SkillSuggestionRun {
+  jobId: string
+  status: 'PENDING' | 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED'
+  progress: string | null
+  error: string | null
+  createdAt: string
+  startedAt: string | null
+  finishedAt: string | null
+}
+
+export interface CourseSkillSuggestions {
+  courseId: string
+  /** Null before the course's first run. */
+  run: SkillSuggestionRun | null
+  /** Course order: chapters, then lessons, the most likely first within a lesson. */
+  suggestions: LessonSkillSuggestion[]
+}
+
+export interface AcceptSkillSuggestionsResult {
+  accepted: number
+  /** Lessons whose labels refused their suggestions; those stay pending. */
+  skipped: { lessonId: string; lessonTitle: string; skillCodes: string[]; reason: string }[]
+}

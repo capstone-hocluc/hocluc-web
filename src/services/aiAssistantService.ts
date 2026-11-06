@@ -90,14 +90,52 @@ export interface AiDraftQuestion {
   passageChart?: AiChart | null
 }
 
-/** Chart data as the server checked it: a bar, line or pie chart over labelled categories. */
-export interface AiChart {
+/**
+ * Chart data as the server checked it (`ai/compose/ChartSpec` on the backend reads the same JSON, field for field):
+ * - bar, line, pie: numbers over labelled categories, one value per category in every series.
+ * - function: the graph of one to three functions y = f(x) in the window xMin..xMax by yMin..yMax, with optional
+ *   labelled points and asymptotes ({ x: a } is the vertical line x = a, { y: b } the horizontal line y = b), all inside
+ *   the window. An expression uses x, numbers with a decimal point, + - * / ^, parentheses, sqrt abs sin cos tan ln
+ *   log exp (argument in parentheses), pi and e; ^ groups to the right and binds tighter than a leading minus
+ *   (-x^2 is -(x^2)); a product may leave out its * before a name or "(" (2x, 3(x+1), x sin(x)) and then reads like *
+ *   and /, left to right; log is base 10, ln natural.
+ * - variation: a variation table (bảng biến thiên). `xValues` (2 to 9, increasing, "-∞" first and "+∞" last when
+ *   there) head the columns; `signs` is the f'(x) row read left to right, at xValues[0], on the interval to
+ *   xValues[1], at xValues[1], and so on (one entry fewer than twice the x values): "", "0" or "||" (undefined) at an
+ *   x value, "+", "-" or "0" on an interval; `values` holds f, or its limit, at each x value: "||" where f is
+ *   undefined, "a||b" there with its limit a from the left and b from the right. The arrows follow the signs. `name`
+ *   ("f", or "y" for the rows y' and y) names the function.
+ */
+export type AiChart = AiDataChart | AiFunctionChart | AiVariationChart
+
+export interface AiDataChart {
   type: 'bar' | 'line' | 'pie'
   title?: string
   xLabel?: string
   yLabel?: string
   categories: string[]
   series: { name: string; values: number[] }[]
+}
+
+export interface AiFunctionChart {
+  type: 'function'
+  title?: string
+  xMin: number
+  xMax: number
+  yMin: number
+  yMax: number
+  functions: { expression: string; label?: string }[]
+  points?: { x: number; y: number; label?: string }[]
+  asymptotes?: ({ x: number } | { y: number })[]
+}
+
+export interface AiVariationChart {
+  type: 'variation'
+  title?: string
+  name?: string
+  xValues: string[]
+  signs: string[]
+  values: string[]
 }
 
 export interface AiCheckResult {
@@ -207,6 +245,8 @@ export type AiStreamEvent =
         cells?: number | null
         degraded?: boolean | null
         mimic?: boolean | null
+        /** What the plan changed about the request, e.g. a count cut to the exam's size. */
+        notes?: string[] | null
       }
     }
   | { type: 'tool'; data: { tool: string; iteration?: number | null; arguments?: unknown } }
@@ -449,6 +489,84 @@ export async function removeAiDraftItem(conversationId: string, itemId: string):
   await request(
     `${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/items/${encodeURIComponent(itemId)}`,
     { auth: true, method: 'DELETE' }
+  )
+}
+
+/** Where a draft question stands with the question bank: its subject there and the bank question it became. */
+export interface AiBankLink {
+  itemId: string
+  /** Null when no subject is known for the question: it cannot be saved. */
+  subjectId: string | null
+  /** Null until the question is saved to the bank. */
+  questionId: string | null
+}
+
+export type AiBankResult = 'SAVED' | 'ALREADY_SAVED' | 'SKIPPED'
+
+/** One draft question after "Lưu vào ngân hàng": the bank question it is, or why it was left out. */
+export interface AiBankItem {
+  itemId: string
+  result: AiBankResult
+  questionId: string | null
+  reason: string | null
+}
+
+export async function getAiDraftBankLinks(conversationId: string): Promise<AiBankLink[]> {
+  const result = requireData(
+    await request<{ items: AiBankLink[] }>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/bank`, {
+      auth: true,
+    }),
+    'Không tải được trạng thái lưu vào ngân hàng.'
+  )
+  return result.items ?? []
+}
+
+/** Saves the questions to the bank, in review; without `itemIds`, every question the draft keeps. */
+export async function saveAiDraftToBank(conversationId: string, itemIds?: string[]): Promise<AiBankItem[]> {
+  const result = requireData(
+    await request<{ items: AiBankItem[] }>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/bank`, {
+      auth: true,
+      method: 'POST',
+      body: itemIds ? { itemIds } : {},
+      timeoutMs: 120_000,
+    }),
+    'Không lưu được câu hỏi vào ngân hàng.'
+  )
+  return result.items ?? []
+}
+
+export type AiQuizTarget = 'EXAM' | 'CHAPTER' | 'LESSON' | 'QUICK'
+
+/** Where the new quiz hangs (EXAM: a main course; CHAPTER: a chapter; LESSON, QUICK: a lesson) and what it takes. */
+export interface AiQuizExport {
+  type: AiQuizTarget
+  courseId?: string
+  chapterId?: string
+  lessonId?: string
+  title?: string
+  durationMinutes?: number
+  /** Without it, every written question the draft keeps. */
+  itemIds?: string[]
+}
+
+/** The draft quiz made from the exam, and the questions left out with why. */
+export interface AiExportedQuiz {
+  quizId: string
+  type: AiQuizTarget
+  title: string
+  questionCount: number
+  skipped: Array<{ itemId: string; reason: string }>
+}
+
+export async function exportAiDraftToQuiz(conversationId: string, body: AiQuizExport): Promise<AiExportedQuiz> {
+  return requireData(
+    await request<AiExportedQuiz>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/quiz`, {
+      auth: true,
+      method: 'POST',
+      body,
+      timeoutMs: 120_000,
+    }),
+    'Không xuất được đề thành quiz.'
   )
 }
 

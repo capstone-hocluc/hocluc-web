@@ -373,6 +373,16 @@ export default function QuestionBankScreen({ readOnly = false, title, onNavigate
                   setReviewQuery((old) => ({ ...old, subject: value === 'ALL' ? undefined : value, page: 0 }))
                 }}
               />
+              <div className="flex flex-wrap gap-2 border-b border-card-border px-4 py-3">
+                <Button size="sm" appearance={reviewQuery.readyToApprove ? 'fill' : 'outline'}
+                  aria-pressed={Boolean(reviewQuery.readyToApprove)}
+                  onClick={() => {
+                    setSelected([])
+                    setReviewQuery((old) => ({ ...old, readyToApprove: old.readyToApprove ? undefined : true, page: 0 }))
+                  }}>
+                  Đủ điều kiện duyệt
+                </Button>
+              </div>
               <ScheduleResourceState skeleton="table" inset status={reviewList.status} errorMessage={reviewList.errorMessage} onRetry={reviewList.reload}>
                 <DataTable
                   columns={reviewColumns}

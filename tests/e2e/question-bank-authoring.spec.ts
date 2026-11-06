@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { installQuizFixture } from './quiz-permissions-fixture'
 
-async function install(page: Page, role: 'STAFF' | 'TEACHER') {
+async function install(page: Page, role: 'STAFF' | 'TEACHER', author = role === 'STAFF') {
   const state = await installQuizFixture(page, role)
   let status = 'DRAFT'
   let version = 1
@@ -63,7 +63,7 @@ async function install(page: Page, role: 'STAFF' | 'TEACHER') {
     if (path.endsWith('/me/scopes'))
       return ok({
         administrator: false,
-        authorSubjectIds: role === 'STAFF' ? ['category-1'] : [],
+        authorSubjectIds: author ? ['category-1'] : [],
         reviewerSubjectIds: [],
       })
     if (path.endsWith('/stats'))
@@ -180,9 +180,9 @@ test('staff authors, submits, edits and handles a concurrent save', async ({ pag
   expect(state.pageErrors).toEqual([])
 })
 
-test('teacher without author scope cannot start authoring', async ({ page }) => {
-  await install(page, 'TEACHER')
-  await page.goto('/console/teacher/question-bank')
+test('staff without author scope cannot start authoring', async ({ page }) => {
+  await install(page, 'STAFF', false)
+  await page.goto('/console/staff/question-bank')
   await expect(page.getByText('Tổng số câu')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Soạn câu' })).toHaveCount(0)
 })

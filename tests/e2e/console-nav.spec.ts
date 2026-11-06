@@ -39,7 +39,7 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
   ],
   TEACHER: [
     { label: 'Tổng quan', items: ['Tổng quan'] },
-    { label: 'Đào tạo', items: ['Khung đề thi', 'Lớp của tôi', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
+    { label: 'Đào tạo', items: ['Lớp của tôi', 'Trợ lý AI', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Lớp học', items: ['Lịch dạy', 'Giờ rảnh'] },
   ],
   MENTOR: [

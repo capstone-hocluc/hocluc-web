@@ -85,6 +85,45 @@
   display: inline-flex;
 }
 
+/* The handles that drag a selected chart's width: a bar on its right edge and a square at its corner. */
+.exam-chart-resize {
+  display: none;
+}
+
+.exam-doc-content[contenteditable='true'] .exam-chart.ProseMirror-selectednode > .exam-chart-resize {
+  position: absolute;
+  z-index: 10;
+  display: block;
+  box-sizing: border-box;
+  border: 2px solid #2563eb;
+  background: #fff;
+  touch-action: none;
+}
+
+.exam-doc-content[contenteditable='true'] .exam-chart.ProseMirror-selectednode > .exam-chart-resize-side {
+  top: 50%;
+  right: -6px;
+  width: 8px;
+  height: 28px;
+  margin-top: -14px;
+  border-radius: 4px;
+  cursor: ew-resize;
+}
+
+.exam-doc-content[contenteditable='true'] .exam-chart.ProseMirror-selectednode > .exam-chart-resize-corner {
+  right: -7px;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  cursor: nwse-resize;
+}
+
+.exam-chart-resizing {
+  cursor: ew-resize;
+  user-select: none;
+}
+
 .exam-choice-grid.ProseMirror-selectednode,
 .exam-header.ProseMirror-selectednode,
 .exam-chart.ProseMirror-selectednode {
