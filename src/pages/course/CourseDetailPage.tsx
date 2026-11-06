@@ -307,6 +307,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             <dd>
                               {day(course.startDate)}
                               {day(course.endDate) && ` – ${day(course.endDate)}`}
+                              {view.weeks && <span className="cd-facts-note"> · {view.weeks} tuần</span>}
                             </dd>
                           </div>
                         )}
@@ -326,12 +327,6 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             <dd>{formatDuration(course.estimatedDurationMinutes * 60)}</dd>
                           </div>
                         ) : null}
-                        {view.weeks && (
-                          <div>
-                            <dt>Thời gian học</dt>
-                            <dd>{view.weeks} tuần</dd>
-                          </div>
-                        )}
                         {view.gifts.length > 0 && !view.bundle && (
                           <div>
                             <dt>Khóa đi kèm</dt>
