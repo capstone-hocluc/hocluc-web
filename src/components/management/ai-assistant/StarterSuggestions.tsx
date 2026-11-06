@@ -5,7 +5,7 @@ interface Suggestion {
   prompt: string
 }
 
-// Three starters per mode, each one a request the backend can carry out in that mode ("revise" is no mode to pick).
+// A few starters per mode, each one a request the backend can carry out in that mode ("revise" is no mode to pick).
 const SUGGESTIONS: Record<Exclude<AiAssistantMode, 'revise'>, Suggestion[]> = {
   ask: [
     {
@@ -21,32 +21,29 @@ const SUGGESTIONS: Record<Exclude<AiAssistantMode, 'revise'>, Suggestion[]> = {
       prompt: 'Gợi ý cách dạy bài tích phân cho học sinh trung bình, kèm ví dụ minh hoạ.',
     },
   ],
+  // Each request of an exam names its subject and its count: without them the assistant has to ask.
   compose: [
     {
       label: 'Soạn 10 câu trắc nghiệm Toán mức trung bình',
       prompt: 'Soạn 10 câu trắc nghiệm Toán mức trung bình, kèm lời giải.',
     },
     {
-      label: 'Soạn đề giữa kì gồm trắc nghiệm và tự luận',
-      prompt: 'Soạn đề kiểm tra giữa kì gồm phần trắc nghiệm và phần tự luận, kèm đáp án.',
+      label: 'Soạn 5 câu vận dụng môn Toán về hàm số',
+      prompt: 'Soạn 5 câu vận dụng môn Toán về hàm số, kèm lời giải chi tiết.',
     },
     {
-      label: 'Soạn 5 câu vận dụng về hàm số, kèm lời giải chi tiết',
-      prompt: 'Soạn 5 câu vận dụng về hàm số, kèm lời giải chi tiết.',
+      label: 'Soạn 8 câu Toán về xác suất, mức dễ',
+      prompt: 'Soạn 8 câu Toán về xác suất, mức dễ, kèm lời giải.',
     },
   ],
   'mock-exam': [
     {
-      label: 'Tạo đề mô phỏng từ đề mẫu đã chọn',
-      prompt: 'Tạo đề mô phỏng từ đề mẫu đã chọn, giữ dạng câu và độ khó của từng câu.',
+      label: 'Mô phỏng 10 câu Toán từ đề mẫu đã chọn',
+      prompt: 'Mô phỏng 10 câu Toán từ đề mẫu đã chọn, giữ dạng câu và độ khó của từng câu.',
     },
     {
-      label: 'Mô phỏng đề mẫu, đổi số liệu và ngữ cảnh',
-      prompt: 'Mô phỏng đề mẫu đã chọn, đổi số liệu và ngữ cảnh của từng câu.',
-    },
-    {
-      label: 'Mô phỏng đề mẫu với ngữ cảnh gần gũi học sinh',
-      prompt: 'Mô phỏng đề mẫu đã chọn, dùng ngữ cảnh đời sống gần gũi với học sinh.',
+      label: 'Mô phỏng 5 câu Toán, đổi số liệu và ngữ cảnh',
+      prompt: 'Mô phỏng 5 câu Toán từ đề mẫu đã chọn, đổi số liệu và ngữ cảnh của từng câu.',
     },
   ],
 }

@@ -649,6 +649,11 @@ export async function installLabelsTrace(page: Page, options: Options = {}) {
         return ok(state.labels[lessonId])
       }
     }
+    // The course content panel also lists the AI's skill suggestions; this course has had no run yet.
+    const suggestionsOf = /^\/api\/v1\/authoring\/courses\/([^/]+)\/skill-suggestions$/.exec(path)
+    if (suggestionsOf && method === 'GET') {
+      return ok({ courseId: suggestionsOf[1], run: null, suggestions: [] })
+    }
     if (path === '/api/v1/authoring/lessons/by-label' && method === 'GET') {
       own()
       return ok(url.searchParams.get('skillCode') === 'TV.S02' ? suggestions : [])

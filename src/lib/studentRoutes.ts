@@ -17,6 +17,7 @@ export const studentRoutes = {
   learningProfile: () => '/student/learning-profile',
   roadmap: () => '/student/roadmap',
   tutor: () => '/student/tutor',
+  wallet: () => '/student/wallet',
   profile: (section?: 'student') =>
     section ? `/student/profile?section=${enc(section)}` : '/student/profile',
   courses: () => '/student/courses',
@@ -45,6 +46,7 @@ export type StudentRoute =
   | { name: 'learning-profile' }
   | { name: 'roadmap' }
   | { name: 'tutor' }
+  | { name: 'wallet' }
   | { name: 'profile' }
   | { name: 'courses' }
   | { name: 'course-detail'; courseId: string }
@@ -103,6 +105,8 @@ export function parseStudentRoute(path: string): StudentRoute | null {
       return rest.length === 0 ? { name: 'roadmap' } : null
     case 'tutor':
       return rest.length === 0 ? { name: 'tutor' } : null
+    case 'wallet':
+      return rest.length === 0 ? { name: 'wallet' } : null
     case 'profile':
       return rest.length === 0 ? { name: 'profile' } : null
     case 'courses': {

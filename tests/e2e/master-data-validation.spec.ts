@@ -220,22 +220,13 @@ test('an active version is not validated', async ({ page }) => {
   expect(state.pageErrors).toEqual([])
 })
 
-// A TEACHER authors master data (imports, edits drafts) but is not a reviewer, so the draft is
-// validated while "Kích hoạt" stays hidden (TAXONOMY_ACTIVATE is not granted to TEACHER).
-test('a teacher sees the validation card but not the activate button', async ({ page }) => {
-  const { state, calls, validationRequests } = await installMasterData(page, { role: 'TEACHER' })
+// The exam framework is kept by staff: a teacher has no page for it.
+test('a teacher has no exam framework page', async ({ page }) => {
+  const { state, calls } = await installMasterData(page, { role: 'TEACHER' })
   await page.goto('/console/teacher/taxonomy')
 
-  await expect(page.getByRole('heading', { name: 'Khung đề thi' })).toBeVisible()
-  await expect(page.getByText('Hợp lệ', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Kiểm tra lại' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'So sánh' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Xóa nháp' })).toBeVisible()
-  await expect(activateButton(page)).toHaveCount(0)
-
-  expect(validationRequests).toHaveLength(1)
-  expect(calls.some((call) => call.endsWith('/activate'))).toBe(false)
-  expect(state.unmatched).toEqual([])
+  await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập', exact: true })).toBeVisible()
+  expect(calls.some((call) => call.endsWith('/validation'))).toBe(false)
   expect(state.pageErrors).toEqual([])
 })
 

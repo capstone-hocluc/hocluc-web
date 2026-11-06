@@ -88,7 +88,7 @@ test('roadmaps compare as plans with facts from the data and a badge chosen by r
   await expect(longPlan).toContainText('16 tuần')
   await expect(longPlan).toContainText('Đợt 1 · 30/03/2027')
   await expect(longPlan).not.toContainText('Dự kiến')
-  await expect(longPlan).toContainText('Đủ 4 phần thi V-ACT')
+  await expect(longPlan).toContainText('Đủ 4 phần thi ĐGNL')
   await expect(longPlan).toContainText('19 khóa học thành phần, chia thành 3 giai đoạn')
   await expect(longPlan.getByRole('link', { name: /Xem lộ trình/ })).toHaveAttribute('href', '/courses/fixture-long')
 

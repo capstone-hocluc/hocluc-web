@@ -1,12 +1,17 @@
 import { request } from '../lib/api'
 import type {
+  AcceptSkillSuggestionsResult,
+  CourseSkillSuggestions,
   FindLessonsByLabelQuery,
   LessonLabelsRequest,
   LessonLabelsResponse,
   LessonMarkersRequest,
+  LessonSkillSuggestion,
   LessonSuggestionsQuery,
   LessonSuggestionResponse,
   LessonVideoLabelsRequest,
+  SkillSuggestionRun,
+  SkillSuggestionStatus,
 } from '../types/lessonLabels'
 
 const path = (lessonId: string) => `/api/v1/authoring/lessons/${encodeURIComponent(lessonId)}`
@@ -73,4 +78,56 @@ export async function getLessonSuggestions(
   return data(await request<LessonSuggestionResponse[]>(
     `/api/v1/lessons/suggestions?${queryString(query)}`, { auth: true }
   ))
+}
+
+const courseSuggestions = (courseId: string) =>
+  `/api/v1/authoring/courses/${encodeURIComponent(courseId)}/skill-suggestions`
+const suggestion = (suggestionId: string) =>
+  `/api/v1/authoring/skill-suggestions/${encodeURIComponent(suggestionId)}`
+
+// Skill suggestions are authoring work, never a teacher's: reading as for the labels but only for ADMINISTRATOR,
+// STAFF and MANAGER; the rest needs AUTHOR on the subject too. Starting answers 503 when the server has neither Jev nor a model.
+export async function getSkillSuggestions(
+  courseId: string,
+  status?: SkillSuggestionStatus
+): Promise<CourseSkillSuggestions> {
+  const query = status ? `?status=${status}` : ''
+  return data(await request<CourseSkillSuggestions>(`${courseSuggestions(courseId)}${query}`, { auth: true }))
+}
+
+/** Queues a run over every lesson of the course; while one is queued or running, returns that one. */
+export async function startSkillSuggestions(courseId: string): Promise<SkillSuggestionRun> {
+  return data(await request<SkillSuggestionRun>(`${courseSuggestions(courseId)}/run`, {
+    auth: true, method: 'POST',
+  }))
+}
+
+/** One lesson at once (a single AI call); returns its pending suggestions. */
+export async function startLessonSkillSuggestions(lessonId: string): Promise<LessonSkillSuggestion[]> {
+  return data(await request<LessonSkillSuggestion[]>(`${path(lessonId)}/skill-suggestions/run`, {
+    auth: true, method: 'POST',
+  }))
+}
+
+/** Adds the skill to the lesson's skills, keeping the others and the main one. */
+export async function acceptSkillSuggestion(suggestionId: string): Promise<LessonSkillSuggestion> {
+  return data(await request<LessonSkillSuggestion>(`${suggestion(suggestionId)}/accept`, {
+    auth: true, method: 'POST',
+  }))
+}
+
+export async function rejectSkillSuggestion(suggestionId: string): Promise<LessonSkillSuggestion> {
+  return data(await request<LessonSkillSuggestion>(`${suggestion(suggestionId)}/reject`, {
+    auth: true, method: 'POST',
+  }))
+}
+
+/** Accepts every pending suggestion of the course at least `minConfidence` (0..1) likely. */
+export async function acceptSkillSuggestionsAbove(
+  courseId: string,
+  minConfidence: number
+): Promise<AcceptSkillSuggestionsResult> {
+  return data(await request<AcceptSkillSuggestionsResult>(`${courseSuggestions(courseId)}/accept`, {
+    auth: true, method: 'POST', body: { minConfidence },
+  }))
 }

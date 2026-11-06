@@ -299,15 +299,16 @@ test('a manager corrects a label and the screen asks the server to set the chose
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
 })
 
-test('a teacher can read the bank but not change a label', async ({ page }) => {
+test('a teacher has no bank page and reaches the assistant from the menu', async ({ page }) => {
   const { state } = await install(page, 'TEACHER')
   await page.goto('/console/teacher/question-bank')
 
-  await page.getByRole('row', { name: /2021/ }).click()
-  const dialog = page.getByRole('dialog')
-  await expect(dialog.getByText('2 và 3')).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Lưu nhãn' })).toHaveCount(0)
-  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+  await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập', exact: true })).toBeVisible()
+  const nav = page.locator('aside nav')
+  await expect(nav.getByRole('button', { name: 'Ngân hàng câu hỏi', exact: true })).toHaveCount(0)
+  await expect(nav.getByRole('button', { name: 'Khung đề thi', exact: true })).toHaveCount(0)
+  await expect(nav.getByRole('button', { name: 'Trợ lý AI', exact: true })).toBeVisible()
+  expect(state.pageErrors).toEqual([])
 })
 
 test('staff load papers in the AI workspace, which the loaded-papers tab links to', async ({ page }) => {
@@ -321,15 +322,6 @@ test('staff load papers in the AI workspace, which the loaded-papers tab links t
   await expect(page).toHaveURL(/\/console\/staff\/ai-assistant$/)
   await expect(page.getByRole('button', { name: 'Nạp đề', exact: true })).toBeVisible()
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
-})
-
-test('a teacher sees the loaded papers but cannot upload one', async ({ page }) => {
-  const { state } = await install(page, 'TEACHER', () => [source('DONE', 120)])
-  await page.goto('/console/teacher/question-bank')
-  await page.getByRole('tab', { name: 'Đề đã nạp' }).click()
-  await expect(page.getByText('Xong', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Nạp đề trong Trợ lý AI' })).toHaveCount(0)
-  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
 test('a paper being read opens in the workspace, written onto the sheet as the AI reads it', async ({ page }) => {

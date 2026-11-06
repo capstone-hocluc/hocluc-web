@@ -32,6 +32,7 @@ interface PaperReadingWorkspaceProps {
   source: BankSource
   onBack: () => void
   backHref: string
+  backLabel?: string
   onNew: () => void
   /** The left panel (every exam and paper) with this paper's outline under it. */
   renderTree: (
@@ -52,6 +53,7 @@ export default function PaperReadingWorkspace({
   source,
   onBack,
   backHref,
+  backLabel,
   onNew,
   renderTree,
   onLoadAgain,
@@ -187,6 +189,7 @@ export default function PaperReadingWorkspace({
           onTitleChange={noop}
           onBack={onBack}
           backHref={backHref}
+          backLabel={backLabel}
           chatOpen={panelOpen || panelSheet}
           onToggleChat={togglePanel}
           outlineOpen={outlineOpen || outlineSheet}

@@ -90,8 +90,11 @@ export default function ChartDataGrid({ draft, onChange, showsInvalid, onLeaveCe
 
   function removeSeries(index: number) {
     pendingFocus.current = { row: -1, column: Math.min(index, series.length - 2) + 1 }
+    // A series added later may get the removed one's id; it does not get its colour.
+    const colors = Object.fromEntries(Object.entries(draft.colors).filter(([id]) => id !== series[index].id))
     onChange({
       ...draft,
+      colors,
       series: series.filter((_, at) => at !== index),
       rows: rows.map((row) => ({ ...row, cells: row.cells.filter((_, at) => at !== index) })),
     })

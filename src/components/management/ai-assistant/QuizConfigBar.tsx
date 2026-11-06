@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import SelectField from '../../console/select-field'
-import type { AiDifficulty, AiExamFormat, AiSolutionStyle } from '../../../services/aiAssistantService'
+import type { AiExamFormat, AiSolutionStyle } from '../../../services/aiAssistantService'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
-import { COMPOSE_COUNTS, DIFFICULTIES, FORMAT_OPTIONS, MOCK_COUNTS, REUSE_RATIOS, SOLUTION_STYLES } from './quiz-config-options'
+import { FORMAT_OPTIONS, REUSE_RATIOS, SOLUTION_STYLES } from './quiz-config-options'
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -20,18 +20,14 @@ interface QuizConfigBarProps {
 }
 
 /**
- * The compose settings. There is no subject: the request names it ("10 câu Toán"), and one that names none is for the
- * whole format. The sample paper of a mock exam is chosen in the chat's "Nguồn cho trợ lý" block.
+ * The settings a request rarely says in words. The subject, the count and the difficulty come from the request itself
+ * ("10 câu Toán mức khó"); the sample paper of a mock exam is chosen in the chat's "Nguồn cho trợ lý" block.
  */
 export default function QuizConfigBar({
   mode,
   settings,
   onChange,
 }: QuizConfigBarProps) {
-  const counts = mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS
-  const countValue = counts.some((option) => option.id === String(settings.questionCount))
-    ? String(settings.questionCount)
-    : counts[0].id
   const ratioValue = REUSE_RATIOS.some((option) => option.id === String(settings.bankRatio))
     ? String(settings.bankRatio)
     : REUSE_RATIOS[0].id
@@ -50,26 +46,6 @@ export default function QuizConfigBar({
             />
           </Field>
         )}
-        <Field label="Số câu">
-          <SelectField
-            ariaLabel="Số câu"
-            options={counts}
-            value={countValue}
-            onChange={(value) =>
-              onChange({ questionCount: value === 'full' ? 'full' : Number(value) })
-            }
-            triggerClassName="h-9"
-          />
-        </Field>
-        <Field label="Mức độ">
-          <SelectField
-            ariaLabel="Mức độ"
-            options={DIFFICULTIES}
-            value={settings.difficulty}
-            onChange={(value) => onChange({ difficulty: value as AiDifficulty })}
-            triggerClassName="h-9"
-          />
-        </Field>
         <Field label="Tỉ lệ dùng lại">
           <SelectField
             ariaLabel="Tỉ lệ dùng lại"

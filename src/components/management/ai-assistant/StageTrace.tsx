@@ -63,6 +63,11 @@ export default function StageTrace({ stages }: { stages: readonly AiTraceStage[]
                 {stage.detail && (
                   <p className="text-[11px] leading-4 text-text-tertiary">{stage.detail}</p>
                 )}
+                {stage.notes?.map((note) => (
+                  <p key={note} className="text-[11px] leading-4 text-text-secondary">
+                    {note}
+                  </p>
+                ))}
                 {stage.items && stage.items.length > 0 && (
                   <ul className="mt-1 space-y-0.5">
                     {stage.items.map((item) => (

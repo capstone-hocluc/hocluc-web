@@ -25,7 +25,7 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
     { label: 'Tổng quan', items: ['Tổng quan'] },
     { label: 'Đào tạo', items: ['Năm thi & đợt thi', 'Môn học và khóa học', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Lớp học', items: ['Lịch học'] },
-    { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng'] },
+    { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng', 'Sao'] },
     { label: 'Hỗ trợ', items: ['Giám sát hỗ trợ'] },
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
   ],
@@ -33,13 +33,13 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
     { label: 'Tổng quan', items: ['Tổng quan'] },
     { label: 'Đào tạo', items: ['Khung đề thi', 'Năm thi & đợt thi', 'Môn học và khóa học', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Lớp học', items: ['Lịch học', 'Điểm danh'] },
-    { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng'] },
+    { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng', 'Sao'] },
     { label: 'Hỗ trợ', items: ['Phân công Mentor'] },
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
   ],
   TEACHER: [
     { label: 'Tổng quan', items: ['Tổng quan'] },
-    { label: 'Đào tạo', items: ['Khung đề thi', 'Lớp của tôi', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
+    { label: 'Đào tạo', items: ['Lớp của tôi', 'Trợ lý AI', 'Bài kiểm tra', 'Bài làm học viên'] },
     { label: 'Lớp học', items: ['Lịch dạy', 'Giờ rảnh'] },
   ],
   MENTOR: [
@@ -51,7 +51,7 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
     { label: 'Tổng quan', items: ['Tổng quan'] },
     { label: 'Đào tạo', items: ['Khung đề thi', 'Năm thi & đợt thi', 'Môn học và khóa học', 'Ngân hàng câu hỏi', 'Bài kiểm tra', 'Bài làm học viên'] },
-    { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng'] },
+    { label: 'Học viên & đơn hàng', items: ['Học viên', 'Ghi danh', 'Đơn hàng', 'Sao'] },
     { label: 'Hỗ trợ', items: ['Phân công Mentor'] },
   ],
 }

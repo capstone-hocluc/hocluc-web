@@ -47,6 +47,8 @@ interface ChatPanelProps {
   /** Downloads the exam on the sheet: a Word file, or the print dialog to save it as PDF. */
   onDownload: (format: ExamDownload) => void
   onAnswerKey: () => void
+  onRetry: (messageId: string) => void
+  onChooseSubject: (messageId: string, subjectName: string | null) => void
   onCollapse?: () => void
   onClose?: () => void
   className?: string
@@ -81,6 +83,8 @@ export default function ChatPanel({
   onPickPrompt,
   onDownload,
   onAnswerKey,
+  onRetry,
+  onChooseSubject,
   onCollapse,
   onClose,
   className = '',
@@ -110,7 +114,6 @@ export default function ChatPanel({
           <button
             type="button"
             onClick={onOpenConversations}
-            aria-haspopup="dialog"
             aria-expanded={conversationsOpen}
             aria-label="Cuộc trò chuyện"
             title="Cuộc trò chuyện"
@@ -168,6 +171,8 @@ export default function ChatPanel({
           onRegenerate={onRegenerate}
           onDownload={onDownload}
           onAnswerKey={onAnswerKey}
+          onRetry={onRetry}
+          onChooseSubject={onChooseSubject}
         />
       )}
 

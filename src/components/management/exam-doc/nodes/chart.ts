@@ -5,8 +5,16 @@ import { NodeSelection } from '@tiptap/pm/state'
 import type { EditorView, NodeView } from '@tiptap/pm/view'
 import { cn } from '../../../../lib/cn'
 import { buttonStyles } from '../../../tailgrids/core/button'
-import { CHART_SVG_SIZE } from '../chart-svg'
-import { chartValueAlt, chartValueSrc, newChart, normalizeChart, type ChartValue } from '../chart-data'
+import {
+  CHART_WIDTH,
+  chartValueAlt,
+  chartValueSize,
+  chartValueSrc,
+  chartWidth,
+  newChart,
+  normalizeChart,
+  type ChartValue,
+} from '../chart-data'
 import { selectionInsertRange } from './insert-position'
 import './exam-nodes.css'
 
@@ -45,10 +53,13 @@ export function onChartEdit(editor: Editor, listener: ChartEditListener): () => 
   }
 }
 
-/** Chèn ▸ Biểu đồ: the sample chart at the caret, then its editor (which takes focus, and gives it back to the chart). */
-export function insertChartAndEdit(editor: Editor) {
+/**
+ * Chèn ▸ Biểu đồ: a chart at the caret (the sample column chart unless `value` says), then its editor (which takes
+ * focus, and gives it back to the chart).
+ */
+export function insertChartAndEdit(editor: Editor, value?: ChartValue) {
   if (editor.isDestroyed || !editor.isEditable) return
-  if (!editor.commands.insertChart()) return
+  if (!editor.commands.insertChart(value)) return
   const { selection } = editor.state
   if (selection instanceof NodeSelection && selection.node.type.name === 'chart') openChartEditor(editor, selection.from)
 }
@@ -85,17 +96,25 @@ function readChart(element: HTMLElement): ChartValue | null {
 
 const widthStyle = (value: ChartValue) => `${Math.round(value.spec.width * 100)}%`
 
+/** A width dragged to, as a share of the text width: in range, in hundredths. */
+const draggedWidth = (share: number) => chartWidth(Math.min(CHART_WIDTH.max, Math.max(CHART_WIDTH.min, share)))
+
 /**
  * The chart on the sheet: its drawing (an SVG picture), a ring while it is selected and, in an editable document, a
- * "Sửa biểu đồ" button. A double click opens the chart editor too, and so do Enter and Space on a selected chart
- * (the node's keyboard shortcuts). Plain DOM like the formulas: a React view per chart would be mounted inside the
- * editor updates that write AI questions in, where React cannot render synchronously.
+ * "Sửa biểu đồ" button and handles at its right edge and corner that drag its width (one undo step on release). A
+ * double click opens the chart editor too, and so do Enter and Space on a selected chart (the node's keyboard
+ * shortcuts); the editor's width slider is the keyboard's way to the width. Plain DOM like the formulas: a React view
+ * per chart would be mounted inside the editor updates that write AI questions in, where React cannot render
+ * synchronously.
  */
 class ChartView implements NodeView {
   dom: HTMLElement
   private node: ProseMirrorNode
   private readonly image: HTMLImageElement
   private readonly button: HTMLButtonElement
+  private readonly handles: HTMLElement[]
+  /** The drag of a handle under way: where it started and the width it has reached. */
+  private resizing: { pointerId: number; handle: HTMLElement; centre: number; textWidth: number; width: number } | null = null
 
   constructor(
     node: ProseMirrorNode,
@@ -111,8 +130,6 @@ class ChartView implements NodeView {
     this.image = document.createElement('img')
     // The node is dragged, not the picture.
     this.image.draggable = false
-    this.image.width = CHART_SVG_SIZE.width
-    this.image.height = CHART_SVG_SIZE.height
     this.image.className = 'w-full'
 
     this.button = document.createElement('button')
@@ -132,7 +149,23 @@ class ChartView implements NodeView {
     this.button.addEventListener('mousedown', this.keepFocus)
     this.button.addEventListener('click', this.edit)
     this.dom.addEventListener('dblclick', this.edit)
-    this.dom.append(this.image, this.button)
+
+    // Shown by exam-nodes.css with the edit button; chrome of the editor like it.
+    this.handles = (['side', 'corner'] as const).map((place) => {
+      const handle = document.createElement('span')
+      handle.className = `exam-chart-resize exam-chart-resize-${place}`
+      handle.setAttribute('data-exam-doc-chrome', '')
+      handle.setAttribute('data-chart-resize', place)
+      handle.setAttribute('aria-hidden', 'true')
+      handle.title = 'Kéo để đổi độ rộng'
+      handle.addEventListener('pointerdown', this.startResize)
+      handle.addEventListener('pointermove', this.moveResize)
+      handle.addEventListener('pointerup', this.endResize)
+      handle.addEventListener('pointercancel', this.cancelResize)
+      handle.addEventListener('mousedown', this.keepFocus)
+      return handle
+    })
+    this.dom.append(this.image, this.button, ...this.handles)
     this.render()
   }
 
@@ -140,9 +173,65 @@ class ChartView implements NodeView {
     event.preventDefault()
   }
 
+  private startResize = (event: PointerEvent) => {
+    if (event.button !== 0 || !this.view.editable || this.resizing) return
+    event.preventDefault()
+    event.stopPropagation()
+    const handle = event.currentTarget as HTMLElement
+    const rect = this.dom.getBoundingClientRect()
+    const share = chartValueOf(this.node).spec.width
+    // The text width in screen pixels, whatever the zoom: the chart takes its share of it.
+    this.resizing = { pointerId: event.pointerId, handle, centre: rect.left + rect.width / 2, textWidth: rect.width / share, width: share }
+    handle.setPointerCapture?.(event.pointerId)
+    // Nor does the browser drag the chart away while its handle is held.
+    this.dom.draggable = false
+    this.dom.classList.add('exam-chart-resizing')
+  }
+
+  private moveResize = (event: PointerEvent) => {
+    const drag = this.resizing
+    if (!drag || event.pointerId !== drag.pointerId) return
+    // The chart stays centred, so its right edge follows the pointer when it grows by twice the pointer's way.
+    drag.width = draggedWidth((2 * (event.clientX - drag.centre)) / drag.textWidth)
+    this.dom.style.width = `${Math.round(drag.width * 100)}%`
+  }
+
+  private endResize = (event: PointerEvent) => {
+    const drag = this.resizing
+    if (!drag || event.pointerId !== drag.pointerId) return
+    this.finishResize()
+    const value = chartValueOf(this.node)
+    const pos = this.getPos()
+    if (drag.width === value.spec.width || typeof pos !== 'number' || !this.view.editable) {
+      this.render()
+      return
+    }
+    this.editor.chain().updateChart(pos, { ...value, spec: { ...value.spec, width: drag.width } }).focus().run()
+  }
+
+  private cancelResize = (event: PointerEvent) => {
+    if (!this.resizing || event.pointerId !== this.resizing.pointerId) return
+    this.finishResize()
+    this.render()
+  }
+
+  private finishResize() {
+    const drag = this.resizing
+    this.resizing = null
+    this.dom.draggable = true
+    this.dom.classList.remove('exam-chart-resizing')
+    if (drag?.handle.hasPointerCapture?.(drag.pointerId)) drag.handle.releasePointerCapture(drag.pointerId)
+  }
+
   private edit = (event: MouseEvent) => {
-    // The button's own clicks open the editor; a double click on it is not a second request.
-    if (event.type === 'dblclick' && event.target instanceof globalThis.Node && this.button.contains(event.target)) return
+    // The button's own clicks open the editor; a double click on it is not a second request, nor one on a handle.
+    if (
+      event.type === 'dblclick' &&
+      event.target instanceof globalThis.Node &&
+      [this.button, ...this.handles].some((element) => element.contains(event.target as globalThis.Node))
+    ) {
+      return
+    }
     event.preventDefault()
     if (!this.view.editable) return
     const pos = this.getPos()
@@ -151,6 +240,10 @@ class ChartView implements NodeView {
 
   private render() {
     const value = chartValueOf(this.node)
+    // Its size before it loads, so the page does not move when it does.
+    const size = chartValueSize(value)
+    this.image.width = size.width
+    this.image.height = size.height
     this.image.src = chartValueSrc(value)
     this.image.alt = chartValueAlt(value)
     this.dom.style.width = widthStyle(value)
@@ -172,13 +265,17 @@ class ChartView implements NodeView {
     this.dom.classList.remove('ProseMirror-selectednode')
   }
 
-  /** Mouse events on the button are the button's; everything else (selecting, dragging the chart) is the editor's. */
+  /**
+   * Mouse events on the button and the handles are theirs (a handle's drag is no drag of the chart); everything else
+   * (selecting, dragging the chart) is the editor's.
+   */
   stopEvent(event: Event) {
-    return (
-      event.target instanceof globalThis.Node &&
-      this.button.contains(event.target) &&
-      /^(mouse|pointer|click|dblclick|auxclick|contextmenu)/.test(event.type)
-    )
+    if (!(event.target instanceof globalThis.Node)) return false
+    const target = event.target
+    if (this.handles.some((handle) => handle.contains(target))) {
+      return /^(mouse|pointer|click|dblclick|auxclick|contextmenu|drag)/.test(event.type)
+    }
+    return this.button.contains(target) && /^(mouse|pointer|click|dblclick|auxclick|contextmenu)/.test(event.type)
   }
 
   ignoreMutation() {
@@ -189,13 +286,20 @@ class ChartView implements NodeView {
     this.button.removeEventListener('mousedown', this.keepFocus)
     this.button.removeEventListener('click', this.edit)
     this.dom.removeEventListener('dblclick', this.edit)
+    for (const handle of this.handles) {
+      handle.removeEventListener('pointerdown', this.startResize)
+      handle.removeEventListener('pointermove', this.moveResize)
+      handle.removeEventListener('pointerup', this.endResize)
+      handle.removeEventListener('pointercancel', this.cancelResize)
+      handle.removeEventListener('mousedown', this.keepFocus)
+    }
   }
 }
 
 /**
- * A chart block: bar, line or pie, with its data table and settings (see `chart-data.ts`). In HTML (copy and paste,
- * clipboard to other programs) it is the drawing as an `<img>` carrying the chart's JSON in `data-chart`, which a
- * paste reads back as a chart; pictures without it stay pictures.
+ * A chart block: bar, line or pie with its data table, or a function's graph or variation table, and its settings
+ * (see `chart-data.ts`). In HTML (copy and paste, clipboard to other programs) it is the drawing as an `<img>`
+ * carrying the chart's JSON in `data-chart`, which a paste reads back as a chart; pictures without it stay pictures.
  */
 export const ChartNode = Node.create({
   name: 'chart',
@@ -218,13 +322,14 @@ export const ChartNode = Node.create({
 
   renderHTML: ({ node }) => {
     const value = chartValueOf(node)
+    const size = chartValueSize(value)
     return [
       'img',
       {
         src: chartValueSrc(value),
         alt: chartValueAlt(value),
-        width: String(CHART_SVG_SIZE.width),
-        height: String(CHART_SVG_SIZE.height),
+        width: String(size.width),
+        height: String(size.height),
         style: `width: ${widthStyle(value)}; height: auto`,
         'data-chart': JSON.stringify(value),
       },

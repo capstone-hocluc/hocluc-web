@@ -17,6 +17,8 @@ import {
 } from '@tailgrids/icons'
 import { BarChart3, Calculator, NotebookPen } from '../../../console/icons'
 import { LINE_HEIGHTS, ZOOM_LEVELS, useExamDoc, type DocMode } from '../exam-doc-context'
+import { sampleChart } from '../chart-data'
+import { INSERT_DATA_CHARTS, INSERT_FIGURES } from '../chart-editor/chart-types'
 import { insertChartAndEdit } from '../nodes/chart'
 import {
   downloadDocument,
@@ -288,12 +290,25 @@ export function InsertMenu({ run, onPickImage, onOpenLink }: InsertMenuProps) {
         }
       />
       <MenuItem label="Hình" icon={Gallery} disabled={!editable} onSelect={onPickImage} />
-      <MenuItem
-        label="Biểu đồ"
-        icon={BarChart3}
-        disabled={!editable}
-        onSelect={() => run((target) => insertChartAndEdit(target))}
-      />
+      <MenuSub label="Biểu đồ" icon={BarChart3} disabled={!editable}>
+        {INSERT_DATA_CHARTS.map((option) => (
+          <MenuItem
+            key={option.id}
+            label={option.label}
+            icon={option.icon}
+            onSelect={() => run((target) => insertChartAndEdit(target, sampleChart(option.id)))}
+          />
+        ))}
+        <MenuSeparator />
+        {INSERT_FIGURES.map((option) => (
+          <MenuItem
+            key={option.id}
+            label={option.label}
+            icon={option.icon}
+            onSelect={() => run((target) => insertChartAndEdit(target, sampleChart(option.id)))}
+          />
+        ))}
+      </MenuSub>
       <MenuSeparator />
       <MenuItem
         label="Liên kết"

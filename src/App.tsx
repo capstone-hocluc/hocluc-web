@@ -550,6 +550,7 @@ function App() {
         orderId={orderPaymentOrderId}
         onGoToOrderDetail={() => navigateTo(`/orders/${orderPaymentOrderId}`)}
         onGoToMyCourses={() => navigateTo(studentRoutes.courses())}
+        onGoToWallet={() => navigateTo(studentRoutes.wallet())}
       />
     )
   if (orderDetailId)
@@ -559,6 +560,7 @@ function App() {
         orderId={orderDetailId}
         onBackToOrders={() => navigateTo('/orders')}
         onGoToMyCourses={() => navigateTo(studentRoutes.courses())}
+        onGoToWallet={() => navigateTo(studentRoutes.wallet())}
         onPaymentReady={(paymentData) =>
           navigateTo(`/orders/${paymentData.order.id}/payment`, paymentData)
         }

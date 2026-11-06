@@ -41,8 +41,10 @@ import { arrayMove, useDragReorder } from './use-drag-reorder'
 import ChapterEditorDialog from './chapter-editor-dialog'
 import LessonEditorDialog from './lesson-editor-dialog'
 import LessonSkillsDialog from './lesson-skills-dialog'
+import LessonSkillSuggestionsPanel from './lesson-skill-suggestions-panel'
 import { getLessonLabels } from '../../../services/lessonLabelService'
 import { getBankScopes } from '../../../services/questionBankService'
+import { useActiveRole } from '../../../hooks/useActiveRole'
 
 interface Props {
   courseId: string
@@ -101,6 +103,10 @@ export default function CourseContentPanel({
   const scopes = useScheduleResource(!readOnly ? 'course-label-scopes' : null, getBankScopes)
   const canLabel = Boolean(scopes.data && (scopes.data.administrator ||
     (categoryId && scopes.data.authorSubjectIds.includes(categoryId))))
+  // Skill suggestions are authoring work: a teacher only teaches, so they are neither shown nor fetched for one,
+  // nor before the active role is known.
+  const { activeRole } = useActiveRole()
+  const suggestsSkills = activeRole === 'STAFF' || activeRole === 'MANAGER' || activeRole === 'ADMINISTRATOR'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -360,7 +366,12 @@ export default function CourseContentPanel({
     if (!lessons[chapter.id]) await loadLessons(chapter.id)
   }
 
-  return (
+  // Accepted skill suggestions change lessons' skills: reload the chapters whose lessons are on screen.
+  const reloadLabelledChapters = (chapterIds: string[]) => {
+    for (const chapterId of chapterIds) if (lessons[chapterId]) void loadLessons(chapterId)
+  }
+
+  const content = (
     <Panel
       title={title}
       action={
@@ -766,5 +777,15 @@ export default function CourseContentPanel({
         />
       )}
     </Panel>
+  )
+
+  // One root whether or not the suggestions show, so the content above is not remounted once scopes load.
+  return (
+    <>
+      {content}
+      {!readOnly && canLabel && suggestsSkills && (
+        <LessonSkillSuggestionsPanel courseId={courseId} onLabelsChanged={reloadLabelledChapters} />
+      )}
+    </>
   )
 }

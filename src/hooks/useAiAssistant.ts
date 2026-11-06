@@ -29,13 +29,16 @@ import {
   type AiSolutionStyle,
   type AiStreamEvent,
 } from '../services/aiAssistantService'
+import { ApiError } from '../lib/api'
 import { getBankSources } from '../services/questionBankService'
 import type { SelectOption } from '../components/console/select-field'
 import {
   buildPaper,
   DIFFICULTY_LABELS,
   emptyManualQuestion,
+  EXAM_FORMATS,
   questionNumbers,
+  sectionLabel,
   traceLines,
   type AiChatMessage,
   type AiTraceItem,
@@ -44,11 +47,13 @@ import {
 import { liveDraftTail, liveDraftView, type LiveDraft } from '../components/management/exam-doc/live-draft'
 import { revisedNumbers } from '../components/management/ai-assistant/revise-request'
 
-/** Compose settings. No subject: the request names it, and one naming none is for the whole format. */
+/**
+ * Compose settings. No subject and no difficulty: the request names them ("10 câu Toán mức khó"), and one naming no
+ * subject is for the whole format.
+ */
 export interface AiComposeSettings {
   examFormat: AiExamFormat
   questionCount: number | 'full'
-  difficulty: AiDifficulty
   bankRatio: number
   bankSourceId: string
   /** How much of a solution each question carries, and the answer guide after the exam shows. */
@@ -58,7 +63,6 @@ export interface AiComposeSettings {
 const DEFAULT_SETTINGS: AiComposeSettings = {
   examFormat: 'VACT_2025',
   questionCount: 5,
-  difficulty: 'TB',
   bankRatio: 0.2,
   bankSourceId: '',
   solutionStyle: 'full',
@@ -109,6 +113,51 @@ const STAGE_TITLES: Record<string, string> = {
 function errorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message
   return 'Không kết nối được máy chủ. Kiểm tra mạng và thử lại.'
+}
+
+/** The code of the backend's refusal of a compose request that names no subject. */
+const SUBJECT_REQUIRED = 'AI_COMPOSE_SUBJECT_REQUIRED'
+
+function subjectsOf(data: unknown): { id: string; name: string }[] {
+  const list = (data as { subjects?: unknown } | null)?.subjects
+  if (!Array.isArray(list)) return []
+  return list.filter(
+    (entry): entry is { id: string; name: string } =>
+      typeof entry?.id === 'string' && typeof entry?.name === 'string' && entry.name.trim() !== ''
+  )
+}
+
+/** Whether the teacher can teach every subject of the exam format, so the whole paper is a choice. */
+function wholeOf(data: unknown): boolean {
+  return (data as { whole?: unknown } | null)?.whole === true
+}
+
+/** The compose settings a stored request config tells; what it does not tell stays as it was. */
+function settingsFromConfig(config: Record<string, unknown> | null | undefined, previous: AiComposeSettings): AiComposeSettings {
+  if (!config || typeof config !== 'object') return previous
+  const next = { ...previous }
+  if (EXAM_FORMATS.some((format) => format.id === config.examFormat)) next.examFormat = config.examFormat as AiExamFormat
+  if (config.questionCount === 'full' || (typeof config.questionCount === 'number' && config.questionCount > 0)) {
+    next.questionCount = config.questionCount as number | 'full'
+  }
+  if (typeof config.bankRatio === 'number' && config.bankRatio >= 0 && config.bankRatio <= 1) next.bankRatio = config.bankRatio
+  if (config.solutionStyle === 'full' || config.solutionStyle === 'short') next.solutionStyle = config.solutionStyle
+  if (typeof config.bankSourceId === 'string') next.bankSourceId = config.bankSourceId
+  return next
+}
+
+/** The conversation the address names (?c=<id>), read once when the page opens. */
+function conversationInAddress(): string | null {
+  return new URLSearchParams(window.location.search).get('c')
+}
+
+/** Writes the open conversation into the address without a new history entry, so a reload opens it again. */
+function showConversationInAddress(id: string | null) {
+  const url = new URL(window.location.href)
+  if ((url.searchParams.get('c') ?? null) === id) return
+  if (id) url.searchParams.set('c', id)
+  else url.searchParams.delete('c')
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
 }
 
 function normalizeMode(value: string | null | undefined): AiAssistantMode | undefined {
@@ -180,7 +229,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_document_questions: 'Xem các câu của đề',
   get_document_question: 'Đọc câu trong đề',
   revise_question: 'Viết lại câu',
-  check_question: 'Soát lại câu',
+  check_question: 'Kiểm tra lại câu',
 }
 
 /** A tool call as one plain line: what it did, and at most a short readable hint (a difficulty, a query). */
@@ -204,6 +253,42 @@ function mapMessage(message: AiMessage): AiChatMessage {
     mode: normalizeMode(message.mode),
     trace: traceLines(message.trace),
   }
+}
+
+/** Messages only this page holds: the teacher's words while sending, a refused request's question, a run's summary. */
+const LOCAL_ID = /^(local|subject|error|summary)-/
+
+/**
+ * The server's messages with what the page showed that the server does not hold. A refused request (the question
+ * "Bạn muốn soạn môn nào?" and the words above it) is never stored, and a finished run's card is built here; a reload
+ * of the thread keeps them where they were, after the message they followed.
+ */
+function mergeServerMessages(server: AiChatMessage[], previous: AiChatMessage[]): AiChatMessage[] {
+  const previousById = new Map(previous.map((message) => [message.id, message]))
+  const merged = server.map((message) => {
+    const shown = previousById.get(message.id)
+    if (!shown) return message
+    const { stages, addedItemIds, stopped } = shown
+    return { ...message, ...(stages ? { stages } : {}), ...(addedItemIds ? { addedItemIds } : {}), ...(stopped ? { stopped } : {}) }
+  })
+  const onServer = new Set(server.map((message) => message.id))
+  let anchor = -1
+  const placed = new Map<number, AiChatMessage[]>()
+  for (const message of previous) {
+    if (onServer.has(message.id)) {
+      anchor = merged.findIndex((entry) => entry.id === message.id)
+    } else if (LOCAL_ID.test(message.id)) {
+      const list = placed.get(anchor) ?? []
+      list.push(message)
+      placed.set(anchor, list)
+    }
+  }
+  if (placed.size === 0) return merged
+  const result: AiChatMessage[] = [...(placed.get(-1) ?? [])]
+  merged.forEach((message, index) => {
+    result.push(message, ...(placed.get(index) ?? []))
+  })
+  return result
 }
 
 function mapStreamItem(event: Extract<AiStreamEvent, { type: 'item' }>['data']): AiDraftItem {
@@ -246,6 +331,10 @@ export function useAiAssistant() {
   const [saving, setSaving] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [settings, setSettings] = useState<AiComposeSettings>(DEFAULT_SETTINGS)
+  /** The settings on screen, readable between renders. */
+  const settingsRef = useRef<AiComposeSettings>(DEFAULT_SETTINGS)
+  /** What the teacher last chose in the settings panel; a new exam starts from it, never from another exam's request. */
+  const preferredSettingsRef = useRef<AiComposeSettings>(DEFAULT_SETTINGS)
   const [papers, setPapers] = useState<SelectOption[]>([])
   const [papersLoading, setPapersLoading] = useState(false)
   const [papersError, setPapersError] = useState<string | null>(null)
@@ -269,6 +358,7 @@ export function useAiAssistant() {
   const autoSelectRef = useRef(true)
   const papersTriedRef = useRef(false)
   const cancelRequestedRef = useRef(false)
+  const addressConversationRef = useRef<string | null>(conversationInAddress())
   /** Questions streamed in since the last paint; they reach the draft (and the document) together. */
   const pendingItemsRef = useRef<AiDraftItem[]>([])
   const itemFlushRef = useRef<number | null>(null)
@@ -276,6 +366,21 @@ export function useAiAssistant() {
   const revisionRef = useRef(0)
   /** Questions only the sheet holds that the AI rewrote, in order; the page writes each once (by `seq`). */
   const [rewrites, setRewrites] = useState<SheetRewrite[]>([])
+
+  const showSettings = useCallback((next: AiComposeSettings) => {
+    settingsRef.current = next
+    setSettings(next)
+  }, [])
+
+  /** A change the teacher makes in the settings panel: it is also what a new exam starts from. */
+  const changeSettings = useCallback(
+    (update: (previous: AiComposeSettings) => AiComposeSettings) => {
+      const next = update(settingsRef.current)
+      preferredSettingsRef.current = next
+      showSettings(next)
+    },
+    [showSettings]
+  )
 
   const updateConversations = useCallback((next: AiConversation[]) => {
     conversationsRef.current = next
@@ -348,7 +453,7 @@ export function useAiAssistant() {
     try {
       const server = await getAiMessages(conversationId)
       if (activeIdRef.current !== conversationId) return false
-      updateMessages(server.map(mapMessage))
+      updateMessages(mergeServerMessages(server.map(mapMessage), messagesRef.current))
       return true
     } catch {
       return false
@@ -386,6 +491,7 @@ export function useAiAssistant() {
       if (event.type !== 'end') return
 
       const endEvent = event
+      const stopped = endEvent.data.status === 'CANCELLED'
       updateRun(null)
       if (!finished) return
 
@@ -410,7 +516,7 @@ export function useAiAssistant() {
         updateMessages(
           messagesRef.current.map((message) =>
             message.id === latest.id
-              ? { ...message, addedItemIds: finished.itemIds, stages: markAllDone(finished.stages) }
+              ? { ...message, addedItemIds: finished.itemIds, stages: markAllDone(finished.stages), ...(stopped ? { stopped } : {}) }
               : message
           )
         )
@@ -421,13 +527,17 @@ export function useAiAssistant() {
         {
           id: `summary-${crypto.randomUUID()}`,
           role: 'assistant',
-          body: finished.mode === 'revise'
-            ? `Đã sửa ${finished.itemIds.length} câu.`
-            : endSummary(endEvent.data, finished.itemIds.length),
+          // A stopped run says so in its card; the words would only repeat it.
+          body: stopped
+            ? ''
+            : finished.mode === 'revise'
+              ? `Đã sửa ${finished.itemIds.length} câu.`
+              : endSummary(endEvent.data, finished.itemIds.length),
           createdAt: new Date().toISOString(),
           mode: finished.mode,
           stages: markAllDone(finished.stages),
           addedItemIds: finished.itemIds,
+          ...(stopped ? { stopped } : {}),
         },
       ])
     },
@@ -464,10 +574,12 @@ export function useAiAssistant() {
             stages = finishBefore(stages, stageId)
           }
           let detail: string | undefined
+          let notes: string[] | undefined
           if (stageId === 'explore') detail = event.data.summary ?? undefined
           if (stageId === 'plan' && event.data.status === 'done') {
             const cells = event.data.cells ?? 0
-            detail = `${cells} ô${event.data.degraded ? ' · rút gọn' : ''}${event.data.mimic ? ' · mô phỏng' : ''}`
+            detail = `${cells} câu${event.data.degraded ? ' · rút gọn' : ''}${event.data.mimic ? ' · theo đề mẫu' : ''}`
+            notes = (event.data.notes ?? []).filter((note) => typeof note === 'string' && note.trim() !== '')
           }
           updateRun({
             ...current,
@@ -475,6 +587,7 @@ export function useAiAssistant() {
               title: STAGE_TITLES[stageId] ?? stageId,
               state: event.data.status === 'done' ? 'done' : 'running',
               ...(detail !== undefined ? { detail } : {}),
+              ...(notes?.length ? { notes } : {}),
             }),
           })
           return
@@ -502,7 +615,7 @@ export function useAiAssistant() {
             ? `Đang sửa câu ${event.data.number}`
             : `Đang soạn câu ${event.data.index}/${event.data.total}`
           const detail = [
-            event.data.section,
+            sectionLabel(event.data.section),
             event.data.difficulty ? DIFFICULTY_LABELS[event.data.difficulty as AiDifficulty] : null,
           ]
             .filter(Boolean)
@@ -637,7 +750,8 @@ export function useAiAssistant() {
 
   /**
    * Opens the stream and waits until the replay of older events is over, so nothing from a past run leaks in.
-   * esumeFrom follows a run already going (the page was opened or reloaded during it): the stream starts right
+   * 
+esumeFrom follows a run already going (the page was opened or reloaded during it): the stream starts right
    * before that run, so every event it replays is the run's own and is shown.
    */
   const beginStream = useCallback(
@@ -742,6 +856,8 @@ export function useAiAssistant() {
         if (activeIdRef.current !== conversationId) return
         updateMessages(serverMessages.map(mapMessage))
         updateDraft(draftResponse)
+        // The config the exam was last asked with comes back to the settings (a reload would reset it).
+        showSettings(settingsFromConfig(draftResponse.draft?.config, preferredSettingsRef.current))
         // A run still going (the page was reloaded, or the exam opened during it) is followed again from its start,
         // so its stages, tool calls and new questions keep showing and it can be stopped.
         const active = draftResponse.run
@@ -767,7 +883,7 @@ export function useAiAssistant() {
         if (activeIdRef.current === conversationId) setDraftLoading(false)
       }
     },
-    [armRunTimer, beginStream, clearRunTimer, stopStream, updateDraft, updateMessages, updateRun]
+    [armRunTimer, beginStream, clearRunTimer, showSettings, stopStream, updateDraft, updateMessages, updateRun]
   )
 
   const loadConversations = useCallback(async () => {
@@ -775,7 +891,13 @@ export function useAiAssistant() {
     try {
       const page = await getAiConversations()
       updateConversations(page.content ?? [])
-      if (autoSelectRef.current && !activeIdRef.current && page.content?.[0]) {
+      const wanted = addressConversationRef.current
+      addressConversationRef.current = null
+      if (wanted && !activeIdRef.current) {
+        // The exam the address names, even when it is not on the first page of the list.
+        autoSelectRef.current = false
+        void loadConversation(wanted)
+      } else if (autoSelectRef.current && !activeIdRef.current && page.content?.[0]) {
         void loadConversation(page.content[0].id)
       }
     } catch (error) {
@@ -802,23 +924,29 @@ export function useAiAssistant() {
         setPapersError('Ngân hàng chưa có đề đã đọc xong.')
         return
       }
-      setSettings((previous) =>
-        options.some((option) => option.id === previous.bankSourceId)
-          ? previous
-          : { ...previous, bankSourceId: options[0].id }
-      )
+      const previous = settingsRef.current
+      if (!options.some((option) => option.id === previous.bankSourceId)) {
+        const next = { ...previous, bankSourceId: options[0].id }
+        preferredSettingsRef.current = { ...preferredSettingsRef.current, bankSourceId: next.bankSourceId }
+        showSettings(next)
+      }
     } catch (error) {
       setPapersError(errorMessage(error))
     } finally {
       setPapersLoading(false)
     }
-  }, [])
+  }, [showSettings])
 
   useEffect(() => {
     // The first fetch starts the request lifecycle; its loading flags drive the skeletons.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadConversations()
   }, [loadConversations])
+
+  useEffect(() => {
+    // Until the list has loaded the address may still name the exam to open, so it is left alone.
+    if (!conversationsLoading) showConversationInAddress(activeId)
+  }, [activeId, conversationsLoading])
 
   useEffect(() => {
     // Same lifecycle, started the first time the teacher picks a bank-based mode.
@@ -864,11 +992,6 @@ export function useAiAssistant() {
       return {
         examFormat: settings.examFormat,
         questionCount: settings.questionCount === 'full' ? 'full' : settings.questionCount,
-        difficultyMix: {
-          DE: settings.difficulty === 'DE' ? 1 : 0,
-          TB: settings.difficulty === 'TB' ? 1 : 0,
-          KHO: settings.difficulty === 'KHO' ? 1 : 0,
-        },
         bankRatio: settings.bankRatio,
         solutionStyle: settings.solutionStyle,
         instruction: text,
@@ -902,7 +1025,7 @@ export function useAiAssistant() {
           activeIdRef.current = conversation.id
           setActiveId(conversation.id)
           setCreatedConversationId(conversation.id)
-          updateMessages([])
+          // Messages already on screen (a refused request, its question) stay with the exam being made.
           updateDraft(null)
           await refreshDraft(conversation.id)
           return conversation.id
@@ -916,11 +1039,34 @@ export function useAiAssistant() {
       creationRef.current = { generation, promise: creation }
       return creation
     },
-    [refreshDraft, updateConversations, updateDraft, updateMessages]
+    [refreshDraft, updateConversations, updateDraft]
+  )
+
+  /** Takes back the conversation a failed send created: it holds nothing yet, so it leaves the list and the screen. */
+  const discardConversation = useCallback(
+    (conversationId: string) => {
+      if (activeIdRef.current !== conversationId) return
+      generationRef.current += 1
+      autoSelectRef.current = false
+      activeIdRef.current = null
+      setActiveId(null)
+      setCreatedConversationId(null)
+      updateDraft(null)
+      updateConversations(conversationsRef.current.filter((conversation) => conversation.id !== conversationId))
+      // A conversation that stays on the server unseen is harmless; the screen does not wait for the delete.
+      void deleteAiConversation(conversationId).catch(() => undefined)
+    },
+    [updateConversations, updateDraft]
   )
 
   const startRun = useCallback(
-    async (text: string, runMode: AiAssistantMode = mode, revise?: AiRevisedItem[], document?: AiSheetDocument) => {
+    async (
+      text: string,
+      runMode: AiAssistantMode = mode,
+      revise?: AiRevisedItem[],
+      document?: AiSheetDocument,
+      restoreOnFailure = false
+    ) => {
       if (sendingRef.current || runRef.current) return
       sendingRef.current = true
       cancelRequestedRef.current = false
@@ -930,10 +1076,21 @@ export function useAiAssistant() {
         .filter((message) => message.role === 'assistant')
         .map((message) => message.id)
       const localUserId = `local-${crypto.randomUUID()}`
+      // A new send answers what an earlier refusal asked: its retry and its subject choices are done with.
+      if (messagesRef.current.some((message) => message.retryText || message.subjectChoices)) {
+        updateMessages(
+          messagesRef.current
+            .filter((message) => !message.retryText)
+            .map(({ subjectChoices, ...message }) => (subjectChoices ? { ...message, subjectChoices: undefined } : message))
+        )
+      }
 
+      let conversationId = activeIdRef.current
+      // Made for this send (not by an edit of the sheet): it is taken back when the send fails, leaving no empty exam.
+      let createdHere = false
       try {
-        let conversationId = activeIdRef.current
         if (!conversationId) {
+          const shared = creationRef.current !== null
           conversationId = await ensureConversation(titleFromText(text))
           // The teacher opened another exam while this one was being created: the request is dropped.
           if (!conversationId) {
@@ -941,6 +1098,7 @@ export function useAiAssistant() {
             setSending(false)
             return
           }
+          createdHere = !shared
         }
 
         updateMessages([
@@ -996,6 +1154,24 @@ export function useAiAssistant() {
         stopStream()
         clearRunTimer()
         updateRun(null)
+        if (createdHere && conversationId) discardConversation(conversationId)
+        if (error instanceof ApiError && error.code === SUBJECT_REQUIRED && subjectsOf(error.data).length > 0) {
+          // Not a failure: the assistant asks which subject, and the teacher's words stay above the question.
+          updateMessages([
+            ...messagesRef.current,
+            {
+              id: `subject-${crypto.randomUUID()}`,
+              role: 'assistant',
+              body: error.message || 'Bạn muốn soạn môn nào?',
+              createdAt: new Date().toISOString(),
+              mode: runMode,
+              subjectChoices: { text, subjects: subjectsOf(error.data), whole: wholeOf(error.data) },
+            },
+          ])
+          sendingRef.current = false
+          setSending(false)
+          return
+        }
         updateMessages(
           messagesRef.current.filter((message) => message.id !== localUserId || message.role !== 'user')
         )
@@ -1008,9 +1184,11 @@ export function useAiAssistant() {
             createdAt: new Date().toISOString(),
             mode: runMode,
             error: true,
+            ...(runMode !== 'revise' ? { retryText: text } : {}),
           },
         ])
-        setNotice(errorMessage(error))
+        // The error shows once, in the thread; the teacher's words go back to the input to send again.
+        if (restoreOnFailure) setValue((current) => current || text)
         sendingRef.current = false
         setSending(false)
       }
@@ -1020,6 +1198,7 @@ export function useAiAssistant() {
       beginStream,
       buildConfig,
       clearRunTimer,
+      discardConversation,
       ensureConversation,
       mode,
       stopStream,
@@ -1039,7 +1218,7 @@ export function useAiAssistant() {
       if (!text || sendingRef.current || runRef.current) return
       setValue('')
       const revise = extra?.revise
-      void startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document)
+      void startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document, true)
     },
     [mode, startRun, value]
   )
@@ -1072,6 +1251,27 @@ export function useAiAssistant() {
     void startRun(lastUser.body, lastMode)
   }, [mode, startRun])
 
+  /** "Thử lại" on the error of a send: the same words, sent again. */
+  const retry = useCallback(
+    (messageId: string) => {
+      const failed = messagesRef.current.find((message) => message.id === messageId)
+      if (!failed?.retryText) return
+      void startRun(failed.retryText, failed.mode ?? mode, undefined, undefined, true)
+    },
+    [mode, startRun]
+  )
+
+  /** A subject (null: the whole paper) chosen for the question "Bạn muốn soạn môn nào?": the same request, with it added. */
+  const chooseSubject = useCallback(
+    (messageId: string, subjectName: string | null) => {
+      const asked = messagesRef.current.find((message) => message.id === messageId)
+      if (!asked?.subjectChoices) return
+      const words = asked.subjectChoices.text.trim().replace(/[\s.,;:!?…]+$/u, '')
+      void startRun(subjectName === null ? `${words} cả đề` : `${words} môn ${subjectName}`, asked.mode ?? mode, undefined, undefined, true)
+    },
+    [mode, startRun]
+  )
+
   const cancel = useCallback(() => {
     const conversationId = activeIdRef.current
     if (!conversationId || (!runRef.current && !sendingRef.current)) return
@@ -1080,16 +1280,14 @@ export function useAiAssistant() {
     void cancelAiRun(conversationId)
       .then((cancelled) => {
         const handle = streamRef.current
-        if (!cancelled && (!handle || !handle.opened)) {
+        // The server took the request: the run shows as stopped now, not when its stream gets to say so.
+        if (cancelled || !handle || !handle.opened) {
           void finishRun({ type: 'end', data: { status: 'CANCELLED' } }, conversationId)
           return
         }
         if (cancelTimerRef.current !== null) window.clearTimeout(cancelTimerRef.current)
         cancelTimerRef.current = window.setTimeout(() => {
-          if (runRef.current) {
-            setNotice('Đã gửi yêu cầu dừng nhưng máy chủ chưa phản hồi.')
-            void finishRun({ type: 'end', data: { status: 'CANCELLED' } }, conversationId)
-          }
+          if (runRef.current) void finishRun({ type: 'end', data: { status: 'CANCELLED' } }, conversationId)
         }, 4000)
       })
       .catch((error) => {
@@ -1114,7 +1312,8 @@ export function useAiAssistant() {
     sendingRef.current = false
     setDraftLoading(false)
     setNotice(null)
-  }, [clearRunTimer, stopStream, updateDraft, updateMessages, updateRun])
+    showSettings(preferredSettingsRef.current)
+  }, [clearRunTimer, showSettings, stopStream, updateDraft, updateMessages, updateRun])
 
   const selectConversation = useCallback(
     (conversationId: string) => {
@@ -1358,10 +1557,12 @@ export function useAiAssistant() {
     canStop,
     setMode,
     setValue,
-    setSettings,
+    setSettings: changeSettings,
     setNotice,
     send,
     regenerate,
+    retry,
+    chooseSubject,
     addRunStep,
     cancel,
     ensureConversation,

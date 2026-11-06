@@ -311,6 +311,26 @@ test('SECTION content authoring creates and publishes a lesson with edit tokens'
   ).toMatchObject({ published: true, preview: false, expectedUpdatedAt: STAMP })
 })
 
+test('staff who label the course see its skill suggestions under the content', async ({ page }) => {
+  await installCrudFixture(page)
+  const suggestionReads: string[] = []
+  await page.route('**/api/v1/question-bank/me/scopes', (route) =>
+    route.fulfill({ json: { success: true, data: { administrator: true, authorSubjectIds: [], reviewerSubjectIds: [] } } })
+  )
+  await page.route('**/api/v1/authoring/courses/*/skill-suggestions*', (route) => {
+    const url = new URL(route.request().url())
+    suggestionReads.push(`${route.request().method()} ${url.pathname}${url.search}`)
+    return route.fulfill({ json: { success: true, data: { courseId: IDS.section, run: null, suggestions: [] } } })
+  })
+  await page.goto('/staff/courses')
+  await page.getByRole('button', { name: 'SECTION Đại số', exact: true }).click()
+  await page.getByRole('tab', { name: 'Nội dung', exact: true }).click()
+
+  await expect(page.getByRole('heading', { name: 'Gợi ý kỹ năng', exact: true })).toBeVisible()
+  // the dev server mounts effects twice, so the same read may come twice
+  expect([...new Set(suggestionReads)]).toEqual([`GET /api/v1/authoring/courses/${IDS.section}/skill-suggestions?status=PENDING`])
+})
+
 test('staff closes an unpaid order from its detail', async ({ page }) => {
   const state = await installCrudFixture(page)
   await page.goto('/staff/orders')

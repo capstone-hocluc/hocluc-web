@@ -18,7 +18,9 @@ import Notice from '../../console/notice'
 import type { SelectOption } from '../../console/select-field'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import QuizConfigBar from './QuizConfigBar'
-import { COMPOSE_COUNTS, DIFFICULTIES, MOCK_COUNTS, SOLUTION_STYLES } from './quiz-config-options'
+import { EXAM_FORMATS } from './exam-format'
+import { requestedCount } from './revise-request'
+import { COMPOSE_COUNTS, MOCK_COUNTS, SOLUTION_STYLES } from './quiz-config-options'
 
 /**
  * Closes a floating menu on a click outside `root` or on Escape. Spread the returned handler on `root`: inside
@@ -77,7 +79,7 @@ const MODES: {
   {
     id: 'mock-exam',
     label: 'Mô phỏng đề',
-    description: 'Lấy câu hỏi từ ngân hàng đề có sẵn',
+    description: 'Soạn đề mới theo một đề mẫu',
     placeholder: EXAM_PLACEHOLDER,
     icon: FileCheck2,
   },
@@ -134,7 +136,14 @@ export default function Composer({
   const ownRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef ?? ownRef
   const missingConfig = mode === 'mock-exam' && !settings.bankSourceId
-  const canSend = Boolean(value.trim()) && !busy && !missingConfig
+  const blocked = missingConfig
+  const canSend = Boolean(value.trim()) && !busy && !blocked
+  // Counts the sends; the settings menu is keyed by it, so it closes and does not cover the progress.
+  const [sends, setSends] = useState(0)
+  const send = () => {
+    setSends((count) => count + 1)
+    onSend()
+  }
 
   useEffect(() => {
     const element = textareaRef.current
@@ -158,7 +167,7 @@ export default function Composer({
         <form
           onSubmit={(event) => {
             event.preventDefault()
-            if (!busy) onSend()
+            if (!busy) send()
           }}
           className="@container rounded-xl border border-card-border bg-card-background shadow-card-soft transition-[border-color,box-shadow] focus-within:border-input-primary-focus-border focus-within:shadow-card"
         >
@@ -172,7 +181,7 @@ export default function Composer({
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                   event.preventDefault()
-                  if (canSend) onSend()
+                  if (canSend) send()
                 }
               }}
               placeholder={active.placeholder}
@@ -207,7 +216,8 @@ export default function Composer({
               <ModeMenu mode={mode} onModeChange={onModeChange} />
               {mode !== 'ask' && (
                 <SettingsMenu
-                  summary={settingsSummary(mode, settings)}
+                  key={sends}
+                  summary={settingsSummary(mode, settings, requestedCount(value))}
                   missing={missingConfig}
                   hasError={Boolean(mode === 'mock-exam' && papersError)}
                 >
@@ -222,7 +232,7 @@ export default function Composer({
             <Button
               type={busy ? 'button' : 'submit'}
               onClick={busy ? onStop : undefined}
-              disabled={!busy && (!value.trim() || missingConfig)}
+              disabled={!busy && (!value.trim() || blocked)}
               aria-label={busy ? 'Dừng tạo câu trả lời' : 'Gửi tin nhắn'}
               title={busy ? 'Dừng tạo câu trả lời' : 'Gửi (Enter)'}
               size="icon"
@@ -334,20 +344,29 @@ const labelOf = (options: readonly SelectOption[], id: string) =>
   options.find((option) => option.id === id)?.label
 
 /**
- * One line telling the current compose settings, e.g. "5 câu · Trung bình · Lời giải đầy đủ". The bank paper of
- * "Mô phỏng đề" is left out: the sources block above the composer already shows it.
+ * One line telling the current compose settings, e.g. "10 câu · VACT 2025 · Dùng lại 20% · Lời giải gọn". The count is
+ * the one the typed words ask for when they name one: that is what the run will write. The bank paper of "Mô phỏng
+ * đề" is left out: the sources block above the composer already shows it.
  */
 function settingsSummary(
   mode: Exclude<AiAssistantMode, 'ask'>,
-  settings: AiComposeSettings
+  settings: AiComposeSettings,
+  typedCount: number | null
 ) {
-  const count = labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount))
-  const difficulty = mode === 'compose' ? labelOf(DIFFICULTIES, settings.difficulty) : undefined
+  const count = typedCount
+    ? `${typedCount} câu`
+    : labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount)) ??
+      (typeof settings.questionCount === 'number' ? `${settings.questionCount} câu` : undefined)
+  const format = mode === 'compose' ? labelOf(EXAM_FORMATS, settings.examFormat) : undefined
+  const reuse = settings.bankRatio > 0 ? `Dùng lại ${Math.round(settings.bankRatio * 100)}%` : 'Không dùng lại'
   const solution = labelOf(SOLUTION_STYLES, settings.solutionStyle)
-  return [count, difficulty, solution && `Lời giải ${solution.toLowerCase()}`].filter(Boolean).join(' · ')
+  return [count, format, reuse, solution && `Lời giải ${solution.toLowerCase()}`].filter(Boolean).join(' · ')
 }
 
-/** The compose settings folded into one chip of the composer; the full settings open above it. */
+/**
+ * The settings a request rarely says in words, behind one small chip of the composer. The chip's title sums up what
+ * the run will use, the count the words ask for included.
+ */
 function SettingsMenu({
   summary,
   missing,
@@ -369,13 +388,13 @@ function SettingsMenu({
       <button
         type="button"
         aria-expanded={open}
-        aria-label="Cấu hình đề"
-        title={summary || 'Cấu hình đề'}
+        aria-label="Tùy chọn"
+        title={summary || 'Tùy chọn'}
         onClick={() => setOpen((value) => !value)}
         className={cn(CHIP, attention ? 'text-danger' : 'text-text-secondary hover:text-text-primary')}
       >
         <Filter size={14} strokeWidth={1.7} aria-hidden className="shrink-0 @max-xs:hidden" />
-        <span className="min-w-0 truncate">{missing ? 'Chọn cấu hình đề' : summary || 'Cấu hình đề'}</span>
+        <span className="min-w-0 truncate">{missing ? 'Chọn cấu hình đề' : 'Tùy chọn'}</span>
         <ChevronDown
           size={12}
           strokeWidth={1.8}
@@ -385,7 +404,7 @@ function SettingsMenu({
       </button>
       {open && (
         // The selects inside portal their option lists into this box, so picking one is not a click outside.
-        <div role="dialog" aria-label="Cấu hình đề" data-select-portal="" className={cn(MENU, 'max-w-[360px] p-2')}>
+        <div role="dialog" aria-label="Tùy chọn" data-select-portal="" className={cn(MENU, 'max-w-[360px] p-2')}>
           {children}
         </div>
       )}

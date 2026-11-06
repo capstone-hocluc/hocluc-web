@@ -170,11 +170,11 @@ const seededItems = (conversationId: string) => [
 const sse = (...events: [string, unknown][]) =>
   events.map(([name, data]) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`).join('')
 
-const composeStream = (conversationId: string) =>
+const composeStream = (conversationId: string, planNotes?: string[]) =>
   sse(
     ['stage', { stage: 'explore', status: 'running', summary: 'Đã khảo sát 120 câu' }],
     ['stage', { stage: 'plan', status: 'running' }],
-    ['stage', { stage: 'plan', status: 'done', cells: 2 }],
+    ['stage', { stage: 'plan', status: 'done', cells: 2, ...(planNotes ? { notes: planNotes } : {}) }],
     ['slot', { stage: 'write', status: 'running', index: 1, total: 2, section: 'Toán học', difficulty: 'TB' }],
     ['item', {
       stage: 'write',
@@ -254,6 +254,12 @@ interface AiFixtureOptions {
   queued?: boolean
   /** The teacher already has an exam being composed in another conversation. */
   busyElsewhere?: boolean
+  /** A compose request naming no subject is answered with the question which subject, until the words say "môn". */
+  subjectRequired?: boolean
+  /** The question which subject also offers the whole paper: the teacher can teach every subject of the format. */
+  subjectWhole?: boolean
+  /** What the plan step of a compose run says about the request. */
+  planNotes?: string[]
   /** The text of the `answer` event an ask run publishes, instead of its usual error. */
   askAnswer?: string
   /** A compose run already going when the page opens: the draft reports it, with the last event before it began. */
@@ -263,6 +269,10 @@ interface AiFixtureOptions {
   /** What a paper's reading answers, and its stream (null: the stream cannot be opened). */
   bankReading?: (sourceId: string) => unknown
   bankStream?: (sourceId: string) => string | null
+  /** The subject every draft question goes under in the bank; without it none is known and nothing can be saved. */
+  bankSubject?: string
+  /** The subjects the viewer authors in the bank. */
+  authorSubjectIds?: string[]
 }
 
 /** The running test's fixture; after the test every request must have had a handler and the page must not have thrown. */
@@ -279,6 +289,9 @@ test.afterEach(() => {
 async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options: AiFixtureOptions = {}) {
   const quiz = await installQuizFixture(page, role)
   checkedFixture = quiz
+  page.on('console', (message) => {
+    if (message.type() === 'warning' && message.text().includes('PressResponder')) quiz.pageErrors.push(message.text())
+  })
   const state = {
     conversations: [...(options.conversations ?? [])] as Conversation[],
     messages: new Map(Object.entries(options.messages ?? {})),
@@ -300,6 +313,10 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
     revised: null as { itemId?: string; number: number } | null,
     posted: false,
     cancelled: false,
+    /** Sends are refused as another exam being composed; a test turns it off to let a retry through. */
+    busy: options.busyElsewhere === true,
+    /** The bank question each draft question saved to the bank became. */
+    bankSaved: new Map<string, string>(),
   }
 
   // The subject list also reads which subjects have an exam framework; Toán has one.
@@ -435,7 +452,10 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
 
     if (action === 'messages') {
       if (method === 'GET') return reply(state.messages.get(conversationId) ?? [])
-      if (options.busyElsewhere && body.mode !== 'ask') {
+      if (options.subjectRequired && body.mode === 'compose' && !/môn|cả đề/i.test(String(body.content))) {
+        return reply({ subjects: [{ id: 'subject-1', name: 'Toán học' }, { id: 'subject-2', name: 'Vật lí' }], whole: options.subjectWhole === true }, 422, 'Bạn muốn soạn môn nào?', 'AI_COMPOSE_SUBJECT_REQUIRED')
+      }
+      if (state.busy && body.mode !== 'ask') {
         return route.fulfill({
           status: 409,
           contentType: 'application/json',
@@ -538,7 +558,7 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
                 ? sse(['tool', { tool: 'soan-cau-hoi', arguments: { section: 'P2' } }])
                 : state.mode === 'revise' && state.revised
                   ? reviseStream(state.revised)
-                  : composeStream(conversationId)
+                  : composeStream(conversationId, options.planNotes)
       return route.fulfill({ status: 200, contentType: 'text/event-stream', body })
     }
 
@@ -549,6 +569,38 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
         return reply(options.runningAfter && !state.cancelled
           ? { ...draft, run: { mode: 'compose', status: 'RUNNING', progress: 'Đã soạn 1/2 câu', afterEventId: options.runningAfter } }
           : draft)
+      }
+      // Where each question stands with the bank, and saving questions there, once each.
+      if (segments.length === 2 && segments[1] === 'bank' && method === 'GET') {
+        return reply({
+          items: draft.items.map((entry) => ({
+            itemId: entry.id,
+            subjectId: options.bankSubject ?? null,
+            questionId: state.bankSaved.get(entry.id) ?? null,
+          })),
+        })
+      }
+      if (segments.length === 2 && segments[1] === 'bank' && method === 'POST') {
+        const itemIds = (body.itemIds as string[] | undefined) ?? draft.items.filter((entry) => entry.kept).map((entry) => entry.id)
+        return reply({
+          items: itemIds.map((itemId) => {
+            const before = state.bankSaved.get(itemId)
+            if (before) return { itemId, result: 'ALREADY_SAVED', questionId: before, reason: null }
+            if (!options.bankSubject) return { itemId, result: 'SKIPPED', questionId: null, reason: 'Chưa xác định được môn của câu' }
+            state.bankSaved.set(itemId, `bank-question-${itemId}`)
+            return { itemId, result: 'SAVED', questionId: `bank-question-${itemId}`, reason: null }
+          }),
+        })
+      }
+      if (segments.length === 2 && segments[1] === 'quiz' && method === 'POST') {
+        const written = draft.items.filter((entry) => entry.kept && !entry.question.failed)
+        return reply({
+          quizId: 'quiz-from-draft',
+          type: body.type,
+          title: String(body.title ?? conversation.title),
+          questionCount: written.length,
+          skipped: [],
+        })
       }
       if (segments[1] !== 'items') return unhandled()
 
@@ -608,6 +660,9 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
     const reply = (data: unknown, status = 200) =>
       route.fulfill({ status, json: { success: status < 400, status, data, message: 'OK' } })
     if (path === '/api/v1/question-bank/labelling') return reply({ ready: true, reason: null })
+    if (path === '/api/v1/question-bank/me/scopes') {
+      return reply({ administrator: false, authorSubjectIds: options.authorSubjectIds ?? [], reviewerSubjectIds: [] })
+    }
     if (path === '/api/v1/question-bank/sources') {
       if (method === 'GET') return reply(bank.sources)
       bank.upload = request.postData()
@@ -694,10 +749,10 @@ async function openAssistant(page: Page) {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/console/manager/ai-assistant')
   await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toBeVisible()
-  // The compose settings sit behind the "Cấu hình đề" chip; its title sums them up, with no subject in it.
-  await expect(page.getByRole('button', { name: 'Cấu hình đề', exact: true })).toHaveAttribute(
+  // The compose settings sit behind the "Tùy chọn" chip; its title sums them up, with no subject in it.
+  await expect(page.getByRole('button', { name: 'Tùy chọn', exact: true })).toHaveAttribute(
     'title',
-    '5 câu · Trung bình · Lời giải đầy đủ'
+    '5 câu · VACT 2025 · Dùng lại 20% · Lời giải đầy đủ'
   )
   // The new exam's sheet takes edits once its document is ready; a click before that would not place the caret.
   await expect(docEditor(page)).toHaveAttribute('contenteditable', 'true')
@@ -831,7 +886,7 @@ test('the question bank opens the assistant, whose compose settings ask for no s
 
   await expect(page).toHaveURL(/\/console\/manager\/ai-assistant$/)
   await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toBeVisible()
-  await page.getByRole('button', { name: 'Cấu hình đề', exact: true }).click()
+  await page.getByRole('button', { name: 'Tùy chọn', exact: true }).click()
   // The request names the subject ("10 câu Toán"); the settings have no subject to pick.
   await expect(page.getByText('Định dạng đề', { exact: true })).toBeVisible()
   await expect(page.getByText('Môn học', { exact: true })).toHaveCount(0)
@@ -844,23 +899,17 @@ test('the question bank opens the assistant, whose compose settings ask for no s
   await expect(page.getByRole('heading', { name: 'Ngân hàng câu hỏi', exact: true })).toBeVisible()
 })
 
-test('a teacher opens the assistant from the bank, and its back control returns to the bank', async ({ page }) => {
+test('a teacher opens the assistant from the menu, and its back control returns to the overview', async ({ page }) => {
   await installAiFixture(page, 'TEACHER')
-  await installBankFixture(page)
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/console/teacher/question-bank')
+  await page.goto('/console/teacher/dashboard')
 
-  // A teacher's bank is read-only, but the assistant entry is still offered.
-  await expect(page.getByRole('heading', { name: 'Ngân hàng câu hỏi', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Soạn đề với AI', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Soạn đề với AI', exact: true }).click()
-
+  await page.locator('aside nav').getByRole('button', { name: 'Trợ lý AI', exact: true }).click()
   await expect(page).toHaveURL(/\/console\/teacher\/ai-assistant$/)
   await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Về ngân hàng câu hỏi', exact: true }).click()
-  await expect(page).toHaveURL(/\/console\/teacher\/question-bank$/)
-  await expect(page.getByRole('heading', { name: 'Ngân hàng câu hỏi', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Về trang tổng quan', exact: true }).click()
+  await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
 })
 
 test('the assistant entry stays visible after switching to the bank\'s "Đề đã nạp" tab', async ({ page }) => {
@@ -1023,6 +1072,123 @@ test('keeping and dropping an AI question each call the draft API', async ({ pag
 
   await first.getByRole('button', { name: 'Bỏ', exact: true }).click()
   await expect.poll(() => keepRequests().at(-1)?.body).toEqual({ kept: false })
+})
+
+/** A saved exam of two kept AI questions shown as question cards, with what their check found. */
+async function openCheckedExam(page: Page, role: UserRole, bank: Pick<AiFixtureOptions, 'bankSubject' | 'authorSubjectIds'>) {
+  const saved: Conversation = { id: 'conv-7', title: 'Đề ôn hàm số', subjectId: null, mode: 'compose', createdAt: stamp, updatedAt: stamp }
+  const fixture = await installAiFixture(page, role, {
+    conversations: [saved],
+    drafts: {
+      'conv-7': {
+        draft: { id: 'draft-conv-7', conversationId: 'conv-7', name: 'Đề ôn hàm số', examFormat: 'VACT_2025', status: 'DRAFT' },
+        items: [
+          {
+            ...item('conv-7', 'item-1', 1, 'Tính giá trị của biểu thức x cộng 1.', {
+              passed: true,
+              needsReview: true,
+              reasons: [],
+              warnings: ['Chưa kiểm dạng câu: máy chủ chưa cấu hình Jev', 'Chưa kiểm đáp án: máy chủ chưa cấu hình model soát đáp án'],
+            }),
+            kept: true,
+          },
+          {
+            ...item('conv-7', 'item-2', 2, 'Rút gọn biểu thức hai x trừ x.', {
+              passed: false,
+              needsReview: true,
+              reasons: ['Model soát chọn C, đáp án A'],
+              warnings: [],
+            }),
+            kept: true,
+          },
+        ],
+      },
+    },
+    documents: { 'conv-7': structuredDocument('Đề ôn hàm số', ['item-1', 'item-2']) },
+    ...bank,
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto(`/console/${role === 'TEACHER' ? 'teacher' : 'manager'}/ai-assistant`)
+  await expect(page.locator('#exam-question-item-1')).toBeVisible()
+  return fixture
+}
+
+test('a question card shows what its check found, faults apart from warnings', async ({ page }) => {
+  await openCheckedExam(page, 'MANAGER', {})
+
+  const first = page.locator('#exam-question-item-1').getByRole('list', { name: 'Kết quả kiểm tra câu 1', exact: true })
+  await expect(first.getByText('Cần duyệt', { exact: true })).toBeVisible()
+  await expect(first.getByTitle('Chưa kiểm dạng câu: máy chủ chưa cấu hình Jev', { exact: true })).toBeVisible()
+  await expect(first.getByTitle('Chưa kiểm đáp án: máy chủ chưa cấu hình model soát đáp án', { exact: true }))
+    .toContainText('Chưa kiểm đáp án')
+  const second = page.locator('#exam-question-item-2').getByRole('list', { name: 'Kết quả kiểm tra câu 2', exact: true })
+  await expect(second.getByTitle('Model soát chọn C, đáp án A', { exact: true })).toBeVisible()
+})
+
+test('a question is saved to the bank from its card, then the rest from the header', async ({ page }) => {
+  const { state } = await openCheckedExam(page, 'MANAGER', { bankSubject: 'category-1', authorSubjectIds: ['category-1'] })
+  const saves = () => state.requests.filter((entry) => entry.method === 'POST' && entry.path === `${BASE}/conversations/conv-7/draft/bank`)
+
+  const first = page.locator('#exam-question-item-1')
+  await first.hover()
+  await first.getByRole('button', { name: 'Lưu câu 1 vào ngân hàng', exact: true }).click()
+  await expect.poll(() => saves().at(-1)?.body).toEqual({ itemIds: ['item-1'] })
+  await expect(first.getByText('Đã lưu vào ngân hàng', { exact: true })).toBeVisible()
+  await expect(first.getByRole('button', { name: 'Lưu câu 1 vào ngân hàng' })).toHaveCount(0)
+
+  await page.getByRole('banner').getByRole('button', { name: 'Lưu vào ngân hàng', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('checkbox', { name: /^Câu 1\./ })).toBeDisabled()
+  await dialog.getByRole('button', { name: 'Lưu 1 câu', exact: true }).click()
+  await expect(dialog.getByText('Đã lưu 1 câu', { exact: true })).toBeVisible()
+  expect(saves().at(-1)?.body).toEqual({ itemIds: ['item-2'] })
+  await dialog.getByRole('button', { name: 'Đóng', exact: true }).click()
+  await expect(page.locator('#exam-question-item-2').getByText('Đã lưu vào ngân hàng', { exact: true })).toBeVisible()
+})
+
+test('without an author scope for the questions\' subject nothing is offered for the bank', async ({ page }) => {
+  const { state } = await openCheckedExam(page, 'MANAGER', { bankSubject: 'category-1', authorSubjectIds: ['category-2'] })
+
+  // a manager asks where the questions stand with the bank...
+  await expect
+    .poll(() => state.requests.some((entry) => entry.method === 'GET' && entry.path === `${BASE}/conversations/conv-7/draft/bank`))
+    .toBe(true)
+  // ...but may save none of another subject's questions
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Lưu vào ngân hàng' })).toHaveCount(0)
+  await page.locator('#exam-question-item-1').hover()
+  await expect(page.getByRole('button', { name: 'Lưu câu 1 vào ngân hàng' })).toHaveCount(0)
+})
+
+test('a teacher, even one authoring the subject, is offered nothing for the bank and never asks about it', async ({ page }) => {
+  const { state } = await openCheckedExam(page, 'TEACHER', { bankSubject: 'category-1', authorSubjectIds: ['category-1'] })
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Lưu vào ngân hàng' })).toHaveCount(0)
+  await page.locator('#exam-question-item-1').hover()
+  await expect(page.getByRole('button', { name: 'Lưu câu 1 vào ngân hàng' })).toHaveCount(0)
+  await expect(page.getByText('Đã lưu vào ngân hàng')).toHaveCount(0)
+  expect(state.requests.filter((entry) => entry.path.endsWith('/draft/bank'))).toEqual([])
+  // writing quizzes is staff work
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Xuất thành quiz' })).toHaveCount(0)
+})
+
+test('the exam becomes a draft mock exam of a course, opened from the result', async ({ page }) => {
+  const { state } = await openCheckedExam(page, 'MANAGER', {})
+
+  await page.getByRole('banner').getByRole('button', { name: 'Xuất thành quiz', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Khóa học' }).click()
+  await page.getByRole('option', { name: 'Khóa được phân công', exact: true }).click()
+  await expect(dialog.getByText('2 câu cần kiểm tra lại; quiz được tạo ở dạng nháp.', { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Xuất 2 câu', exact: true }).click()
+
+  await expect(dialog.getByText('Đề thi thử “Đề ôn hàm số” đã được tạo ở dạng nháp với 2 câu.')).toBeVisible()
+  const exported = state.requests.find((entry) => entry.method === 'POST' && entry.path === `${BASE}/conversations/conv-7/draft/quiz`)
+  expect(exported?.body).toMatchObject({ type: 'EXAM', courseId: '10000000-0000-0000-0000-000000000001', title: 'Đề ôn hàm số' })
+  await expect(dialog.getByRole('link', { name: 'Mở quiz', exact: true })).toHaveAttribute(
+    'href',
+    '/console/manager/mock-exams/quiz-from-draft/edit'
+  )
 })
 
 test('dragging a paper question reorders the draft through the API', async ({ page }) => {
@@ -1452,13 +1618,13 @@ test('a short solution style is asked for and shown, and the key is written agai
   const { state } = await installAiFixture(page)
   await openAssistant(page)
   const sheet = docEditor(page)
-  await page.getByRole('button', { name: 'Cấu hình đề', exact: true }).click()
-  await page.getByRole('dialog', { name: 'Cấu hình đề' }).getByRole('button', { name: /Lời giải/ }).click()
+  await page.getByRole('button', { name: 'Tùy chọn', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Tùy chọn' }).getByRole('button', { name: /Lời giải/ }).click()
   await page.getByRole('option', { name: 'Gọn', exact: true }).click()
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('button', { name: 'Cấu hình đề', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Tùy chọn', exact: true })).toHaveAttribute(
     'title',
-    '5 câu · Trung bình · Lời giải gọn'
+    '5 câu · VACT 2025 · Dùng lại 20% · Lời giải gọn'
   )
   await sendCompose(page)
 
@@ -1473,8 +1639,8 @@ test('a short solution style is asked for and shown, and the key is written agai
   await expect(sheet.getByRole('heading', { name: 'BẢNG ĐÁP ÁN', exact: true })).toHaveCount(1)
 
   // A teacher who wants the full guide after all picks it and asks again.
-  await page.getByRole('button', { name: 'Cấu hình đề', exact: true }).click()
-  await page.getByRole('dialog', { name: 'Cấu hình đề' }).getByRole('button', { name: /Lời giải/ }).click()
+  await page.getByRole('button', { name: 'Tùy chọn', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Tùy chọn' }).getByRole('button', { name: /Lời giải/ }).click()
   await page.getByRole('option', { name: 'Đầy đủ', exact: true }).click()
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Cập nhật đáp án', exact: true }).click()
@@ -1551,7 +1717,7 @@ test('"Sửa câu 2" rewrites only that question where it stands and writes its 
   const sent = state.requests.filter((entry) => entry.method === 'POST' && entry.path === `${BASE}/conversations/conv-1/messages`).at(-1)
   expect(sent?.body).toMatchObject({ mode: 'revise', config: { items: [{ itemId: 'item-2', number: 2 }], instruction: 'Sửa câu 2 cho khó hơn' } })
   // The run's steps read as what they did.
-  for (const step of ['Đọc câu trong đề', 'Viết lại câu', 'Soát lại câu', 'Cập nhật đáp án']) {
+  for (const step of ['Đọc câu trong đề', 'Viết lại câu', 'Kiểm tra lại câu', 'Cập nhật đáp án']) {
     await expect(page.getByText(step, { exact: true }).first()).toBeVisible()
   }
 
@@ -1619,6 +1785,260 @@ test('"Sửa câu 9" when the exam has no question 9 says so and sends nothing',
   await expect(page.getByText('Đề không có câu 9 để sửa.')).toBeVisible()
   expect(posts()).toBe(before)
   await expect(page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })).toHaveValue('Sửa câu 9 cho dễ hơn')
+})
+
+const messagePosts = (state: { requests: Array<{ method: string; path: string; body?: unknown }> }) =>
+  state.requests.filter((entry) => entry.method === 'POST' && entry.path.endsWith('/messages'))
+
+test('"Sửa câu 2" in the mock exam mode revises that question instead of replacing the exam', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { bankSources: [bankSource('src-1', 'Đề mẫu 2021', 'DONE', 1)] })
+  await openAssistant(page)
+  await sendCompose(page)
+
+  await page.getByRole('button', { name: 'Chế độ trả lời' }).click()
+  await page.getByRole('option', { name: /Mô phỏng đề/ }).click()
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Câu 2 dễ quá, làm cho khó hơn chút')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Đã sửa 1 câu trong đề')).toBeVisible({ timeout: 15_000 })
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({ mode: 'revise', config: { items: [{ itemId: 'item-2', number: 2 }] } })
+  await expect(page.getByRole('dialog', { name: 'Soạn đề mới thay đề hiện tại?' })).toHaveCount(0)
+})
+
+test('a new run over a draft with questions asks first, naming how many are replaced and kept', async ({ page }) => {
+  const { state } = await installAiFixture(page)
+  await openAssistant(page)
+  await chooseStructuredMode(page)
+  await sendCompose(page)
+  await page.locator('#exam-question-item-1').getByRole('button', { name: 'Giữ', exact: true }).click()
+  await expect(page.locator('#exam-question-item-1').getByText('Đã giữ', { exact: true })).toBeVisible()
+  const posts = messagePosts(state).length
+  const input = page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+
+  await input.fill('Soạn 2 câu hình học')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Soạn đề mới thay đề hiện tại?' })
+  await expect(dialog).toContainText('2 câu hiện có sẽ bị thay, kể cả 1 câu đã giữ')
+  await dialog.getByRole('button', { name: 'Huỷ' }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(input).toHaveValue('Soạn 2 câu hình học')
+  expect(messagePosts(state)).toHaveLength(posts)
+
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await dialog.getByRole('button', { name: 'Thay đề' }).click()
+  await expect.poll(() => messagePosts(state).length).toBe(posts + 1)
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 2 câu hình học' })
+})
+
+test('a send that fails shows its error once and gives the typed message back', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { busyElsewhere: true })
+  await openAssistant(page)
+  const input = page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+
+  await input.fill('Soạn 2 câu đại số cơ bản')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Bạn đang có một đề khác đang soạn', { exact: false })).toHaveCount(1)
+  await expect(input).toHaveValue('Soạn 2 câu đại số cơ bản')
+})
+
+test('stopping a run that the server accepts shows it stopped at once, with no warning', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { endless: true })
+  await openAssistant(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn đề kiểm tra')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await page.getByRole('button', { name: 'Dừng tạo câu trả lời' }).click()
+
+  // Well before the server's own end event could be waited for.
+  await expect(page.getByText('Đã dừng', { exact: true })).toBeVisible({ timeout: 2_500 })
+  await expect(page.getByText('Trợ lý AI đang xử lý')).toHaveCount(0)
+  await expect(page.getByText('máy chủ chưa phản hồi', { exact: false })).toHaveCount(0)
+})
+
+test('a compose request naming no subject is answered with the subjects to choose from', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { subjectRequired: true })
+  await openAssistant(page)
+  const input = page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+
+  await input.fill('Soạn 5 câu trung bình')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  // A question, not an error; the teacher's words stay above it, and no empty exam is left in the list.
+  await expect(page.getByText('Bạn muốn soạn môn nào?', { exact: true })).toBeVisible()
+  await expect(page.getByText('Trợ lý AI báo lỗi')).toHaveCount(0)
+  await expect(page.getByText('Soạn 5 câu trung bình', { exact: true })).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Chọn môn' }).getByRole('button')).toHaveText(['Toán học', 'Vật lí'])
+  await expect(page.getByRole('list', { name: 'Đề của tôi', exact: true }).getByText('Soạn 5 câu trung bình')).toHaveCount(0)
+  await expect(input).toHaveValue('')
+
+  await page.getByRole('list', { name: 'Chọn môn' }).getByRole('button', { name: 'Toán học' }).click()
+  await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 5 câu trung bình môn Toán học', mode: 'compose' })
+  // The choices are gone once one is taken.
+  await expect(page.getByRole('list', { name: 'Chọn môn' })).toHaveCount(0)
+})
+
+test('a request naming no subject also offers the whole paper when the teacher can teach every subject', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { subjectRequired: true, subjectWhole: true })
+  await openAssistant(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn 5 câu trung bình')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  const choices = page.getByRole('list', { name: 'Chọn môn' })
+  await expect(choices.getByRole('button')).toHaveText(['Cả đề', 'Toán học', 'Vật lí'])
+
+  await choices.getByRole('button', { name: 'Cả đề' }).click()
+  await expect.poll(() => messagePosts(state).length).toBe(2)
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 5 câu trung bình cả đề', mode: 'compose' })
+})
+
+test('a refused request, a stopped run and the next request all stay in the thread', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { subjectRequired: true, endless: true })
+  await openAssistant(page)
+  const input = page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+  const thread = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
+
+  await input.fill('Soạn đề thứ nhất')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await expect(thread.getByText('Bạn muốn soạn môn nào?', { exact: true })).toBeVisible()
+
+  await input.fill('Soạn đề thứ hai môn Toán học')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await page.getByRole('button', { name: 'Dừng tạo câu trả lời' }).click()
+  await expect(thread.getByText('Đã dừng', { exact: true })).toBeVisible({ timeout: 5_000 })
+
+  await input.fill('Soạn đề thứ ba')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await expect(thread.getByText('Bạn muốn soạn môn nào?', { exact: true })).toHaveCount(2)
+
+  await expect(thread.getByText('Soạn đề thứ nhất', { exact: true })).toBeVisible()
+  await expect(thread.getByText('Soạn đề thứ hai môn Toán học', { exact: true })).toBeVisible()
+  await expect(thread.getByText('Soạn đề thứ ba', { exact: true })).toBeVisible()
+  await expect(thread.getByText('Đã dừng', { exact: true })).toBeVisible()
+})
+
+test('a new conversation starts from the default settings, not from the exam it follows', async ({ page }) => {
+  const older: Conversation = { id: 'conv-1', title: 'Đề cũ', subjectId: null, mode: 'compose', createdAt: stamp, updatedAt: stamp }
+  const { state } = await installAiFixture(page, 'MANAGER', {
+    conversations: [older],
+    drafts: {
+      'conv-1': {
+        ...emptyDraft(older),
+        draft: {
+          ...emptyDraft(older).draft,
+          config: { examFormat: 'VACT_2025', questionCount: 30, bankRatio: 0.2, solutionStyle: 'full' },
+        },
+      },
+    },
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant?c=conv-1')
+  const chip = page.getByRole('button', { name: 'Tùy chọn', exact: true })
+  await expect(chip).toHaveAttribute('title', /^30 câu/)
+
+  await page.getByRole('complementary', { name: 'Trợ lý AI', exact: true }).getByRole('button', { name: 'Cuộc trò chuyện mới', exact: true }).click()
+  await expect(chip).toHaveAttribute('title', /^5 câu/)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn đề đại số')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await expect.poll(() => messagePosts(state).length).toBeGreaterThan(0)
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({ config: { questionCount: 5 } })
+})
+
+test('the settings menu closes when a message is sent', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { endless: true })
+  await openAssistant(page)
+
+  await page.getByRole('button', { name: 'Tùy chọn', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Tùy chọn' })).toBeVisible()
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn đề kiểm tra')
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).press('Enter')
+
+  await expect(page.getByRole('dialog', { name: 'Tùy chọn' })).toHaveCount(0)
+})
+
+test('a failed send leaves no empty exam behind and can be tried again', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { busyElsewhere: true })
+  await openAssistant(page)
+  const input = page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+
+  await input.fill('Soạn 2 câu đại số cơ bản')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Trợ lý AI báo lỗi')).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Đề của tôi', exact: true }).getByText('Soạn 2 câu đại số cơ bản')).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).not.toHaveValue('Soạn 2 câu đại số cơ bản')
+  expect(state.requests.some((entry) => entry.method === 'DELETE')).toBe(true)
+
+  state.busy = false
+  await page.getByRole('button', { name: 'Thử lại' }).click()
+  await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Trợ lý AI báo lỗi')).toHaveCount(0)
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 2 câu đại số cơ bản' })
+})
+
+test('the plan step tells what it changed, and the config chip follows the count the words ask for', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { planNotes: ['Đề tối đa 120 câu; yêu cầu 500 câu được rút về 120.'] })
+  await openAssistant(page)
+  const chip = page.getByRole('button', { name: 'Tùy chọn', exact: true })
+  const input = page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+
+  await input.fill('Soạn 10 câu Toán')
+  await expect(chip).toHaveAttribute('title', '10 câu · VACT 2025 · Dùng lại 20% · Lời giải đầy đủ')
+  await input.fill('Sửa câu 2 cho khó hơn')
+  await expect(chip).toHaveAttribute('title', '5 câu · VACT 2025 · Dùng lại 20% · Lời giải đầy đủ')
+
+  await input.fill('Soạn 2 câu đại số cơ bản')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Đề tối đa 120 câu; yêu cầu 500 câu được rút về 120.')).toBeVisible()
+  await expect(page.getByText('2 câu', { exact: true }).first()).toBeVisible()
+  // The AI's own codes and words for cells stay out of the steps.
+  await expect(page.getByText(/\d+ ô|· mô phỏng|P2 ·/)).toHaveCount(0)
+})
+
+test('a reload opens the exam named in the address, with the config it was last asked with', async ({ page }) => {
+  const older: Conversation = { id: 'conv-1', title: 'Đề cũ', subjectId: null, mode: 'compose', createdAt: stamp, updatedAt: stamp }
+  const newest: Conversation = { id: 'conv-2', title: 'Đề mới nhất', subjectId: null, mode: 'compose', createdAt: stamp, updatedAt: stamp }
+  await installAiFixture(page, 'MANAGER', {
+    conversations: [newest, older],
+    drafts: {
+      'conv-1': {
+        ...emptyDraft(older),
+        draft: {
+          ...emptyDraft(older).draft,
+          config: { examFormat: 'VACT_2018', questionCount: 10, bankRatio: 0.4, solutionStyle: 'short' },
+        },
+      },
+    },
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant?c=conv-1')
+
+  await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('Đề cũ')
+  await expect(page.getByRole('button', { name: 'Tùy chọn', exact: true })).toHaveAttribute(
+    'title',
+    '10 câu · VACT 2018 · Dùng lại 40% · Lời giải gọn'
+  )
+  expect(new URL(page.url()).searchParams.get('c')).toBe('conv-1')
+
+  await page.getByRole('list', { name: 'Đề của tôi', exact: true }).getByRole('button', { name: 'Đề mới nhất' }).click()
+  await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('Đề mới nhất')
+  expect(new URL(page.url()).searchParams.get('c')).toBe('conv-2')
+})
+
+test('the conversations button of the chat folds the exam list away and brings it back', async ({ page }) => {
+  await installAiFixture(page)
+  await openAssistant(page)
+  const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
+  const exams = page.getByRole('complementary', { name: 'Mục lục đề thi' })
+  await expect(exams).toBeVisible()
+
+  await chat.getByRole('button', { name: 'Cuộc trò chuyện', exact: true }).click()
+  await expect(exams).toBeHidden()
+  await chat.getByRole('button', { name: 'Cuộc trò chuyện', exact: true }).click()
+  await expect(exams).toBeVisible()
 })
 
 test('"Sửa câu 2" on a question the teacher typed sends its words from the sheet and rewrites it there', async ({ page }) => {
@@ -1922,7 +2342,6 @@ test('an exam opened while a new exam is still being created never receives the 
   await expect.poll(() => creations(state).length).toBe(1)
 
   // Meanwhile the saved exam is picked in the list; then the new exam's conversation is created.
-  await page.getByRole('button', { name: 'Cuộc trò chuyện', exact: true }).click()
   await page.getByLabel('Đề của tôi', { exact: true }).getByRole('button', { name: /Đề kiểm tra Toán 10/ }).click()
   await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue(savedExam.title)
   release()
@@ -2224,7 +2643,10 @@ test('a chart is edited in its dialog, the edit saved as one undo step', async (
   await edit.click()
   const dialog = page.getByRole('dialog', { name: 'Sửa biểu đồ', exact: true })
   await expect(dialog).toBeVisible()
+  // The data and kind are under "Thiết lập", the titles under "Tùy chỉnh".
+  await dialog.getByRole('tab', { name: 'Tùy chỉnh', exact: true }).click()
   await expect(dialog.getByRole('textbox', { name: 'Tiêu đề', exact: true })).toHaveValue('Nhiệt độ trung bình')
+  await dialog.getByRole('tab', { name: 'Thiết lập', exact: true }).click()
   const first = dialog.getByRole('textbox', { name: 'Hà Nội, dòng 1', exact: true })
   await expect(first).toHaveValue('16,5')
 
@@ -2258,6 +2680,7 @@ test('a chart is edited in its dialog, the edit saved as one undo step', async (
   // A double click opens it too; "Huỷ" changes nothing.
   await drawing.dblclick()
   await expect(dialog).toBeVisible()
+  await dialog.getByRole('tab', { name: 'Tùy chỉnh', exact: true }).click()
   await dialog.getByRole('textbox', { name: 'Tiêu đề', exact: true }).fill('Lượng mưa')
   await dialog.getByRole('button', { name: 'Huỷ', exact: true }).click()
   await expect(dialog).toHaveCount(0)
@@ -2304,10 +2727,12 @@ test('Chèn ▸ Biểu đồ puts a sample chart after the caret\'s line and ope
 
   await page.getByRole('menubar', { name: 'Menu đề thi' }).getByRole('menuitem', { name: 'Chèn', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Biểu đồ', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Cột', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Sửa biểu đồ', exact: true })
   await expect(dialog).toBeVisible()
-  await expect(dialog.getByRole('textbox', { name: 'Tiêu đề', exact: true })).toBeFocused()
-  await page.keyboard.type('Số học sinh')
+  await expect(dialog.getByRole('button', { name: 'Cột', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await dialog.getByRole('tab', { name: 'Tùy chỉnh', exact: true }).click()
+  await dialog.getByRole('textbox', { name: 'Tiêu đề', exact: true }).fill('Số học sinh')
   await dialog.getByRole('button', { name: 'Lưu', exact: true }).click()
   await expect(dialog).toHaveCount(0)
 

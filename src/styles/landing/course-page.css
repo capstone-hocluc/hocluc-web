@@ -43,17 +43,30 @@
   font-size: var(--lead);
   max-width: 62ch;
 }
+/* Facts read as one inline row split by hairlines. A divider sits in the gap left of each
+   item; the row clips it, so an item that wraps to the start of a line shows none. */
 .course-page .cd-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 12px 40px;
   margin-top: 24px;
+  overflow: hidden;
 }
 .course-page .cd-facts > div {
-  padding: 12px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--paper);
+  position: relative;
+}
+.course-page .cd-facts > div::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: -20px;
+  width: 1px;
+  background: var(--line);
+}
+.course-page .cd-facts-note {
+  font-weight: 400;
+  color: var(--muted);
 }
 .course-page .cd-facts dt {
   font-size: var(--small);

@@ -4,11 +4,13 @@ import OrderStatusBadge from '../../components/orders/OrderStatusBadge'
 import {
   cancelOrder,
   getOrder,
+  isCreditPackOrder,
   payOrder,
   type Order,
   type OrderPaymentData,
 } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
+import { CreditAmount } from '../../components/credits/CreditIcon'
 import { ApiError } from '../../lib/api'
 import { formatCoursePrice } from '../../lib/courseFormat'
 import { canCancelOrder, canPayOrder } from '../../lib/orderStatus'
@@ -18,6 +20,8 @@ interface Props {
   orderId: string
   onBackToOrders: () => void
   onGoToMyCourses: () => void
+  /** Where a paid credit-pack order leads. */
+  onGoToWallet: () => void
   onPaymentReady: (data: OrderPaymentData) => void
   onOpenCourse: (id: string) => void
 }
@@ -28,6 +32,7 @@ export default function OrderDetailPage({
   orderId,
   onBackToOrders,
   onGoToMyCourses,
+  onGoToWallet,
   onPaymentReady,
   onOpenCourse,
 }: Props) {
@@ -151,12 +156,19 @@ export default function OrderDetailPage({
                 </dl>
               </section>
               <section className="purchase-panel">
-                <h2>Khóa học</h2>
+                <h2>{isCreditPackOrder(order) ? 'Gói' : 'Khóa học'}</h2>
                 {order.items.map((item) => (
-                  <div className="purchase-checkout-course" key={item.courseId}>
-                    <button className="purchase-link" onClick={() => onOpenCourse(item.courseId)}>
-                      {item.courseTitle}
-                    </button>
+                  <div className="purchase-checkout-course" key={item.courseId ?? item.creditPackId ?? item.courseTitle}>
+                    {item.courseId ? (
+                      <button className="purchase-link" onClick={() => onOpenCourse(item.courseId!)}>
+                        {item.courseTitle}
+                      </button>
+                    ) : (
+                      <span className="inline-flex items-center gap-2">
+                        {item.courseTitle}
+                        {item.credits ? <CreditAmount value={item.credits} /> : null}
+                      </span>
+                    )}
                     <strong>{formatCoursePrice(item.unitPrice)}</strong>
                   </div>
                 ))}
@@ -212,8 +224,8 @@ export default function OrderDetailPage({
                   </div>
                 )}
                 {order.status === 'PAID' && (
-                  <button className="btn" onClick={onGoToMyCourses}>
-                    Vào học ngay
+                  <button className="btn" onClick={isCreditPackOrder(order) ? onGoToWallet : onGoToMyCourses}>
+                    {isCreditPackOrder(order) ? 'Về ví Sao' : 'Vào học ngay'}
                   </button>
                 )}
               </section>
