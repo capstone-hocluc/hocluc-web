@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { installQuizFixture } from './quiz-permissions-fixture'
 
-async function install(page: Page, role: 'STAFF' | 'TEACHER') {
+async function install(page: Page, role: 'STAFF' | 'TEACHER', reviewer = role === 'STAFF') {
   const state = await installQuizFixture(page, role)
   const calls: Array<{ path: string; method: string; body: unknown; search: string }> = []
   const statuses: Record<string, string> = {
@@ -57,7 +57,7 @@ async function install(page: Page, role: 'STAFF' | 'TEACHER') {
       return ok({
         administrator: false,
         authorSubjectIds: ['category-1'],
-        reviewerSubjectIds: role === 'STAFF' ? ['category-1'] : [],
+        reviewerSubjectIds: reviewer ? ['category-1'] : [],
       })
     if (path.endsWith('/stats'))
       return ok({
@@ -222,9 +222,9 @@ test('retire and restore use their own permissions', async ({ page }) => {
   expect(state.pageErrors).toEqual([])
 })
 
-test('teacher with only author scope cannot see the review tab', async ({ page }) => {
-  const { state } = await install(page, 'TEACHER')
-  await page.goto('/console/teacher/question-bank')
+test('staff with only author scope cannot see the review tab', async ({ page }) => {
+  const { state } = await install(page, 'STAFF', false)
+  await page.goto('/console/staff/question-bank')
   await expect(page.getByRole('button', { name: 'Soạn câu' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Chờ duyệt' })).toHaveCount(0)
   expect(state.unmatched).toEqual([])

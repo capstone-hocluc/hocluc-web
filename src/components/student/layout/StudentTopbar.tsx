@@ -14,13 +14,18 @@ import type { UserProfile } from '../../../services/userService'
 import { getUserDisplayName, getUserInitials } from '../../../lib/userDisplay'
 import { ROLE_LABELS } from '../../../lib/role-home'
 import { cn } from '../../../lib/cn'
+import { CreditIcon } from '../../credits/CreditIcon'
+import { CREDIT_UNIT } from '../../../lib/credits'
 
 interface StudentTopbarProps {
   /** Signed-in user from useCurrentUser(); null until it has loaded. */
   profile: UserProfile | null
   profileLoading?: boolean
-  /** Consecutive learning days (mock until the backend has a streak endpoint). */
+  /** Consecutive learning days. */
   streak?: number
+  /** Credits the student can spend; null while loading. */
+  balance?: number | null
+  onOpenWallet?: () => void
   onToggleSidebar?: () => void
   sidebarCollapsed?: boolean
   onOpenNavigation?: () => void
@@ -40,6 +45,8 @@ function StudentTopbar({
   profile,
   profileLoading = false,
   streak = 0,
+  balance = null,
+  onOpenWallet,
   onToggleSidebar,
   sidebarCollapsed = false,
   onOpenNavigation,
@@ -92,6 +99,20 @@ function StudentTopbar({
         >
           <Flame size={17} />
           <strong className="text-sm font-semibold whitespace-nowrap">{streak} ngày học</strong>
+        </button>
+
+        <button
+          type="button"
+          aria-label={balance === null ? `Ví ${CREDIT_UNIT}` : `${balance} ${CREDIT_UNIT}`}
+          onClick={onOpenWallet}
+          className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 text-text-heading transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <CreditIcon size={20} />
+          {balance === null ? (
+            <Skeleton className="h-4 w-8 rounded-md" />
+          ) : (
+            <strong className="text-sm font-semibold tabular-nums">{balance.toLocaleString('vi-VN')}</strong>
+          )}
         </button>
 
         <RoleSwitcher className="h-11 rounded-xl" />

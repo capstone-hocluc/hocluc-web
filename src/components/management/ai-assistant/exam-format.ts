@@ -25,6 +25,8 @@ export interface AiTraceStage {
   id: string
   title: string
   detail?: string
+  /** What the plan changed about the request (a count cut to the exam's size, say), one line each. */
+  notes?: string[]
   items?: AiTraceItem[]
   state?: AiTraceState
 }
@@ -42,6 +44,12 @@ export interface AiChatMessage {
   /** Questions this turn put on the paper; the chat links to them instead of printing them. */
   addedItemIds?: string[]
   error?: boolean
+  /** The run was stopped by the teacher; the questions written until then stay. */
+  stopped?: boolean
+  /** An error of a send, with the words that can be sent again. */
+  retryText?: string
+  /** The question "Bạn muốn soạn môn nào?" asks: the words it was asked about, and the subjects to answer it. */
+  subjectChoices?: { text: string; subjects: { id: string; name: string }[]; whole: boolean }
 }
 
 export interface ExamPaperOption {
@@ -79,7 +87,12 @@ export interface ExamPaperQuestion {
   /** False while the teacher has not accepted an AI or bank question yet. */
   kept: boolean
   needsReview: boolean
+  /** What the check found, faults then warnings, once each. */
   reasons: string[]
+  /** The check's faults: what is wrong with the question. */
+  faults?: string[]
+  /** The check's warnings: what it could not confirm, or only doubts. */
+  warnings?: string[]
   /** How many times the AI rewrote the question on this page ("Sửa câu 2"); 0 when it never did. */
   revision: number
   /** Why the AI could not write the question, which holds its place and number; null for a written one. */
@@ -135,6 +148,14 @@ const GENERIC_PARTS: ExamPaperPart[] = [
   { id: 'ALL', title: 'Toàn bộ đề', code: null, parentTitle: null, firstNumber: 1, targetCount: null },
 ]
 
+/** The title of an exam part by the code the AI reports it under; undefined for a code with no name to show. */
+export function sectionLabel(code: string | null | undefined): string | undefined {
+  const part = VACT_2025_PARTS.find((item) => item.id === code)
+  if (part) return part.title.replace(/^Phần \d+\.\s*/, '')
+  // A short upper-case code ("TV", "P7") is the AI's own label; a name is shown as it is.
+  return code && !/^[A-Z0-9._-]{1,6}$/.test(code) ? code : undefined
+}
+
 const DIFFICULTIES: readonly AiDifficulty[] = ['DE', 'TB', 'KHO']
 
 export const DIFFICULTY_LABELS: Record<AiDifficulty, string> = {
@@ -155,10 +176,13 @@ function difficultyOf(value: string | null | undefined): AiDifficulty {
   return DIFFICULTIES.includes(value as AiDifficulty) ? (value as AiDifficulty) : 'TB'
 }
 
+function findings(values: readonly (string | null | undefined)[] | null | undefined): string[] {
+  return [...new Set((values ?? []).filter((value): value is string => Boolean(value?.trim())))]
+}
+
 function reviewReasons(check: AiCheckResult | null | undefined): string[] {
   if (!check) return []
-  const values = [...(check.reasons ?? []), ...(check.warnings ?? [])]
-  return [...new Set(values.filter((reason): reason is string => Boolean(reason?.trim())))]
+  return findings([...(check.reasons ?? []), ...(check.warnings ?? [])])
 }
 
 /** An option's words without a label the AI repeated in them ("A. 2019, 2021" under label A, printed "A. A. …"). */
@@ -301,6 +325,8 @@ export function buildPaper(
       kept: item.kept,
       needsReview: item.checkResult?.needsReview === true,
       reasons: reviewReasons(item.checkResult),
+      faults: findings(item.checkResult?.reasons),
+      warnings: findings(item.checkResult?.warnings),
       revision: item.revision ?? 0,
       failure: item.question.failed ? item.question.failure?.trim() || FAILED_REASON : null,
     }))

@@ -178,6 +178,8 @@ function LabelPanel({
               const needle = term.toLocaleLowerCase('vi')
               return {
                 options: patterns
+                  // The server only accepts a pattern of the question's own subject.
+                  .filter(p => !question.categoryId || p.categoryId === question.categoryId)
                   .filter(p => `${p.code} ${p.nameVi} ${p.domainNameVi ?? ''}`.toLocaleLowerCase('vi').includes(needle))
                   .map(p => ({ id: p.code, label: `${partLabel(p.partCode)} · ${p.nameVi}` })),
                 last: true,

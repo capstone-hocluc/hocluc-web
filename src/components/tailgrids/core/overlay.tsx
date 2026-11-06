@@ -1,15 +1,35 @@
 import { cn } from "../../../lib/cn";
+import { useMemo, type ContextType, type ReactNode } from "react";
 import {
-  DialogTrigger as AriaDialogTrigger,
   ModalOverlay as AriaModalOverlay,
-  type DialogTriggerProps as AriaDialogTriggerProps,
+  OverlayTriggerStateContext,
   type ModalOverlayProps as AriaModalOverlayProps
 } from "react-aria-components";
 
-export interface OverlayWrapperProps extends AriaDialogTriggerProps {}
+export interface OverlayWrapperProps {
+  isOpen: boolean;
+  onOpenChange?: (isOpen: boolean) => void;
+  children: ReactNode;
+}
 
-export function OverlayWrapper({ ...props }: OverlayWrapperProps) {
-  return <AriaDialogTrigger {...props} />;
+/**
+ * Opens and closes the overlay inside it from `isOpen`. These dialogs have no trigger element, so this provides the
+ * open state straight to the modal (a react-aria DialogTrigger would wait for a pressable child it never gets).
+ */
+export function OverlayWrapper({ isOpen, onOpenChange, children }: OverlayWrapperProps) {
+  const state = useMemo<NonNullable<ContextType<typeof OverlayTriggerStateContext>>>(
+    () => ({
+      isOpen,
+      setOpen: (next) => onOpenChange?.(next),
+      open: () => onOpenChange?.(true),
+      close: () => onOpenChange?.(false),
+      toggle: () => onOpenChange?.(!isOpen),
+      point: null,
+      setPoint: () => undefined,
+    }),
+    [isOpen, onOpenChange]
+  );
+  return <OverlayTriggerStateContext.Provider value={state}>{children}</OverlayTriggerStateContext.Provider>;
 }
 
 export interface BackdropProps extends AriaModalOverlayProps {}

@@ -12,6 +12,7 @@ import ManagementCourseList from './ManagementCourseList'
 import MasterDataManagement from './master-data/master-data-management'
 import ExamYearManagement from './crud/exam-year-management'
 import OrderManagement from './crud/order-management'
+import CreditManagement from './crud/credit-management'
 import EnrollmentManagement from './crud/enrollment-management'
 import ManagerOverview from './ManagerOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
@@ -125,6 +126,15 @@ export function ManagementScreen({
       return (
         // Confirming a payment by hand stays administrator-only, as on the backend.
         <OrderManagement readOnly={readOnly} canConfirm={role === 'ADMINISTRATOR'} title={title} />
+      )
+    case 'credits':
+      return (
+        // Packs: administrator and manager; balance corrections and the grant: administrator only.
+        <CreditManagement
+          title={title}
+          canEditPacks={role === 'ADMINISTRATOR' || role === 'MANAGER'}
+          canAdjust={role === 'ADMINISTRATOR'}
+        />
       )
     case 'solution-queue':
       return <MentorSolutionQueue />

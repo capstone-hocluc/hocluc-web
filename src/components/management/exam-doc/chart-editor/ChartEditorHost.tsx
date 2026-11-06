@@ -4,6 +4,7 @@ import type { Transaction } from '@tiptap/pm/state'
 import { sameChart, type ChartValue } from '../chart-data'
 import { chartValueOf, onChartEdit } from '../nodes/chart'
 import ChartEditorDialog from './ChartEditorDialog'
+import ChartFigureDialog from './ChartFigureDialog'
 
 interface Editing {
   editor: Editor
@@ -12,7 +13,8 @@ interface Editing {
 
 /**
  * The chart editor of the document on the sheet. A chart asks for it (its button, a double click, Enter) through
- * `openChartEditor`. "Lưu" writes the chart back as one undo step wherever it is by then: the AI may write questions
+ * `openChartEditor`; a function's graph or a variation table gets the figure editor of its curves or cells, which can
+ * also delete it. "Lưu" writes the chart back as one undo step wherever it is by then: the AI may write questions
  * in while the dialog is open. Either way the document gets focus back with the chart selected, so Ctrl+Z works.
  */
 export default function ChartEditorHost({ editor }: { editor: Editor | null }) {
@@ -80,6 +82,17 @@ export default function ChartEditorHost({ editor }: { editor: Editor | null }) {
     }
   }
 
+  /** Takes the chart out of the document, as one undo step. */
+  function remove() {
+    const at = close()
+    if (!editor || editor.isDestroyed || !editor.isEditable) return
+    if (chartAt(at) && at !== null) editor.chain().setNodeSelection(at).deleteSelection().focus().run()
+    else editor.commands.focus()
+  }
+
   if (!editing || editing.editor !== editor) return null
+  if (editing.value.spec.figure) {
+    return <ChartFigureDialog initial={editing.value} onCancel={cancel} onSave={save} onDelete={remove} />
+  }
   return <ChartEditorDialog initial={editing.value} onCancel={cancel} onSave={save} />
 }

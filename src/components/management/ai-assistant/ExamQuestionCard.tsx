@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { cn } from '../../../lib/cn'
 import type { AiDraftQuestion } from '../../../services/aiAssistantService'
 import Button from '../../console/button'
-import Status from '../../console/status'
-import { Check, GripVertical, Pencil, Trash2, X, type LucideIcon } from '../../console/icons'
+import Status, { type StatusTone } from '../../console/status'
+import { Check, GripVertical, Landmark, Pencil, Trash2, X, type LucideIcon } from '../../console/icons'
 import FormulaTextarea from '../../ui/math/FormulaTextarea'
 import MathText from '../../ui/MathText'
 import { optionColumns } from '../quiz/paper-layout'
@@ -31,6 +31,11 @@ interface ExamQuestionCardProps {
   onDelete: () => void
   onKeep: (kept: boolean) => void
   onMove: (sourceId: string, targetId: string) => void
+  /** The question was saved to the question bank from this exam. */
+  savedToBank?: boolean
+  /** Saves it to the question bank; absent when the viewer may not, or there is nothing to save. */
+  onSaveToBank?: () => void
+  savingToBank?: boolean
 }
 
 export default function ExamQuestionCard({
@@ -44,9 +49,14 @@ export default function ExamQuestionCard({
   onDelete,
   onKeep,
   onMove,
+  savedToBank = false,
+  onSaveToBank,
+  savingToBank = false,
 }: ExamQuestionCardProps) {
   const pattern = question.patternName ?? question.patternCode
   const bankSource = question.source === 'bank' ? question.sourceTitle : null
+  const faults = question.faults ?? question.reasons
+  const warnings = question.warnings ?? []
 
   return (
     <div
@@ -91,36 +101,41 @@ export default function ExamQuestionCard({
                 ))}
               </ol>
             )}
-            {question.needsReview && (
-              <div className="mt-2 flex flex-wrap items-start gap-2 font-sans print:hidden">
-                <Status tone="warning">Cần duyệt</Status>
-                {question.reasons.length > 0 && (
-                  <ul className="min-w-0 flex-1 space-y-0.5 text-xs leading-5 text-text-secondary">
-                    {question.reasons.map((reason) => (
-                      <li key={reason}>{reason}</li>
-                    ))}
-                  </ul>
+            {(question.needsReview || faults.length > 0 || warnings.length > 0) && (
+              <ul className="mt-2 flex flex-wrap items-center gap-1.5 font-sans print:hidden" aria-label={`Kết quả kiểm tra câu ${number}`}>
+                {question.needsReview && (
+                  <li className="flex min-w-0">
+                    <Status tone="warning">Cần duyệt</Status>
+                  </li>
                 )}
-              </div>
+                {faults.map((fault) => (
+                  <Finding key={`fault:${fault}`} text={fault} tone="warning" />
+                ))}
+                {warnings.map((warning) => (
+                  <Finding key={`warning:${warning}`} text={warning} tone="neutral" />
+                ))}
+              </ul>
             )}
-            {question.source !== 'manual' && (
+            {(question.source !== 'manual' || savedToBank) && (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5 font-sans text-text-secondary print:hidden">
+                {savedToBank && <Status tone="info">Đã lưu vào ngân hàng</Status>}
                 {bankSource && <Status tone="neutral">Từ ngân hàng: {bankSource}</Status>}
-                {pattern && <Status tone="neutral">{pattern}</Status>}
-                {question.kept ? (
-                  <>
-                    <Status tone="success">Đã giữ</Status>
-                    <Button size="sm" appearance="ghost" onClick={() => onKeep(false)}>
-                      <X size={13} />
-                      Bỏ
+                {question.source !== 'manual' && pattern && <Status tone="neutral">{pattern}</Status>}
+                {question.source !== 'manual' &&
+                  (question.kept ? (
+                    <>
+                      <Status tone="success">Đã giữ</Status>
+                      <Button size="sm" appearance="ghost" onClick={() => onKeep(false)}>
+                        <X size={13} />
+                        Bỏ
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" appearance="outline" onClick={() => onKeep(true)}>
+                      <Check size={13} />
+                      Giữ
                     </Button>
-                  </>
-                ) : (
-                  <Button size="sm" appearance="outline" onClick={() => onKeep(true)}>
-                    <Check size={13} />
-                    Giữ
-                  </Button>
-                )}
+                  ))}
               </div>
             )}
           </>
@@ -129,6 +144,14 @@ export default function ExamQuestionCard({
 
       {!editing && (
         <div className="z-10 mt-1 ml-auto flex w-fit items-center gap-0.5 rounded-lg border border-card-border bg-card-background p-0.5 font-sans shadow-sm print:hidden lg:absolute lg:-top-2 lg:right-0 lg:mt-0 lg:opacity-0 lg:transition-opacity lg:focus-within:opacity-100 lg:group-hover/examq:opacity-100">
+          {onSaveToBank && (
+            <QuestionAction
+              icon={Landmark}
+              label={`Lưu câu ${number} vào ngân hàng`}
+              onClick={onSaveToBank}
+              disabled={savingToBank}
+            />
+          )}
           <QuestionAction icon={Pencil} label={`Sửa câu ${number}`} onClick={onStartEdit} />
           <QuestionAction icon={Trash2} label={`Xoá câu ${number}`} onClick={onDelete} />
           <button
@@ -154,21 +177,43 @@ function QuestionAction({
   icon: Icon,
   label,
   onClick,
+  disabled = false,
 }: {
   icon: LucideIcon
   label: string
   onClick: () => void
+  disabled?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       title={label}
-      className="inline-flex size-7 items-center justify-center rounded-md text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
+      className="inline-flex size-7 items-center justify-center rounded-md text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border disabled:cursor-wait disabled:opacity-50"
     >
       <Icon size={14} strokeWidth={1.8} />
     </button>
+  )
+}
+
+/**
+ * A finding of the question's check as a badge: its gist (the words before a colon) on show, the rest of it on hover
+ * and for screen readers.
+ */
+function Finding({ text, tone }: { text: string; tone: StatusTone }) {
+  const colon = text.indexOf(':')
+  const cut = colon > 0 && colon <= 60 ? colon : text.length
+  return (
+    <li className="flex max-w-full min-w-0">
+      <Status tone={tone} title={text} className="max-w-full min-w-0">
+        <span className="min-w-0 truncate">
+          {text.slice(0, cut)}
+          {cut < text.length && <span className="sr-only">{text.slice(cut)}</span>}
+        </span>
+      </Status>
+    </li>
   )
 }
 

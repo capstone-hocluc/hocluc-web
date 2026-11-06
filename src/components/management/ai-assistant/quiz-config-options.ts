@@ -1,14 +1,9 @@
 import type { SelectOption } from '../../console/select-field'
-import type { AiDifficulty, AiSolutionStyle } from '../../../services/aiAssistantService'
+import type { AiSolutionStyle } from '../../../services/aiAssistantService'
 import { EXAM_FORMATS } from './exam-format'
 
-// The choices of the compose settings, shared by the settings panel and the composer's summary chip.
-export const DIFFICULTIES: { id: AiDifficulty; label: string }[] = [
-  { id: 'DE', label: 'Dễ' },
-  { id: 'TB', label: 'Trung bình' },
-  { id: 'KHO', label: 'Khó' },
-]
-
+// The choices of the compose settings, shared by the settings panel and the composer's summary chip. The counts only
+// name the count in that summary: the request's own words set it.
 export const COMPOSE_COUNTS: SelectOption[] = [
   { id: '5', label: '5 câu' },
   { id: '10', label: '10 câu' },
@@ -16,7 +11,6 @@ export const COMPOSE_COUNTS: SelectOption[] = [
   { id: 'full', label: 'Cả đề' },
 ]
 
-// 5 is the assistant's default count, so it has to be a choice here too (else the field shows 10 while 5 is sent).
 export const MOCK_COUNTS: SelectOption[] = [
   { id: '5', label: '5 câu' },
   { id: '10', label: '10 câu' },

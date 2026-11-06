@@ -141,6 +141,8 @@ export interface BankQuestionQuery {
   difficulty?: BankDifficulty
   mine?: boolean
   reviewable?: boolean
+  /** In review, undisputed, labelled with enough confidence and well-formed: safe to approve in bulk. */
+  readyToApprove?: boolean
   q?: string
   /** A subject's id, or {@link NO_SUBJECT}. */
   subject?: string

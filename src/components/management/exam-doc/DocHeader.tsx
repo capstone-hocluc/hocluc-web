@@ -24,6 +24,8 @@ interface DocHeaderProps {
   onTitleChange: (title: string) => void
   onBack: () => void
   backHref: string
+  /** Names where the back control goes. */
+  backLabel?: string
   chatOpen: boolean
   onToggleChat: () => void
   outlineOpen: boolean
@@ -76,6 +78,7 @@ export default function DocHeader({
   onTitleChange,
   onBack,
   backHref,
+  backLabel = 'Về ngân hàng câu hỏi',
   chatOpen,
   onToggleChat,
   outlineOpen,
@@ -104,8 +107,8 @@ export default function DocHeader({
           event.preventDefault()
           onBack()
         }}
-        aria-label="Về ngân hàng câu hỏi"
-        title="Về ngân hàng câu hỏi"
+        aria-label={backLabel}
+        title={backLabel}
         className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-icon-tertiary transition-colors hover:bg-background-gray-secondary hover:text-text-primary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
       >
         <ArrowLeft size={17} strokeWidth={1.7} className="shrink-0" />

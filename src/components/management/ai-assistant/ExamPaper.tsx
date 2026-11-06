@@ -25,6 +25,15 @@ interface ExamPaperProps {
   onKeep: (id: string, kept: boolean) => void
   onMove: (sourceId: string, targetId: string) => void
   onAdd: (partId: string) => void
+  /** Each question's side in the question bank: saved there from this exam, or savable by the viewer. */
+  bank?: ExamPaperBank
+}
+
+export interface ExamPaperBank {
+  saved: (id: string) => boolean
+  canSave: (id: string) => boolean
+  saving: (id: string) => boolean
+  onSave: (id: string) => void
 }
 
 export default function ExamPaper({
@@ -39,6 +48,7 @@ export default function ExamPaper({
   onKeep,
   onMove,
   onAdd,
+  bank,
 }: ExamPaperProps) {
   const groups = new Map(paper.groups.map((group) => [group.id, group]))
   const meta = [
@@ -71,6 +81,11 @@ export default function ExamPaper({
         onDelete={() => onDelete(question.id)}
         onKeep={(kept) => onKeep(question.id, kept)}
         onMove={onMove}
+        savedToBank={bank?.saved(question.id) ?? false}
+        onSaveToBank={
+          bank && !question.failure && bank.canSave(question.id) ? () => bank.onSave(question.id) : undefined
+        }
+        savingToBank={bank?.saving(question.id) ?? false}
       />
     )
   }

@@ -623,3 +623,26 @@ test('mobile quiz type form and combined filters fit the current console layout'
   expect(writes(state)).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
+
+test('a teacher reads an assigned course\'s content without skill suggestions, which are never fetched', async ({ page }) => {
+  const state = await installQuizFixture(page, 'TEACHER')
+  const suggestionRequests: string[] = []
+  // Even a teacher who could label the subject: suggestions are authoring work, not teaching.
+  await page.route('**/api/v1/question-bank/me/scopes', route =>
+    route.fulfill({ json: { success: true, data: { administrator: true, authorSubjectIds: [], reviewerSubjectIds: [] } } }))
+  await page.route('**/api/v1/authoring/**', route => {
+    const url = new URL(route.request().url())
+    if (!url.pathname.includes('skill-suggestions')) return route.fallback()
+    suggestionRequests.push(`${route.request().method()} ${url.pathname}`)
+    return route.fulfill({ json: { success: true, data: { courseId: QUIZ_IDS.course, run: null, suggestions: [] } } })
+  })
+  await page.goto('/console/teacher/courses')
+  await page.getByRole('button', { name: /Khóa được phân công/ }).click()
+  await expect(page.getByText('Chương nháp', { exact: true })).toBeVisible()
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByRole('heading', { name: 'Gợi ý kỹ năng' })).toHaveCount(0)
+  expect(suggestionRequests).toEqual([])
+  expect(state.requests.filter(r => r.path.includes('skill-suggestions'))).toEqual([])
+  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+})

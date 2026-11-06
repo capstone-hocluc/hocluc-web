@@ -10,6 +10,7 @@ import {
   Search,
   ShoppingBag,
   UserRound,
+  Wallet,
 } from '../components/console/icons'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from './studentRoutes'
 
@@ -23,6 +24,7 @@ export type StudentNavKey =
   | 'assessments'
   | 'learning-profile'
   | 'orders'
+  | 'wallet'
   | 'catalog'
 
 export interface StudentNavItem {
@@ -38,7 +40,7 @@ export interface StudentNavGroup {
 }
 
 // Rendered by StudentSidebar; the only place the sidebar entries are declared.
-// "Lộ trình" and "Gia sư AI" open their "Đang phát triển" page until they are built.
+// "Lộ trình" opens its "Đang phát triển" page until it is built.
 export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Học tập',
@@ -61,6 +63,7 @@ export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Khác',
     items: [
+      { key: 'wallet', label: 'Ví Sao', icon: Wallet, path: studentRoutes.wallet() },
       // Both live outside the student area (public catalog, order history).
       { key: 'orders', label: 'Đơn hàng', icon: ShoppingBag, path: '/orders' },
       { key: 'catalog', label: 'Khám phá khóa học', icon: Search, path: '/courses' },
@@ -79,6 +82,8 @@ export function getStudentNavKey(route: StudentRoute | null): StudentNavKey | nu
       return 'roadmap'
     case 'tutor':
       return 'tutor'
+    case 'wallet':
+      return 'wallet'
     case 'chat':
       return 'chat'
     case 'schedule':

@@ -6,7 +6,7 @@ import { useCurrentUser, useHydrateCurrentUser } from '../../../hooks/useCurrent
 import { useLearnerTheme } from '../../../hooks/useLearnerTheme'
 import { useTransientMessage } from '../../../hooks/useTransientMessage'
 import StudentToast from '../common/StudentToast'
-import { dashboardSummary } from '../../../data/studentDashboard'
+import { useCredits } from '../../../lib/credits'
 import { getAccessToken } from '../../../lib/api'
 import { getStudentNavKeyForPath } from '../../../lib/studentNav'
 import { studentRoutes } from '../../../lib/studentRoutes'
@@ -47,6 +47,7 @@ function StudentLayout({
   // The one place that restores the signed-in user after F5; the topbar only reads it.
   useHydrateCurrentUser()
   const { profile, status } = useCurrentUser()
+  const credits = useCredits()
 
   useLearnerTheme()
 
@@ -66,8 +67,9 @@ function StudentLayout({
       </a>
       <StudentTopbar
         profile={profile}
-        // Streak remains a mock until the backend provides it.
-        streak={dashboardSummary.currentStreak}
+        streak={credits.streak?.current ?? 0}
+        balance={credits.balance?.available ?? null}
+        onOpenWallet={() => onNavigate(studentRoutes.wallet())}
         profileLoading={status === 'loading' || (status === 'idle' && Boolean(getAccessToken()))}
         onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
         sidebarCollapsed={sidebarCollapsed}

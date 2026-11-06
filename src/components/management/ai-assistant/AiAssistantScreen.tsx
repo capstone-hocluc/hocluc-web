@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
+import { useQuizAccess } from '../../../hooks/useQuizAccess'
+import { getErrorMessage } from '../../../lib/errors'
 import ThemeProvider from '../../common/ThemeProvider'
 import Button from '../../console/button'
-import { FileText } from '../../console/icons'
+import { ClipboardList, FileText, Landmark } from '../../console/icons'
 import ConfirmDialog from '../../console/confirm-dialog'
 import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -16,6 +18,9 @@ import { DIVIDER_WIDTH, PANEL_LIMITS, usePanelWidths } from './use-panel-widths'
 import { buildPaper, isSoloGroup, questionNumbers } from './exam-format'
 import ChatPanel from './ChatPanel'
 import ExamPaper from './ExamPaper'
+import ExportQuizDialog from './ExportQuizDialog'
+import SaveToBankDialog from './SaveToBankDialog'
+import { useDraftBank } from './use-draft-bank'
 import DocHeader from '../exam-doc/DocHeader'
 import DocSheet from '../exam-doc/DocSheet'
 import DocToolbar from '../exam-doc/DocToolbar'
@@ -36,7 +41,7 @@ import AiSelectionMenu from '../exam-doc/ai-selection-menu'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
 import { revisedNumbers } from './revise-request'
 import type { ExamDownload } from './AssistantMessage'
-import { showErrorToast } from '../../../lib/toastBus'
+import { showErrorToast, showSuccessToast } from '../../../lib/toastBus'
 import { downloadDocument, downloadPdf } from '../exam-doc/export'
 import { liveDraftView } from '../exam-doc/live-draft'
 import { useFollowWriting } from '../exam-doc/use-follow-writing'
@@ -87,10 +92,12 @@ function greetingForHour(hour: number) {
 export default function AiAssistantScreen({
   onBack,
   backHref,
+  backLabel,
   canImport = false,
 }: {
   onBack: () => void
   backHref: string
+  backLabel?: string
   /** The viewer may load papers into the bank (the AI reads them here, as it writes an exam). */
   canImport?: boolean
 }) {
@@ -399,6 +406,35 @@ export default function AiAssistantScreen({
 
   const numberOf = useMemo(() => questionNumbers(ai.paper), [ai.paper])
 
+  // The question bank's side of the exam: what is saved there, and what the viewer may save. Looked up again when the
+  // draft's questions change, but not for each question a run adds (once the run ends). Writing into the bank is
+  // authoring work: a teacher only teaches, so for one (or before the active role is known) nothing is looked up.
+  const quizAccess = useQuizAccess()
+  const bankAllowed = quizAccess.role === 'STAFF' || quizAccess.role === 'MANAGER' || quizAccess.role === 'ADMINISTRATOR'
+  const writtenQuestions = useMemo(() => ai.paper.questions.filter((question) => !question.failure), [ai.paper])
+  const bankKey = ai.running ? 'running' : ai.paper.questions.map((question) => question.id).join(',')
+  const bank = useDraftBank(ai.activeId ?? null, bankKey, bankAllowed)
+  const [pendingReplace, setPendingReplace] = useState<{ total: number; kept: number } | null>(null)
+  const [bankDialog, setBankDialog] = useState(false)
+  const [quizDialog, setQuizDialog] = useState(false)
+  const canSaveToBank = bank.ready && writtenQuestions.some((question) => bank.authorable(question.id))
+  const keptWritten = writtenQuestions.filter((question) => question.kept).length
+  const { save: saveToBank } = bank
+
+  const saveOneToBank = useCallback(
+    async (id: string) => {
+      const label = `Câu ${numberOf.get(id) ?? '?'}`
+      try {
+        const [result] = await saveToBank([id])
+        if (result?.result === 'SKIPPED') showErrorToast(`${label}: ${result.reason ?? 'chưa lưu được'}`)
+        else if (result) showSuccessToast(`Đã lưu ${label.toLowerCase()} vào ngân hàng`)
+      } catch (error) {
+        showErrorToast(getErrorMessage(error))
+      }
+    },
+    [numberOf, saveToBank]
+  )
+
   /** The finished exam from the chat: a Word file, or a PDF of the A4 sheets (which only the free document is on). */
   function downloadExam(format: ExamDownload) {
     if (format === 'docx-exam') {
@@ -429,8 +465,15 @@ export default function AiAssistantScreen({
       ai.send(onSheet ? { document: sheetDocument(onSheet.state.doc) } : undefined)
       return
     }
-    const numbers = ai.mode === 'compose' ? revisedNumbers(ai.value) : null
+    // "Sửa câu 2 …" revises in compose and mock-exam alike, once there is an exam to revise.
+    const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
+    const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(ai.value) : null
     if (!numbers) {
+      // A new run replaces the draft, the questions kept included: ask first.
+      if (ai.paper.questions.length > 0 && ai.value.trim()) {
+        setPendingReplace({ total: ai.paper.questions.length, kept: ai.paper.questions.filter((question) => question.kept).length })
+        return
+      }
       ai.send()
       return
     }
@@ -543,10 +586,10 @@ export default function AiAssistantScreen({
   }
 
   /** The list of exams is the left panel (a sheet on a narrow screen). */
-  function openTree() {
+  function toggleTree() {
     setChatSheet(false)
-    if (window.matchMedia('(min-width: 1280px)').matches) setOutlineOpen(true)
-    else setOutlineSheet(true)
+    if (window.matchMedia('(min-width: 1280px)').matches) setOutlineOpen((open) => !open)
+    else setOutlineSheet((open) => !open)
   }
 
   const chatPanelProps = {
@@ -574,10 +617,12 @@ export default function AiAssistantScreen({
     onRegenerate: ai.regenerate,
     onStartNew: startNew,
     conversationsOpen: outlineOpen || outlineSheet,
-    onOpenConversations: openTree,
+    onOpenConversations: toggleTree,
     onPickPrompt: pickPrompt,
     onDownload: downloadExam,
     onAnswerKey: writeAnswerKey,
+    onRetry: ai.retry,
+    onChooseSubject: ai.chooseSubject,
   }
 
   /** The left panel: every exam and loaded paper, with the open one's outline under it. */
@@ -642,6 +687,7 @@ export default function AiAssistantScreen({
           source={viewingPaper}
           onBack={onBack}
           backHref={backHref}
+          backLabel={backLabel}
           onNew={startNew}
           renderTree={renderTree}
           onLoadAgain={
@@ -679,18 +725,45 @@ export default function AiAssistantScreen({
           }}
           onBack={onBack}
           backHref={backHref}
+          backLabel={backLabel}
           chatOpen={chatOpen || chatSheet}
           onToggleChat={toggleChat}
           outlineOpen={outlineOpen || outlineSheet}
           onToggleOutline={toggleOutline}
           onNew={startNew}
           actions={
-            canImport ? (
-              <Button appearance="ghost" size="sm" onClick={() => setImporting(true)} aria-label="Nạp đề" title="Nạp đề">
-                <FileText size={15} />
-                <span className="hidden lg:inline">Nạp đề</span>
-              </Button>
-            ) : undefined
+            <>
+              {canSaveToBank && (
+                <Button
+                  appearance="ghost"
+                  size="sm"
+                  onClick={() => setBankDialog(true)}
+                  aria-label="Lưu vào ngân hàng"
+                  title="Lưu vào ngân hàng"
+                >
+                  <Landmark size={15} />
+                  <span className="hidden lg:inline">Lưu vào ngân hàng</span>
+                </Button>
+              )}
+              {quizAccess.canWrite && ai.activeId && keptWritten > 0 && (
+                <Button
+                  appearance="ghost"
+                  size="sm"
+                  onClick={() => setQuizDialog(true)}
+                  aria-label="Xuất thành quiz"
+                  title="Xuất thành quiz"
+                >
+                  <ClipboardList size={15} />
+                  <span className="hidden lg:inline">Xuất thành quiz</span>
+                </Button>
+              )}
+              {canImport && (
+                <Button appearance="ghost" size="sm" onClick={() => setImporting(true)} aria-label="Nạp đề" title="Nạp đề">
+                  <FileText size={15} />
+                  <span className="hidden lg:inline">Nạp đề</span>
+                </Button>
+              )}
+            </>
           }
         />
 
@@ -782,6 +855,12 @@ export default function AiAssistantScreen({
                   onKeep={(id, kept) => void ai.toggleKeep(id, kept)}
                   onMove={(sourceId, targetId) => void ai.moveItem(sourceId, targetId)}
                   onAdd={(partId) => void addQuestion(partId)}
+                  bank={bankAllowed ? {
+                    saved: (id) => Boolean(bank.savedQuestionId(id)),
+                    canSave: bank.canSave,
+                    saving: bank.isSaving,
+                    onSave: (id) => void saveOneToBank(id),
+                  } : undefined}
                 />
               )}
             </div>
@@ -840,6 +919,27 @@ export default function AiAssistantScreen({
         </div>
 
         {importDialog}
+
+        {bankDialog && bankAllowed && (
+          <SaveToBankDialog
+            questions={writtenQuestions}
+            numberOf={numberOf}
+            bank={bank}
+            onClose={() => setBankDialog(false)}
+          />
+        )}
+
+        {quizDialog && ai.activeId && (
+          <ExportQuizDialog
+            conversationId={ai.activeId}
+            title={ai.activeConversation?.title ?? ''}
+            questionCount={keptWritten}
+            reviewCount={writtenQuestions.filter((question) => question.kept && question.needsReview).length}
+            numberOf={numberOf}
+            role={quizAccess.role}
+            onClose={() => setQuizDialog(false)}
+          />
+        )}
 
         <SheetOverlay isOpen={chatSheet} onOpenChange={setChatSheet}>
           <SheetContent
@@ -911,6 +1011,21 @@ export default function AiAssistantScreen({
                     setFormula(null)
                   }
             }
+          />
+        )}
+
+        {pendingReplace && (
+          <ConfirmDialog
+            title="Soạn đề mới thay đề hiện tại?"
+            description={`${pendingReplace.total} câu hiện có sẽ bị thay, kể cả ${pendingReplace.kept} câu đã giữ. Muốn sửa một câu, nhắn "Sửa câu 2 …".`}
+            cancelLabel="Huỷ"
+            confirmLabel="Thay đề"
+            variant="danger"
+            onCancel={() => setPendingReplace(null)}
+            onConfirm={() => {
+              setPendingReplace(null)
+              ai.send()
+            }}
           />
         )}
 

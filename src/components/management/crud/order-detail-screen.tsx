@@ -230,7 +230,7 @@ export default function OrderDetailScreen({
                 <DataTable
                   columns={itemColumns}
                   data={order.items}
-                  getRowKey={(item) => item.courseId}
+                  getRowKey={(item) => item.courseId ?? item.creditPackId ?? item.courseTitle}
                   emptyMessage="Đơn không còn dòng nào."
                 />
               </DetailSection>

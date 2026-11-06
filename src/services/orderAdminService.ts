@@ -10,8 +10,12 @@ export const PAYMENT_STATUSES = ['SUCCESS', 'FAILED', 'AMOUNT_MISMATCH', 'LATE']
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]
 
 export interface OrderItem {
-  courseId: string
+  /** Null for a credit-pack line. */
+  courseId: string | null
+  /** The course title, or the pack name. */
   courseTitle: string
+  creditPackId?: string | null
+  credits?: number | null
   /** Price frozen at checkout time, not the course's current price. */
   unitPrice: number
 }
