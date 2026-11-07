@@ -14,6 +14,7 @@ import {
   getBankPatterns,
   getBankQuestions,
   getBankStats,
+  type BankStats,
   getBankScopes,
   type BankQuestionStatus,
   type BankDifficulty,
@@ -105,6 +106,19 @@ function SubjectFilter({
   )
 }
 
+function buildSubjectOptions(stats: BankStats | null | undefined, onlyWithQuestions: boolean) {
+  const subjects = (stats?.bySubject ?? []).filter((subject) => !onlyWithQuestions || subject.count > 0)
+  const known = subjects.filter((subject) => subject.id !== null)
+  const unknown = subjects.filter((subject) => subject.id === null)
+  return [
+    { id: 'ALL', label: `Tất cả môn (${number.format(stats?.total ?? 0)})` },
+    ...[...known, ...unknown].map((subject) => ({
+      id: subject.id ?? NO_SUBJECT,
+      label: `${subject.id === null ? 'Chưa xác định môn' : subject.name ?? 'Chưa xác định môn'} (${number.format(subject.count)})`,
+    })),
+  ]
+}
+
 export default function QuestionBankScreen({ readOnly = false, title, onNavigate }: { readOnly?: boolean; title: string; onNavigate?: (page: string) => void }) {
   const { profile } = useCurrentUser()
   const legacyReadOnly = readOnly || !profile || !can(profile.role, 'QUIZ_WRITE')
@@ -124,7 +138,9 @@ export default function QuestionBankScreen({ readOnly = false, title, onNavigate
   const [bulkError, setBulkError] = useState('')
   const [bulkBusy, setBulkBusy] = useState(false)
 
-  const stats = useScheduleResource('bank-stats', getBankStats)
+  const stats = useScheduleResource('bank-stats', () => getBankStats())
+  // counted with the review list's own predicate, so the chips match the rows
+  const reviewStats = useScheduleResource(canReview ? 'bank-stats-reviewable' : null, () => getBankStats({ reviewable: true }))
   const patterns = useScheduleResource('bank-patterns', getBankPatterns)
   const list = useScheduleResource(`bank-questions:${JSON.stringify(query)}`, () =>
     getBankQuestions(query)
@@ -139,6 +155,7 @@ export default function QuestionBankScreen({ readOnly = false, title, onNavigate
     list.reload()
     reviewList.reload()
     stats.reload()
+    reviewStats.reload()
   }
 
   async function bulkApprove() {
@@ -164,18 +181,8 @@ export default function QuestionBankScreen({ readOnly = false, title, onNavigate
     () => patternList.filter((p) => query.subject && query.subject !== NO_SUBJECT && p.categoryId === query.subject),
     [patternList, query.subject]
   )
-  const subjectOptions = useMemo(() => {
-    const subjects = stats.data?.bySubject ?? []
-    const known = subjects.filter((subject) => subject.id !== null)
-    const unknown = subjects.filter((subject) => subject.id === null)
-    return [
-      { id: 'ALL', label: `Tất cả môn (${number.format(stats.data?.total ?? 0)})` },
-      ...[...known, ...unknown].map((subject) => ({
-        id: subject.id ?? NO_SUBJECT,
-        label: `${subject.id === null ? 'Chưa xác định môn' : subject.name ?? 'Chưa xác định môn'} (${number.format(subject.count)})`,
-      })),
-    ]
-  }, [stats.data])
+  const subjectOptions = useMemo(() => buildSubjectOptions(stats.data, false), [stats.data])
+  const reviewSubjectOptions = useMemo(() => buildSubjectOptions(reviewStats.data, true), [reviewStats.data])
 
   const columns = useMemo<ColumnDef<BankQuestionRow>[]>(
     () => [
@@ -365,9 +372,9 @@ export default function QuestionBankScreen({ readOnly = false, title, onNavigate
             )}
             <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
               <SubjectFilter
-                options={subjectOptions}
+                options={reviewSubjectOptions}
                 value={reviewQuery.subject ?? 'ALL'}
-                loading={stats.status === 'loading' || stats.status === 'idle'}
+                loading={reviewStats.status === 'loading' || reviewStats.status === 'idle'}
                 onChange={(value) => {
                   setSelected([])
                   setReviewQuery((old) => ({ ...old, subject: value === 'ALL' ? undefined : value, page: 0 }))
@@ -425,6 +432,7 @@ export default function QuestionBankScreen({ readOnly = false, title, onNavigate
             onFinished={() => {
               list.reload()
               stats.reload()
+              reviewStats.reload()
               patterns.reload()
             }}
           />

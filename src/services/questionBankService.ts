@@ -201,8 +201,9 @@ export async function getBankPatterns(): Promise<BankPatternChoice[]> {
   return requireData(await request<BankPatternChoice[]>(`${BASE}/patterns`, { auth: true }))
 }
 
-export async function getBankStats(): Promise<BankStats> {
-  return requireData(await request<BankStats>(`${BASE}/stats`, { auth: true }))
+export async function getBankStats(options: { reviewable?: boolean } = {}): Promise<BankStats> {
+  const query = options.reviewable ? '?reviewable=true' : ''
+  return requireData(await request<BankStats>(`${BASE}/stats${query}`, { auth: true }))
 }
 
 export interface BankSource {

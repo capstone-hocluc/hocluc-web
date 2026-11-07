@@ -13,6 +13,7 @@ import {
   type BankQuestionDetail,
 } from '../../../services/questionBankService'
 import Button from '../../console/button'
+import ConfirmDialog from '../../console/confirm-dialog'
 import ConsoleDialog from '../../console/dialog'
 import Notice from '../../console/notice'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
@@ -263,6 +264,7 @@ function QuestionBody({
   legacyReadOnly: boolean
 }) {
   const [busy, setBusy] = useState(false)
+  const [confirmRetire, setConfirmRetire] = useState(false)
   const [error, setError] = useState('')
   async function transition(action: 'submit' | 'retire' | 'restore') {
     setBusy(true)
@@ -307,7 +309,7 @@ function QuestionBody({
           </Button>
         )}
         {question.canRetire && (
-          <Button size="sm" appearance="outline" disabled={busy} onClick={() => transition('retire')}>
+          <Button size="sm" appearance="outline" disabled={busy} onClick={() => setConfirmRetire(true)}>
             Ngừng dùng
           </Button>
         )}
@@ -319,6 +321,18 @@ function QuestionBody({
       </div>
     </div>
     {error && <Notice tone="danger">{error}</Notice>}
+    {confirmRetire && (
+      <ConfirmDialog
+        title="Ngừng dùng câu hỏi?"
+        description="Có thể khôi phục lại sau."
+        cancelLabel="Hủy"
+        confirmLabel="Ngừng dùng"
+        variant="danger"
+        busy={busy}
+        onCancel={() => setConfirmRetire(false)}
+        onConfirm={async () => { await transition('retire'); setConfirmRetire(false) }}
+      />
+    )}
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="flex min-w-0 flex-col gap-5">
         <article className="quiz-paper w-full! p-8! shadow-none! rounded-lg border border-card-border" aria-label="Câu hỏi">
