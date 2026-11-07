@@ -59,16 +59,26 @@ async function install(page: Page, role: 'STAFF' | 'TEACHER', reviewer = role ==
         authorSubjectIds: ['category-1'],
         reviewerSubjectIds: reviewer ? ['category-1'] : [],
       })
-    if (path.endsWith('/stats'))
+    if (path.endsWith('/stats')) {
+      const reviewable = url.searchParams.get('reviewable') === 'true'
       return ok({
-        total: 4,
+        total: reviewable ? 2 : 7,
         needsReview: 2,
         unlabelled: 4,
         byPart: {},
         byYear: {},
         byAnswerSource: {},
-        bySubject: [{ id: 'category-1', name: 'Toán học', count: 4 }],
+        bySubject: reviewable
+          ? [
+              { id: 'category-1', name: 'Toán học', count: 2 },
+              { id: 'category-2', name: 'Vật lý', count: 0 },
+            ]
+          : [
+              { id: 'category-1', name: 'Toán học', count: 4 },
+              { id: 'category-2', name: 'Vật lý', count: 3 },
+            ],
       })
+    }
     if (path.endsWith('/labelling')) return ok({ ready: true, reason: null })
     if (path.endsWith('/patterns') || path.endsWith('/sources')) return ok([])
     if (path.endsWith('/versions'))
@@ -176,6 +186,29 @@ test('reviewer compares versions, requests changes and approves selected questio
   expect(state.pageErrors).toEqual([])
 })
 
+test('review chips count only what the reviewer can review', async ({ page }) => {
+  const { state, calls } = await install(page, 'STAFF')
+  await page.goto('/console/staff/question-bank')
+  const questionChips = page.getByRole('tabpanel', { name: 'Câu hỏi' }).getByRole('group', { name: 'Lọc theo môn' })
+  await expect(questionChips.getByRole('button', { name: 'Tất cả môn (7)', exact: true })).toBeVisible()
+  await expect(questionChips.getByRole('button', { name: 'Toán học (4)', exact: true })).toBeVisible()
+  await expect(questionChips.getByRole('button', { name: 'Vật lý (3)', exact: true })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Chờ duyệt' }).click()
+  const reviewChips = page.getByRole('tabpanel', { name: 'Chờ duyệt' }).getByRole('group', { name: 'Lọc theo môn' })
+  await expect(reviewChips.getByRole('button', { name: 'Tất cả môn (2)', exact: true })).toBeVisible()
+  await expect(reviewChips.getByRole('button', { name: 'Toán học (2)', exact: true })).toBeVisible()
+  await expect(reviewChips.getByRole('button')).toHaveCount(2)
+  expect(calls.some((call) => call.path.endsWith('/stats') && call.search === '?reviewable=true')).toBe(true)
+
+  // back on "Câu hỏi" the whole-bank chips are unchanged
+  await page.getByRole('tab', { name: 'Câu hỏi' }).click()
+  await expect(questionChips.getByRole('button', { name: 'Tất cả môn (7)', exact: true })).toBeVisible()
+  await expect(questionChips.getByRole('button', { name: 'Vật lý (3)', exact: true })).toBeVisible()
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
 test('ticking a row and then "Chọn tất cả" gives bulk approve every selected id', async ({ page }) => {
   const { state, calls } = await install(page, 'STAFF')
   await page.goto('/console/staff/question-bank')
@@ -209,15 +242,24 @@ test('retire and restore use their own permissions', async ({ page }) => {
   await page.goto('/console/staff/question-bank')
   await page.getByText('Nội dung q-3').click()
   const dialog = page.getByRole('dialog')
-  await page.getByRole('button', { name: 'Ngừng dùng' }).click()
-  await expect
-    .poll(() => calls.some((call) => call.path.endsWith('/q-3/retire') && call.method === 'POST'))
-    .toBe(true)
+  const retireCalls = () => calls.filter((call) => call.path.endsWith('/q-3/retire') && call.method === 'POST')
+  await dialog.getByRole('button', { name: 'Ngừng dùng' }).click()
+  const confirm = page.getByRole('dialog', { name: 'Ngừng dùng câu hỏi?' })
+  await expect(confirm).toBeVisible()
+  await confirm.getByRole('button', { name: 'Hủy' }).click()
+  await expect(confirm).toBeHidden()
+  expect(retireCalls()).toHaveLength(0)
+
+  await dialog.getByRole('button', { name: 'Ngừng dùng' }).click()
+  await confirm.getByRole('button', { name: 'Ngừng dùng' }).click()
+  await expect.poll(() => retireCalls().length).toBe(1)
+  await expect(confirm).toBeHidden()
   await expect(page.getByRole('button', { name: 'Khôi phục' })).toBeVisible()
   await dialog.getByRole('button', { name: 'Close' }).click()
   await expect(dialog).toBeHidden()
   await page.getByText('Nội dung q-4').click()
   await expect(page.getByRole('button', { name: 'Khôi phục' })).toBeVisible()
+  expect(retireCalls()).toHaveLength(1)
   expect(state.unmatched).toEqual([])
   expect(state.pageErrors).toEqual([])
 })
