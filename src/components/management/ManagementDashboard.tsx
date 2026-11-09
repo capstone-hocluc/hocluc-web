@@ -101,7 +101,9 @@ export function ManagementScreen({
     case 'categories':
     case 'courses':
       return (
+        // The list reads ?courseId= once, so a link to another course while it is open starts it afresh.
         <ManagementCourseList
+          key={new URLSearchParams(window.location.search).get('courseId') ?? ''}
           readOnly={readOnly}
           title={navLabel(role, findNavItem(role, 'courses') ?? item)}
         />

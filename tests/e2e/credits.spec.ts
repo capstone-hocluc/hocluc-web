@@ -47,6 +47,8 @@ async function install(page: Page, role = 'STUDENT') {
     const method = request.method()
     if (path === '/api/v1/auth/refresh') return answer(null, 401)
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
+    // No live notifications here: an empty answer stops the bell from following them.
+    if (path === '/api/v1/notifications/stream') return route.fulfill({ status: 204 })
     if (path === '/api/v1/notifications') return answer({ content: [], totalElements: 0, last: true })
     if (path === '/api/v1/users/profiles')
       return answer({ id: USER, role, roles: [role], displayName: 'Học sinh', firstName: 'Học', lastName: 'Sinh',

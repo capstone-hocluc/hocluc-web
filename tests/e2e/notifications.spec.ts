@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page, type Request } from '@playwright/test'
 import { installQuizFixture, quizToken } from './quiz-permissions-fixture'
 import type { UserRole } from '../../src/services/userService'
 import type { UserNotification } from '../../src/services/notificationService'
@@ -15,12 +15,28 @@ async function fixture(page: Page, role: UserRole = 'STAFF', count = 3) {
   const state = { items: Array.from({ length: count }, (_, index) => item(index + 1)),
     requests: [] as { method: string; path: string; page: number; role: string }[],
     listStatus: 200, countStatus: 200, writeStatus: 200,
-    listGate: null as Promise<void> | null, countGate: null as Promise<void> | null, writeGate: null as Promise<void> | null }
+    listGate: null as Promise<void> | null, countGate: null as Promise<void> | null, writeGate: null as Promise<void> | null,
+    /** Each live stream asked for, in order; it stays quiet until the test sends it its events. */
+    streams: [] as Stream[] }
+  // The page closes a stream it no longer follows (dev StrictMode opens and closes one at every mount).
+  const failed = new Set<Request>()
+  page.on('requestfailed', request => {
+    failed.add(request)
+    state.streams.forEach(stream => { if (stream.request === request) stream.closedByPage = true })
+  })
   await page.route('**/api/v1/notifications**', async route => {
     const req = route.request(), url = new URL(req.url()), path = url.pathname, method = req.method()
     const token = req.headers().authorization?.split('.')[1]
     const actor = token ? JSON.parse(Buffer.from(token, 'base64url').toString()).role : ''
     state.requests.push({ method, path, page: Number(url.searchParams.get('page') ?? 0), role: actor })
+    if (path.endsWith('/stream')) {
+      const body = await new Promise<string>(resolve => {
+        const stream: Stream = { role: actor, request: req, closedByPage: failed.has(req), answered: false,
+          send: events => { stream.answered = true; resolve(events) } }
+        state.streams.push(stream)
+      })
+      return route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body }).catch(() => undefined)
+    }
     const answer = (data: unknown, status = 200) => route.fulfill({ status,
       json: { success: status < 400, status, data, message: status === 403 ? 'Forbidden' : 'Lỗi API kiểm thử' } })
     if (path.endsWith('/unread-count')) {
@@ -43,10 +59,24 @@ async function fixture(page: Page, role: UserRole = 'STAFF', count = 3) {
     return answer({ content, pageNumber, pageSize: 20, totalElements: state.items.length,
       totalPages: Math.ceil(state.items.length / 20), last: (pageNumber + 1) * 20 >= state.items.length }, state.listStatus)
   })
-  return { state, base }
+  /** Streams the page kept, answered or not. */
+  const followed = () => state.streams.filter(stream => !stream.closedByPage)
+  /** Streams the page keeps open and that have not been answered yet. */
+  const waiting = () => followed().filter(stream => !stream.answered)
+  return { state, base, followed, waiting }
+}
+
+interface Stream {
+  role: string
+  request: Request
+  closedByPage: boolean
+  answered: boolean
+  send: (events: string) => void
 }
 
 const visibleBell = (page: Page) => page.getByRole('button', { name: 'Thông báo', exact: true }).filter({ visible: true })
+const sse = (...events: [name: string, data: unknown][]) =>
+  events.map(([name, data]) => `event: ${name}\ndata: ${typeof data === 'string' ? data : JSON.stringify(data)}\n\n`).join('')
 
 for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINISTRATOR', 'admin'], ['TEACHER', 'teacher'], ['MENTOR', 'mentor'], ['STUDENT', 'student']] as const) {
   test(`${role}: notification feed and read state use the authenticated API`, async ({ page }) => {
@@ -185,11 +215,12 @@ test('role switch closes the notification detail and discards its old content', 
 })
 
 test('active-role change drops old feed and rejects a late count response', async ({ page }) => {
-  const { state, base } = await fixture(page)
+  const { state, base, waiting } = await fixture(page)
   let release!: () => void
   state.countGate = new Promise<void>(resolve => { release = resolve })
   await page.goto('/console/staff/quizzes')
   await expect.poll(() => state.requests.filter(r => r.path.endsWith('/unread-count')).length).toBeGreaterThan(0)
+  await expect.poll(() => waiting().map(stream => stream.role)).toEqual(['ROLE_STAFF'])
   state.items = [{ ...item(99), title: 'Thông báo của Teacher' }]
   await page.evaluate(token => {
     localStorage.setItem('hocluc.accessToken', token)
@@ -201,7 +232,135 @@ test('active-role change drops old feed and rejects a late count response', asyn
   await visibleBell(page).click()
   await expect(page.getByRole('button', { name: 'Xem thông báo: Thông báo của Teacher', exact: true })).toBeVisible()
   await expect(visibleBell(page)).toHaveAccessibleDescription('1 thông báo chưa đọc')
+  // The old role's stream is closed and exactly one follows the new role.
+  await expect.poll(() => waiting().map(stream => stream.role)).toEqual(['ROLE_TEACHER'])
+  await page.waitForTimeout(500)
+  expect(waiting().map(stream => stream.role)).toEqual(['ROLE_TEACHER'])
   expect(base.pageErrors).toEqual([])
+})
+
+test('a live notification raises the count and opens from its toast', async ({ page }) => {
+  const { state, base, waiting } = await fixture(page)
+  await page.goto('/console/staff/quizzes')
+  await expect(visibleBell(page)).toHaveAccessibleDescription('3 thông báo chưa đọc')
+  await expect.poll(() => waiting().length).toBe(1)
+  const fresh = { ...item(50), title: 'Thông báo mới' }
+  state.items.unshift(fresh)
+  waiting()[0].send(sse(['ready', 'ok'], ['notification', fresh]))
+  await expect(visibleBell(page)).toHaveAccessibleDescription('4 thông báo chưa đọc')
+  await page.getByRole('button', { name: 'Mở thông báo: Thông báo mới', exact: true }).click()
+  const detail = page.getByRole('dialog', { name: 'Chi tiết thông báo', exact: true })
+  await expect(detail.getByRole('heading', { name: 'Thông báo mới', exact: true })).toBeVisible()
+  await expect(detail.getByText('Đã đọc', { exact: true })).toBeVisible()
+  expect(state.requests.filter(r => r.method === 'PATCH').map(r => r.path)).toEqual([`${prefix}/${fresh.id}/read`])
+  await detail.getByRole('button', { name: 'Đóng thông báo', exact: true }).click()
+  await expect(visibleBell(page)).toHaveAccessibleDescription('3 thông báo chưa đọc')
+  expect(base.unmatched).toEqual([]); expect(base.pageErrors).toEqual([])
+})
+
+test('a notification that arrives while the list is open joins it without a toast', async ({ page }) => {
+  const { state, base, waiting } = await fixture(page)
+  await page.goto('/console/staff/quizzes')
+  await visibleBell(page).click()
+  const rows = page.getByRole('button', { name: /^Xem thông báo: / })
+  await expect(rows).toHaveCount(3)
+  await expect.poll(() => waiting().length).toBe(1)
+  const fresh = { ...item(50), title: 'Thông báo mới' }
+  state.items.unshift(fresh)
+  waiting()[0].send(sse(['notification', fresh], ['notification', fresh]))
+  await expect(rows).toHaveCount(4)
+  await expect(rows.first()).toHaveAccessibleName('Xem thông báo: Thông báo mới')
+  await expect(visibleBell(page)).toHaveAccessibleDescription('4 thông báo chưa đọc')
+  await expect(page.getByRole('button', { name: 'Mở thông báo: Thông báo mới', exact: true })).toHaveCount(0)
+  expect(base.unmatched).toEqual([]); expect(base.pageErrors).toEqual([])
+})
+
+test('a stream replaced by another screen stays closed until this one is shown again', async ({ page }) => {
+  const { base, followed, waiting } = await fixture(page)
+  await page.goto('/console/staff/quizzes')
+  await expect.poll(() => waiting().length).toBe(1)
+  // A stream that just ends is followed again.
+  waiting()[0].send(sse(['ready', 'ok']))
+  await expect.poll(() => waiting().length).toBe(1)
+  expect(followed()).toHaveLength(2)
+  waiting()[0].send(sse(['ready', 'ok'], ['replaced', 'ok']))
+  await page.waitForTimeout(3_000)
+  expect(followed()).toHaveLength(2)
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+  await expect.poll(() => waiting().length).toBe(1)
+  expect(followed()).toHaveLength(3)
+  expect(base.pageErrors).toEqual([])
+})
+
+test('each notification opens the page its active role can reach', async ({ page }) => {
+  await fixture(page, 'STUDENT')
+  await page.goto('/student/assessments/placement')
+  const targets = await page.evaluate(async () => {
+    const module = '/src/lib/notificationTarget.ts'
+    const { notificationTarget } = await import(/* @vite-ignore */ module)
+    const all = ['STUDENT', 'MENTOR', 'TEACHER', 'STAFF', 'MANAGER', 'ADMINISTRATOR']
+    const to = (role: string | null, entityType: string | null, entityId: string | null = 'id 1', audience: string | null = null, roles = all) =>
+      notificationTarget({ entityType, entityId, audience }, role, roles)
+    return {
+      studentCourse: to('STUDENT', 'COURSE'), studentClass: to('STUDENT', 'LIVE_CLASS', null),
+      studentSolve: to('STUDENT', 'STUDENT_SOLVE'), studentOrder: to('STUDENT', 'ORDER'),
+      studentOrderWithoutId: to('STUDENT', 'ORDER', null), studentOther: to('STUDENT', 'SYSTEM'),
+      staffCourse: to('STAFF', 'COURSE'), managerCourse: to('MANAGER', 'COURSE'), adminCourse: to('ADMINISTRATOR', 'COURSE'),
+      staffCourseWithoutId: to('STAFF', 'COURSE', null), teacherCourse: to('TEACHER', 'COURSE'),
+      teacherClass: to('TEACHER', 'LIVE_CLASS'), staffClass: to('STAFF', 'LIVE_CLASS'), staffOrder: to('STAFF', 'ORDER'),
+      sentToThisRole: to('STAFF', 'COURSE', 'id 1', 'STAFF'),
+      sentToAnotherRole: to('STAFF', 'COURSE', 'id 1', 'TEACHER'),
+      sentToARoleTheyLack: to('STAFF', 'COURSE', 'id 1', 'TEACHER', ['STAFF']),
+      signedOut: to(null, 'COURSE'),
+    }
+  })
+  expect(targets).toEqual({
+    studentCourse: { href: '/courses/id%201' }, studentClass: { href: '/student/schedule' },
+    studentSolve: { href: '/student/tutor' }, studentOrder: { href: '/orders/id%201' },
+    studentOrderWithoutId: null, studentOther: null,
+    staffCourse: { href: '/console/staff/courses?courseId=id%201' },
+    managerCourse: { href: '/console/manager/courses?courseId=id%201' },
+    adminCourse: { href: '/console/admin/courses?courseId=id%201' },
+    staffCourseWithoutId: null, teacherCourse: null,
+    teacherClass: { href: '/console/teacher/schedule' }, staffClass: null, staffOrder: null,
+    sentToThisRole: { href: '/console/staff/courses?courseId=id%201' },
+    sentToAnotherRole: { switchTo: 'TEACHER' },
+    sentToARoleTheyLack: null,
+    signedOut: null,
+  })
+})
+
+for (const [role, start, entityType, entityId, destination] of [
+  ['STUDENT', '/student/assessments/placement', 'ORDER', 'order-1', /\/orders\/order-1$/],
+  ['STAFF', '/console/staff/quizzes', 'COURSE', 'course-1', /\/console\/staff\/courses\?courseId=course-1$/],
+] as const) {
+  test(`${role}: opening a notification with a page goes there and marks it read`, async ({ page }) => {
+    const { state } = await fixture(page, role)
+    state.items[0] = { ...state.items[0], entityType, entityId, title: 'Thông báo có trang' }
+    await page.goto(start)
+    await visibleBell(page).click()
+    await page.getByRole('button', { name: 'Xem thông báo: Thông báo có trang', exact: true }).click()
+    await expect(page).toHaveURL(destination)
+    await expect(page.getByRole('dialog', { name: 'Chi tiết thông báo', exact: true })).toHaveCount(0)
+    await expect.poll(() => state.requests.filter(r => r.method === 'PATCH').map(r => r.path)).toEqual([`${prefix}/${state.items[0].id}/read`])
+  })
+}
+
+test('a notification sent to another of the user\'s roles is labelled and asks to switch to it', async ({ page }) => {
+  const { state, base } = await fixture(page)
+  state.items[0] = { ...state.items[0], entityType: 'LIVE_CLASS', audience: 'TEACHER', title: 'Lớp học sắp bắt đầu' }
+  state.items[1] = { ...state.items[1], audience: 'STAFF' }
+  await page.goto('/console/staff/quizzes')
+  await visibleBell(page).click()
+  const row = page.getByRole('button', { name: 'Xem thông báo: Lớp học sắp bắt đầu', exact: true })
+  await expect(row.getByText('Giáo viên', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Xem thông báo: Thông báo QA 2', exact: true }).getByText('Nhân viên', { exact: true })).toHaveCount(0)
+  await row.click()
+  const detail = page.getByRole('dialog', { name: 'Chi tiết thông báo', exact: true })
+  await expect(detail.getByRole('heading', { name: 'Lớp học sắp bắt đầu', exact: true })).toBeVisible()
+  await detail.getByRole('button', { name: 'Chuyển sang vai trò Giáo viên', exact: true }).click()
+  await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
+  expect(base.requests.filter(r => r.path === '/api/v1/auth/switch-role').map(r => r.body)).toEqual([{ role: 'TEACHER' }])
 })
 
 test('mobile bell fits the viewport and keeps read state when the popover reopens', async ({ page }, testInfo) => {

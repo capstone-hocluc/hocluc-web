@@ -1,35 +1,40 @@
 import { useContext, useId, useRef, useState } from 'react'
-import { Bell, BookOpen, CalendarDays, CheckCircle2, RefreshCw } from '../console/icons'
+import { Bell, BookOpen, CalendarDays, CheckCircle2, RefreshCw, ShoppingBag, Sparkles } from '../console/icons'
 import { NotificationContext, useNotifications } from '../../hooks/useNotifications'
+import { accessTokenRole } from '../../lib/api'
 import { cn } from '../../lib/cn'
+import { ROLE_LABELS } from '../../lib/role-home'
 import Button from '../ui/Button'
 import Notice from '../ui/Notice'
 import Skeleton from '../ui/Skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/Popover'
 import NotificationProvider from './NotificationProvider'
-import Modal from '../ui/Modal'
-import type { UserNotification } from '../../services/notificationService'
+import { NotificationTime } from './NotificationDetail'
 
-function formatTime(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('vi-VN', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
+const ICONS: Record<string, typeof Bell> = {
+  COURSE: BookOpen,
+  LIVE_CLASS: CalendarDays,
+  ORDER: ShoppingBag,
+  STUDENT_SOLVE: Sparkles,
 }
 
 function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
   const feed = useNotifications()
   const [open, setOpen] = useState(false)
-  const [selected, setSelected] = useState<UserNotification | null>(null)
   const bellRef = useRef<HTMLButtonElement>(null)
   const descriptionId = useId()
   const loading = feed.status === 'loading' || feed.status === 'idle'
   const hasUnread = (feed.unread ?? 0) > 0 || Boolean(feed.page?.content.some(item => !item.read))
   const disabled = loading || Boolean(feed.busy)
-  const detail = feed.page?.content.find(item => item.id === selected?.id) ?? selected
+  const activeRole = accessTokenRole()
 
-  return <><Popover open={open} onOpenChange={next => {
+  const showList = (next: boolean) => {
     setOpen(next)
+    feed.setListOpen(next)
+  }
+
+  return <Popover open={open} onOpenChange={next => {
+    showList(next)
     if (next) {
       void feed.loadPage(0)
       void feed.refreshCount()
@@ -70,13 +75,13 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
           <p className="text-sm text-text-secondary">Chưa có thông báo nào.</p>
         </div> : <ul className="space-y-1 p-2">
           {feed.page?.content.map(item => {
-            const Icon = item.entityType === 'COURSE' ? BookOpen : item.entityType === 'LIVE_CLASS' ? CalendarDays : Bell
+            const Icon = (item.entityType && ICONS[item.entityType]) || Bell
+            const otherRole = item.audience && item.audience !== activeRole ? item.audience : null
             return <li key={item.id}>
-              <button type="button" aria-label={`Xem thông báo: ${item.title}`} aria-haspopup="dialog"
+              <button type="button" aria-label={`Xem thông báo: ${item.title}`}
                 disabled={Boolean(feed.busy)} onClick={() => {
-                  setOpen(false)
-                  setSelected(item)
-                  void feed.markRead(item)
+                  showList(false)
+                  feed.open(item, bellRef.current)
                 }} className={cn('flex w-full gap-3 rounded-xl p-3 text-left transition-colors hover:bg-surface-hover disabled:cursor-wait focus-visible:outline-2 focus-visible:outline-focus-ring', !item.read && 'bg-surface-brand')}>
                 <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-background-gray-secondary text-icon-primary"><Icon size={18} /></span>
                 <span className="min-w-0 flex-1">
@@ -85,7 +90,12 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
                     {!item.read && <span className="mt-1 size-2 shrink-0 rounded-full bg-primary-bright" aria-label="Chưa đọc" />}
                   </span>
                   {item.message && <span className="mt-1 line-clamp-2 text-xs leading-5 break-words whitespace-pre-wrap text-text-secondary">{item.message}</span>}
-                  <time dateTime={item.createdAt} className="mt-1 block text-xs text-text-tertiary">{formatTime(item.createdAt)}</time>
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    <NotificationTime value={item.createdAt} className="block text-xs text-text-tertiary" />
+                    {otherRole && <span className="rounded-md bg-background-gray-secondary px-1.5 py-0.5 text-[11px] font-medium text-text-secondary">
+                      {ROLE_LABELS[otherRole]}
+                    </span>}
+                  </span>
                 </span>
               </button>
             </li>
@@ -104,35 +114,9 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
       </div>
     </PopoverContent>
   </Popover>
-    <Modal open={detail !== null} title="Chi tiết thông báo" maxWidth={640}
-      description={detail ? <time dateTime={detail.createdAt} className="text-xs text-text-tertiary">{formatTime(detail.createdAt)}</time> : undefined}
-      className="flex max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden [&>h2]:pr-8"
-      onClose={() => {
-        setSelected(null)
-        requestAnimationFrame(() => bellRef.current?.focus())
-      }}>
-      {detail && <>
-        <div role="region" aria-label="Nội dung thông báo" tabIndex={0}
-          className="min-h-0 app-scroll overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-4 focus-visible:outline-2 focus-visible:outline-focus-ring">
-          <h3 className="mb-3 text-base font-semibold leading-6 text-text-heading [overflow-wrap:anywhere]">{detail.title}</h3>
-          <p className="text-sm leading-7 whitespace-pre-wrap text-text-body [overflow-wrap:anywhere]">{detail.message || 'Thông báo này không có nội dung bổ sung.'}</p>
-        </div>
-        {feed.mutationError && <Notice tone="danger" role="alert" className="shrink-0 text-xs font-normal">
-          {feed.mutationError}
-          <Button size="sm" appearance="ghost" disabled={Boolean(feed.busy)} onClick={() => void feed.markRead(detail)}>Thử lại đánh dấu đã đọc</Button>
-        </Notice>}
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-line pt-3">
-          <span className="text-xs text-text-tertiary" role="status">{feed.busy === detail.id ? 'Đang đánh dấu đã đọc...' : detail.read ? 'Đã đọc' : 'Chưa đọc'}</span>
-          <Button size="sm" appearance="outline" onClick={() => {
-            setSelected(null)
-            requestAnimationFrame(() => bellRef.current?.focus())
-          }}>Đóng thông báo</Button>
-        </div>
-      </>}
-    </Modal>
-  </>
 }
 
+/** One provider per layout: a bell inside one shares its feed and stream, a bell on its own brings its own. */
 export default function NotificationBell({ variant = 'console' }: { variant?: 'console' | 'student' }) {
   const shared = useContext(NotificationContext)
   return shared ? <NotificationControl variant={variant} />
