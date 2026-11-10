@@ -100,7 +100,7 @@ export default function DocHeader({
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-1.5 bg-card-background px-2 sm:gap-2 sm:px-3">
+    <header className="exam-doc-ui flex h-14 shrink-0 items-center gap-1.5 bg-card-background px-2 sm:gap-2 sm:px-3">
       <a
         href={backHref}
         onClick={(event) => {

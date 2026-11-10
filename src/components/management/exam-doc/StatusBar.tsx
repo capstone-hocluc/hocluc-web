@@ -45,7 +45,7 @@ export default function StatusBar() {
   }
 
   return (
-    <div className="flex h-11 shrink-0 items-center gap-1 border-t border-card-border px-2">
+    <div className="exam-doc-ui flex h-11 shrink-0 items-center gap-1 border-t border-card-border px-2">
       {!structured && (
         <ScrollArea horizontal className="min-w-0 py-1">
           <div role="tablist" aria-label="Các tab của đề" className="flex items-center gap-0.5" onKeyDown={onTabKey}>

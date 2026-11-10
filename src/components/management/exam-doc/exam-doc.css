@@ -1,5 +1,15 @@
 /* The exam paper is printed matter: white sheets, black ink, Times New Roman, in light and dark themes alike. */
 
+/*
+ * The editor's own controls (title, menus, toolbar, status bar and what they open) are an editor's, not the console's:
+ * the plain Inter of Tiptap's editor UI instead of the brand face. Redefining --font-sans keeps `font-sans` inside
+ * them on Inter too.
+ */
+.exam-doc-ui {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
+}
+
 /* Print layout: A4 sheets (sizes must match PAGE in pagination.ts) stacked behind one editable flow. */
 .exam-doc-pages {
   --exam-doc-page-gap: 24px;
