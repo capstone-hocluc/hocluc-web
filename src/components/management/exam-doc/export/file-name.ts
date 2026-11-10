@@ -50,10 +50,9 @@ export function baseFileName(doc: JSONContent): string {
   return title ? slugify(title) : FALLBACK_NAME
 }
 
-/** "<title>.docx", or "<title>-Ma-<code>.docx" for an exam variant (mã đề). */
-export function fileNameFor(doc: JSONContent, extension: string, code?: string | null): string {
-  const base = baseFileName(doc)
-  return `${code ? `${base}-Ma-${slugify(code)}` : base}.${extension}`
+/** "<title>.docx". */
+export function fileNameFor(doc: JSONContent, extension: string): string {
+  return `${baseFileName(doc)}.${extension}`
 }
 
 /** Saves the blob under `fileName` through an object URL, as a download. */

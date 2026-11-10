@@ -21,8 +21,6 @@ import { documentTitle, downloadBlob, fileNameFor } from './file-name'
 export type PdfRender = 'client' | 'auto'
 
 export interface PdfOptions {
-  /** Code of the exam variant (mã đề) on the sheet, for the file name. */
-  code?: string | null
   /** The exam without its answer key: the key's blocks and the sheets holding only the key are left out. */
   examOnly?: boolean
   render?: PdfRender
@@ -475,16 +473,13 @@ const RENDERERS: Record<PdfRender, Renderer> = {
 }
 
 /**
- * Downloads what the sheet of `editor` shows as an A4 PDF named after the title: "…-Ma-<code>.pdf" for a variant,
- * "…-khong-dap-an.pdf" for the exam without its answer key.
+ * Downloads what the sheet of `editor` shows as an A4 PDF named after the title; "…-khong-dap-an.pdf" for the exam
+ * without its answer key.
  */
-export async function exportPdf(
-  editor: Editor,
-  { code = null, examOnly = false, render = 'auto' }: PdfOptions = {}
-): Promise<PdfResult> {
+export async function exportPdf(editor: Editor, { examOnly = false, render = 'auto' }: PdfOptions = {}): Promise<PdfResult> {
   const doc = editor.getJSON()
   const { blob, ...result } = await RENDERERS[render](editor, { title: documentTitle(doc) ?? 'Đề thi', examOnly })
-  const fileName = fileNameFor(doc, 'pdf', code)
+  const fileName = fileNameFor(doc, 'pdf')
   downloadBlob(blob, examOnly ? fileName.replace(/\.pdf$/, '-khong-dap-an.pdf') : fileName)
   return result
 }

@@ -15,7 +15,13 @@ export interface AiConversation {
   mode?: AiAssistantMode | string | null
   createdAt: string
   updatedAt: string
+  /** When the exam last went out through "Xuất bản"; null while it is a draft. */
+  publishedAt?: string | null
+  publishedAs?: AiPublishedAs | null
 }
+
+/** How an exam went out: a course quiz, a mock exam, or a Word or PDF file. */
+export type AiPublishedAs = 'QUIZ' | 'EXAM' | 'DOCX' | 'PDF'
 
 export interface AiConversationPage {
   content: AiConversation[]
@@ -344,6 +350,18 @@ export async function renameAiConversation(id: string, title: string): Promise<v
     method: 'PATCH',
     body: { title },
   })
+}
+
+/** Records that the exam went out as a file; a quiz or mock exam is recorded by its export. */
+export async function publishAiConversation(id: string, as: 'DOCX' | 'PDF'): Promise<AiConversation> {
+  return requireData(
+    await request<AiConversation>(`${BASE}/conversations/${encodeURIComponent(id)}/publish`, {
+      auth: true,
+      method: 'POST',
+      body: { as },
+    }),
+    'Không ghi được đề đã xuất bản.'
+  )
 }
 
 export async function deleteAiConversation(id: string): Promise<void> {

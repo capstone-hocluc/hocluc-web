@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { END_LINE, TAIL_HEADING } from './variants/parse-exam'
+import { END_LINE, TAIL_HEADING } from './exam-lines'
 
 /**
  * Ties blocks of the free document to the AI draft they came from, so later AI questions can be placed under their

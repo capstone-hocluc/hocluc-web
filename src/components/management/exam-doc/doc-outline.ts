@@ -65,7 +65,7 @@ export function outlineOf(doc: ProseMirrorNode): OutlineItem[] {
   return items
 }
 
-/** Index of the outline item the selection sits in (the last one starting before it), or -1. */
+/** The outline item the caret is in: the last one starting before it, or -1. */
 export function activeOutlineIndex(items: OutlineItem[], selectionFrom: number): number {
   let active = -1
   for (let index = 0; index < items.length && items[index].pos < selectionFrom; index += 1) {

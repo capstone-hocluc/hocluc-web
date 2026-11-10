@@ -18,6 +18,9 @@ interface Conversation {
   mode: string | null
   createdAt: string
   updatedAt: string
+  /** Set once the exam went out through "Xuất bản". */
+  publishedAt?: string | null
+  publishedAs?: 'QUIZ' | 'EXAM' | 'DOCX' | 'PDF' | null
 }
 
 interface DraftItem {
@@ -293,7 +296,8 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
     if (message.type() === 'warning' && message.text().includes('PressResponder')) quiz.pageErrors.push(message.text())
   })
   const state = {
-    conversations: [...(options.conversations ?? [])] as Conversation[],
+    // Copies: a test that renames or publishes an exam must not change the shared fixture other tests start from.
+    conversations: (options.conversations ?? []).map((conversation) => ({ ...conversation })) as Conversation[],
     messages: new Map(Object.entries(options.messages ?? {})),
     drafts: new Map(Object.entries(options.drafts ?? {})),
     documents: new Map(Object.entries(options.documents ?? {})),
@@ -400,6 +404,14 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
         state.documents.delete(conversationId)
         return reply(null)
       }
+    }
+
+    // A file published from "Xuất bản"; the edit time stays as it was.
+    if (action === 'publish' && method === 'POST') {
+      if (body.as !== 'DOCX' && body.as !== 'PDF') return reply(null, 400, 'Kiểu xuất bản không hợp lệ.')
+      conversation.publishedAt = stamp
+      conversation.publishedAs = body.as
+      return reply(conversation)
     }
 
     // One document per conversation, saved over the version it was read at, as the server checks it.
@@ -597,6 +609,9 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
       }
       if (segments.length === 2 && segments[1] === 'quiz' && method === 'POST') {
         const written = draft.items.filter((entry) => entry.kept && !entry.question.failed)
+        // The server records that the exam went out, as a mock exam or a course quiz.
+        conversation.publishedAt = stamp
+        conversation.publishedAs = body.type === 'EXAM' ? 'EXAM' : 'QUIZ'
         return reply({
           quizId: 'quiz-from-draft',
           type: body.type,
@@ -854,11 +869,10 @@ test('a paper being read shows on the sheet word by word, with the stages of the
   await expect(panel.getByText('Đọc câu hỏi')).toBeVisible()
   await expect(panel.getByText('0/1 phần')).toBeVisible()
   await expect(panel.getByText('Phần 1 · câu 1–3')).toBeVisible()
-  // the paper's outline hangs under it in the list, its questions by their printed numbers
-  const exams = page.getByRole('list', { name: 'Đề của tôi', exact: true })
-  await expect(exams.getByRole('button', { name: 'Đề mẫu 2021', exact: true })).toHaveAttribute('aria-current', 'location')
-  await expect(exams.getByRole('button', { name: 'Tới câu 1', exact: true })).toBeVisible()
-  await expect(exams.getByRole('button', { name: 'Tới câu 2', exact: true })).toBeVisible()
+  // the paper is lit in the list, among the loaded papers, with no outline of its questions under it
+  const papers = page.getByRole('list', { name: 'Đề nạp vào kho', exact: true })
+  await expect(papers.getByRole('button', { name: 'Đề mẫu 2021', exact: true })).toHaveAttribute('aria-current', 'location')
+  await expect(page.getByRole('list', { name: 'Đề của tôi', exact: true }).getByText('Câu 1.')).toHaveCount(0)
 })
 
 test('a teacher opens loaded papers in the workspace but cannot load one', async ({ page }) => {
@@ -871,8 +885,7 @@ test('a teacher opens loaded papers in the workspace but cannot load one', async
   await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Nạp đề', exact: true })).toHaveCount(0)
 
-  const panel = page.getByRole('complementary', { name: 'Mục lục đề thi' })
-  await expect(panel.getByRole('button', { name: 'Nạp đề vào kho', exact: true })).toHaveCount(0)
+  const panel = page.getByRole('complementary', { name: 'Danh sách đề' })
   await panel.getByRole('list', { name: 'Đề của tôi', exact: true }).getByRole('button', { name: 'Đề mẫu 2021', exact: true }).click()
   await expect(readingSheet(page)).toContainText('Câu 1. Giải x + 1 = 3')
   await expect(page.getByRole('button', { name: 'Gán nhãn' })).toHaveCount(0)
@@ -966,8 +979,6 @@ test('a compose run streams its stages and items into the paper', async ({ page 
   await expect(first.getByText('Cần duyệt', { exact: true })).toBeVisible()
   await expect(first.getByText('Đáp án chưa được đối chiếu với đề gốc.')).toBeVisible()
   await expect(page.locator('#exam-question-item-2')).toContainText('Rút gọn biểu thức hai x trừ x.')
-  await expect(page.getByRole('button', { name: 'Tới câu 1', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Tới câu 2', exact: true })).toBeVisible()
 
   // Choosing the mode was the new exam's first edit: it created the conversation (named after the document's
   // heading) and saved the document under it in that mode, so the prompt went to that conversation.
@@ -1173,14 +1184,17 @@ test('a teacher, even one authoring the subject, is offered nothing for the bank
   await expect(page.getByRole('button', { name: 'Lưu câu 1 vào ngân hàng' })).toHaveCount(0)
   await expect(page.getByText('Đã lưu vào ngân hàng')).toHaveCount(0)
   expect(state.requests.filter((entry) => entry.path.endsWith('/draft/bank'))).toEqual([])
-  // writing quizzes is staff work
-  await expect(page.getByRole('banner').getByRole('button', { name: 'Xuất thành quiz' })).toHaveCount(0)
+  // writing quizzes is staff work: the teacher publishes the exam only as a file
+  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Word (.docx)', exact: true })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'Thành quiz / đề thi…', exact: true })).toHaveCount(0)
 })
 
 test('the exam becomes a draft mock exam of a course, opened from the result', async ({ page }) => {
   const { state } = await openCheckedExam(page, 'MANAGER', {})
 
-  await page.getByRole('banner').getByRole('button', { name: 'Xuất thành quiz', exact: true }).click()
+  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Thành quiz / đề thi…', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('button', { name: 'Khóa học' }).click()
   await page.getByRole('option', { name: 'Khóa được phân công', exact: true }).click()
@@ -1194,6 +1208,12 @@ test('the exam becomes a draft mock exam of a course, opened from the result', a
     'href',
     '/console/manager/mock-exams/quiz-from-draft/edit'
   )
+
+  // the exam went out as a mock exam: the list moves it from the drafts to the published ones
+  await dialog.getByRole('button', { name: 'Đóng', exact: true }).click()
+  const published = page.getByRole('list', { name: 'Đã xuất bản', exact: true })
+  await expect(published.getByRole('listitem').filter({ hasText: 'Đề ôn hàm số' })).toContainText('Đề thi thử')
+  await expect(page.getByRole('list', { name: 'Bản nháp', exact: true }).getByText('Đề ôn hàm số')).toHaveCount(0)
 })
 
 test('dragging a paper question reorders the draft through the API', async ({ page }) => {
@@ -1290,6 +1310,46 @@ test('an ask run shows the answer text sent in the answer event', async ({ page 
   await expect(page.getByText(answer, { exact: true })).toBeVisible({ timeout: 15_000 })
 })
 
+test('the assistant moves to a bar at the bottom of the paper, answers there, folds away and goes back beside it', async ({ page }) => {
+  const answer = 'Đạo hàm là tốc độ thay đổi tức thời của hàm số tại một điểm.'
+  await installAiFixture(page, 'MANAGER', { askAnswer: answer })
+  await openAssistant(page)
+
+  await page.getByRole('complementary', { name: 'Trợ lý AI' }).getByRole('button', { name: 'Chuyển sang thanh dưới cùng' }).click()
+  const bar = page.getByRole('region', { name: 'Thanh trợ lý AI' })
+  await expect(bar).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toHaveCount(0)
+  // The bar floats over the paper, inside its column.
+  const [barBox, paperBox] = await Promise.all([bar.boundingBox(), page.locator('main').first().boundingBox()])
+  expect(barBox!.x).toBeGreaterThanOrEqual(paperBox!.x)
+  expect(barBox!.x + barBox!.width).toBeLessThanOrEqual(paperBox!.x + paperBox!.width)
+
+  await bar.getByRole('button', { name: 'Chế độ trả lời' }).click()
+  await page.getByRole('option', { name: /Hỏi đáp/ }).click()
+  await bar.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Đạo hàm là gì?')
+  await bar.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await expect(bar.getByText(answer, { exact: true })).toBeVisible({ timeout: 15_000 })
+
+  // Escape folds the bar to one button, which opens it again.
+  await bar.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).press('Escape')
+  await expect(bar).toHaveCount(0)
+  await page.getByRole('button', { name: 'Mở rộng thanh trợ lý AI' }).click()
+  await expect(bar.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })).toBeFocused()
+
+  // The place is kept for the next visit.
+  await page.reload()
+  await expect(bar).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Trợ lý AI' })).toHaveCount(0)
+
+  await bar.getByRole('button', { name: 'Tùy chọn thanh trợ lý AI' }).click()
+  await page.getByRole('menuitem', { name: 'Chuyển sang bảng điều khiển bên' }).click()
+  const panel = page.getByRole('complementary', { name: 'Trợ lý AI' })
+  await expect(panel).toBeVisible()
+  await expect(bar).toHaveCount(0)
+  // The thread asked in the bar is all there in the panel.
+  await expect(panel.getByText(answer, { exact: true })).toBeVisible()
+})
+
 test('opening a saved conversation loads its messages, title and paper', async ({ page }) => {
   const saved: Conversation = {
     id: 'conv-9',
@@ -1332,14 +1392,15 @@ test('opening a saved conversation loads its messages, title and paper', async (
   await expect(page.locator('#exam-question-saved-1')).toContainText('Câu đã lưu trong bản nháp.')
   await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('Đề đã lưu')
 
-  // The exams are listed in the left panel, the open one lit with its outline under it; the chat's list button
-  // brings that panel back when it was folded away.
+  // The exams are listed in the left panel, the open one lit among the drafts; the chat's list button brings that
+  // panel back when it was folded away.
   const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
   await expect(page.getByRole('banner').getByRole('button', { name: 'Cuộc trò chuyện', exact: true })).toHaveCount(0)
   const exams = page.getByRole('list', { name: 'Đề của tôi', exact: true })
-  await expect(exams.getByRole('button', { name: 'Đề đã lưu', exact: true })).toHaveAttribute('aria-current', 'location')
-  await expect(exams.getByRole('button', { name: 'Tới câu 1', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Thu gọn mục lục', exact: true }).click()
+  await expect(
+    exams.getByRole('list', { name: 'Bản nháp', exact: true }).getByRole('button', { name: 'Đề đã lưu', exact: true })
+  ).toHaveAttribute('aria-current', 'location')
+  await page.getByRole('button', { name: 'Thu gọn danh sách đề', exact: true }).click()
   await expect(exams).toBeHidden()
   await chat.getByRole('button', { name: 'Cuộc trò chuyện', exact: true }).click()
   await expect(exams).toBeVisible()
@@ -1382,8 +1443,6 @@ const examDocument = (version = 3): FixtureDocument => ({ mode: 'FREE', content:
 
 /** The "Câu n. …" question lines of a sheet, in order (the answer guide's "Câu n. Chọn A." lines left out). */
 const questionLines = (sheet: Locator) => sheet.locator(':scope > p:not([data-exam-key])').filter({ hasText: /^Câu \d+\./ })
-
-const stemsOf = (lines: string[]) => lines.map((line) => line.replace(/^Câu \d+\.\s*/, '').trim())
 
 /** Opens the saved exam (the only conversation, so it opens by itself) and waits until `line` is on the sheet. */
 async function openSavedDocument(page: Page, line: string) {
@@ -1433,51 +1492,6 @@ const noteContent = (note: string) =>
 
 const noteDocument = (version = 3): FixtureDocument => ({ mode: 'FREE', content: noteContent(NOTE), version, updatedAt: stamp })
 
-test('exam codes reorder the questions and are viewed read-only beside the original', async ({ page }) => {
-  await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
-  await openSavedExam(page)
-  expect(stemsOf(await questionLines(docEditor(page)).allTextContents())).toEqual(EXAM_STEMS)
-
-  await page.getByRole('button', { name: 'Tạo mã đề', exact: true }).click()
-  const panel = page.getByRole('complementary', { name: 'Tạo mã đề', exact: true })
-  await expect(panel.getByText('4 câu trong 1 phần', { exact: true })).toBeVisible()
-  await panel.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-  await panel.getByRole('button', { name: 'Tạo 4 mã đề', exact: true }).click()
-
-  const tabs = page.getByRole('tablist', { name: 'Các tab của đề' }).getByRole('tab')
-  await expect(tabs).toHaveText(['Đề gốc', 'Mã 101', 'Mã 102', 'Mã 103', 'Mã 104'])
-  await expect(tabs.filter({ hasText: 'Mã 101' })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByText('Đang xem mã 101 · chỉ đọc', { exact: true })).toBeVisible()
-
-  // The code is shown in its own read-only editor: the original document is off the sheet.
-  const variant = page.getByRole('textbox', { name: 'Mã đề đang xem (chỉ đọc)', exact: true })
-  await expect(variant).toHaveAttribute('contenteditable', 'false')
-  await expect(docEditor(page)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Đậm', exact: true })).toBeDisabled()
-  await expect(variant).toContainText('Mã đề 101')
-  await expect(questionLines(variant)).toHaveCount(EXAM_STEMS.length)
-  const lines = await questionLines(variant).allTextContents()
-  expect(lines.map((line) => /^Câu (\d+)\./.exec(line)?.[1])).toEqual(['1', '2', '3', '4'])
-  const shown = stemsOf(lines)
-  expect([...shown].sort()).toEqual([...EXAM_STEMS].sort())
-  expect(shown).not.toEqual(EXAM_STEMS)
-  await expect(variant.locator('[data-choice-grid]')).toHaveCount(EXAM_STEMS.length)
-
-  await page.getByRole('button', { name: 'Về đề gốc', exact: true }).click()
-  await expect(page.getByText('Đang xem mã 101 · chỉ đọc', { exact: true })).toHaveCount(0)
-  await expect(tabs.filter({ hasText: 'Đề gốc' })).toHaveAttribute('aria-selected', 'true')
-  expect(stemsOf(await questionLines(docEditor(page)).allTextContents())).toEqual(EXAM_STEMS)
-
-  // Codes belong to the free document: the question view closes the code shown and the codes panel.
-  await tabs.filter({ hasText: 'Mã 102' }).click()
-  await expect(page.getByText('Đang xem mã 102 · chỉ đọc', { exact: true })).toBeVisible()
-  await openFileMenu(page)
-  await page.getByRole('menuitemradio', { name: 'Giữ cấu trúc câu hỏi', exact: true }).click()
-  await expect(questionPaper(page)).toBeVisible()
-  await expect(page.getByText(/^Đang xem mã/)).toHaveCount(0)
-  await expect(panel).toHaveCount(0)
-})
-
 /** Tệp ▸ Tải xuống ▸ `item`, by keyboard: a Radix submenu closes when the pointer jumps across it. */
 async function downloadFromFileMenu(page: Page, item: string) {
   await openFileMenu(page)
@@ -1504,6 +1518,155 @@ test('Tệp ▸ Tải xuống saves the document as JSON and as a Word file', as
   const body = await zip.file('word/document.xml')?.async('string')
   expect(body).toContain('ĐỀ KIỂM TRA TOÁN 10')
   for (const stem of EXAM_STEMS) expect(body).toContain(stem)
+})
+
+test('the exam list groups drafts, published exams and loaded papers, and keeps how the viewer set it', async ({ page }) => {
+  const handedOut: Conversation = {
+    id: 'conv-8',
+    title: 'Đề giữa kỳ đã giao',
+    subjectId: 'category-1',
+    mode: 'compose',
+    createdAt: '2026-10-20T08:00:00Z',
+    updatedAt: '2026-10-20T08:00:00Z',
+    publishedAt: '2026-10-21T08:00:00Z',
+    publishedAs: 'QUIZ',
+  }
+  const { state } = await installAiFixture(page, 'MANAGER', {
+    conversations: [savedExam, handedOut],
+    documents: { 'conv-9': examDocument() },
+    bankSources: [bankSource('src-1', 'Đề mẫu 2021', 'DONE', 1)],
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant?c=conv-9')
+  await expect(docEditor(page)).toContainText(EXAM_STEMS[0], { timeout: 15_000 })
+
+  const panel = page.getByRole('complementary', { name: 'Danh sách đề', exact: true })
+  const drafts = panel.getByRole('list', { name: 'Bản nháp', exact: true })
+  const published = panel.getByRole('list', { name: 'Đã xuất bản', exact: true })
+  const papers = panel.getByRole('list', { name: 'Đề nạp vào kho', exact: true })
+  await expect(drafts.getByRole('button', { name: savedExam.title, exact: true })).toHaveAttribute('aria-current', 'location')
+  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao.*Quiz$/])
+  // A paper read to the end carries no tag: its group says what it is.
+  await expect(papers.getByRole('listitem')).toHaveText(['Đề mẫu 2021'])
+  // As a word processor's tabs panel: an arrow that puts it away, the tabs with "+" beside them; no title, and
+  // loading a paper is the header's. The header has no buttons of its own for a new exam or for the list.
+  await expect(panel.getByRole('tab', { name: 'Đề', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await expect(panel.getByRole('heading')).toHaveCount(0)
+  await expect(panel.getByRole('button', { name: 'Thêm đề', exact: true })).toBeVisible()
+  await expect(panel.getByRole('button', { name: /Nạp đề/ })).toHaveCount(0)
+  await expect(page.getByRole('banner').getByRole('button', { name: /Đề mới|Danh sách đề|Thêm đề/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Hiện danh sách đề', exact: true })).toBeHidden()
+
+  // A Word file from "Xuất bản" publishes the exam; the same file from the File menu does not.
+  const publishes = () => state.requests.filter((entry) => entry.method === 'POST' && entry.path.endsWith('/publish'))
+  await downloadFromFileMenu(page, 'Word (.docx)')
+  expect(publishes()).toEqual([])
+  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
+  const download = page.waitForEvent('download')
+  await page.getByRole('menuitem', { name: 'Word (.docx)', exact: true }).click()
+  expect((await download).suggestedFilename()).toBe('ĐỀ-KIỂM-TRA-TOÁN-10.docx')
+  await expect.poll(() => publishes().map((entry) => entry.body)).toEqual([{ as: 'DOCX' }])
+  await expect(published.getByRole('listitem')).toHaveText([/^Đề kiểm tra Toán 10.*Word$/, /^Đề giữa kỳ đã giao.*Quiz$/])
+  await expect(drafts.getByRole('listitem')).toHaveCount(0)
+
+  // The viewer hides the loaded papers, sorts by name and folds the drafts; the last group shown cannot be hidden.
+  await panel.getByRole('button', { name: 'Tùy chỉnh danh sách', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Đề nạp vào kho', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Đã xuất bản', exact: true }).click()
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Bản nháp', exact: true })).toHaveAttribute('aria-disabled', 'true')
+  await page.getByRole('menuitemcheckbox', { name: 'Đã xuất bản', exact: true }).click()
+  await page.getByRole('menuitemradio', { name: 'Tên A–Z', exact: true }).click()
+  await expect(papers).toHaveCount(0)
+  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao/, /^Đề kiểm tra Toán 10/])
+  await panel.getByRole('button', { name: 'Thu gọn Bản nháp', exact: true }).click()
+  await expect(drafts).toHaveCount(0)
+
+  // All of it is still so after a reload, and the server kept the exam published.
+  await page.reload()
+  await expect(docEditor(page)).toContainText(EXAM_STEMS[0], { timeout: 15_000 })
+  await expect(published.getByRole('button', { name: savedExam.title, exact: true })).toHaveAttribute('aria-current', 'location')
+  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao/, /^Đề kiểm tra Toán 10.*Word$/])
+  await expect(papers).toHaveCount(0)
+  await expect(drafts).toHaveCount(0)
+  await expect(panel.getByRole('button', { name: 'Mở Bản nháp', exact: true })).toBeVisible()
+})
+
+test('an exam\'s menu copies its link, renames it and unfolds its outline under it, as a double click does', async ({ page }) => {
+  // The copied link is read back from a stand-in clipboard: the headless browser's own may refuse to be read.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: (text: string) => {
+          ;(window as unknown as { copied: string }).copied = text
+          return Promise.resolve()
+        },
+      },
+    })
+  })
+  const { state } = await installAiFixture(page, 'MANAGER', {
+    conversations: [savedExam],
+    documents: { 'conv-9': examDocument() },
+    bankSources: [bankSource('src-1', 'Đề mẫu 2021', 'DONE', 1)],
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant?c=conv-9')
+  await expect(docEditor(page)).toContainText(EXAM_STEMS[0], { timeout: 15_000 })
+  const copied = () => page.evaluate(() => (window as unknown as { copied?: string }).copied ?? null)
+
+  const panel = page.getByRole('complementary', { name: 'Danh sách đề', exact: true })
+  const outline = panel.getByRole('list', { name: 'Bố cục đề', exact: true })
+  const row = panel.getByRole('button', { name: savedExam.title, exact: true })
+  const menu = panel.getByRole('button', { name: `Tùy chọn ${savedExam.title}`, exact: true })
+  await expect(outline).toHaveCount(0)
+
+  // "Hiện bố cục" lists the exam's headings and every question under it; a line takes the sheet there.
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Hiện bố cục', exact: true }).click()
+  await expect(outline.getByRole('button', { name: /^Tới / })).toHaveText([
+    'ĐỀ KIỂM TRA TOÁN 10',
+    'PHẦN I. TRẮC NGHIỆM',
+    ...EXAM_STEMS.map((stem, index) => `Câu ${index + 1}. ${stem}`),
+  ])
+  const third = outline.getByRole('button', { name: `Tới Câu 3. ${EXAM_STEMS[2]}`, exact: true })
+  await third.click()
+  await expect(third).toHaveAttribute('aria-current', 'location')
+  await expect(panel.getByRole('button', { name: `Thu gọn ${savedExam.title}`, exact: true })).toHaveAttribute('aria-expanded', 'true')
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Ẩn bố cục', exact: true }).click()
+  await expect(outline).toHaveCount(0)
+
+  // A double click on the row unfolds it too, and folds it again.
+  await row.dblclick()
+  await expect(outline).toBeVisible()
+  await row.dblclick()
+  await expect(outline).toHaveCount(0)
+
+  // The links open the exam (?c=) and the loaded paper (?paper=), with the toast saying so.
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Sao chép đường liên kết', exact: true }).click()
+  await expect.poll(copied).toBe(new URL('/console/manager/ai-assistant?c=conv-9', page.url()).href)
+  await expect(page.getByText('Đã sao chép đường liên kết')).toBeVisible()
+  const paperRow = panel.getByRole('list', { name: 'Đề nạp vào kho', exact: true }).getByRole('listitem')
+  await paperRow.hover()
+  await paperRow.getByRole('button', { name: 'Tùy chọn Đề mẫu 2021', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Đổi tên', exact: true })).toHaveCount(0)
+  await page.getByRole('menuitem', { name: 'Sao chép đường liên kết', exact: true }).click()
+  await expect.poll(copied).toBe(new URL('/console/manager/ai-assistant?paper=src-1', page.url()).href)
+
+  // "Đổi tên" swaps the row for a field holding the focus; "Xoá" asks first.
+  await menu.click()
+  await page.getByRole('menuitem', { name: 'Đổi tên', exact: true }).click()
+  const name = panel.getByRole('textbox', { name: 'Tên đề', exact: true })
+  await expect(name).toBeFocused()
+  await name.fill('Đề Toán 10 đã sửa')
+  await name.press('Enter')
+  await expect(panel.getByRole('button', { name: 'Đề Toán 10 đã sửa', exact: true })).toBeVisible()
+  await expect
+    .poll(() => state.requests.filter((entry) => entry.method === 'PATCH' && entry.path.endsWith('/conv-9')).map((entry) => entry.body))
+    .toEqual([{ title: 'Đề Toán 10 đã sửa' }])
+  await panel.getByRole('button', { name: 'Tùy chọn Đề Toán 10 đã sửa', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Xoá', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Xoá cuộc trò chuyện' })).toBeVisible()
 })
 
 test('a compose run in the free document writes each question under its own part', async ({ page }) => {
@@ -1536,12 +1699,6 @@ test('a compose run in the free document writes each question under its own part
   expect(blocks).not.toContain('PHẦN 3. TƯ DUY KHOA HỌC')
   // Only the answer key follows the end line.
   expect(blocks.slice(part + 6)).toContain('BẢNG ĐÁP ÁN')
-
-  const outline = page.getByRole('complementary', { name: 'Mục lục đề thi', exact: true })
-  await expect(outline.getByRole('button', { name: /^Tới Câu \d+\./ })).toHaveText([
-    'Câu 1. Tính giá trị của biểu thức x cộng 1.',
-    'Câu 2. Rút gọn biểu thức hai x trừ x.',
-  ])
 
   // The new conversation's document is saved from version 0 on, without being read back, and lists what it received.
   await expect
@@ -2085,7 +2242,7 @@ test('the conversations button of the chat folds the exam list away and brings i
   await installAiFixture(page)
   await openAssistant(page)
   const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
-  const exams = page.getByRole('complementary', { name: 'Mục lục đề thi' })
+  const exams = page.getByRole('complementary', { name: 'Danh sách đề' })
   await expect(exams).toBeVisible()
 
   await chat.getByRole('button', { name: 'Cuộc trò chuyện', exact: true }).click()
@@ -2238,7 +2395,7 @@ test('a question in ask mode carries the exam on the sheet, its outline and ever
   expect(document.questions[3].text).toContain(`Câu 4. ${EXAM_STEMS[3]}\nA. 0`)
 })
 
-test('the exam downloads with or without its key, and an exam code keeps the answer table but not the guide', async ({ page }) => {
+test('the exam downloads with or without its key', async ({ page }) => {
   await installAiFixture(page)
   await openAssistant(page)
   const sheet = docEditor(page)
@@ -2262,26 +2419,6 @@ test('the exam downloads with or without its key, and an exam code keeps the ans
   expect(examOnly.body).toContain('HẾT')
   expect(examOnly.body).not.toContain('BẢNG ĐÁP ÁN')
   expect(examOnly.body).not.toContain('HƯỚNG DẪN GIẢI')
-
-  // Each exam code writes its own letters into the answer table; the guide follows the original, so it stays out.
-  await page.getByRole('button', { name: 'Tạo mã đề', exact: true }).click()
-  const panel = page.getByRole('complementary', { name: 'Tạo mã đề', exact: true })
-  await panel.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-  await panel.getByRole('button', { name: /^Tạo \d+ mã đề$/ }).click()
-  const variant = page.getByRole('textbox', { name: 'Mã đề đang xem (chỉ đọc)', exact: true })
-  await expect(variant).toContainText('BẢNG ĐÁP ÁN')
-  await expect(variant).not.toContainText('HƯỚNG DẪN GIẢI')
-  await expect(variant).not.toContainText('Câu cần thầy cô kiểm tra lại')
-  const letters = await variant.evaluate((root) =>
-    Array.from(root.querySelectorAll('[data-choice-grid]')).map((grid) => {
-      const bodies = Array.from(grid.querySelectorAll('.exam-choice-body')).map((cell) => (cell.textContent ?? '').trim())
-      return 'ABCD'[bodies.indexOf('Đáp án đúng')]
-    })
-  )
-  expect(await tableRowsOf(variant, 'Đáp án')).toEqual([
-    ['Câu', '1', '2'],
-    ['Đáp án', ...letters],
-  ])
 })
 
 // Regression: the editor that showed the loading placeholder must never pass its empty document to the saver of the
@@ -2418,7 +2555,7 @@ test('the first edit of a new exam creates its conversation, which keeps the tex
   }).toPass()
   await page.keyboard.press('Enter')
   await page.keyboard.type(line)
-  const panel = page.getByRole('complementary', { name: 'Mục lục đề thi', exact: true })
+  const panel = page.getByRole('complementary', { name: 'Danh sách đề', exact: true })
   await panel.getByRole('tab', { name: 'Mẫu đề thi', exact: true }).click()
   await panel.getByRole('button', { name: 'Chèn mẫu Hướng dẫn làm bài', exact: true }).click()
   await expect(saveStatus(page)).toHaveText('Đã lưu')
@@ -2448,7 +2585,7 @@ test('an exam opened while a new exam is still being created never receives the 
   // What the saved exam's own document looks like afterwards is the empty-save bug's test; this one checks the text.
   const { state } = await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': noteDocument(3) } })
   await openSavedDocument(page, NOTE)
-  await page.getByRole('button', { name: 'Đề mới', exact: true }).click()
+  await page.getByRole('button', { name: 'Thêm đề', exact: true }).click()
   const sheet = docEditor(page)
   const title = sheet.locator(':scope > h1')
   await expect(title).toHaveText('ĐỀ THI MỚI')
@@ -2961,13 +3098,9 @@ test('switching a saved free document to question cards saves the mode and turns
   expect(save).toMatchObject({ mode: 'STRUCTURED', version: 2 })
   expect(savedBlocks(save)).toEqual(['ĐỀ KIỂM TRA TOÁN 10', NOTE, '--- HẾT ---'])
 
-  // Formatting, exam codes and files belong to the free document; the outline lists the draft's questions.
+  // Formatting and files belong to the free document.
   const freeOnly = 'Chỉ có ở chế độ Văn bản tự do'
   await expect(page.getByRole('button', { name: 'Đậm', exact: true })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Tạo nhiều mã đề', exact: true })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Tạo nhiều mã đề', exact: true })).toHaveAttribute('title', freeOnly)
-  await expect(page.getByRole('button', { name: 'Tạo mã đề', exact: true })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Tới câu 1', exact: true })).toBeVisible()
   await openFileMenu(page)
   await expect(page.getByRole('menuitem', { name: 'Mở file (Word, Markdown, JSON)…', exact: true })).toHaveAttribute('aria-disabled', 'true')
   await page.getByRole('menuitem', { name: 'Tải xuống', exact: true }).press('ArrowRight')
@@ -2979,6 +3112,14 @@ test('switching a saved free document to question cards saves the mode and turns
   await page.keyboard.press('Escape')
   await expect(page.getByRole('menuitem', { name: 'PDF (.pdf)', exact: true })).toHaveCount(0)
   await expect(page.getByRole('menuitemradio', { name: 'Văn bản tự do', exact: true })).toHaveCount(0)
+  // Publishing as a file is free-document work too.
+  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
+  for (const label of ['Word (.docx)', 'PDF (.pdf)']) {
+    await expect(page.getByRole('menuitem', { name: label, exact: true })).toHaveAttribute('aria-disabled', 'true')
+    await expect(page.getByRole('menuitem', { name: label, exact: true })).toHaveAttribute('title', freeOnly)
+  }
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menuitem', { name: 'PDF (.pdf)', exact: true })).toHaveCount(0)
 
   // Back to the free document, as it was, saved in that mode over the next version.
   await openFileMenu(page)
@@ -3066,7 +3207,7 @@ test('a four-option template is numbered after the last question of the document
 
   // The caret after the options of the last question, then the template from "Mẫu đề thi".
   await sheet.locator('[data-choice-grid]').last().locator('.exam-choice-body').last().click()
-  const panel = page.getByRole('complementary', { name: 'Mục lục đề thi', exact: true })
+  const panel = page.getByRole('complementary', { name: 'Danh sách đề', exact: true })
   await panel.getByRole('tab', { name: 'Mẫu đề thi', exact: true }).click()
   await panel.getByRole('button', { name: 'Chèn mẫu Bốn phương án, tự xếp hàng', exact: true }).click()
 
@@ -3081,8 +3222,11 @@ test('a four-option template is numbered after the last question of the document
   const blocks = await sheetBlocks(sheet)
   expect(blocks.at(-3)).toBe('Câu 5. Viết câu dẫn.')
   expect(blocks.at(-1)).toBe('--- HẾT ---')
-  await panel.getByRole('tab', { name: 'Mục lục', exact: true }).click()
-  await expect(panel.getByRole('button', { name: 'Tới Câu 5. Viết câu dẫn.', exact: true })).toBeVisible()
+  // The first tab lists the exams again.
+  await panel.getByRole('tab', { name: 'Đề', exact: true }).click()
+  await expect(
+    panel.getByRole('list', { name: 'Bản nháp', exact: true }).getByRole('button', { name: savedExam.title, exact: true })
+  ).toHaveAttribute('aria-current', 'location')
 })
 
 test('the ĐGNL template lays out the whole paper: its parts, their question ranges, the end line and a 120-answer key', async ({ page }) => {
@@ -3090,7 +3234,7 @@ test('the ĐGNL template lays out the whole paper: its parts, their question ran
   await openSavedDocument(page, NOTE)
   const sheet = docEditor(page)
   await caretAtEndOf(page, NOTE)
-  const panel = page.getByRole('complementary', { name: 'Mục lục đề thi', exact: true })
+  const panel = page.getByRole('complementary', { name: 'Danh sách đề', exact: true })
   await panel.getByRole('tab', { name: 'Mẫu đề thi', exact: true }).click()
   await panel.getByRole('button', { name: 'Chèn mẫu ĐGNL', exact: true }).click()
 
@@ -3143,15 +3287,15 @@ test('content longer than one sheet flows onto a second A4 sheet', async ({ page
   expect(last.y).toBeGreaterThan(second.y)
 })
 
-// The composer row is outline | divider | paper | divider | chat. Each divider resizes its
+// The composer row is exam list | divider | paper | divider | chat. Each divider resizes its
 // panel, the paper never drops under 560px, and a committed width is kept in localStorage.
 
 const PANEL_WIDTHS_KEY = 'hocluc.aiAssistant.panelWidths'
 
 function layout(page: Page) {
   return {
-    outline: page.getByRole('complementary', { name: 'Mục lục đề thi', exact: true }),
-    outlineDivider: page.getByRole('separator', { name: 'Kéo để đổi độ rộng mục lục', exact: true }),
+    outline: page.getByRole('complementary', { name: 'Danh sách đề', exact: true }),
+    outlineDivider: page.getByRole('separator', { name: 'Kéo để đổi độ rộng danh sách đề', exact: true }),
     paper: page.getByRole('main').filter({ has: docEditor(page) }),
     chatDivider: page.getByRole('separator', { name: 'Kéo để đổi độ rộng trợ lý AI', exact: true }),
     chat: page.getByRole('complementary', { name: 'Trợ lý AI', exact: true }),
@@ -3410,8 +3554,8 @@ test('below 1024px the chat opens on the right edge and the outline on the left'
   await chatSheet.getByRole('button', { name: 'Đóng trợ lý AI' }).click()
   await expect(chatSheet).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Mục lục', exact: true }).click()
-  const outlineSheet = page.getByRole('dialog', { name: 'Mục lục đề thi', exact: true })
+  await page.getByRole('button', { name: 'Hiện danh sách đề', exact: true }).click()
+  const outlineSheet = page.getByRole('dialog', { name: 'Đề của tôi', exact: true })
   await expect(outlineSheet).toBeVisible()
   await expectPx(leftOf(outlineSheet), 0)
   const outlineBox = await rectOf(outlineSheet)
@@ -3429,10 +3573,16 @@ test('collapsing a panel removes its divider until the panel is reopened', async
   await expect(outlineDivider).toBeVisible()
   await expectPx(rightOf(paper), 1440)
 
-  await outline.getByRole('button', { name: 'Thu gọn mục lục' }).click()
+  await outline.getByRole('button', { name: 'Thu gọn danh sách đề' }).click()
   await expect(outline).toHaveCount(0)
   await expect(outlineDivider).toHaveCount(0)
   await expectPx(leftOf(paper), 0)
+  // Only the button at the sheet's top left is left of the list; it brings the list back.
+  await page.getByRole('button', { name: 'Hiện danh sách đề', exact: true }).click()
+  await expect(outline).toBeVisible()
+  await expect(outlineDivider).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hiện danh sách đề', exact: true })).toBeHidden()
+  await outline.getByRole('button', { name: 'Thu gọn danh sách đề' }).click()
 
   await page.getByRole('button', { name: 'Hỏi AI', exact: true }).click()
   await expect(chatDivider).toHaveAttribute('aria-valuenow', '388')
@@ -3641,15 +3791,20 @@ test.describe('ruler indents', () => {
 
   test('Tăng thụt lề still steps 1.27 cm, from an old step count too', async ({ page }) => {
     await openIndentDocument(page)
-    const more = page.getByRole('button', { name: 'Tăng thụt lề', exact: true })
+    // The toolbar shares its row with the assistant's card, so at this width the indent buttons sit in its overflow.
+    // Its items carry their shortcut after the name.
+    const tool = async (name: string) => {
+      await page.getByRole('button', { name: 'Thêm công cụ', exact: true }).click()
+      await page.getByRole('menuitem', { name: new RegExp(`^${name}`) }).click()
+    }
     await sheetLine(page, PLAIN_LINE).click()
-    await more.click()
+    await tool('Tăng thụt lề')
     await expect.poll(leftOf(sheetLine(page, PLAIN_LINE))).toBe(px(1.27))
     await sheetLine(page, OLD_STEPS_LINE).click()
-    await more.click()
+    await tool('Tăng thụt lề')
     await expect.poll(leftOf(sheetLine(page, OLD_STEPS_LINE))).toBe(px(3.81))
-    await page.getByRole('button', { name: 'Giảm thụt lề', exact: true }).click()
-    await page.getByRole('button', { name: 'Giảm thụt lề', exact: true }).click()
+    await tool('Giảm thụt lề')
+    await tool('Giảm thụt lề')
     await expect.poll(leftOf(sheetLine(page, OLD_STEPS_LINE))).toBe(px(1.27))
   })
 
@@ -3711,21 +3866,23 @@ test.describe('ruler indents', () => {
     expect(Math.abs((await centreOf(handle)).x - target)).toBeLessThan(2)
   })
 
-  test('the markers of a read-only exam code cannot be moved', async ({ page }) => {
-    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
-    await openSavedExam(page)
-    await page.getByRole('button', { name: 'Tạo mã đề', exact: true }).click()
-    const panel = page.getByRole('complementary', { name: 'Tạo mã đề', exact: true })
-    await panel.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-    await panel.getByRole('button', { name: 'Tạo 4 mã đề', exact: true }).click()
-    const variant = page.getByRole('textbox', { name: 'Mã đề đang xem (chỉ đọc)', exact: true })
-    await expect(variant).toHaveAttribute('contenteditable', 'false')
+  test('the markers of a read-only sheet cannot be moved', async ({ page }) => {
+    await installAiFixture(page, 'MANAGER', {
+      bankSources: [bankSource('src-1', 'Đề mẫu 2021', 'DONE', 1)],
+      bankReading: (id) => bankReading(id, 'DONE', [paperQuestion(1, 'Giải x + 1 = 3')]),
+    })
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/console/manager/ai-assistant')
+    await page.getByRole('complementary', { name: 'Danh sách đề' }).getByRole('button', { name: 'Đề mẫu 2021', exact: true }).click()
+    const sheet = readingSheet(page)
+    await expect(sheet).toContainText('Câu 1. Giải x + 1 = 3')
+    await expect(sheet).toHaveAttribute('contenteditable', 'false')
 
     for (const name of ['Thụt lề trái', 'Thụt lề phải', 'Thụt dòng đầu', 'Thụt treo'] as const) {
       await expect(marker(page, name)).toHaveAttribute('aria-disabled', 'true')
       await expect(marker(page, name)).not.toHaveAttribute('tabindex')
     }
-    const line = variant.locator(':scope > p', { hasText: /^Câu 1\./ })
+    const line = sheet.locator(':scope > p', { hasText: /^Câu 1\./ })
     await line.click()
     const from = await centreOf(marker(page, 'Thụt lề trái'))
     await page.mouse.move(from.x, from.y)

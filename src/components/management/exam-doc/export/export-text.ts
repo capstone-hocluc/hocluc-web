@@ -241,15 +241,15 @@ export function docToMarkdown(doc: JSONContent): string {
   return `${blocksMarkdown(doc.content).join('\n\n')}\n`
 }
 
-/** Downloads the editor's document (the original, or the variant `code` being viewed) as Markdown. */
-export function exportMarkdown(editor: Editor, code: string | null = null) {
+/** Downloads the editor's document as Markdown. */
+export function exportMarkdown(editor: Editor) {
   const doc = editor.getJSON()
-  downloadBlob(new Blob([docToMarkdown(doc)], { type: 'text/markdown;charset=utf-8' }), fileNameFor(doc, 'md', code))
+  downloadBlob(new Blob([docToMarkdown(doc)], { type: 'text/markdown;charset=utf-8' }), fileNameFor(doc, 'md'))
 }
 
 /** Downloads the editor's document as JSON in the `hocluc-exam-doc` envelope, which "Mở file" reads back as it was. */
-export function exportJson(editor: Editor, code: string | null = null) {
+export function exportJson(editor: Editor) {
   const doc = editor.getJSON()
   const text = JSON.stringify({ format: DOC_FORMAT, version: DOC_FORMAT_VERSION, content: doc }, null, 2)
-  downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), fileNameFor(doc, 'json', code))
+  downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), fileNameFor(doc, 'json'))
 }

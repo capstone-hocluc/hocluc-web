@@ -9,6 +9,7 @@ import {
   getAiConversations,
   getAiDraft,
   getAiMessages,
+  publishAiConversation,
   removeAiDraftItem,
   renameAiConversation,
   reorderAiDraftItems,
@@ -23,6 +24,7 @@ import {
   type AiDraftResponse,
   type AiExamFormat,
   type AiMessage,
+  type AiPublishedAs,
   type AiRevisedItem,
   type AiSendConfig,
   type AiSheetDocument,
@@ -1345,6 +1347,32 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     [updateConversations]
   )
 
+  /**
+   * Moves the exam to the published ones at once. A file is recorded here; a quiz or mock exam was already recorded
+   * by its export, so only the list changes.
+   */
+  const markPublished = useCallback(
+    async (conversationId: string, as: AiPublishedAs) => {
+      const before = conversationsRef.current.find((conversation) => conversation.id === conversationId)
+      const mark = (publishedAt: string | null, publishedAs: AiPublishedAs | null) =>
+        updateConversations(
+          conversationsRef.current.map((conversation) =>
+            conversation.id === conversationId ? { ...conversation, publishedAt, publishedAs } : conversation
+          )
+        )
+      mark(new Date().toISOString(), as)
+      // A quiz export records it on the server itself; a file is recorded here.
+      if (as !== 'DOCX' && as !== 'PDF') return
+      try {
+        await publishAiConversation(conversationId, as)
+      } catch (error) {
+        mark(before?.publishedAt ?? null, before?.publishedAs ?? null)
+        setNotice(errorMessage(error))
+      }
+    },
+    [updateConversations]
+  )
+
   const deleteConversation = useCallback(
     async (conversationId: string) => {
       const previous = conversationsRef.current
@@ -1569,6 +1597,7 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     startNew,
     selectConversation,
     renameConversation,
+    markPublished,
     deleteConversation,
     reloadConversations: loadConversations,
     reloadPapers: loadPapers,

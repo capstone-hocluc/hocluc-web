@@ -142,7 +142,7 @@ export function textBlocks(text: string): JSONContent[] {
 /**
  * A shared passage: its lead line (tagged with the group), the passage and its figure. The lead names the question
  * range only when every question of the group is known (`numbers`); questions that arrive one by one get a lead
- * without numbers, since a wrong range would also mislead the exam-variant builder that reads it.
+ * without numbers, since a wrong range would mislead the reader.
  */
 function groupBlocks(group: ExamPaperGroup, numbers: number[] | null): JSONContent[] {
   const range = numbers && numbers.length > 0
