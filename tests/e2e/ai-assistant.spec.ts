@@ -301,6 +301,8 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
     conflictNextSave: null as Record<string, unknown> | null,
     /** While set, creating a conversation waits for it before answering. */
     creationGate: null as Promise<void> | null,
+    /** While set, "Nhờ AI sửa" waits for it before answering. */
+    rewriteGate: null as Promise<void> | null,
     /** This many conversation creations fail with a server error first. */
     failCreations: 0,
     /** This many document reads fail with a server error first. */
@@ -447,6 +449,7 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
 
     // "Nhờ AI sửa" on a selection: the selected words come back rewritten.
     if (action === 'rewrite' && method === 'POST') {
+      if (state.rewriteGate) await state.rewriteGate
       return reply({ text: 'Phương trình $x + 2 = 0$ có bao nhiêu nghiệm?' })
     }
 
@@ -948,8 +951,10 @@ test('a compose run streams its stages and items into the paper', async ({ page 
 
   await expect(page.getByRole('button', { name: 'Dừng tạo câu trả lời' })).toBeVisible()
   await expect(page.getByText('Khảo sát ngân hàng câu hỏi')).toBeVisible()
-  await expect(page.getByText('Đang soạn câu 2/2', { exact: true })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
+  // Each stage folds to one line; opening the writing stage shows the questions it went through.
+  await page.getByRole('button', { name: /^Soạn câu hỏi/ }).click()
+  await expect(page.getByText('Đang soạn câu 2/2', { exact: true })).toBeVisible()
   await expect(page.getByText('Mình đã soạn xong 2 câu cho phần Toán học.')).toBeVisible()
   // The finished exam is offered as files, not as a jump to the sheet beside.
   await expect(page.getByRole('button', { name: 'Tải Word', exact: true })).toBeVisible()
@@ -1700,6 +1705,52 @@ test('a question with its own passage prints it under a lead, and an older exam 
   await expect(questionLines(sheet)).toHaveCount(1)
 })
 
+test('underline and bold tags in a question show as underline and bold, also on a sheet saved with them as text', async ({ page }) => {
+  // The sheet was saved before the tags were read, so its words still hold them; the passage is new and comes from
+  // the draft.
+  const stem = 'The analysts <u>attributed the rise with</u> the new form, rather than **to** a decline.'
+  const marked: DraftItem = {
+    ...item('conv-9', 'item-u', 1, stem),
+    question: { ...question(stem), passage: 'If the stored map is <b>stale</b>, the app replaces it.' },
+  }
+  await installAiFixture(page, 'MANAGER', {
+    conversations: [savedExam],
+    drafts: {
+      'conv-9': {
+        draft: { id: 'draft-conv-9', conversationId: 'conv-9', name: savedExam.title, examFormat: 'VACT_2025', status: 'DRAFT' },
+        items: [marked],
+      },
+    },
+    documents: {
+      'conv-9': {
+        mode: 'FREE',
+        version: 2,
+        updatedAt: stamp,
+        content: {
+          type: 'doc',
+          attrs: { deliveredItems: ['item-u'] },
+          content: [
+            heading(1, 'ĐỀ KIỂM TRA TIẾNG ANH'),
+            { type: 'paragraph', attrs: { examItem: 'item-u' }, content: [run('Câu 1. ', 'bold'), run(stem)] },
+            choiceGrid('<u>attributed</u>', 'to', 'with', 'for'),
+            paragraph(run('--- HẾT ---', 'bold')),
+          ],
+        },
+      },
+    },
+  })
+  await openSavedDocument(page, 'The analysts')
+
+  const sheet = docEditor(page)
+  await expect(sheet.locator('u', { hasText: 'attributed the rise with' })).toBeVisible()
+  await expect(sheet.locator('strong', { hasText: /^to$/ })).toBeVisible()
+  await expect(sheet.locator('strong', { hasText: /^stale$/ })).toBeVisible()
+  await expect(sheet.locator('u', { hasText: /^attributed$/ })).toBeVisible()
+  await expect(sheet).not.toContainText('<u>')
+  await expect(sheet).not.toContainText('<b>')
+  await expect(sheet).not.toContainText('**')
+})
+
 test('"Sửa câu 2" rewrites only that question where it stands and writes its new answer into the key', async ({ page }) => {
   const { state } = await installAiFixture(page)
   await openAssistant(page)
@@ -1716,7 +1767,8 @@ test('"Sửa câu 2" rewrites only that question where it stands and writes its 
   await expect(page.getByText('Đã sửa 1 câu trong đề')).toBeVisible({ timeout: 15_000 })
   const sent = state.requests.filter((entry) => entry.method === 'POST' && entry.path === `${BASE}/conversations/conv-1/messages`).at(-1)
   expect(sent?.body).toMatchObject({ mode: 'revise', config: { items: [{ itemId: 'item-2', number: 2 }], instruction: 'Sửa câu 2 cho khó hơn' } })
-  // The run's steps read as what they did.
+  // The run's steps read as what they did, once its stage is opened.
+  await page.getByRole('button', { name: /^Sửa câu hỏi/ }).click()
   for (const step of ['Đọc câu trong đề', 'Viết lại câu', 'Kiểm tra lại câu', 'Cập nhật đáp án']) {
     await expect(page.getByText(step, { exact: true }).first()).toBeVisible()
   }
@@ -1992,6 +2044,7 @@ test('the plan step tells what it changed, and the config chip follows the count
   await input.fill('Soạn 2 câu đại số cơ bản')
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
   await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
+  await page.getByRole('button', { name: /^Lập ma trận đề/ }).click()
   await expect(page.getByText('Đề tối đa 120 câu; yêu cầu 500 câu được rút về 120.')).toBeVisible()
   await expect(page.getByText('2 câu', { exact: true }).first()).toBeVisible()
   // The AI's own codes and words for cells stay out of the steps.
@@ -2068,17 +2121,34 @@ test('"Sửa câu 2" on a question the teacher typed sends its words from the sh
   await expect(questionLines(sheet).nth(1)).not.toHaveAttribute('data-exam-item', /.+/)
 })
 
-test('"Nhờ AI sửa" rewrites the selected words in place, and Ctrl+Z takes the change back', async ({ page }) => {
-  const { state } = await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
-  await openSavedExam(page)
-  const sheet = docEditor(page)
-  const line = `Câu 4. ${EXAM_STEMS[3]}`
-
+/** Selects the whole line of question 4 and asks "Nhờ AI sửa" to change its numbers. */
+async function askToRewriteQuestion4(page: Page) {
   await caretAtEndOf(page, EXAM_STEMS[3])
   await page.keyboard.press('Shift+Home')
   await page.getByRole('button', { name: 'Nhờ AI sửa', exact: true }).click()
   await page.getByRole('textbox', { name: 'Yêu cầu sửa đoạn đã chọn' }).fill('đổi số liệu')
   await page.keyboard.press('Enter')
+}
+
+/** The words under a mark of the AI's (`.ai-pending`, `.ai-suggest-old`), which the mark may cut into several runs. */
+async function marked(sheet: Locator, selector: string) {
+  return (await sheet.locator(selector).allTextContents()).join('')
+}
+
+test('"Nhờ AI sửa" shows the rewrite as a suggestion; accepting puts it in place and Ctrl+Z takes it back', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
+  await openSavedExam(page)
+  const sheet = docEditor(page)
+  const line = `Câu 4. ${EXAM_STEMS[3]}`
+
+  await askToRewriteQuestion4(page)
+
+  // Shown beside the old words, which stay in the document until the teacher accepts.
+  const suggestion = sheet.locator('[data-ai-suggestion]')
+  await expect(suggestion).toContainText('có bao nhiêu nghiệm?')
+  await expect.poll(() => marked(sheet, '.ai-suggest-old')).toContain(EXAM_STEMS[3])
+  await page.getByRole('button', { name: 'Chấp nhận gợi ý của AI' }).click()
+  await expect(suggestion).toHaveCount(0)
 
   const edited = sheet.locator(':scope > p').filter({ hasText: 'có bao nhiêu nghiệm?' }).last()
   await expect(edited.locator('[data-math]')).toHaveCount(1)
@@ -2090,6 +2160,60 @@ test('"Nhờ AI sửa" rewrites the selected words in place, and Ctrl+Z takes th
 
   await page.keyboard.press('Control+z')
   await expect(sheet.locator(':scope > p', { hasText: EXAM_STEMS[3] })).toHaveText(line)
+})
+
+test('turning down a suggestion of "Nhờ AI sửa" leaves the sheet as it was', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
+  await openSavedExam(page)
+  const sheet = docEditor(page)
+
+  await askToRewriteQuestion4(page)
+  await expect(sheet.locator('[data-ai-suggestion]')).toContainText('có bao nhiêu nghiệm?')
+  await page.getByRole('button', { name: 'Bỏ gợi ý của AI' }).click()
+
+  await expect(sheet.locator('[data-ai-suggestion]')).toHaveCount(0)
+  await expect(sheet.locator('.ai-suggest-old')).toHaveCount(0)
+  await expect(sheet.locator(':scope > p', { hasText: EXAM_STEMS[3] })).toHaveText(`Câu 4. ${EXAM_STEMS[3]}`)
+})
+
+test('the piece sent to "Nhờ AI sửa" follows edits made elsewhere while the AI writes', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
+  let answer = () => {}
+  state.rewriteGate = new Promise<void>((resolve) => (answer = resolve))
+  await openSavedExam(page)
+  const sheet = docEditor(page)
+
+  await askToRewriteQuestion4(page)
+  await expect.poll(() => marked(sheet, '.ai-pending')).toContain(EXAM_STEMS[3])
+  // Words typed in question 1 move question 4 down the document.
+  await caretAtEndOf(page, EXAM_STEMS[0])
+  await page.keyboard.type(' (thêm)')
+  answer()
+
+  await expect(sheet.locator('[data-ai-suggestion]')).toContainText('có bao nhiêu nghiệm?')
+  await expect.poll(() => marked(sheet, '.ai-suggest-old')).toBe(`Câu 4. ${EXAM_STEMS[3]}`)
+  await page.getByRole('button', { name: 'Chấp nhận gợi ý của AI' }).click()
+  await expect(sheet.locator(':scope > p', { hasText: 'có bao nhiêu nghiệm?' })).toHaveCount(1)
+  await expect(sheet.locator(':scope > p', { hasText: `${EXAM_STEMS[0]} (thêm)` })).toHaveCount(1)
+})
+
+test('editing inside the piece sent to "Nhờ AI sửa" drops its suggestion', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
+  let answer = () => {}
+  state.rewriteGate = new Promise<void>((resolve) => (answer = resolve))
+  await openSavedExam(page)
+  const sheet = docEditor(page)
+
+  await askToRewriteQuestion4(page)
+  await expect.poll(() => marked(sheet, '.ai-pending')).toContain(EXAM_STEMS[3])
+  await caretAtEndOf(page, EXAM_STEMS[3])
+  await page.keyboard.press('ArrowLeft')
+  await page.keyboard.type('x')
+  answer()
+
+  await expect(page.getByText('Đoạn đã chọn vừa bị sửa nên chưa hiện gợi ý của AI.', { exact: false })).toBeVisible()
+  await expect(sheet.locator('[data-ai-suggestion]')).toHaveCount(0)
+  await expect(sheet.locator('.ai-pending')).toHaveCount(0)
 })
 
 test('a question in ask mode carries the exam on the sheet, its outline and every question', async ({ page }) => {
@@ -2445,8 +2569,6 @@ test('a run still going when the exam is opened is followed again, from right be
   await expect(stop).toBeVisible()
   await expect(page.getByText('Khảo sát ngân hàng câu hỏi')).toBeVisible()
   await expect(page.getByText('Đang soạn câu 2/2', { exact: true })).toBeVisible()
-  // Tool calls read as what they did, without their raw arguments.
-  await expect(page.getByText('Tìm câu mẫu trong ngân hàng', { exact: true })).toBeVisible()
   await expect(page.getByText(/excludeIds|patternCode/)).toHaveCount(0)
   // The question being written shows word by word on the sheet (and as one line in the chat), never in the saved document.
   const live = docEditor(page).locator('[data-live-draft]')
@@ -2454,6 +2576,11 @@ test('a run still going when the exam is opened is followed again, from right be
   await expect(live).toContainText('A. {2}')
   await expect(live).toContainText('B. {-2')
   await expect(page.getByText('Đang viết', { exact: true })).toBeVisible()
+  // A running stage folds to what it is doing now; opening it shows every step, and tool calls read as what they
+  // did, without their raw arguments.
+  await page.getByRole('button', { name: /^Soạn câu hỏi/ }).click()
+  await expect(page.getByText('Tìm câu mẫu trong ngân hàng', { exact: true })).toBeVisible()
+  await expect(page.getByText(/excludeIds|patternCode/)).toHaveCount(0)
   // The sheet follows the writing; scrolling lets go of it, and the button picks it up again.
   const followButton = page.getByRole('button', { name: 'Theo dõi AI đang viết', exact: true })
   await expect(followButton).toHaveCount(0)
@@ -3763,5 +3890,137 @@ test.describe('PDF from the server', () => {
     expect(bodies[0].html).not.toContain('HƯỚNG DẪN GIẢI')
     // The key's page break went with it: nothing after the end line starts a new sheet
     expect(bodies[0].html).not.toContain('exam-page-break')
+  })
+})
+
+test.describe('AI soát đề', () => {
+  const content = tiptapDoc(
+    paragraph(run('Đọc đoạn văn bị lổi này.')),
+    paragraph(run('Câu 1. Câu hổi bị sai.')),
+    choiceGrid('Đáp án chưả đúng', 'Hai', 'Ba', 'Bốn'),
+    paragraph(run('Câu 2. Tính '), { type: 'math', attrs: { latex: 'x+1', display: false } }, run('.')),
+    choiceGrid('Một', 'Hai', 'Ba', 'Bốn')
+  )
+  const document: FixtureDocument = { mode: 'FREE', content, version: 3, updatedAt: stamp }
+  async function setup(page: Page, find: string, replace: string) {
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': document } })
+    await page.route('**/api/v1/ai-assistant/conversations/*/proofread', async (route) => {
+      const body = route.request().postDataJSON() as { units: Array<{ ref: string; text: string }> }
+      const unit = body.units.find((entry) => entry.text.includes(find))
+      await route.fulfill({ json: { success: true, data: { suggestions: unit ? [{ ref: unit.ref, find, replace, reason: 'Sửa lỗi', kind: 'SPELLING' }] : [] } } })
+    })
+    await openSavedDocument(page, 'Câu hổi bị sai')
+    await page.getByRole('button', { name: 'AI soát đề' }).click()
+  }
+  for (const [name, find, replace] of [
+    ['câu hỏi', 'hổi', 'hỏi'],
+    ['đoạn dẫn', 'lổi', 'lỗi'],
+    ['phương án', 'A. Đáp án chưả đúng', 'Đáp án chưa đúng'],
+  ]) {
+    test(`soát ${name} và chấp nhận gợi ý`, async ({ page }) => {
+      await setup(page, find, replace)
+      const suggestion = docEditor(page).locator('[data-ai-suggestion]')
+      await expect(suggestion).toContainText(replace)
+      await suggestion.getByRole('button', { name: 'Chấp nhận gợi ý của AI' }).click()
+      await expect(docEditor(page)).toContainText(replace)
+    })
+  }
+  test('soát không định vị phần bên trong công thức', async ({ page }) => {
+    await setup(page, 'x+1', 'x+2')
+    await expect(page.getByText('1 không định vị được')).toBeVisible()
+  })
+  test('soát và chấp nhận tất cả hoàn tác trong một bước', async ({ page }) => {
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': document } })
+    await page.route('**/api/v1/ai-assistant/conversations/*/proofread', async (route) => {
+      const body = route.request().postDataJSON() as { units: Array<{ ref: string; text: string }> }
+      const suggestions = [['lổi', 'lỗi'], ['hổi', 'hỏi']].map(([find, replace]) => ({ ref: body.units.find((u) => u.text.includes(find))!.ref, find, replace, reason: 'Sửa lỗi', kind: 'SPELLING' }))
+      await route.fulfill({ json: { success: true, data: { suggestions } } })
+    })
+    await openSavedDocument(page, 'Câu hổi bị sai')
+    await page.getByRole('button', { name: 'AI soát đề' }).click()
+    await expect(docEditor(page).locator('[data-ai-suggestion]')).toHaveCount(2)
+    await page.getByRole('button', { name: 'Chấp nhận tất cả' }).click()
+    await expect(docEditor(page)).toContainText('Câu hỏi bị sai')
+    await page.keyboard.press('Control+z')
+    await expect(docEditor(page)).toContainText('Câu hổi bị sai')
+    await expect(docEditor(page)).toContainText('đoạn văn bị lổi')
+  })
+  test('soát vẫn định vị khi thêm đoạn phía trên trong lúc chờ', async ({ page }) => {
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': document } })
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    let requested = false
+    await page.route('**/api/v1/ai-assistant/conversations/*/proofread', async (route) => {
+      const body = route.request().postDataJSON() as { units: Array<{ ref: string; text: string }> }
+      const unit = body.units.find((entry) => entry.text.includes('hổi'))!
+      requested = true
+      await gate
+      await route.fulfill({ json: { success: true, data: { suggestions: [{ ref: unit.ref, find: 'hổi', replace: 'hỏi', reason: 'Sửa lỗi', kind: 'SPELLING' }] } } })
+    })
+    await openSavedDocument(page, 'Câu hổi bị sai')
+    await page.getByRole('button', { name: 'AI soát đề' }).click()
+    await expect.poll(() => requested).toBe(true)
+    await docEditor(page).locator(':scope > p').first().click()
+    await page.keyboard.press('Control+Home')
+    await page.keyboard.type('Câu 99. Mới')
+    await page.keyboard.press('Enter')
+    release()
+    const original = docEditor(page).locator(':scope > p', { hasText: 'Câu 1.' })
+    await expect(original.locator('[data-ai-suggestion]')).toContainText('hỏi')
+  })
+  test('soát báo lý do khi lô thất bại', async ({ page }) => {
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': document } })
+    await page.route('**/api/v1/ai-assistant/conversations/*/proofread', (route) => route.fulfill({ status: 503, json: { success: false, message: 'AI chưa được cấu hình' } }))
+    await openSavedDocument(page, 'Câu hổi bị sai')
+    await page.getByRole('button', { name: 'AI soát đề' }).click()
+    await expect(page.getByText('AI chưa được cấu hình')).toBeVisible()
+    await expect(page.getByText(/không soát được/)).toBeVisible()
+  })
+  test('soát không thấy lỗi giữ thông báo đến khi đóng', async ({ page }) => {
+    await setup(page, 'không có trong đề', 'mới')
+    await expect(page.getByText('AI không thấy lỗi nào')).toBeVisible()
+    await page.getByRole('button', { name: 'Đóng thanh soát đề' }).click()
+    await expect(page.getByText('AI không thấy lỗi nào')).toHaveCount(0)
+  })
+  test('soát đóng thanh mà vẫn giữ gợi ý', async ({ page }) => {
+    await setup(page, 'hổi', 'hỏi')
+    await expect(docEditor(page).locator('[data-ai-suggestion]')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Đóng thanh soát đề' }).click()
+    await expect(docEditor(page).locator('[data-ai-suggestion]')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Đóng thanh soát đề' })).toHaveCount(0)
+  })
+  test('soát chỉ chấp nhận các gợi ý soát đề', async ({ page }) => {
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': examDocument() } })
+    await page.route('**/api/v1/ai-assistant/conversations/*/proofread', async (route) => {
+      const body = route.request().postDataJSON() as { units: Array<{ ref: string; text: string }> }
+      const unit = body.units.find((entry) => entry.text.includes('Tập nghiệm'))!
+      await route.fulfill({ json: { success: true, data: { suggestions: [{ ref: unit.ref, find: 'Tập nghiệm', replace: 'Tập hợp nghiệm', reason: 'Diễn đạt', kind: 'WORDING' }] } } })
+    })
+    await openSavedExam(page)
+    await askToRewriteQuestion4(page)
+    await expect(docEditor(page).locator('[data-ai-suggestion]')).toHaveCount(1)
+    await page.getByRole('button', { name: 'AI soát đề' }).click()
+    await expect(docEditor(page).locator('[data-ai-suggestion]')).toHaveCount(2)
+    await expect(page.getByText('1 gợi ý', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Chấp nhận tất cả' }).click()
+    await expect(docEditor(page).locator('[data-ai-suggestion]')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'Đóng thanh soát đề' })).toHaveCount(0)
+  })
+  test('soát nhiều lô và hiển thị tiến độ', async ({ page }) => {
+    const long = tiptapDoc(...Array.from({ length: 30 }, (_, i) => paragraph(run(`Câu ${i + 1}. Nội dung câu hỏi ${i + 1}.`))))
+    await installAiFixture(page, 'MANAGER', { conversations: [savedExam], documents: { 'conv-9': { mode: 'FREE', content: long, version: 3, updatedAt: stamp } } })
+    let requests = 0
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    await page.route('**/api/v1/ai-assistant/conversations/*/proofread', async (route) => {
+      requests++
+      if (requests === 3) await gate
+      await route.fulfill({ json: { success: true, data: { suggestions: [] } } })
+    })
+    await openSavedDocument(page, 'Nội dung câu hỏi 1.')
+    await page.getByRole('button', { name: 'AI soát đề' }).click()
+    await expect.poll(() => requests).toBeGreaterThanOrEqual(2)
+    await expect(page.getByText(/Đang soát 2\/3 phần/)).toBeVisible()
+    release()
   })
 })

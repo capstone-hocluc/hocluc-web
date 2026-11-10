@@ -7,7 +7,7 @@ import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getErrorMessage } from '../../../lib/errors'
 import ThemeProvider from '../../common/ThemeProvider'
 import Button from '../../console/button'
-import { ClipboardList, FileText, Landmark } from '../../console/icons'
+import { ClipboardList, FileText, Landmark, Sparkles } from '../../console/icons'
 import ConfirmDialog from '../../console/confirm-dialog'
 import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -38,6 +38,8 @@ import { restoreSoloPassages } from '../exam-doc/solo-passages'
 import { replaceQuestionBlocks, replaceSheetRange } from '../exam-doc/replace-question'
 import { sheetDocument, sheetQuestion, sheetQuestions } from '../exam-doc/doc-snapshot'
 import AiSelectionMenu from '../exam-doc/ai-selection-menu'
+import AiSuggestionBar from '../exam-doc/ai-suggestion-bar'
+import { useProofread } from '../exam-doc/use-proofread'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
 import { revisedNumbers } from './revise-request'
 import type { ExamDownload } from './AssistantMessage'
@@ -171,6 +173,7 @@ export default function AiAssistantScreen({
 
   // Only the free document is edited here, and not while a newer version saved elsewhere waits for a decision.
   const editable = examDoc.mode === 'FREE' && !examDoc.conflict && !examDoc.loading
+  const proofread = useProofread(editor, () => ai.activeId ? Promise.resolve(ai.activeId) : ai.ensureConversation(ai.activeConversation?.title || 'Đề thi mới'), showErrorToast)
   useEffect(() => {
     if (editor && editor.isEditable !== editable) editor.setEditable(editable, false)
   }, [editor, editable])
@@ -768,7 +771,14 @@ export default function AiAssistantScreen({
         />
 
         <div className="shrink-0 px-2 pb-1.5 sm:px-3">
-          <DocToolbar />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1"><DocToolbar /></div>
+            <Button size="sm" appearance="outline" disabled={!editable || Boolean(variants.activeDoc) || proofread.running} onClick={() => void proofread.start()}>
+              <Sparkles size={15} aria-hidden />
+              AI soát đề
+            </Button>
+          </div>
+          <AiSuggestionBar editor={editor} proofread={proofread} />
         </div>
 
         <div ref={row} className="flex min-h-0 min-w-0 flex-1">

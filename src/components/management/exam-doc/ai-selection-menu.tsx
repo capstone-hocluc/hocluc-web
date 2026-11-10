@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import Button from '../../console/button'
 import { Sparkles } from '../../console/icons'
-import { inlineContent, textBlocks } from './draft-to-doc'
+import { cancelAiEdit, pendAiEdit, resolveAiEdit } from './nodes/ai-suggestions'
 import { blockText, inlineText, sheetQuestions } from './doc-snapshot'
 
 /** What the teacher selected: where, and its words (formulas as $…$) for the AI and as the sheet reads them. */
@@ -11,8 +11,6 @@ interface Selected {
   from: number
   to: number
   text: string
-  /** The selection as plain text when it was taken, to tell whether the sheet changed meanwhile. */
-  plain: string
   left: number
   top: number
 }
@@ -40,8 +38,9 @@ function contextOf(editor: Editor, from: number) {
 }
 
 /**
- * "Nhờ AI sửa" beside a selection on the sheet: the teacher says what to change, the AI rewrites the selected words,
- * and they take the selection's place as one edit Ctrl+Z takes back.
+ * "Nhờ AI sửa" beside a selection on the sheet: the teacher says what to change and the selection stays marked while
+ * the AI rewrites it, so they may go on editing elsewhere. The AI's words then show beside it as a suggestion to
+ * accept (one edit Ctrl+Z takes back) or turn down.
  */
 export default function AiSelectionMenu({
   editor,
@@ -57,15 +56,11 @@ export default function AiSelectionMenu({
   const [selected, setSelected] = useState<Selected | null>(null)
   const [asking, setAsking] = useState(false)
   const [instruction, setInstruction] = useState('')
-  const [busy, setBusy] = useState(false)
   const input = useRef<HTMLInputElement>(null)
-  const busyRef = useRef(false)
 
   useEffect(() => {
     if (!editor || !enabled) return
     const update = () => {
-      // The question being asked keeps the selection it was opened for.
-      if (busyRef.current) return
       const { from, to, empty } = editor.state.selection
       if (empty || !editor.isEditable) {
         setSelected(null)
@@ -78,13 +73,11 @@ export default function AiSelectionMenu({
         return
       }
       const end = editor.view.coordsAtPos(to)
-      setSelected({ from, to, text, plain: editor.state.doc.textBetween(from, to, '\n'), left: end.left, top: end.bottom + 6 })
+      setSelected({ from, to, text, left: end.left, top: end.bottom + 6 })
     }
     const close = () => {
-      if (!busyRef.current) {
-        setSelected(null)
-        setAsking(false)
-      }
+      setSelected(null)
+      setAsking(false)
     }
     editor.on('selectionUpdate', update)
     const scroller = editor.view.dom.closest('main')
@@ -102,36 +95,29 @@ export default function AiSelectionMenu({
   if (!editor || !enabled || !selected) return null
 
   async function submit() {
-    if (!editor || !selected || !instruction.trim() || busyRef.current) return
-    busyRef.current = true
-    setBusy(true)
+    if (!editor || !selected || !instruction.trim()) return
+    const { from, to, text } = selected
+    const $from = editor.state.doc.resolve(from)
+    const shape = $from.sameParent(editor.state.doc.resolve(to)) && $from.parent.isTextblock ? 'inline' : 'blocks'
+    const request = { selection: text, context: contextOf(editor, from), instruction: instruction.trim() }
+    const id = pendAiEdit(editor, from, to)
+    if (!id) {
+      onError('Đoạn này đang chờ hoặc đang có gợi ý của AI. Hãy xử lý gợi ý đó trước.')
+      return
+    }
+    setSelected(null)
+    setAsking(false)
+    setInstruction('')
+    // The marked piece stays marked; the caret leaves it so the teacher can go on writing elsewhere.
+    editor.chain().focus().setTextSelection(to).run()
     try {
-      const text = await onRewrite({
-        selection: selected.text,
-        context: contextOf(editor, selected.from),
-        instruction: instruction.trim(),
-      })
-      const { doc } = editor.state
-      if (selected.to > doc.content.size || doc.textBetween(selected.from, selected.to, '\n') !== selected.plain) {
-        onError('Đoạn đã chọn vừa thay đổi nên chưa thay. Hãy chọn lại và thử lại.')
-        return
+      const replacement = await onRewrite(request)
+      if (!resolveAiEdit(editor, id, { replacement, shape })) {
+        onError('Đoạn đã chọn vừa bị sửa nên chưa hiện gợi ý của AI. Hãy chọn lại và thử lại.')
       }
-      const $from = doc.resolve(selected.from)
-      const $to = doc.resolve(selected.to)
-      const inline = $from.sameParent($to) && $from.parent.isTextblock
-      editor
-        .chain()
-        .focus()
-        .insertContentAt({ from: selected.from, to: selected.to }, inline ? inlineContent(text) : textBlocks(text))
-        .run()
-      setSelected(null)
-      setAsking(false)
-      setInstruction('')
     } catch (error) {
+      cancelAiEdit(editor, id)
       onError(error instanceof Error && error.message ? error.message : 'Trợ lý AI chưa sửa được đoạn này.')
-    } finally {
-      busyRef.current = false
-      setBusy(false)
     }
   }
 
@@ -147,7 +133,7 @@ export default function AiSelectionMenu({
 
   return createPortal(
     <div
-      className="fixed z-50 flex items-center gap-1.5 rounded-lg border border-card-border bg-card-background p-1 shadow-lg"
+      className="exam-doc-ui fixed z-50 flex items-center gap-1.5 rounded-lg border border-card-border bg-card-background p-1 shadow-lg"
       style={{ left: selected.left, top: selected.top }}
       // Pressing here must not move the caret off the selection.
       onMouseDown={(event) => {
@@ -159,15 +145,14 @@ export default function AiSelectionMenu({
           <input
             ref={input}
             value={instruction}
-            disabled={busy}
             onChange={(event) => setInstruction(event.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Sửa thế nào? Ví dụ: đổi số liệu"
             aria-label="Yêu cầu sửa đoạn đã chọn"
             className="h-8 w-64 rounded-md border border-input-border bg-transparent px-2 text-sm text-text-primary outline-none focus:border-input-primary-focus-border"
           />
-          <Button size="sm" disabled={busy || !instruction.trim()} onClick={() => void submit()}>
-            {busy ? 'Đang sửa…' : 'Sửa'}
+          <Button size="sm" disabled={!instruction.trim()} onClick={() => void submit()}>
+            Sửa
           </Button>
         </>
       ) : (

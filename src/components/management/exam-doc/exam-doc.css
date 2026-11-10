@@ -223,6 +223,96 @@
   pointer-events: none;
 }
 
+/* What the AI would change, before it is changed: the old words struck through, the new ones beside them with ✓ / ✕. */
+.exam-doc-content .ai-pending {
+  background: rgb(37 99 235 / 0.12);
+  border-radius: 2px;
+}
+
+.exam-doc-content .ai-pending-label {
+  margin-left: 0.35em;
+  font-family: system-ui, sans-serif;
+  font-size: 0.78em;
+  font-style: italic;
+  color: rgb(37 99 235);
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .exam-doc-content .ai-pending-label {
+    animation: ai-pending-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes ai-pending-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.exam-doc-content .ai-suggest-old {
+  background: rgb(220 38 38 / 0.1);
+  text-decoration: line-through;
+  text-decoration-color: rgb(220 38 38 / 0.8);
+}
+
+.exam-doc-content .ai-suggest-new {
+  margin-left: 0.25em;
+  padding: 0 0.15em;
+  border-radius: 3px;
+  background: rgb(22 163 74 / 0.12);
+  box-shadow: inset 0 -1px 0 rgb(22 163 74 / 0.6);
+  white-space: pre-wrap;
+  user-select: none;
+}
+
+.exam-doc-content .ai-suggest-new--block {
+  display: block;
+  margin: 0.25em 0 0;
+  padding: 0.25em 0.4em;
+}
+
+.exam-doc-content .ai-suggest-empty {
+  color: rgb(15 23 42 / 0.6);
+}
+
+.exam-doc-content .ai-suggest-actions {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 0.35em;
+  vertical-align: 0.1em;
+}
+
+.exam-doc-content .ai-suggest-button {
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.3em;
+  border: 1px solid rgb(15 23 42 / 0.15);
+  border-radius: 4px;
+  background: #fff;
+  font-family: system-ui, sans-serif;
+  font-size: 0.78em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.exam-doc-content .ai-suggest-accept {
+  color: rgb(21 128 61);
+}
+
+.exam-doc-content .ai-suggest-reject {
+  color: rgb(185 28 28);
+}
+
+.exam-doc-content .ai-suggest-button:hover {
+  background: rgb(15 23 42 / 0.06);
+}
+
+.exam-doc-content .ai-suggest-button:focus-visible {
+  outline: 2px solid rgb(37 99 235);
+  outline-offset: 1px;
+}
+
 /* Printing: only the sheets, one per A4 page with the same margins, broken where the screen breaks them. */
 @page exam-doc {
   size: A4;
@@ -294,5 +384,16 @@
 
   .exam-doc-content img.ProseMirror-selectednode {
     outline: none;
+  }
+
+  /* The sheet prints as the document says; suggestions keep their room, as the pages were broken with them. */
+  .exam-doc-content [data-ai-suggestion] {
+    visibility: hidden;
+  }
+
+  .exam-doc-content .ai-suggest-old,
+  .exam-doc-content .ai-pending {
+    background: none;
+    text-decoration: none;
   }
 }

@@ -451,6 +451,20 @@ export async function rewriteAiSelection(
   return result.text
 }
 
+export type ProofreadKind = 'SPELLING' | 'MATH' | 'OPTION' | 'WORDING' | 'CONSISTENCY'
+export interface ProofreadUnitInput { ref: string; kind: 'QUESTION' | 'PASSAGE'; text: string; context?: string }
+export interface ProofreadSuggestion { ref: string; find: string; replace: string; reason: string; kind: ProofreadKind }
+
+export async function proofreadAiSheet(conversationId: string, units: ProofreadUnitInput[], signal: AbortSignal): Promise<ProofreadSuggestion[]> {
+  const result = requireData(
+    await request<{ suggestions: ProofreadSuggestion[] }>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/proofread`, {
+      auth: true, method: 'POST', body: { units }, signal,
+    }),
+    'Trợ lý AI chưa soát được đề.'
+  )
+  return result.suggestions
+}
+
 export async function setAiDraftItemKept(
   conversationId: string,
   itemId: string,
