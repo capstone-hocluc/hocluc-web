@@ -12,6 +12,7 @@ const container = cva('student-page mx-auto w-full min-w-0', {
       reading: 'max-w-[960px]',
       narrow: 'max-w-[980px]',
       wide: 'max-w-[1280px]',
+      fluid: 'max-w-none',
     },
     spacing: {
       none: '',

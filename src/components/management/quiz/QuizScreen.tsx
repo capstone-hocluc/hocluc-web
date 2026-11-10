@@ -47,6 +47,8 @@ import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
 import QuizImportDialog from './QuizImportDialog'
+import QuizAnswerReviewSetting from './QuizAnswerReviewSetting'
+import QuizAnswerReviewDialog from './QuizAnswerReviewDialog'
 import DragHandle from '../crud/drag-handle'
 import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
 import { cn } from '../../../lib/cn'
@@ -127,6 +129,7 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
+  const [answerSettingsQuiz, setAnswerSettingsQuiz] = useState<TeacherQuizRecord | null>(null)
   const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
 
   const refresh = () => quizzes.reload()
@@ -232,6 +235,11 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
                   <DropdownMenu>
                     <DropdownMenuTrigger isDisabled={busyId !== null} aria-label={`Thao tác khác với ${quiz.title}`} className="grid size-9 place-items-center rounded-lg border border-card-border text-icon-tertiary hover:bg-background-gray-secondary data-disabled:opacity-50"><MoreHorizontal size={16} /></DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      {quiz.status !== 'ARCHIVED' && (
+                        <DropdownMenuItem isDisabled={busyId !== null} onAction={() => setAnswerSettingsQuiz(quiz)}>
+                          <Eye size={15} />Cấu hình xem đáp án
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem isDisabled={busyId !== null} onAction={() => void runQuizAction(quiz, () => duplicateTeacherQuiz(quiz.id), 'Đã sao chép quiz thành bản nháp.')}>
                         <Copy size={15} />Sao chép thành bản nháp
                       </DropdownMenuItem>
@@ -249,6 +257,14 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
                   </>}
         </RowActions>} />
 
+      {!readOnly && answerSettingsQuiz && (
+        <QuizAnswerReviewDialog quiz={answerSettingsQuiz} busy={busyId === answerSettingsQuiz.id}
+          onCancel={() => setAnswerSettingsQuiz(null)}
+          onSave={(showAnswers) => void runQuizAction(answerSettingsQuiz, async () => {
+            await updateTeacherQuiz(answerSettingsQuiz.id, { showAnswers })
+            setAnswerSettingsQuiz(null)
+          }, 'Đã lưu cấu hình xem đáp án.')} />
+      )}
       {!readOnly && confirmDelete && (
         <ConfirmDialog
           title="Xóa quiz?"
@@ -341,6 +357,7 @@ function TeacherQuizEditorForm({
   const [title, setTitle] = useState(initialQuiz?.title ?? '')
   const [duration, setDuration] = useState(String(initialQuiz?.durationMinutes ?? 30))
   const [attempts, setAttempts] = useState(String(initialQuiz?.maxAttempts ?? 1))
+  const [showAnswers, setShowAnswers] = useState(initialQuiz?.showAnswers ?? false)
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
   const [selectedLessonId, setSelectedLessonId] = useState('')
   const [selectedChapterId, setSelectedChapterId] = useState('')
@@ -354,8 +371,8 @@ function TeacherQuizEditorForm({
   const [busy, setBusy] = useState(false)
   const [ambiguousCreate, setAmbiguousCreate] = useState(false)
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
-  const [importBaseline] = useState(() => JSON.stringify({ title, duration, attempts, questions }))
-  const hasUnsavedChanges = JSON.stringify({ title, duration, attempts, questions }) !== importBaseline
+  const [importBaseline] = useState(() => JSON.stringify({ title, duration, attempts, showAnswers, questions }))
+  const hasUnsavedChanges = JSON.stringify({ title, duration, attempts, showAnswers, questions }) !== importBaseline
   const unsupportedStructure = Boolean(initial && (initial.sections.length > 0 || initial.groups.length > 0))
   const importBlockedReason = !serverQuizId ? ''
     : initialQuiz?.status !== 'DRAFT' || quizIsLocked(initialQuiz) ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
@@ -482,13 +499,14 @@ function TeacherQuizEditorForm({
           title: title.trim(),
           durationMinutes,
           maxAttempts,
+          showAnswers,
         })
         quizId = created.id
         setServerQuizId(created.id)
       } else {
         const updatePayload = settingsLocked
-          ? { title: title.trim() }
-          : { title: title.trim(), durationMinutes, maxAttempts }
+          ? { title: title.trim(), showAnswers }
+          : { title: title.trim(), durationMinutes, maxAttempts, showAnswers }
         await updateTeacherQuiz(quizId, updatePayload)
       }
 
@@ -673,6 +691,9 @@ function TeacherQuizEditorForm({
             <input id="teacher-quiz-attempts" className={fieldControlClass} type="number" min="1" max="999" value={attempts} onChange={(event) => { setAttempts(event.target.value); clearFieldError('attempts') }} disabled={settingsLocked || busy} aria-invalid={fieldErrors.attempts ? true : undefined} aria-describedby={fieldErrors.attempts ? 'teacher-quiz-attempts-error' : undefined} />
             {fieldErrors.attempts && <span id="teacher-quiz-attempts-error" className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.attempts}</span>}
           </label>
+          <div className="md:col-span-4">
+            <QuizAnswerReviewSetting enabled={showAnswers} onChange={setShowAnswers} disabled={busy || ambiguousCreate || ambiguousQuestionSave} />
+          </div>
         </div>
       </Card>
 
