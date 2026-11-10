@@ -8,7 +8,7 @@ import {
   type AiDocumentMode,
 } from '../../../services/aiAssistantService'
 import type { ExamPaper } from '../ai-assistant/exam-format'
-import { draftToDoc } from './draft-to-doc'
+import { draftToDoc, markTags } from './draft-to-doc'
 import type { SaveState } from './exam-doc-context'
 
 const SAVE_DELAY_MS = 800
@@ -290,7 +290,7 @@ export function useExamDocument(
         setFetched({
           visit: n,
           conversationId: id,
-          content: (document.content as JSONContent | null) ?? draftToDoc(paper),
+          content: document.content ? markTags(document.content as JSONContent) : draftToDoc(paper),
           mode: document.content ? document.mode : 'FREE',
           version: document.version,
         })
@@ -439,7 +439,7 @@ export function useExamDocument(
         setFetched({
           visit: visit.n,
           conversationId,
-          content: (conflict.content as JSONContent | null) ?? draftToDoc(paper),
+          content: conflict.content ? markTags(conflict.content as JSONContent) : draftToDoc(paper),
           mode: conflict.content ? conflict.mode : 'FREE',
           version: conflict.version,
         })

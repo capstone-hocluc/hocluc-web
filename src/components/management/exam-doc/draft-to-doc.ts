@@ -1,5 +1,5 @@
 import type { JSONContent } from '@tiptap/react'
-import { splitFormulas as split } from '../../ui/math-split'
+import { hasMarkTags, MarkReader, splitText as split } from '../../ui/math-split'
 import {
   questionNumbers,
   type ExamPaper,
@@ -10,7 +10,10 @@ import {
 import { chartBlock } from './chart-data'
 import { CHOICE_LABELS, choiceGridContent } from './nodes/choice-grid'
 
-/** Plain text with `$…$` formulas as editor inline content: text runs and math nodes, line breaks kept. */
+/**
+ * Plain text with `$…$` formulas as editor inline content: text runs and math nodes, line breaks kept. Words the text
+ * underlines (`<u>…</u>`) or sets bold (`<b>…</b>`, `**…**`) carry the editor's underline and bold marks.
+ */
 export function inlineContent(text: string, marks?: JSONContent['marks']): JSONContent[] {
   const content: JSONContent[] = []
   for (const piece of split(text)) {
@@ -18,12 +21,44 @@ export function inlineContent(text: string, marks?: JSONContent['marks']): JSONC
       content.push({ type: 'math', attrs: { latex: piece.formula, display: piece.display } })
       continue
     }
+    const runMarks = [...(marks ?? [])]
+    for (const mark of piece.marks ?? []) {
+      if (!runMarks.some((existing) => existing.type === mark)) runMarks.push({ type: mark })
+    }
     piece.text.split('\n').forEach((line, index) => {
       if (index > 0) content.push({ type: 'hardBreak' })
-      if (line) content.push({ type: 'text', text: line, ...(marks ? { marks } : {}) })
+      if (line) content.push({ type: 'text', text: line, ...(runMarks.length ? { marks: runMarks } : {}) })
     })
   }
   return content
+}
+
+/**
+ * A sheet saved before its words' `<u>…</u>`, `<b>…</b>` and `**…**` were read still holds them as text: each
+ * textblock's tags become the underline and bold they stand for. A sheet without such tags comes back as it is.
+ */
+export function markTags(doc: JSONContent): JSONContent {
+  return hasMarkTags(JSON.stringify(doc)) ? markBlock(doc) : doc
+}
+
+function markBlock(node: JSONContent): JSONContent {
+  if (!node.content) return node
+  const runs = node.content.flatMap((child) => (child.type === 'text' ? [child.text ?? ''] : []))
+  let content = node.content
+  if (runs.some(hasMarkTags)) {
+    const reader = new MarkReader(runs)
+    content = content.flatMap((child) => {
+      if (child.type !== 'text') return [child]
+      return reader.read(child.text ?? '').map((run) => {
+        const marks = [...(child.marks ?? [])]
+        for (const mark of run.marks ?? []) {
+          if (!marks.some((existing) => existing.type === mark)) marks.push({ type: mark })
+        }
+        return { ...child, text: run.text, ...(marks.length ? { marks } : {}) }
+      })
+    })
+  }
+  return { ...node, content: content.map(markBlock) }
 }
 
 const paragraph = (content: JSONContent[], attrs?: Record<string, unknown>): JSONContent => ({
