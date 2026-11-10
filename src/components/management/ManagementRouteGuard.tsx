@@ -1,6 +1,5 @@
 import { ROLE_LABELS } from '../../lib/role-home'
 import { useEffect, useRef, type ReactNode } from 'react'
-import { LoaderCircle } from '../console/icons'
 import { getAccessToken } from '../../lib/api'
 import { useSessionRestore } from '../../hooks/useSessionRestore'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -21,13 +20,16 @@ interface ManagementRouteGuardProps {
   children: ReactNode
 }
 
+/**
+ * While the session is checked the page stays empty on the console's own background: the check takes a moment on a
+ * reload, and a loader flashing in front of every page only got in the way.
+ */
 function LoadingState() {
   return (
-    <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-      <div className="inline-flex items-center gap-2 text-sm text-text-muted" role="status">
-        <LoaderCircle size={18} className="animate-spin text-primary" aria-hidden="true" />
-        Đang xác thực quyền truy cập...
-      </div>
+    <main aria-busy="true" className="min-h-screen bg-background-gray-secondary_alt_2">
+      <p role="status" className="sr-only">
+        Đang xác thực quyền truy cập
+      </p>
     </main>
   )
 }
