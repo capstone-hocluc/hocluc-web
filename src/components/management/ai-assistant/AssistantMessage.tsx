@@ -89,11 +89,6 @@ export default function AssistantMessage({
           · {MODE_LABEL[message.mode]}
         </span>
       )}
-      {hasStages && (
-        <span className="text-xs font-medium text-text-tertiary/80">
-          · {message.stages!.length} giai đoạn
-        </span>
-      )}
       {!hasStages && hasTrace && (
         <span className="text-xs font-medium text-text-tertiary/80">
           · {message.trace!.length} bước
@@ -112,7 +107,12 @@ export default function AssistantMessage({
 
   return (
     <article className="min-w-0">
-      {!hasStages && hasTrace ? (
+      {hasStages ? (
+        // The stages hang under the status line they belong to, which folds them.
+        <div className="mb-3">
+          <StageTrace stages={message.stages!} header={statusInner} />
+        </div>
+      ) : hasTrace ? (
         <button
           type="button"
           aria-expanded={traceOpen}
@@ -148,8 +148,6 @@ export default function AssistantMessage({
           <AiMarkdown content={message.body} />
         </div>
       )}
-
-      {hasStages && <StageTrace stages={message.stages!} />}
 
       {message.subjectChoices && (
         <ul aria-label="Chọn môn" className="mt-3 flex flex-wrap gap-2">

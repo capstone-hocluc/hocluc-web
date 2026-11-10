@@ -75,13 +75,11 @@ export default function MessageThread({
         )}
         {pending && (
           <div role="status" aria-live="polite" aria-busy className="min-w-0">
-            <div className="flex items-center gap-2.5 text-sm leading-none font-semibold text-text-tertiary">
-              <AiOrb active />
-              <span className="animate-pulse motion-reduce:animate-none">Trợ lý AI đang xử lý</span>
-            </div>
-            {stages.length > 0 && (
-              <div className="mt-4">
-                <StageTrace stages={stages} />
+            {stages.length > 0 ? (
+              <StageTrace stages={stages} header={<PendingStatus />} />
+            ) : (
+              <div className="flex items-center gap-2.5 text-sm leading-none font-semibold text-text-tertiary">
+                <PendingStatus />
               </div>
             )}
             {trace.length > 0 && (
@@ -106,6 +104,15 @@ export default function MessageThread({
         <div className="h-px w-full shrink-0" />
       </div>
     </ScrollArea>
+  )
+}
+
+function PendingStatus() {
+  return (
+    <>
+      <AiOrb active />
+      <span className="animate-pulse motion-reduce:animate-none">Trợ lý AI đang xử lý</span>
+    </>
   )
 }
 
