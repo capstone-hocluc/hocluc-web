@@ -11,7 +11,7 @@ interface QuizTimerProps {
 function computeRemaining(deadlineAt: string) {
   const deadline = new Date(deadlineAt).getTime()
   if (Number.isNaN(deadline)) return 0
-  return Math.max(0, Math.floor((deadline - Date.now()) / 1000))
+  return Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
 }
 
 function formatCountdown(totalSeconds: number) {

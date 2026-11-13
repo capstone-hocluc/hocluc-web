@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
@@ -36,16 +36,20 @@ const studentLabel = (student: { displayName?: string; firstName?: string; lastN
  */
 export default function CreditManagement({
   title,
+  navigation,
   canEditPacks,
   canAdjust,
 }: {
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
   canEditPacks: boolean
   canAdjust: boolean
 }) {
   return (
     <section className="flex flex-col gap-5">
       <PageHeading title={title} readOnly={!canEditPacks && !canAdjust} />
+      {navigation}
       <ConsoleTabs defaultValue="packs" className="flex flex-col gap-4">
         <ConsoleTabsList aria-label={title}>
           <ConsoleTabsTrigger value="packs">Gói {CREDIT_UNIT}</ConsoleTabsTrigger>

@@ -8,7 +8,7 @@ import {
   type AiDocumentMode,
 } from '../../../services/aiAssistantService'
 import type { ExamPaper } from '../ai-assistant/exam-format'
-import { draftToDoc } from './draft-to-doc'
+import { draftToDoc, markTags } from './draft-to-doc'
 import type { SaveState } from './exam-doc-context'
 
 const SAVE_DELAY_MS = 800
@@ -217,7 +217,8 @@ interface Visit {
 interface Fetched {
   visit: number
   conversationId: string
-  content: JSONContent
+  /** Null when the conversation has no document yet: it starts from its draft, once the draft is in. */
+  content: JSONContent | null
   mode: AiDocumentMode
   version: number
 }
@@ -273,8 +274,9 @@ export function useExamDocument(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fresh = useMemo(() => (visit.startedNew && !draftLoading ? draftToDoc(paper) : null), [visit.n, visit.startedNew, draftLoading])
 
+  // The document is read at once, alongside the draft: only a conversation without one waits for the draft.
   useEffect(() => {
-    if (!conversationId || draftLoading || visit.startedNew) return
+    if (!conversationId || visit.startedNew) return
     const id = conversationId
     const n = visit.n
     let live = true
@@ -290,7 +292,7 @@ export function useExamDocument(
         setFetched({
           visit: n,
           conversationId: id,
-          content: (document.content as JSONContent | null) ?? draftToDoc(paper),
+          content: document.content ? markTags(document.content as JSONContent) : null,
           mode: document.content ? document.mode : 'FREE',
           version: document.version,
         })
@@ -309,11 +311,19 @@ export function useExamDocument(
       live = false
       if (retryTimer !== null) window.clearTimeout(retryTimer)
     }
-    // The draft only seeds a conversation that has no document; later draft changes reach the editor as new questions.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, draftLoading, visit.n, visit.startedNew, reload])
+  }, [conversationId, visit.n, visit.startedNew, reload])
 
-  const current = !visit.startedNew && fetched?.visit === visit.n ? fetched : null
+  const read = !visit.startedNew && fetched?.visit === visit.n ? fetched : null
+  // The draft only seeds a conversation that has no document; later draft changes reach the editor as new questions.
+  const seeded = useMemo(
+    () => (read && read.content === null && !draftLoading ? draftToDoc(paper) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [read, draftLoading]
+  )
+  const current = useMemo(() => {
+    const content = read?.content ?? seeded
+    return read && content ? { ...read, content } : null
+  }, [read, seeded])
   const loaded = useMemo(
     () =>
       visit.startedNew
@@ -439,7 +449,7 @@ export function useExamDocument(
         setFetched({
           visit: visit.n,
           conversationId,
-          content: (conflict.content as JSONContent | null) ?? draftToDoc(paper),
+          content: conflict.content ? markTags(conflict.content as JSONContent) : draftToDoc(paper),
           mode: conflict.content ? conflict.mode : 'FREE',
           version: conflict.version,
         })

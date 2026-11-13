@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { matchesSearch } from '../../lib/search'
 import { CalendarPlus, Pencil, RefreshCw, Trash2 } from '../../components/console/icons'
 import type { Course, CourseSection } from '../../services/courseService'
@@ -50,6 +50,8 @@ import type { ManagementRole } from '../../components/management/ManagementRoute
 
 interface Props {
   role: Extract<ManagementRole, 'STAFF' | 'MANAGER'>
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }
 
 const weekdayLabels: Record<DayOfWeek, string> = {
@@ -82,7 +84,7 @@ async function loadTeachers(): Promise<UserSummary[]> {
   return [firstPage, ...remainingPages].flatMap((page) => page.content)
 }
 
-export default function SchedulingPage({ role }: Props) {
+export default function SchedulingPage({ role, navigation }: Props) {
   const [date, setDate] = useState(localToday())
   const [query, setQuery] = useState('')
   const [view, setView] = useState<ScheduleViewMode>('agenda')
@@ -365,6 +367,7 @@ export default function SchedulingPage({ role }: Props) {
           </>
         }
       />
+      {navigation}
       {(attendancePanelState.busy || mutationBusy) && (
         <Notice tone="info">Đang lưu…</Notice>
       )}

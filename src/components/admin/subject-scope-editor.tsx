@@ -5,7 +5,8 @@ import { Checkbox } from '../tailgrids/core/checkbox'
 import { Skeleton } from '../tailgrids/core/skeleton'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { getErrorMessage } from '../../lib/errors'
-import { getCategories, type Category } from '../../services/categoryService'
+import { subjectRows } from '../../lib/subject-rows'
+import { getCategories } from '../../services/categoryService'
 import {
   CAPABILITY_LABELS,
   CAPABILITY_ROLES,
@@ -17,17 +18,6 @@ import type { UserRole } from '../../services/userService'
 
 const CAPABILITIES = Object.keys(CAPABILITY_ROLES) as SubjectCapability[]
 const key = (categoryId: string, capability: SubjectCapability) => `${categoryId}:${capability}`
-
-/** Parents first, each followed by its sub-subjects, so a grant on a parent reads as covering the rows under it. */
-function subjectRows(categories: Category[]) {
-  const active = categories.filter((category) => category.active)
-  const byOrder = (a: Category, b: Category) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'vi')
-  const roots = active.filter((category) => !category.parentId || !active.some((item) => item.id === category.parentId)).sort(byOrder)
-  return roots.flatMap((root) => [
-    { category: root, child: false },
-    ...active.filter((item) => item.parentId === root.id).sort(byOrder).map((category) => ({ category, child: true })),
-  ])
-}
 
 export default function SubjectScopeEditor({ userId, roles }: { userId: string; roles: UserRole[] }) {
   const capabilities = CAPABILITIES.filter((capability) => CAPABILITY_ROLES[capability].some((role) => roles.includes(role)))

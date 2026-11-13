@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useEditor, type Editor, type JSONContent } from '@tiptap/react'
 import { examDocExtensions } from './editor-extensions'
+import { examDocJSON } from './exam-tags'
 import type { MathOptions } from './extensions'
 
 const ignorePages = () => undefined
@@ -50,7 +51,7 @@ export function useDocEditor({ content, onChange, onEditFormula, onPages = ignor
   useEffect(() => {
     if (!editor) return
     const update = ({ editor: changed }: { editor: Editor }) => {
-      if (changed === editor) onChange(changed.getJSON())
+      if (changed === editor) onChange(examDocJSON(changed))
     }
     editor.on('update', update)
     return () => {

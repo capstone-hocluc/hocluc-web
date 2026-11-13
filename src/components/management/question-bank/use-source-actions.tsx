@@ -13,8 +13,12 @@ import BankImportDialog from './BankImportDialog'
 /**
  * What can be done to a loaded paper besides opening it: have Jev label it, or load it again (from its kept files, or
  * by uploading them again). Each asks first; `dialogs` must be rendered. `onChanged` runs once a paper is queued.
+ * Whether Jev can label is only asked while `watchLabelling` (a page that shows no paper need not know).
  */
-export function useSourceActions(onChanged: (source: BankSource) => void) {
+export function useSourceActions(
+  onChanged: (source: BankSource) => void,
+  { watchLabelling = true }: { watchLabelling?: boolean } = {}
+) {
   const [labelling, setLabelling] = useState<BankLabelling | null>(null)
   const [labelTarget, setLabelTarget] = useState<BankSource | null>(null)
   const [labelBusy, setLabelBusy] = useState(false)
@@ -38,7 +42,9 @@ export function useSourceActions(onChanged: (source: BankSource) => void) {
       .then(setLabelling)
       .catch(() => undefined)
   }, [])
-  useEffect(refreshLabelling, [refreshLabelling])
+  useEffect(() => {
+    if (watchLabelling) refreshLabelling()
+  }, [watchLabelling, refreshLabelling])
 
   /** Jev labels what has no label yet, after a confirmation; when it cannot label now, the reason is shown instead. */
   const askLabelling = useCallback((source: BankSource) => {

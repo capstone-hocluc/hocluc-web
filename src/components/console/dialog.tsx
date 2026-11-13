@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '../tailgrids/core/dialog'
 import { Backdrop, OverlayWrapper } from '../tailgrids/core/overlay'
+import { cn } from '../../lib/cn'
 
 interface ConsoleDialogProps {
   open: boolean
@@ -17,6 +18,11 @@ interface ConsoleDialogProps {
   description?: ReactNode
   /** Max width in px; the dialog shrinks on narrow screens. */
   maxWidth?: number
+  /**
+   * Fixed height in px (capped to the viewport), for dialogs whose content changes, such as tabs,
+   * so the dialog keeps its size and the body scrolls instead. Without it the dialog fits its content.
+   */
+  height?: number
   /** Block backdrop click / ESC while a request is running. */
   dismissable?: boolean
   /** Action buttons, rendered in the bordered footer. */
@@ -34,6 +40,7 @@ function ConsoleDialog({
   title,
   description,
   maxWidth = 560,
+  height,
   dismissable = true,
   footer,
   onSubmit,
@@ -50,17 +57,22 @@ function ConsoleDialog({
     </>
   )
 
+  const frame = cn('flex max-h-[calc(100dvh-2rem)] flex-col', height && 'h-full')
+
   return (
     <OverlayWrapper isOpen={open} onOpenChange={(next) => !next && onClose()}>
       <Backdrop isDismissable={dismissable} isKeyboardDismissDisabled={!dismissable}>
         <Dialog
           className="max-h-[calc(100dvh-2rem)] overflow-hidden p-0"
-          style={{ maxWidth: `min(${maxWidth}px, calc(100% - 2rem))` }}
+          style={{
+            maxWidth: `min(${maxWidth}px, calc(100% - 2rem))`,
+            height: height ? `min(${height}px, calc(100dvh - 2rem))` : undefined,
+          }}
           showCloseButton={dismissable}
         >
           {onSubmit ? (
             <Form
-              className="flex max-h-[calc(100dvh-2rem)] flex-col"
+              className={frame}
               onSubmit={(event) => {
                 event.preventDefault()
                 onSubmit(event)
@@ -69,7 +81,7 @@ function ConsoleDialog({
               {content}
             </Form>
           ) : (
-            <div className="flex max-h-[calc(100dvh-2rem)] flex-col">{content}</div>
+            <div className={frame}>{content}</div>
           )}
         </Dialog>
       </Backdrop>

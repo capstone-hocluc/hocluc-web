@@ -177,7 +177,9 @@ test('the dashboard shows the streak and buys a freeze with stars', async ({ pag
 test('an administrator switches a pack on and corrects a learner balance with a reason', async ({ page }) => {
   const state = await install(page, 'ADMINISTRATOR')
   await page.goto('/admin/credits')
-  await expect(page.getByRole('heading', { name: 'Sao' })).toBeVisible()
+  // Sao is a tab of the payments page, which keeps the payments heading.
+  await expect(page.getByRole('heading', { name: 'Thanh toán', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Sao', exact: true })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('Đã tắt')).toBeVisible()
   await page.getByRole('row', { name: /Gói 50/ }).getByRole('button', { name: 'Sửa' }).click()
   const packDialog = page.getByRole('dialog', { name: 'Sửa gói' })

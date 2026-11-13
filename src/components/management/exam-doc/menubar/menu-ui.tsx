@@ -6,7 +6,7 @@ import { Check, ChevronRight, type IconProps } from '../../../console/icons'
 // Menu pieces with the NextAdmin dropdown look (tailgrids core/dropdown), on Radix for keyboard support.
 
 const CONTENT_CLASS =
-  'z-70 min-w-[232px] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-xl border border-card-border bg-background-white-secondary p-1.5 text-text-primary shadow-md outline-none'
+  'exam-doc-ui z-70 min-w-[232px] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-xl border border-card-border bg-background-white-secondary p-1.5 text-text-primary shadow-md outline-none'
 
 const ITEM_CLASS =
   'flex h-8 w-full cursor-default items-center gap-2.5 rounded-md px-2 text-left text-[13px] text-text-primary outline-none select-none data-[highlighted]:bg-background-gray-secondary_alt data-[disabled]:pointer-events-none data-[disabled]:opacity-45'

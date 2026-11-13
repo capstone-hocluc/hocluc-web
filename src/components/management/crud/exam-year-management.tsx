@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
@@ -49,9 +49,12 @@ type Deleting =
 export default function ExamYearManagement({
   readOnly = false,
   title,
+  navigation,
 }: {
   readOnly?: boolean
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }) {
   const resource = useScheduleResource('exam-years', getAdminExamYears)
   const [yearEditor, setYearEditor] = useState<{ year: ExamYear | null } | null>(null)
@@ -203,6 +206,7 @@ export default function ExamYearManagement({
           )
         }
       />
+      {navigation}
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>

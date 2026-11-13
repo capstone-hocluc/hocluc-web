@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { CheckCircle2, Clock3, Eye, GraduationCap, ListChecks } from '../console/icons'
 import { IconAction, RowActions } from '../console/icon-action'
@@ -200,14 +200,15 @@ function QuizAttempts({ quizId }: { quizId: string }) {
   )
 }
 
-export function TeacherAttempts() {
+/** Attempts at the teacher's quizzes; under the quiz tabs it carries the quiz pages' heading. */
+export function TeacherAttempts({ navigation }: { navigation?: ReactNode } = {}) {
   const { data, status, errorMessage, reload } = usePageResource(async () => (await getTeacherQuizzes()).filter((quiz) => quiz.attemptCount > 0), [])
   const [selected, setSelected] = useState('')
   const quizzes = data ?? []
   const quizId = selected || quizzes[0]?.id || ''
 
   return (
-    <Page title="Bài làm học viên">
+    <Page title={navigation ? 'Bài kiểm tra' : 'Bài làm học viên'} navigation={navigation}>
       <ScheduleResourceState status={status} errorMessage={errorMessage} onRetry={reload} empty={status === 'ready' && quizzes.length === 0} emptyMessage="Chưa có bài kiểm tra nào có lượt làm.">
         <div className="space-y-5">
           <SelectField

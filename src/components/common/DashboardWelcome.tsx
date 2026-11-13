@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { ArrowRight } from '../console/icons'
 import { ROLE_LABELS } from '../../lib/role-home'
-import { buildNavSections } from '../../lib/console-nav'
+import { findNavEntry } from '../../lib/console-nav'
 import type { UserRole } from '../../services/userService'
 
 type PersonnelRole = Exclude<UserRole, 'STUDENT'>
@@ -79,10 +79,10 @@ export function DashboardActions({ role, onNavigate }: {
   role: PersonnelRole
   onNavigate: (page: string) => void
 }) {
-  // Use the same filtered navigation as the sidebar: permission and feature flags apply here too.
-  const available = buildNavSections(role).flatMap((section) => section.items)
+  // The same entries as the sidebar, permission and feature flags included; a page the sidebar shows as a tab
+  // is still a shortcut here.
   const actions = ACTIONS[role].flatMap((key) => {
-    const item = available.find((entry) => entry.key === key)
+    const item = findNavEntry(role, key)
     return item ? [item] : []
   })
   if (!actions.length) return null

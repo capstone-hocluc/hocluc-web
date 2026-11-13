@@ -1,7 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { Editor } from '@tiptap/core'
 import { showErrorToast } from '../../../../lib/toastBus'
-import type { VariantDoc } from '../variants/build-variants'
 import type { FormulaReport } from './docx-math'
 import type * as PdfExport from './export-pdf'
 
@@ -17,33 +16,23 @@ function reportWordExport(formulas: FormulaReport, missingImages: number) {
   if (formulas.texts) showErrorToast(`${formulas.texts} công thức được ghi dưới dạng LaTeX`)
 }
 
-/** Downloads what the sheet shows: the original, or the variant `code` being viewed (named "…-Ma-<code>"). */
-export async function downloadDocument(editor: Editor, format: DownloadFormat, code: string | null = null) {
-  if (editor.isDestroyed) return
+/** Downloads what the sheet shows. True once the file is made. */
+export async function downloadDocument(editor: Editor, format: DownloadFormat): Promise<boolean> {
+  if (editor.isDestroyed) return false
   try {
     if (format !== 'docx') {
       const { exportJson, exportMarkdown } = await import('./export-text')
-      if (format === 'md') exportMarkdown(editor, code)
-      else exportJson(editor, code)
-      return
+      if (format === 'md') exportMarkdown(editor)
+      else exportJson(editor)
+      return true
     }
     const { exportDocx } = await import('./export-docx')
-    const { formulas, missingImages } = await exportDocx(editor, code)
+    const { formulas, missingImages } = await exportDocx(editor)
     reportWordExport(formulas, missingImages)
+    return true
   } catch {
     showErrorToast('Không tạo được tệp tải xuống')
-  }
-}
-
-/** Every exam variant as a .docx with its answer key after a page break, in one .zip. */
-export async function downloadVariants(variants: VariantDoc[]) {
-  if (!variants.length) return
-  try {
-    const { exportVariants } = await import('./export-variants')
-    const { formulas, missingImages } = await exportVariants(variants)
-    reportWordExport(formulas, missingImages)
-  } catch {
-    showErrorToast('Không tạo được tệp tải xuống')
+    return false
   }
 }
 
@@ -76,19 +65,21 @@ export function usePdfBusy(): boolean {
 }
 
 /**
- * Downloads what the sheet shows (the original, or the variant `code` being viewed) as a PDF, one at a time; with
- * `examOnly`, the exam without its answer key.
+ * Downloads what the sheet shows as a PDF, one at a time; with `examOnly`, the exam without its answer key. True once
+ * the file is made.
  */
-export async function downloadPdf(editor: Editor, options: PdfExport.PdfOptions = {}) {
-  if (pdfJob || editor.isDestroyed) return
+export async function downloadPdf(editor: Editor, options: PdfExport.PdfOptions = {}): Promise<boolean> {
+  if (pdfJob || editor.isDestroyed) return false
   setPdfJob(options.examOnly ? 'examOnly' : 'full')
   let pdf: typeof PdfExport | null = null
   try {
     pdf = await import('./export-pdf')
     const { missingImages } = await pdf.exportPdf(editor, options)
     if (missingImages) showErrorToast(`Không tải được ${missingImages} hình; tệp PDF ghi tên hình ở chỗ đó`)
+    return true
   } catch (error) {
     showErrorToast(pdf && error instanceof pdf.PdfError ? error.message : 'Không tạo được tệp PDF')
+    return false
   } finally {
     setPdfJob(null)
   }

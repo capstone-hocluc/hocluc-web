@@ -2,7 +2,7 @@ import type { Editor, JSONContent } from '@tiptap/react'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { isSoloGroup, type ExamPaper, type ExamPaperQuestion } from '../ai-assistant/exam-format'
 import { questionsToBlocks } from './draft-to-doc'
-import { END_LINE } from './variants/parse-exam'
+import { END_LINE } from './exam-lines'
 
 const QUESTION_NUMBER = /^\s*Câu\s+(\d+)/u
 

@@ -1,7 +1,6 @@
 import type { Editor } from '@tiptap/react'
 import {
   Atom,
-  BoxArchive1,
   Code1,
   Download1,
   FileFormatPdf,
@@ -23,7 +22,6 @@ import { insertChartAndEdit } from '../nodes/chart'
 import {
   downloadDocument,
   downloadPdf,
-  downloadVariants,
   hasAnswerKey,
   openDocumentFile,
   usePdfJob,
@@ -56,7 +54,7 @@ const TEXT_ALIGNS = [
 const DEFAULT_LINE_HEIGHT = 'default'
 
 /** Why a control that only works on the free document is off in the structured mode. */
-const FREE_MODE_ONLY = 'Chỉ có ở chế độ Văn bản tự do'
+export const FREE_MODE_ONLY = 'Chỉ có ở chế độ Văn bản tự do'
 
 function canEdit(editor: Editor | null): editor is Editor {
   return Boolean(editor && !editor.isDestroyed && editor.isEditable)
@@ -76,7 +74,7 @@ function setBlockLineHeight(editor: Editor, value: string | null) {
 }
 
 export function FileMenu({ onNew }: { onNew: () => void }) {
-  const { editor, sourceEditor, activeVariant, variantDocs, mode, setMode } = useExamDoc()
+  const { editor, mode, setMode } = useExamDoc()
   const pdfJob = usePdfJob()
   // The menu mounts when it opens, so the answer key is looked for now.
   const answerKey = hasAnswerKey(editor)
@@ -84,25 +82,24 @@ export function FileMenu({ onNew }: { onNew: () => void }) {
   // mode does not show), so in the structured mode only printing is left.
   const structured = mode === 'STRUCTURED'
   const freeOnly = structured ? FREE_MODE_ONLY : undefined
-  // Downloads take what the sheet shows (the original or the code being viewed); a file opens into the original.
   const download = (format: DownloadFormat) => {
-    if (editor) void downloadDocument(editor, format, activeVariant)
+    if (editor) void downloadDocument(editor, format)
   }
   const pdf = (examOnly: boolean) => (event: Event) => {
     // The menu stays open while the file is made, so the item can show it.
     event.preventDefault()
-    if (editor) void downloadPdf(editor, { code: activeVariant, examOnly })
+    if (editor) void downloadPdf(editor, { examOnly })
   }
   return (
     <>
-      <MenuItem label="Đề mới" icon={NotebookPen} onSelect={onNew} />
+      <MenuItem label="Thêm đề" icon={NotebookPen} onSelect={onNew} />
       <MenuItem
         label="Mở file (Word, Markdown, JSON)…"
         icon={Folder1}
-        disabled={structured || activeVariant !== null || !canEdit(sourceEditor)}
+        disabled={structured || !canEdit(editor)}
         title={freeOnly}
         onSelect={() => {
-          if (sourceEditor) openDocumentFile(sourceEditor)
+          if (editor) openDocumentFile(editor)
         }}
       />
       <MenuSeparator />
@@ -121,7 +118,7 @@ export function FileMenu({ onNew }: { onNew: () => void }) {
             disabled={structured}
             title={freeOnly}
             onSelect={() => {
-              if (editor) void downloadExamOnlyDocx(editor, activeVariant)
+              if (editor) void downloadExamOnlyDocx(editor)
             }}
           />
         )}
@@ -155,18 +152,6 @@ export function FileMenu({ onNew }: { onNew: () => void }) {
           title={freeOnly}
           onSelect={() => download('json')}
         />
-        {variantDocs.length > 0 && (
-          <>
-            <MenuSeparator />
-            <MenuItem
-              label="Tất cả mã đề (.docx)"
-              icon={BoxArchive1}
-              disabled={structured}
-              title={freeOnly}
-              onSelect={() => void downloadVariants(variantDocs)}
-            />
-          </>
-        )}
       </MenuSub>
       <MenuSeparator />
       <MenuLabel>Chế độ đề</MenuLabel>
@@ -245,7 +230,7 @@ export function ViewMenu({ outlineOpen, onToggleOutline, chatOpen, onToggleChat 
         onCheckedChange={(checked) => setShowRuler(checked === true)}
       />
       <MenuCheckboxItem
-        label="Hiện dàn ý và mẫu chèn"
+        label="Hiện danh sách đề"
         checked={outlineOpen}
         onCheckedChange={onToggleOutline}
       />

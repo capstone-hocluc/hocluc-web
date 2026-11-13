@@ -25,6 +25,7 @@ export interface QuizAttemptSummary {
   submittedAt: string | null
   autoSubmitted: boolean
   score: number
+  maxScore?: number | null
   percentage: number
   passed: boolean
   timeSpentSeconds: number
@@ -163,16 +164,15 @@ export async function saveAnswer(
 ): Promise<void> {
   await request<string>(
     `/api/v1/assessments/attempts/${encodeURIComponent(attemptId)}/answers`,
-    { method: 'POST', body: payload, auth: true }
+    { method: 'POST', body: payload, auth: true, guardIdentity: true }
   )
 }
 
-// No request body, no result payload to trust - navigate to the review
-// endpoint afterwards for the authoritative outcome.
+// The result page reads the persisted score so the same URL also works on reload.
 export async function submitAttempt(attemptId: string): Promise<void> {
-  await request<string>(
+  await request<unknown>(
     `/api/v1/assessments/attempts/${encodeURIComponent(attemptId)}/submit`,
-    { method: 'POST', auth: true }
+    { method: 'POST', auth: true, guardIdentity: true }
   )
 }
 

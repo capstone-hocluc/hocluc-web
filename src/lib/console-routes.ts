@@ -25,13 +25,6 @@ export function isQuizPage(page: string): boolean {
   return ['quizzes', 'mock-exams', 'placements', 'attempts'].includes(quizMenuPage(page))
 }
 
-/** Sidebar grouping only. quizMenuPage retains each tab's route and permission. */
-export function quizSidebarPage(page: string): string {
-  const menu = quizMenuPage(page)
-  if (menu === 'ai-assistant') return 'question-bank'
-  return ['placements', 'mock-exams'].includes(menu) ? 'quizzes' : menu
-}
-
 const LEGACY_AREA = /^\/(admin|manager|staff|teacher|mentor)(?=\/|$)/
 const LEGACY_LOGIN = /^\/(admin|management)\/login\/?$/
 

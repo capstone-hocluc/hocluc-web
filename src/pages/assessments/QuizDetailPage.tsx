@@ -18,7 +18,7 @@ import Notice from '../../components/ui/Notice'
 import Skeleton from '../../components/ui/Skeleton'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getQuiz, startQuizAttempt } from '../../services/assessmentService'
+import { getQuiz, startQuizAttempt, type QuizDetail } from '../../services/assessmentService'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast } from '../../lib/toastBus'
 import { getAssessmentLockMessage } from '../../lib/quizLock'
@@ -27,11 +27,12 @@ import { getQuizKind } from '../../lib/learningType'
 
 interface QuizDetailPageProps {
   quizId: string
+  onBack: (quiz: QuizDetail | null) => void
   onStartAttempt: (quizId: string, attemptId: string) => void
   onOpenReview: (attemptId: string) => void
 }
 
-function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPageProps) {
+function QuizDetailPage({ quizId, onBack, onStartAttempt, onOpenReview }: QuizDetailPageProps) {
   const {
     data: quiz,
     status,
@@ -59,7 +60,8 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
   }
 
   return (
-    <StudentPageContainer width="compact" spacing="stack">
+    <StudentPageContainer width="fluid" spacing="stack">
+      {status !== 'loading' && <BackLink onClick={() => onBack(quiz)}>Quay lại</BackLink>}
       <ResourceState
         status={status}
         errorMessage={errorMessage}
@@ -72,8 +74,6 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
 
       {status === 'ready' && quiz && (
         <>
-          <BackLink onClick={() => window.history.back()}>Quay lại</BackLink>
-
           <Card
             as="section"
             variant="panel"
@@ -97,6 +97,7 @@ function QuizDetailPage({ quizId, onStartAttempt, onOpenReview }: QuizDetailPage
             {quizRequirement(quiz.type) && <p className="text-sm leading-6 text-text-body">{quizRequirement(quiz.type)}</p>}
 
             <AssessmentFacts
+              className="grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))]"
               facts={[
                 {
                   icon: ListChecks,
