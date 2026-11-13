@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
@@ -41,9 +41,12 @@ const EXPIRY_WINDOWS = [
 export default function EnrollmentManagement({
   readOnly = false,
   title,
+  navigation,
 }: {
   readOnly?: boolean
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }) {
   const [query, setQuery] = useState<EnrollmentQuery>({ page: 0, size: 20 })
   const [editing, setEditing] = useState<{ kind: 'status' | 'expiry'; row: EnrollmentAdmin } | null>(
@@ -161,6 +164,7 @@ export default function EnrollmentManagement({
           )
         }
       />
+      {navigation}
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
         <FilterToolbar className="justify-start">
           <FilterGroup>

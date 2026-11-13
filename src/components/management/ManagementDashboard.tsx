@@ -25,7 +25,7 @@ import {
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
 import QuestionBankScreen from './question-bank/QuestionBankScreen'
 import AiAssistantScreen from './ai-assistant/AiAssistantScreen'
-import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
+import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import {
   buildNavSections,
   canAccessPage,
@@ -33,7 +33,10 @@ import {
   findNavItem,
   isKnownPage,
   navLabel,
+  pageTabs,
+  sidebarPage,
 } from '../../lib/console-nav'
+import { PageTabs, PageTabsList } from '../console/page-tabs'
 import { roleHome } from '../../lib/role-home'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
@@ -63,103 +66,121 @@ export function ManagementScreen({
 }: ManagementScreenProps) {
   const item = findNavItem(role, quizMenuPage(page))
   if (!item) return isKnownPage(quizMenuPage(page)) ? <ForbiddenPage /> : <NotFoundPage />
-  const title = navLabel(role, item)
-  if (item.soon) return <ComingSoonPage title={title} />
+  if (item.soon) return <ComingSoonPage title={navLabel(role, item)} />
   const readOnly = !canWrite(role, page)
 
   if (isQuizPage(page)) return <QuizConsoleScreen role={role} page={page} onNavigate={onNavigate} />
 
-  switch (page) {
-    case 'dashboard':
-      return (
-        <>
-          <RoleDashboardWelcome role={role} />
-          {role === 'MANAGER' ? (
-            <ManagerOverview onNavigate={onNavigate} />
-          ) : role !== 'MENTOR' ? (
-            <AdminOverview
-              onNavigate={onNavigate}
-              areaLabel={role === 'ADMINISTRATOR' ? 'quản trị' : 'vận hành'}
-            />
-          ) : null}
-          <DashboardActions role={role} onNavigate={onNavigate} />
-        </>
-      )
-    case 'users':
-      return <UserManagement audience="staff" title={title} readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
-    case 'learners':
-      return <UserManagement audience="students" title={title} readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
-    case 'audit-log':
-      return <AdminAuditLog />
-    case 'question-bank':
-      return <QuestionBankScreen title={title} readOnly={readOnly} onNavigate={onNavigate} />
-    case 'taxonomy':
-      return <MasterDataManagement title={title} reader={readOnly} role={role} />
-    case 'exam-years':
-      return <ExamYearManagement readOnly={readOnly} title={title} />
-    // The old subject page is the same merged screen; its URL keeps working.
-    case 'categories':
-    case 'courses':
-      return (
-        <ManagementCourseList
-          readOnly={readOnly}
-          title={navLabel(role, findNavItem(role, 'courses') ?? item)}
-        />
-      )
-    case 'schedules':
-      return (
-        <Suspense fallback={<SchedulingPageFallback title={title} />}>
-          <SchedulingPage role={role === 'MANAGER' ? 'MANAGER' : 'STAFF'} />
-        </Suspense>
-      )
-    case 'attendance':
-      return (
-        <Suspense fallback={<SchedulingPageFallback title={title} />}>
-          <AttendanceManagementPage />
-        </Suspense>
-      )
-    case 'students':
-      return <MentorStudents />
-    case 'enrollments':
-      return <EnrollmentManagement readOnly={readOnly} title={title} />
-    case 'orders':
-      return (
-        // Confirming a payment by hand stays administrator-only, as on the backend.
-        <OrderManagement readOnly={readOnly} canConfirm={role === 'ADMINISTRATOR'} title={title} />
-      )
-    case 'credits':
-      return (
-        // Packs: administrator and manager; balance corrections and the grant: administrator only.
-        <CreditManagement
-          title={title}
-          canEditPacks={role === 'ADMINISTRATOR' || role === 'MANAGER'}
-          canAdjust={role === 'ADMINISTRATOR'}
-        />
-      )
-    case 'solution-queue':
-      return <MentorSolutionQueue />
-    case 'chat':
-      return (
-        <ChatFeatureGate console>
-          <MentorChatScreen
-            conversationId={conversationId}
-            onSelectConversation={onSelectConversation}
-          />
-        </ChatFeatureGate>
-      )
-    case 'chat-queue':
-    case 'chat-monitoring':
-      return (
-        <ChatFeatureGate console>
-          <ChatAssignmentScreen
+  // Pages that share a sidebar entry carry its name and show a tab row under the heading.
+  const tabs = pageTabs(role, page)
+  const title = navLabel(role, (tabs.length > 0 && findNavItem(role, tabs[0].page)) || item)
+  const navigation = tabs.length > 0 ? <PageTabsList tabs={tabs} label={title} /> : undefined
+  const screen = renderScreen()
+  if (!tabs.length) return screen
+  return (
+    <PageTabs value={tabs.some((tab) => tab.page === page) ? page : tabs[0].page} onNavigate={onNavigate}>
+      {screen}
+    </PageTabs>
+  )
+
+  function renderScreen() {
+    switch (page) {
+      case 'dashboard':
+        return (
+          <>
+            <RoleDashboardWelcome role={role} />
+            {role === 'MANAGER' ? (
+              <ManagerOverview onNavigate={onNavigate} />
+            ) : role !== 'MENTOR' ? (
+              <AdminOverview
+                onNavigate={onNavigate}
+                areaLabel={role === 'ADMINISTRATOR' ? 'quản trị' : 'vận hành'}
+              />
+            ) : null}
+            <DashboardActions role={role} onNavigate={onNavigate} />
+          </>
+        )
+      case 'users':
+        return <UserManagement audience="staff" title={title} readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
+      case 'learners':
+        return <UserManagement audience="students" title={title} navigation={navigation} readOnly={readOnly} canCreateUsers={role === 'ADMINISTRATOR'} />
+      case 'audit-log':
+        return <AdminAuditLog />
+      case 'question-bank':
+        return <QuestionBankScreen title={title} readOnly={readOnly} onNavigate={onNavigate} />
+      case 'taxonomy':
+        return (
+          <MasterDataManagement
+            title={title}
+            reader={readOnly}
             role={role}
-            conversationId={conversationId}
-            onSelectConversation={onSelectConversation}
+            onBack={canAccessPage(role, 'question-bank') ? () => onNavigate('question-bank') : undefined}
           />
-        </ChatFeatureGate>
-      )
-    default:
-      return <ComingSoonPage title={title} />
+        )
+      case 'exam-years':
+        return <ExamYearManagement readOnly={readOnly} title={title} navigation={navigation} />
+      // The old subject page is the same merged screen; its URL keeps working.
+      case 'categories':
+      case 'courses':
+        return (
+          <ManagementCourseList readOnly={readOnly} title={title} navigation={navigation} />
+        )
+      case 'schedules':
+        return (
+          <Suspense fallback={<SchedulingPageFallback title={title} />}>
+            <SchedulingPage role={role === 'MANAGER' ? 'MANAGER' : 'STAFF'} navigation={navigation} />
+          </Suspense>
+        )
+      case 'attendance':
+        return (
+          <Suspense fallback={<SchedulingPageFallback title={title} />}>
+            <AttendanceManagementPage title={title} navigation={navigation} />
+          </Suspense>
+        )
+      case 'students':
+        return <MentorStudents />
+      case 'enrollments':
+        return <EnrollmentManagement readOnly={readOnly} title={title} navigation={navigation} />
+      case 'orders':
+        return (
+          // Confirming a payment by hand stays administrator-only, as on the backend.
+          <OrderManagement readOnly={readOnly} canConfirm={role === 'ADMINISTRATOR'} title={title} navigation={navigation} />
+        )
+      case 'credits':
+        return (
+          // Packs: administrator and manager; balance corrections and the grant: administrator only.
+          <CreditManagement
+            title={title}
+            navigation={navigation}
+            canEditPacks={role === 'ADMINISTRATOR' || role === 'MANAGER'}
+            canAdjust={role === 'ADMINISTRATOR'}
+          />
+        )
+      case 'solution-queue':
+        return <MentorSolutionQueue />
+      case 'chat':
+        return (
+          <ChatFeatureGate console>
+            <MentorChatScreen
+              conversationId={conversationId}
+              onSelectConversation={onSelectConversation}
+            />
+          </ChatFeatureGate>
+        )
+      case 'chat-queue':
+      case 'chat-monitoring':
+        return (
+          <ChatFeatureGate console>
+            <ChatAssignmentScreen
+              role={role}
+              conversationId={conversationId}
+              onSelectConversation={onSelectConversation}
+            />
+          </ChatFeatureGate>
+        )
+      default:
+        return <ComingSoonPage title={title} />
+    }
   }
 }
 
@@ -197,7 +218,7 @@ function ManagementDashboard({
   return (
     <ConsoleShell
       sections={buildNavSections(role)}
-      activeKey={quizSidebarPage(page)}
+      activeKey={sidebarPage(role, page)}
       onNavigate={onNavigate}
       onOpenProfile={() => onNavigate('profile')}
       onLogout={onLogout}

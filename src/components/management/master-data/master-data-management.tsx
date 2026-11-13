@@ -176,10 +176,13 @@ export default function MasterDataManagement({
   title,
   reader,
   role,
+  onBack,
 }: {
   title: string
   reader: boolean
   role: UserRole
+  /** Returns to the question bank, the page this one is opened from. */
+  onBack?: () => void
 }) {
   const canActivate = can(role, 'TAXONOMY_ACTIVATE')
   const categories = useScheduleResource<SubjectOption[]>(
@@ -427,6 +430,8 @@ export default function MasterDataManagement({
       <PageHeading
         title={title}
         readOnly={reader}
+        onBack={onBack}
+        backLabel="Về ngân hàng câu hỏi"
         action={
           !reader && (
             <div className="flex flex-wrap gap-2">
