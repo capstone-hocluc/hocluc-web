@@ -1,4 +1,5 @@
 import { Extension } from '@tiptap/core'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { questionInsertPos } from '../exam-tags'
@@ -14,7 +15,16 @@ export interface LiveDraftShown {
   numbers?: number[]
 }
 
-export const liveDraftKey = new PluginKey<LiveDraftShown | null>('examLiveDraft')
+interface LiveDraft {
+  shown: LiveDraftShown | null
+  key: string
+  set: DecorationSet | null
+}
+
+const NOTHING: LiveDraft = { shown: null, key: '', set: null }
+
+/** Set with a transaction meta: what to show (`LiveDraftShown`), or null to show nothing. */
+export const liveDraftKey = new PluginKey<LiveDraft>('examLiveDraft')
 
 function text(tag: string, className: string, content: string) {
   const element = document.createElement(tag)
@@ -60,25 +70,35 @@ function draftElement({ view, label = 'Trợ lý AI đang viết…', numbers }:
 export const LiveDraftWidget = Extension.create({
   name: 'examLiveDraft',
   addProseMirrorPlugins() {
+    // Each new set of words gets a new key, so the widget is drawn again for it. Through any other transaction (the
+    // page breaks, the caret, a question landing) it keeps its key and so its drawing; only its place is found again.
+    let drawn = 0
+    const place = (doc: ProseMirrorNode, shown: LiveDraftShown, key: string): LiveDraft => ({
+      shown,
+      key,
+      set: DecorationSet.create(doc, [
+        Decoration.widget(questionInsertPos(doc, shown.partId), () => draftElement(shown), {
+          side: -1,
+          ignoreSelection: true,
+          key,
+        }),
+      ]),
+    })
     return [
-      new Plugin<LiveDraftShown | null>({
+      new Plugin<LiveDraft>({
         key: liveDraftKey,
         state: {
-          init: () => null,
+          init: () => NOTHING,
           apply: (tr, previous) => {
             const next = tr.getMeta(liveDraftKey) as LiveDraftShown | null | undefined
-            return next === undefined ? previous : next
+            if (next !== undefined) return next ? place(tr.doc, next, `live-draft-${(drawn += 1)}`) : NOTHING
+            if (!previous.shown || !tr.docChanged) return previous
+            // A question landing in the part moves where the words go.
+            return place(tr.doc, previous.shown, previous.key)
           },
         },
         props: {
-          decorations(state) {
-            const shown = liveDraftKey.getState(state)
-            if (!shown) return null
-            const pos = questionInsertPos(state.doc, shown.partId)
-            return DecorationSet.create(state.doc, [
-              Decoration.widget(pos, () => draftElement(shown), { side: -1, ignoreSelection: true }),
-            ])
-          },
+          decorations: (state) => liveDraftKey.getState(state)?.set ?? null,
         },
       }),
     ]

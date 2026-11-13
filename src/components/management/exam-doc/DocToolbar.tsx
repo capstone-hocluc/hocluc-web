@@ -532,7 +532,7 @@ export default function DocToolbar() {
     <div
       role="toolbar"
       aria-label="Công cụ soạn thảo"
-      className="flex h-9 w-full min-w-0 items-center overflow-hidden rounded-full bg-background-gray-secondary px-2.5"
+      className="exam-doc-ui flex h-9 w-full min-w-0 items-center overflow-hidden rounded-full bg-background-gray-secondary px-2.5"
     >
       <div ref={rowRef} className="flex w-full min-w-0 items-center">
         {rowGroups.map((group, index) => (

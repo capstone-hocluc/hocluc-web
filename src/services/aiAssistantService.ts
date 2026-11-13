@@ -15,7 +15,13 @@ export interface AiConversation {
   mode?: AiAssistantMode | string | null
   createdAt: string
   updatedAt: string
+  /** When the exam last went out through "Xuất bản"; null while it is a draft. */
+  publishedAt?: string | null
+  publishedAs?: AiPublishedAs | null
 }
+
+/** How an exam went out: a course quiz, a mock exam, or a Word or PDF file. */
+export type AiPublishedAs = 'QUIZ' | 'EXAM' | 'DOCX' | 'PDF'
 
 export interface AiConversationPage {
   content: AiConversation[]
@@ -149,6 +155,8 @@ export interface AiCheckResult {
   labelPattern?: string | null
   labelConfidence?: number | null
   reviewedAnswer?: unknown
+  /** The level (DE, TB, KHO) the answer audit judged the question to be; null when it was not judged. */
+  auditDifficulty?: string | null
 }
 
 export interface AiDraftItem {
@@ -346,6 +354,18 @@ export async function renameAiConversation(id: string, title: string): Promise<v
   })
 }
 
+/** Records that the exam went out as a file; a quiz or mock exam is recorded by its export. */
+export async function publishAiConversation(id: string, as: 'DOCX' | 'PDF'): Promise<AiConversation> {
+  return requireData(
+    await request<AiConversation>(`${BASE}/conversations/${encodeURIComponent(id)}/publish`, {
+      auth: true,
+      method: 'POST',
+      body: { as },
+    }),
+    'Không ghi được đề đã xuất bản.'
+  )
+}
+
 export async function deleteAiConversation(id: string): Promise<void> {
   await request(`${BASE}/conversations/${encodeURIComponent(id)}`, { auth: true, method: 'DELETE' })
 }
@@ -449,6 +469,20 @@ export async function rewriteAiSelection(
     'Trợ lý AI chưa sửa được đoạn này.'
   )
   return result.text
+}
+
+export type ProofreadKind = 'SPELLING' | 'MATH' | 'OPTION' | 'WORDING' | 'CONSISTENCY'
+export interface ProofreadUnitInput { ref: string; kind: 'QUESTION' | 'PASSAGE'; text: string; context?: string }
+export interface ProofreadSuggestion { ref: string; find: string; replace: string; reason: string; kind: ProofreadKind }
+
+export async function proofreadAiSheet(conversationId: string, units: ProofreadUnitInput[], signal: AbortSignal): Promise<ProofreadSuggestion[]> {
+  const result = requireData(
+    await request<{ suggestions: ProofreadSuggestion[] }>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/proofread`, {
+      auth: true, method: 'POST', body: { units }, signal,
+    }),
+    'Trợ lý AI chưa soát được đề.'
+  )
+  return result.suggestions
 }
 
 export async function setAiDraftItemKept(

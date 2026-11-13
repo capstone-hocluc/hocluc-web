@@ -45,9 +45,9 @@ export default function Sidebar({
   isMobileSheet = false,
 }: SidebarProps) {
   const [collapsedGroups, setCollapsedGroups] = useState(readCollapsedGroups);
-  const toggleGroup = (label: string) => {
+  const toggleGroup = (id: string) => {
     setCollapsedGroups((current) => {
-      const next = current.includes(label) ? current.filter((item) => item !== label) : [...current, label];
+      const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
       writeCollapsedGroups(next);
       return next;
     });
@@ -88,15 +88,18 @@ export default function Sidebar({
         )}
       >
         {sections.map((section, index) => {
-          // The icon rail has no room for group titles, so it always lists every entry.
-          const folded = isSidebarOpen && collapsedGroups.includes(section.label);
-          const groupId = `nav-group-${section.label}`;
+          // The icon rail has no room for group titles, so it always lists every entry. A group without a
+          // title cannot be folded either.
+          const folded = isSidebarOpen && !!section.label && collapsedGroups.includes(section.id);
+          const groupId = `nav-group-${section.id}`;
           return (
-          <div key={section.label}>
-            {isSidebarOpen ? (
+          <div key={section.id}>
+            {!isSidebarOpen ? (
+              index > 0 && <hr className="mx-2 my-3 border-border-primary" />
+            ) : section.label ? (
               <button
                 type="button"
-                onClick={() => toggleGroup(section.label)}
+                onClick={() => toggleGroup(section.id)}
                 aria-expanded={!folded}
                 aria-controls={groupId}
                 className="mt-3 mb-2 flex w-full items-center justify-between rounded-md py-1 text-left text-xs text-text-tertiary uppercase transition-colors hover:text-text-secondary"
@@ -104,9 +107,7 @@ export default function Sidebar({
                 <span>{section.label}</span>
                 <ChevronDown size={14} className={cn('transition-transform duration-200', folded && '-rotate-90')} aria-hidden />
               </button>
-            ) : (
-              index > 0 && <hr className="mx-2 my-3 border-border-primary" />
-            )}
+            ) : null}
             <div id={groupId} hidden={folded} className={cn('space-y-1', !isSidebarOpen && 'space-y-1.5')}>
               {section.items.map((item) => (
                 <NavItem

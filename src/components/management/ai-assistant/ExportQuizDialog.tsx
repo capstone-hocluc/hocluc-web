@@ -37,6 +37,8 @@ interface ExportQuizDialogProps {
   numberOf: Map<string, number>
   role: UserRole | null
   onClose: () => void
+  /** The quiz was made: a mock exam or a course quiz. */
+  onExported?: (as: 'EXAM' | 'QUIZ') => void
 }
 
 function loadError(status: string, message: string, what: string) {
@@ -59,6 +61,7 @@ export default function ExportQuizDialog({
   numberOf,
   role,
   onClose,
+  onExported,
 }: ExportQuizDialogProps) {
   const [type, setType] = useState<AiQuizTarget>('EXAM')
   const [courseId, setCourseId] = useState('')
@@ -104,6 +107,7 @@ export default function ExportQuizDialog({
           durationMinutes: minutesValue,
         })
       )
+      onExported?.(exam ? 'EXAM' : 'QUIZ')
     } catch (reason) {
       setError(getErrorMessage(reason))
     } finally {

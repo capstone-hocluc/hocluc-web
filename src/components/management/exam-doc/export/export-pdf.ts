@@ -21,8 +21,6 @@ import { documentTitle, downloadBlob, fileNameFor } from './file-name'
 export type PdfRender = 'client' | 'auto'
 
 export interface PdfOptions {
-  /** Code of the exam variant (mã đề) on the sheet, for the file name. */
-  code?: string | null
   /** The exam without its answer key: the key's blocks and the sheets holding only the key are left out. */
   examOnly?: boolean
   render?: PdfRender
@@ -280,16 +278,17 @@ function cleanCopy(copy: HTMLElement, selected: HTMLElement | null) {
   content?.classList.remove('ProseMirror-focused')
   // Placed over the text (absolutely): taking them out moves nothing.
   copy.querySelectorAll('.ProseMirror-gapcursor, .column-resize-handle').forEach((element) => element.remove())
-  // Selection marks and the empty sheet's placeholder come from classes.
-  for (const name of ['ProseMirror-selectednode', 'selectedCell', 'is-editor-empty']) {
+  // Selection marks, the empty sheet's placeholder and the AI's suggestion marks come from classes.
+  for (const name of ['ProseMirror-selectednode', 'selectedCell', 'is-editor-empty', 'ai-suggest-old', 'ai-pending']) {
     copy.querySelectorAll(`.${name}`).forEach((element) => element.classList.remove(name))
   }
   if (selected) {
     selected.style.outline = 'none'
     selected.style.boxShadow = 'none'
   }
-  // The "Ngắt trang" label, and the words the AI is still writing, keep their room: the pages were broken with them.
-  copy.querySelectorAll<HTMLElement>('.exam-doc-page-break, [data-live-draft]').forEach((element) => {
+  // The "Ngắt trang" label, the words the AI is still writing and its suggestions keep their room: the pages were
+  // broken with them.
+  copy.querySelectorAll<HTMLElement>('.exam-doc-page-break, [data-live-draft], [data-ai-suggestion]').forEach((element) => {
     element.style.visibility = 'hidden'
   })
   // Plain paper, without the sheet's border and shadow.
@@ -474,16 +473,13 @@ const RENDERERS: Record<PdfRender, Renderer> = {
 }
 
 /**
- * Downloads what the sheet of `editor` shows as an A4 PDF named after the title: "…-Ma-<code>.pdf" for a variant,
- * "…-khong-dap-an.pdf" for the exam without its answer key.
+ * Downloads what the sheet of `editor` shows as an A4 PDF named after the title; "…-khong-dap-an.pdf" for the exam
+ * without its answer key.
  */
-export async function exportPdf(
-  editor: Editor,
-  { code = null, examOnly = false, render = 'auto' }: PdfOptions = {}
-): Promise<PdfResult> {
+export async function exportPdf(editor: Editor, { examOnly = false, render = 'auto' }: PdfOptions = {}): Promise<PdfResult> {
   const doc = editor.getJSON()
   const { blob, ...result } = await RENDERERS[render](editor, { title: documentTitle(doc) ?? 'Đề thi', examOnly })
-  const fileName = fileNameFor(doc, 'pdf', code)
+  const fileName = fileNameFor(doc, 'pdf')
   downloadBlob(blob, examOnly ? fileName.replace(/\.pdf$/, '-khong-dap-an.pdf') : fileName)
   return result
 }

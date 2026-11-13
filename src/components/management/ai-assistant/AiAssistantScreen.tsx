@@ -1,13 +1,14 @@
 // The AI exam composer, laid out like a document editor: header with menus, formatting toolbar, the document
-// panel (outline, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
+// panel (the exams, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { AssistantRuntimeProvider } from '@assistant-ui/react'
 import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getErrorMessage } from '../../../lib/errors'
 import ThemeProvider from '../../common/ThemeProvider'
 import Button from '../../console/button'
-import { ClipboardList, FileText, Landmark } from '../../console/icons'
+import { FileText, Landmark, Sparkles } from '../../console/icons'
 import ConfirmDialog from '../../console/confirm-dialog'
 import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -17,6 +18,8 @@ import FormulaDialog, { type FormulaValue } from '../../ui/math/FormulaDialog'
 import { DIVIDER_WIDTH, PANEL_LIMITS, usePanelWidths } from './use-panel-widths'
 import { buildPaper, isSoloGroup, questionNumbers } from './exam-format'
 import ChatPanel from './ChatPanel'
+import ChatBar from './ChatBar'
+import { useChatDock } from './use-chat-dock'
 import ExamPaper from './ExamPaper'
 import ExportQuizDialog from './ExportQuizDialog'
 import SaveToBankDialog from './SaveToBankDialog'
@@ -26,10 +29,11 @@ import DocSheet from '../exam-doc/DocSheet'
 import DocToolbar from '../exam-doc/DocToolbar'
 import StatusBar from '../exam-doc/StatusBar'
 import TemplateLibrary from '../exam-doc/templates/TemplateLibrary'
-import { EditorOutlineTree, PaperOutlineTree } from '../exam-doc/doc-tree'
-import WorkspaceTree from './WorkspaceTree'
+import PublishMenu from './PublishMenu'
+import WorkspaceTree, { ShowExamListButton } from './WorkspaceTree'
 import { parentHeadingText, partHeadings, questionsToBlocks } from '../exam-doc/draft-to-doc'
 import { scrollToPos } from '../exam-doc/doc-outline'
+import { EditorOutlineTree, PaperOutlineTree } from '../exam-doc/doc-tree'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
 import { deliveredItems, findTagged, partHeadingPlace, questionInsertPos } from '../exam-doc/exam-tags'
 import { refreshChartImages } from '../exam-doc/chart-refresh'
@@ -38,24 +42,21 @@ import { restoreSoloPassages } from '../exam-doc/solo-passages'
 import { replaceQuestionBlocks, replaceSheetRange } from '../exam-doc/replace-question'
 import { sheetDocument, sheetQuestion, sheetQuestions } from '../exam-doc/doc-snapshot'
 import AiSelectionMenu from '../exam-doc/ai-selection-menu'
+import AiSuggestionBar from '../exam-doc/ai-suggestion-bar'
+import { useProofread } from '../exam-doc/use-proofread'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
 import { revisedNumbers } from './revise-request'
-import type { ExamDownload } from './AssistantMessage'
+import { useAssistantChatRuntime } from './chat/assistant-runtime'
+import { ChatActionsProvider, type ChatActions, type ExamDownload } from './chat/ChatThread'
 import { showErrorToast, showSuccessToast } from '../../../lib/toastBus'
 import { downloadDocument, downloadPdf } from '../exam-doc/export'
-import { liveDraftView } from '../exam-doc/live-draft'
-import { useFollowWriting } from '../exam-doc/use-follow-writing'
-import { liveDraftKey } from '../exam-doc/nodes/live-draft-widget'
 import { useDocEditor } from '../exam-doc/use-doc-editor'
 import { useExamDocument } from '../exam-doc/use-exam-document'
-import VariantBanner from '../exam-doc/variants/VariantBanner'
-import VariantsPanel from '../exam-doc/variants/VariantsPanel'
-import { useExamVariants } from '../exam-doc/variants/use-exam-variants'
-import { useVariantEditor } from '../exam-doc/variants/use-variant-editor'
 import type { BankSource } from '../../../services/questionBankService'
 import BankImportDialog from '../question-bank/BankImportDialog'
 import { useSourceActions } from '../question-bank/use-source-actions'
 import PaperReadingWorkspace from './PaperReadingWorkspace'
+import SheetWriting from './SheetWriting'
 import { useBankPapers } from './use-bank-papers'
 import { clearRequestedPaper, requestedPaper, showPaperInAddress } from './open-paper'
 
@@ -101,8 +102,8 @@ export default function AiAssistantScreen({
   /** The viewer may load papers into the bank (the AI reads them here, as it writes an exam). */
   canImport?: boolean
 }) {
-  const ai = useAiAssistant()
   const bankPapers = useBankPapers(true)
+  const ai = useAiAssistant(bankPapers)
   // The loaded paper on the sheet instead of an exam: one asked for by the bank's list (or kept in the address) at
   // first. The list refreshes it; `queued` covers one just loaded, before the list has it.
   const [viewingId, setViewingId] = useState<string | null>(requestedPaper)
@@ -113,7 +114,7 @@ export default function AiAssistantScreen({
     ? (bankPapers.papers.find((paper) => paper.id === viewingId) ?? (queued?.id === viewingId ? queued : null))
     : null
   // A paper that is not in the list (deleted, or not allowed) leaves the address once the list is in.
-  const shownPaperId = bankPapers.loading ? viewingId : (viewingPaper?.id ?? null)
+  const shownPaperId = bankPapers.settled ? (viewingPaper?.id ?? null) : viewingId
   useEffect(() => showPaperInAddress(shownPaperId), [shownPaperId])
   const { refresh: refreshPapers } = bankPapers
   const openQueued = useCallback(
@@ -124,7 +125,8 @@ export default function AiAssistantScreen({
     },
     [refreshPapers]
   )
-  const sourceActions = useSourceActions(openQueued)
+  // Whether Jev can label a paper only matters once one is open here.
+  const sourceActions = useSourceActions(openQueued, { watchLabelling: canImport && viewingPaper !== null })
   const { actionError, setActionError: clearActionError } = sourceActions
   useEffect(() => {
     if (!actionError) return
@@ -133,20 +135,34 @@ export default function AiAssistantScreen({
   }, [actionError, clearActionError])
   const [chatOpen, setChatOpen] = useState(true)
   const [chatSheet, setChatSheet] = useState(false)
-  // The "Mã đề" panel takes the chat's place on the right (a sheet on narrow screens); one of them at a time.
-  const [variantsOpen, setVariantsOpen] = useState(false)
-  const [variantsSheet, setVariantsSheet] = useState(false)
+  const [chatDock, setChatDock] = useChatDock()
+  const chatBeside = chatOpen && chatDock === 'side'
+  const chatBar = chatOpen && chatDock === 'bottom'
   const [outlineOpen, setOutlineOpen] = useState(true)
   const [outlineSheet, setOutlineSheet] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<AiConversation | null>(null)
+  // Exams whose outline the viewer unfolded in the list ("Hiện bố cục", a double click), kept here so a paper opened
+  // from the list (its own workspace) keeps it too.
+  const [outlined, setOutlined] = useState<ReadonlySet<string>>(() => new Set())
+  const showOutline = useCallback(
+    (key: string, shown: boolean) =>
+      setOutlined((current) => {
+        if (current.has(key) === shown) return current
+        const next = new Set(current)
+        if (shown) next.add(key)
+        else next.delete(key)
+        return next
+      }),
+    []
+  )
   const [greeting] = useState(() => {
     const bucket = greetingForHour(new Date().getHours())
     return bucket[Math.floor(Math.random() * bucket.length)]
   })
   const highlight = useRef<number | null>(null)
-  const { row, widths, max, change } = usePanelWidths(chatOpen || variantsOpen, outlineOpen)
+  const { row, widths, max, change } = usePanelWidths(chatBeside, outlineOpen)
   const [zoom, setZoom] = useState(1)
   const [showRuler, setShowRuler] = useState(true)
   const [pages, setPages] = useState(1)
@@ -164,13 +180,10 @@ export default function AiAssistantScreen({
     onEditFormula: editFormula,
     onPages: setPages,
   })
-  const variants = useExamVariants(editor, ai.activeId ?? null, variantsOpen || variantsSheet)
-  const variantView = useVariantEditor(variants.activeDoc?.content ?? null)
-  // While a variant is shown, the sheet and the chrome get its read-only editor; the original stays as it is.
-  const shownEditor = variants.activeDoc && variantView.editor ? variantView.editor : editor
 
   // Only the free document is edited here, and not while a newer version saved elsewhere waits for a decision.
   const editable = examDoc.mode === 'FREE' && !examDoc.conflict && !examDoc.loading
+  const proofread = useProofread(editor, () => ai.activeId ? Promise.resolve(ai.activeId) : ai.ensureConversation(ai.activeConversation?.title || 'Đề thi mới'), showErrorToast)
   useEffect(() => {
     if (editor && editor.isEditable !== editable) editor.setEditable(editable, false)
   }, [editor, editable])
@@ -180,7 +193,7 @@ export default function AiAssistantScreen({
   // the document remembers which items it received, so one the teacher deleted is not written again.
   useEffect(() => {
     if (!editor || examDoc.loading || ai.draftLoading) return
-    const delivered = deliveredItems(editor.state.doc)
+    const delivered = deliveredItems(editor.state)
     if (delivered === null) {
       // Saved before items were tracked: what the draft holds now counts as written.
       const ids = ai.paper.questions.map((question) => question.id)
@@ -204,57 +217,30 @@ export default function AiAssistantScreen({
         editor.schema.nodeFromJSON(block)
       )
       tr.insert(questionInsertPos(tr.doc, question.partId), nodes)
-      delivered.add(question.id)
     }
-    tr.setDocAttribute('deliveredItems', [...delivered]).setMeta('addToHistory', false)
-    editor.view.dispatch(tr)
+    // Each question's "Câu n." line marks it as written (see ExamTags): no doc attribute changes, which would draw the
+    // whole sheet again for every question that lands.
+    editor.view.dispatch(tr.setMeta('addToHistory', false))
   }, [ai.paper, ai.draftLoading, examDoc.loading, editor])
 
-  // The question the AI is writing shows on the sheet where it will land, word by word, until the checked question
-  // replaces it. Only a decoration changes: nothing is saved and nothing goes into undo.
-  const liveDraft = ai.liveDraft
-  useEffect(() => {
-    if (!editor || editor.isDestroyed) return
-    const shown = liveDraft ? { partId: liveDraft.section, view: liveDraftView(liveDraft.text) } : null
-    editor.view.dispatch(editor.state.tr.setMeta(liveDraftKey, shown).setMeta('addToHistory', false))
-  }, [editor, liveDraft])
-
-  // While the AI writes, the sheet follows it; the teacher scrolling lets go, and a button picks it up again.
   const sheetScroller = useRef<HTMLElement>(null)
   // Ctrl + wheel or a pinch over the sheet zooms the paper, not the page.
   useWheelZoom(sheetScroller, zoom, setZoom)
-  const followTarget = liveDraft
-    ? '[data-live-draft]'
-    : ai.lastItemId
-      ? `[data-exam-item="${CSS.escape(ai.lastItemId)}"]`
-      : null
-  const writing = useFollowWriting(
-    sheetScroller,
-    ai.running && examDoc.mode === 'FREE' && !variants.activeDoc,
-    followTarget,
-    `${ai.lastItemId ?? ''}:${liveDraft?.text.length ?? 0}`
-  )
 
   // A compose run that ends leaves the answer key after the exam: the answer table and the solution guide, written
   // once every question it added is on the sheet. The teacher's later edits to the key stay until they ask for a new
-  // one ("Cập nhật đáp án").
-  const keyDue = useRef(false)
-  const lastRunMode = useRef(ai.runMode)
-  useEffect(() => {
-    // A revise run only updates a key the exam already has (as each rewritten question arrives, below).
-    if (lastRunMode.current && lastRunMode.current !== 'ask' && lastRunMode.current !== 'revise' && !ai.runMode) {
-      keyDue.current = true
-    }
-    lastRunMode.current = ai.runMode
-  }, [ai.runMode])
+  // one ("Cập nhật đáp án"). Only a run the server took counts: a refused send changed nothing, so its key stays. A
+  // revise run only updates a key the exam already has (as each rewritten question arrives, below).
+  const keyWrittenFor = useRef(ai.examRunsEnded)
   const solutionStyle = ai.settings.solutionStyle
   useEffect(() => {
-    if (!keyDue.current || ai.running || !editor || examDoc.loading || ai.draftLoading || examDoc.mode !== 'FREE') return
-    const delivered = deliveredItems(editor.state.doc)
+    if (keyWrittenFor.current === ai.examRunsEnded) return
+    if (ai.running || !editor || examDoc.loading || ai.draftLoading || examDoc.mode !== 'FREE') return
+    const delivered = deliveredItems(editor.state)
     if (delivered && ai.paper.questions.some((question) => !delivered.has(question.id))) return
-    keyDue.current = false
+    keyWrittenFor.current = ai.examRunsEnded
     replaceAnswerKey(editor, ai.paper, solutionStyle)
-  }, [ai.paper, ai.running, ai.runMode, ai.draftLoading, examDoc.loading, examDoc.mode, editor, solutionStyle])
+  }, [ai.examRunsEnded, ai.paper, ai.running, ai.draftLoading, examDoc.loading, examDoc.mode, editor, solutionStyle])
 
   // A question the AI rewrote ("Sửa câu 2") replaces its blocks where it stands, keeping its number; an exam that has
   // an answer key gets it written again for the new answer, and the sheet shows the question.
@@ -320,43 +306,11 @@ export default function AiAssistantScreen({
     restoreSoloPassages(editor, ai.paper)
   }, [ai.paper, ai.draftLoading, examDoc.loading, examDoc.mode, editor])
 
-  const showVariants = useCallback((open: boolean) => {
-    if (!open) {
-      setVariantsOpen(false)
-      setVariantsSheet(false)
-      return
-    }
-    setChatOpen(false)
-    setChatSheet(false)
-    if (window.matchMedia('(min-width: 1024px)').matches) setVariantsOpen(true)
-    else setVariantsSheet(true)
-  }, [])
-
-  // Exam codes belong to the free document: the question view closes them (and shows the original again).
-  const { setMode: setDocMode } = examDoc
-  const { setActiveVariant } = variants
-  const switchMode = useCallback(
-    (next: ExamDocContextValue['mode']) => {
-      if (next === 'STRUCTURED') {
-        setActiveVariant(null)
-        showVariants(false)
-      }
-      setDocMode(next)
-    },
-    [setDocMode, setActiveVariant, showVariants]
-  )
-
   const docContext = useMemo<ExamDocContextValue>(
     () => ({
-      editor: shownEditor,
-      sourceEditor: editor,
-      variantsOpen: variantsOpen || variantsSheet,
-      setVariantsOpen: showVariants,
-      activeVariant: variants.activeVariant,
-      setActiveVariant: variants.setActiveVariant,
-      variantDocs: variants.variantDocs,
+      editor,
       mode: examDoc.mode,
-      setMode: switchMode,
+      setMode: examDoc.setMode,
       saveState: examDoc.saveState,
       saveError: examDoc.saveError,
       loading: examDoc.loading,
@@ -365,26 +319,18 @@ export default function AiAssistantScreen({
       showRuler,
       setShowRuler,
       openFormula: (kind) => setFormula({ pos: null, initial: kind === 'chem' ? { latex: '\\ce{}', display: false } : null }),
-      pages: shownEditor === editor ? pages : variantView.pages,
+      pages,
     }),
     [
       editor,
-      shownEditor,
-      variantsOpen,
-      variantsSheet,
-      showVariants,
-      variants.activeVariant,
-      variants.setActiveVariant,
-      variants.variantDocs,
       examDoc.mode,
-      switchMode,
+      examDoc.setMode,
       examDoc.saveState,
       examDoc.saveError,
       examDoc.loading,
       zoom,
       showRuler,
       pages,
-      variantView.pages,
     ]
   )
 
@@ -413,8 +359,19 @@ export default function AiAssistantScreen({
   const bankAllowed = quizAccess.role === 'STAFF' || quizAccess.role === 'MANAGER' || quizAccess.role === 'ADMINISTRATOR'
   const writtenQuestions = useMemo(() => ai.paper.questions.filter((question) => !question.failure), [ai.paper])
   const bankKey = ai.running ? 'running' : ai.paper.questions.map((question) => question.id).join(',')
-  const bank = useDraftBank(ai.activeId ?? null, bankKey, bankAllowed)
+  // Looked up once the draft is in, so opening an exam asks once (not for the empty draft, then again for its questions).
+  const bank = useDraftBank(ai.draftLoading ? null : (ai.activeId ?? null), bankKey, bankAllowed)
   const [pendingReplace, setPendingReplace] = useState<{ total: number; kept: number } | null>(null)
+  // The chat on assistant-ui: its thread and composer read the conversation the hook keeps, and its sends come here.
+  const chatRuntime = useAssistantChatRuntime({
+    messages: ai.messages,
+    running: ai.running,
+    loading: ai.draftLoading,
+    sendBlocked: ai.mode === 'mock-exam' && !ai.settings.bankSourceId,
+    onSend: (text) => sendMessage(text),
+    onCancel: ai.cancel,
+    onRegenerate: ai.regenerate,
+  })
   const [bankDialog, setBankDialog] = useState(false)
   const [quizDialog, setQuizDialog] = useState(false)
   const canSaveToBank = bank.ready && writtenQuestions.some((question) => bank.authorable(question.id))
@@ -438,44 +395,38 @@ export default function AiAssistantScreen({
   /** The finished exam from the chat: a Word file, or a PDF of the A4 sheets (which only the free document is on). */
   function downloadExam(format: ExamDownload) {
     if (format === 'docx-exam') {
-      // The original exam only: an exam code's sheet has no guide, and its answer table belongs to that code.
       if (editor) void downloadExamOnlyDocx(editor)
       return
     }
     if (format === 'pdf' || format === 'pdf-exam') {
-      // The sheet's editor: the original, or the read-only variant being viewed.
       if (examDoc.mode !== 'FREE') showErrorToast('Tải PDF chỉ có ở chế độ Văn bản tự do')
-      else if (shownEditor) {
-        void downloadPdf(shownEditor, { code: variants.activeVariant ?? null, examOnly: format === 'pdf-exam' })
-      }
+      else if (editor) void downloadPdf(editor, { examOnly: format === 'pdf-exam' })
       return
     }
-    // What the sheet shows: the original, or the exam code being viewed (named after it).
-    if (shownEditor) void downloadDocument(shownEditor, 'docx', variants.activeVariant ?? null)
+    if (editor) void downloadDocument(editor, 'docx')
   }
 
   /**
-   * Sends the composer's text. "Sửa câu 2 …" in compose mode rewrites those questions: each number is the one the sheet
-   * prints (or the question cards show), looked up to its draft question before anything is sent.
+   * Sends the composer's words; resolves false when they do not go, and the composer gets them back. "Sửa câu 2 …" in
+   * compose mode rewrites those questions: each number is the one the sheet prints (or the question cards show), looked
+   * up to its draft question before anything is sent. `replacing`: the teacher already agreed to replace the exam.
    */
-  function sendMessage() {
+  function sendMessage(text: string, replacing = false): Promise<boolean> {
     const onSheet = examDoc.mode === 'FREE' && editor ? editor : null
     // A question about the exam reads the sheet the teacher sees.
     if (ai.mode === 'ask') {
-      ai.send(onSheet ? { document: sheetDocument(onSheet.state.doc) } : undefined)
-      return
+      return ai.send(text, onSheet ? { document: sheetDocument(onSheet.state.doc) } : undefined)
     }
     // "Sửa câu 2 …" revises in compose and mock-exam alike, once there is an exam to revise.
     const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
-    const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(ai.value) : null
+    const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(text) : null
     if (!numbers) {
       // A new run replaces the draft, the questions kept included: ask first.
-      if (ai.paper.questions.length > 0 && ai.value.trim()) {
+      if (!replacing && ai.paper.questions.length > 0) {
         setPendingReplace({ total: ai.paper.questions.length, kept: ai.paper.questions.filter((question) => question.kept).length })
-        return
+        return Promise.resolve(false)
       }
-      ai.send()
-      return
+      return ai.send(text)
     }
     const targets: AiRevisedItem[] = []
     const missing: number[] = []
@@ -501,9 +452,24 @@ export default function AiAssistantScreen({
     }
     if (missing.length > 0) {
       ai.setNotice(`Đề không có câu ${missing.join(', ')} để sửa.`)
-      return
+      return Promise.resolve(false)
     }
-    ai.send({ revise: targets })
+    return ai.send(text, { revise: targets })
+  }
+
+  /** Words a send of the page's own (a retry, a subject chosen) did not get through go back to an empty composer. */
+  function giveBack(text: string | null) {
+    const composer = chatRuntime.thread.composer
+    if (text && !composer.getState().text) composer.setText(text)
+  }
+
+  /** "Thay đề" in the question before a new run: the composer's words go, past the question. */
+  function replaceExam() {
+    setPendingReplace(null)
+    const composer = chatRuntime.thread.composer
+    const text = composer.getState().text
+    composer.setText('')
+    void sendMessage(text, true).then((sent) => giveBack(sent ? null : text))
   }
 
   /** "Nhờ AI sửa" on a selection: the exam's conversation (made now for a new exam) asks the AI for the new words. */
@@ -520,7 +486,6 @@ export default function AiAssistantScreen({
       showErrorToast('Đáp án chỉ ghi được ở chế độ Văn bản tự do')
       return
     }
-    variants.setActiveVariant(null)
     replaceAnswerKey(editor, ai.paper, solutionStyle)
     let at: number | null = null
     editor.state.doc.forEach((node, pos) => {
@@ -536,10 +501,7 @@ export default function AiAssistantScreen({
     if (examDoc.mode === 'FREE' && editor) {
       // The free document marks each AI question's "Câu n." line with its draft item.
       const pos = findTagged(editor.state.doc, 'examItem', id)
-      if (pos !== null) {
-        variants.setActiveVariant(null)
-        scrollToPos(editor, pos)
-      }
+      if (pos !== null) scrollToPos(editor, pos)
       return
     }
     setFocusedId(id)
@@ -555,6 +517,7 @@ export default function AiAssistantScreen({
   function startNew() {
     setViewingId(null)
     ai.startNew()
+    chatRuntime.thread.composer.setText('')
     setOutlineSheet(false)
     setEditingId(null)
     setFocusedId(null)
@@ -569,15 +532,28 @@ export default function AiAssistantScreen({
 
   function pickPrompt(mode: AiAssistantMode, prompt: string) {
     ai.setMode(mode)
-    ai.setValue(prompt)
+    chatRuntime.thread.composer.setText(prompt)
   }
 
   function toggleChat() {
-    // The chat and the "Mã đề" panel share the right column.
-    setVariantsOpen(false)
-    setVariantsSheet(false)
-    if (window.matchMedia('(min-width: 1024px)').matches) setChatOpen((open) => !open)
+    // The bar fits any width; the panel beside the paper is a sheet on a narrow screen.
+    if (chatDock === 'bottom' || window.matchMedia('(min-width: 1024px)').matches) setChatOpen((open) => !open)
     else setChatSheet((open) => !open)
+  }
+
+  function dockBottom() {
+    setChatDock('bottom')
+    setChatSheet(false)
+    setChatOpen(true)
+  }
+
+  function dockSide() {
+    setChatDock('side')
+    if (window.matchMedia('(min-width: 1024px)').matches) setChatOpen(true)
+    else {
+      setChatOpen(false)
+      setChatSheet(true)
+    }
   }
 
   function toggleOutline() {
@@ -595,10 +571,7 @@ export default function AiAssistantScreen({
   const chatPanelProps = {
     messages: ai.messages,
     mode: ai.mode,
-    value: ai.value,
     pending: ai.running,
-    stages: ai.stages,
-    trace: ai.trace,
     loading: ai.draftLoading,
     greeting,
     notice: ai.notice,
@@ -611,29 +584,36 @@ export default function AiAssistantScreen({
     papersError: ai.papersError,
     onReloadPapers: ai.reloadPapers,
     onModeChange: ai.setMode,
-    onValueChange: ai.setValue,
-    onSend: sendMessage,
     onStop: ai.cancel,
-    onRegenerate: ai.regenerate,
     onStartNew: startNew,
     conversationsOpen: outlineOpen || outlineSheet,
     onOpenConversations: toggleTree,
     onPickPrompt: pickPrompt,
+  }
+  // What the turns of the thread do: the reply's own buttons, and the run its progress follows.
+  const chatActions: ChatActions = {
+    run: ai.runStore,
     onDownload: downloadExam,
     onAnswerKey: writeAnswerKey,
-    onRetry: ai.retry,
-    onChooseSubject: ai.chooseSubject,
+    onRetry: (messageId) => void ai.retry(messageId).then(giveBack),
+    onChooseSubject: (messageId, subjectName) => void ai.chooseSubject(messageId, subjectName).then(giveBack),
   }
 
-  /** The left panel: every exam and loaded paper, with the open one's outline under it. */
-  const renderTree = (outline: ReactNode, chrome: { onCollapse?: () => void; onClose?: () => void; templates?: ReactNode; className: string; style?: CSSProperties }) => (
+  /** The left panel: every exam and loaded paper, grouped. */
+  const renderTree = (chrome: {
+    onCollapse?: () => void
+    onClose?: () => void
+    templates?: ReactNode
+    outline?: ReactNode
+    className: string
+    style?: CSSProperties
+  }) => (
     <WorkspaceTree
       conversations={ai.conversations}
       papers={bankPapers.papers}
       activeId={ai.activeId}
       activePaperId={viewingPaper?.id ?? null}
       loading={ai.conversationsLoading || bankPapers.loading}
-      outline={outline}
       onSelect={(id) => {
         setViewingId(null)
         ai.selectConversation(id)
@@ -646,27 +626,28 @@ export default function AiAssistantScreen({
         setOutlineSheet(false)
       }}
       onNew={startNew}
-      onImport={
-        canImport
-          ? () => {
-              setOutlineSheet(false)
-              setImporting(true)
-            }
-          : undefined
-      }
+      canImport={canImport}
       onRename={(id, title) => void ai.renameConversation(id, title)}
       onDelete={(id) => setPendingDelete(ai.conversations.find((item) => item.id === id) ?? null)}
+      outlined={outlined}
+      onOutlineChange={showOutline}
       {...chrome}
     />
   )
-  // The free document lists its own headings; the question view lists the draft (the document would show hidden text).
+  const composeTemplates = examDoc.mode === 'FREE' ? <TemplateLibrary /> : undefined
   const composeOutline =
     examDoc.mode === 'FREE' ? (
-      <EditorOutlineTree editor={shownEditor} depth={1} />
+      <EditorOutlineTree
+        editor={editor}
+        depth={2}
+        onJump={(pos) => {
+          setOutlineSheet(false)
+          if (editor) scrollToPos(editor, pos)
+        }}
+      />
     ) : (
-      <PaperOutlineTree paper={ai.paper} numberOf={numberOf} onJump={jumpToQuestion} depth={1} />
+      <PaperOutlineTree paper={ai.paper} numberOf={numberOf} onJump={jumpToQuestion} depth={2} />
     )
-  const composeTemplates = examDoc.mode === 'FREE' ? <TemplateLibrary /> : undefined
 
   const importDialog = importing && (
     <BankImportDialog
@@ -709,11 +690,13 @@ export default function AiAssistantScreen({
 
   return (
     <ThemeProvider>
+      <AssistantRuntimeProvider runtime={chatRuntime}>
+      <ChatActionsProvider value={chatActions}>
       <ExamDocContext.Provider value={docContext}>
       <div className="flex h-dvh w-full flex-col overflow-hidden bg-background-gray-secondary_alt_2 font-sans text-text-primary">
         <AiSelectionMenu
           editor={editor}
-          enabled={editable && !variants.activeDoc}
+          enabled={editable}
           onRewrite={rewriteSelection}
           onError={showErrorToast}
         />
@@ -745,146 +728,155 @@ export default function AiAssistantScreen({
                   <span className="hidden lg:inline">Lưu vào ngân hàng</span>
                 </Button>
               )}
-              {quizAccess.canWrite && ai.activeId && keptWritten > 0 && (
-                <Button
-                  appearance="ghost"
-                  size="sm"
-                  onClick={() => setQuizDialog(true)}
-                  aria-label="Xuất thành quiz"
-                  title="Xuất thành quiz"
-                >
-                  <ClipboardList size={15} />
-                  <span className="hidden lg:inline">Xuất thành quiz</span>
-                </Button>
-              )}
               {canImport && (
                 <Button appearance="ghost" size="sm" onClick={() => setImporting(true)} aria-label="Nạp đề" title="Nạp đề">
                   <FileText size={15} />
                   <span className="hidden lg:inline">Nạp đề</span>
                 </Button>
               )}
+              {ai.activeId && (
+                <PublishMenu
+                  onQuiz={quizAccess.canWrite && keptWritten > 0 ? () => setQuizDialog(true) : undefined}
+                  onPublished={(as) => {
+                    if (ai.activeId) void ai.markPublished(ai.activeId, as)
+                  }}
+                />
+              )}
             </>
           }
         />
 
-        <div className="shrink-0 px-2 pb-1.5 sm:px-3">
-          <DocToolbar />
-        </div>
-
         <div ref={row} className="flex min-h-0 min-w-0 flex-1">
-          {outlineOpen && (
-            <>
-              {renderTree(composeOutline, {
-                onCollapse: () => setOutlineOpen(false),
-                templates: composeTemplates,
-                style: { width: widths.outline },
-                className: 'hidden shrink-0 border-r border-card-border bg-card-background xl:flex',
-              })}
-              <ResizeHandle
-                label="Kéo để đổi độ rộng mục lục"
-                value={widths.outline}
-                min={PANEL_LIMITS.outline.min}
-                max={max.outline}
-                defaultValue={PANEL_LIMITS.outline.default}
-                step={16}
-                direction={1}
-                homeEnd
-                onChange={(value, keep) => change('outline', value, keep)}
-                valueAt={(clientX) => {
-                  const box = row.current?.getBoundingClientRect()
-                  return box ? clientX - box.left - DIVIDER_WIDTH / 2 : null
-                }}
-                className="hidden w-1.5 shrink-0 xl:flex"
-              />
-            </>
-          )}
-
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <VariantBanner />
-          <main
-            ref={sheetScroller}
-            className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-background-gray-secondary [scrollbar-gutter:stable]"
-          >
-            {examDoc.mode === 'FREE' || shownEditor !== editor ? (
-              examDoc.loadError && examDoc.loading ? (
-                <div className="mx-auto max-w-[560px] px-4 py-10">
-                  <Notice tone="danger">
-                    {examDoc.loadError}
-                    <Button size="sm" appearance="outline" onClick={examDoc.retryLoad}>
-                      Thử lại
-                    </Button>
-                  </Notice>
-                </div>
-              ) : (
-                <>
-                  {examDoc.conflict && shownEditor === editor && (
-                    <div className="sticky top-0 z-20 mx-auto max-w-[794px] px-4 pt-3 print:hidden">
-                      <Notice tone="warning">
-                        Đề này vừa được lưu ở nơi khác.
-                        <Button size="sm" onClick={() => examDoc.resolveConflict('reload')}>
-                          Tải bản mới nhất
-                        </Button>
-                        <Button size="sm" appearance="outline" onClick={() => examDoc.resolveConflict('keep')}>
-                          Giữ bản của tôi
-                        </Button>
-                      </Notice>
-                    </div>
-                  )}
-                  <DocSheet />
-                </>
-              )
-            ) : (
-            <div className="mx-auto w-full max-w-[794px] px-3 py-5 sm:px-6 sm:py-8">
-              {ai.draftLoading ? (
-                <PaperSkeleton />
-              ) : (
-                <ExamPaper
-                  paper={ai.paper}
-                  numberOf={numberOf}
-                  editingId={editingId}
-                  focusedId={focusedId}
-                  onStartEdit={setEditingId}
-                  onStopEdit={() => setEditingId(null)}
-                  onSave={(id, patch) => {
-                    void ai.updateQuestion(id, patch).then(() => setEditingId(null))
-                  }}
-                  onDelete={(id) => {
-                    void ai.deleteItem(id)
-                    if (editingId === id) setEditingId(null)
-                  }}
-                  onKeep={(id, kept) => void ai.toggleKeep(id, kept)}
-                  onMove={(sourceId, targetId) => void ai.moveItem(sourceId, targetId)}
-                  onAdd={(partId) => void addQuestion(partId)}
-                  bank={bankAllowed ? {
-                    saved: (id) => Boolean(bank.savedQuestionId(id)),
-                    canSave: bank.canSave,
-                    saving: bank.isSaving,
-                    onSave: (id) => void saveOneToBank(id),
-                  } : undefined}
-                />
-              )}
-            </div>
-            )}
-            {/* Shown once the teacher scrolled away from the writing; it stays at the bottom of the sheet's view. */}
-            {ai.running && !writing.following && examDoc.mode === 'FREE' && !variants.activeDoc && (
-              <div className="pointer-events-none sticky bottom-5 z-20 flex justify-center">
-                <button
-                  type="button"
-                  onClick={writing.follow}
-                  className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-button-primary-background px-4 py-2 text-sm font-semibold text-button-primary-text shadow-card-hover transition-colors hover:bg-button-primary-hover-background focus-visible:ring-4 focus-visible:ring-button-primary-focus-ring"
-                >
-                  <span aria-hidden className="size-2 rounded-full bg-current motion-safe:animate-pulse" />
-                  Theo dõi AI đang viết
-                </button>
+            <div className="shrink-0 px-2 pb-1.5 sm:px-3">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1"><DocToolbar /></div>
+                <Button size="sm" appearance="outline" disabled={!editable || proofread.running} onClick={() => void proofread.start()}>
+                  <Sparkles size={15} aria-hidden />
+                  AI soát đề
+                </Button>
               </div>
-            )}
-          </main>
-          </div>
+              <AiSuggestionBar editor={editor} proofread={proofread} />
+            </div>
 
-          {(chatOpen || variantsOpen) && (
+            <div className="relative flex min-h-0 min-w-0 flex-1">
+              <ShowExamListButton listOpen={outlineOpen} onClick={toggleOutline} />
+              {outlineOpen && (
+                <>
+                  {renderTree({
+                    onCollapse: () => setOutlineOpen(false),
+                    templates: composeTemplates,
+                    outline: composeOutline,
+                    style: { width: widths.outline },
+                    className: 'hidden shrink-0 border-r border-card-border bg-card-background xl:flex',
+                  })}
+                  <ResizeHandle
+                    label="Kéo để đổi độ rộng danh sách đề"
+                    value={widths.outline}
+                    min={PANEL_LIMITS.outline.min}
+                    max={max.outline}
+                    defaultValue={PANEL_LIMITS.outline.default}
+                    step={16}
+                    direction={1}
+                    homeEnd
+                    onChange={(value, keep) => change('outline', value, keep)}
+                    valueAt={(clientX) => {
+                      const box = row.current?.getBoundingClientRect()
+                      return box ? clientX - box.left - DIVIDER_WIDTH / 2 : null
+                    }}
+                    className="hidden w-1.5 shrink-0 xl:flex"
+                  />
+                </>
+              )}
+
+              <div className="relative flex min-h-0 min-w-0 flex-1">
+                <main
+                  ref={sheetScroller}
+                  className="relative min-h-0 min-w-0 flex-1 overflow-auto bg-background-gray-secondary [scrollbar-gutter:stable]"
+                >
+                  {examDoc.mode === 'FREE' ? (
+                    examDoc.loadError && examDoc.loading ? (
+                      <div className="mx-auto max-w-[560px] px-4 py-10">
+                        <Notice tone="danger">
+                          {examDoc.loadError}
+                          <Button size="sm" appearance="outline" onClick={examDoc.retryLoad}>
+                            Thử lại
+                          </Button>
+                        </Notice>
+                      </div>
+                    ) : (
+                      <>
+                        {examDoc.conflict && (
+                          <div className="sticky top-0 z-20 mx-auto max-w-[794px] px-4 pt-3 print:hidden">
+                            <Notice tone="warning">
+                              Đề này vừa được lưu ở nơi khác.
+                              <Button size="sm" onClick={() => examDoc.resolveConflict('reload')}>
+                                Tải bản mới nhất
+                              </Button>
+                              <Button size="sm" appearance="outline" onClick={() => examDoc.resolveConflict('keep')}>
+                                Giữ bản của tôi
+                              </Button>
+                            </Notice>
+                          </div>
+                        )}
+                        <DocSheet />
+                      </>
+                    )
+                  ) : (
+                  <div className="mx-auto w-full max-w-[794px] px-3 py-5 sm:px-6 sm:py-8">
+                    {ai.draftLoading ? (
+                      <PaperSkeleton />
+                    ) : (
+                      <ExamPaper
+                        paper={ai.paper}
+                        numberOf={numberOf}
+                        editingId={editingId}
+                        focusedId={focusedId}
+                        onStartEdit={setEditingId}
+                        onStopEdit={() => setEditingId(null)}
+                        onSave={(id, patch) => {
+                          void ai.updateQuestion(id, patch).then(() => setEditingId(null))
+                        }}
+                        onDelete={(id) => {
+                          void ai.deleteItem(id)
+                          if (editingId === id) setEditingId(null)
+                        }}
+                        onKeep={(id, kept) => void ai.toggleKeep(id, kept)}
+                        onMove={(sourceId, targetId) => void ai.moveItem(sourceId, targetId)}
+                        onAdd={(partId) => void addQuestion(partId)}
+                        bank={bankAllowed ? {
+                          saved: (id) => Boolean(bank.savedQuestionId(id)),
+                          canSave: bank.canSave,
+                          saving: bank.isSaving,
+                          onSave: (id) => void saveOneToBank(id),
+                        } : undefined}
+                      />
+                    )}
+                  </div>
+                  )}
+                  <SheetWriting
+                    editor={editor}
+                    run={ai.runStore}
+                    scroller={sheetScroller}
+                    following={ai.running && examDoc.mode === 'FREE'}
+                    raised={chatBar}
+                  />
+                </main>
+                {chatBar && (
+                  <ChatBar
+                    {...chatPanelProps}
+                    run={ai.runStore}
+                    onDockSide={dockSide}
+                    onHide={() => setChatOpen(false)}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+          {chatBeside && (
             <>
               <ResizeHandle
-                label={variantsOpen ? 'Kéo để đổi độ rộng bảng mã đề' : 'Kéo để đổi độ rộng trợ lý AI'}
+                label="Kéo để đổi độ rộng trợ lý AI"
                 value={widths.chat}
                 min={PANEL_LIMITS.chat.min}
                 max={max.chat}
@@ -899,21 +891,14 @@ export default function AiAssistantScreen({
                 }}
                 className="hidden w-1.5 shrink-0 lg:flex"
               />
-              {variantsOpen ? (
-                <VariantsPanel
-                  variants={variants}
-                  onClose={() => showVariants(false)}
-                  style={{ width: widths.chat }}
-                  className="hidden shrink-0 border-l border-card-border lg:flex"
-                />
-              ) : (
-                <ChatPanel
-                  {...chatPanelProps}
-                  onCollapse={() => setChatOpen(false)}
-                  style={{ width: widths.chat }}
-                  className="hidden shrink-0 border-l border-card-border lg:flex"
-                />
-              )}
+              <ChatPanel
+                {...chatPanelProps}
+                card
+                onCollapse={() => setChatOpen(false)}
+                onDockBottom={dockBottom}
+                style={{ width: widths.chat }}
+                className="hidden shrink-0 lg:flex"
+              />
             </>
           )}
         </div>
@@ -938,6 +923,9 @@ export default function AiAssistantScreen({
             numberOf={numberOf}
             role={quizAccess.role}
             onClose={() => setQuizDialog(false)}
+            onExported={(as) => {
+              if (ai.activeId) void ai.markPublished(ai.activeId, as)
+            }}
           />
         )}
 
@@ -951,22 +939,7 @@ export default function AiAssistantScreen({
             <ChatPanel
               {...chatPanelProps}
               onClose={() => setChatSheet(false)}
-              className="flex h-full w-full"
-            />
-          </SheetContent>
-        </SheetOverlay>
-
-        <SheetOverlay isOpen={variantsSheet} onOpenChange={setVariantsSheet}>
-          <SheetContent
-            side="right"
-            showCloseButton={false}
-            className="w-[min(380px,92vw)]! min-w-0! max-w-[92vw]! gap-0 border-l border-card-border bg-card-background p-0 sm:max-w-[92vw]!"
-          >
-            <SheetTitle className="sr-only">Tạo mã đề</SheetTitle>
-            <VariantsPanel
-              variants={variants}
-              onClose={() => setVariantsSheet(false)}
-              onNavigate={() => setVariantsSheet(false)}
+              onDockBottom={dockBottom}
               className="flex h-full w-full"
             />
           </SheetContent>
@@ -978,10 +951,11 @@ export default function AiAssistantScreen({
             showCloseButton={false}
             className="w-[min(280px,85vw)]! min-w-0! max-w-[85vw]! gap-0 border-r border-card-border bg-card-background p-0 sm:max-w-[85vw]!"
           >
-            <SheetTitle className="sr-only">Mục lục đề thi</SheetTitle>
-            {renderTree(composeOutline, {
+            <SheetTitle className="sr-only">Đề của tôi</SheetTitle>
+            {renderTree({
               onClose: () => setOutlineSheet(false),
               templates: composeTemplates,
+              outline: composeOutline,
               className: 'flex h-full w-full',
             })}
           </SheetContent>
@@ -1022,10 +996,7 @@ export default function AiAssistantScreen({
             confirmLabel="Thay đề"
             variant="danger"
             onCancel={() => setPendingReplace(null)}
-            onConfirm={() => {
-              setPendingReplace(null)
-              ai.send()
-            }}
+            onConfirm={replaceExam}
           />
         )}
 
@@ -1048,6 +1019,8 @@ export default function AiAssistantScreen({
         <StatusBar />
       </div>
       </ExamDocContext.Provider>
+      </ChatActionsProvider>
+      </AssistantRuntimeProvider>
     </ThemeProvider>
   )
 }

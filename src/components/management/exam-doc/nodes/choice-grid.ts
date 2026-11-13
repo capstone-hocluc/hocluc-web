@@ -97,7 +97,8 @@ function sharedResizeObserver(): ResizeObserver | null {
   resizeObserver ??= new ResizeObserver((entries) => {
     for (const entry of entries) {
       const view = viewsByDom.get(entry.target)
-      if (view) view.remeasure()
+      // Only a new width can change how many options fit a row; a new height is the grid's own columns changing.
+      if (view && view.measuredWidth !== Math.round(entry.contentRect.width)) view.remeasure()
     }
   })
   return resizeObserver
@@ -112,6 +113,8 @@ class ChoiceGridView implements NodeView {
   contentDOM: HTMLElement
   private node: ProseMirrorNode
   private mutations: MutationObserver | null = null
+  /** The grid's width when its options were last measured, in whole px (-1: not measured yet). */
+  measuredWidth = -1
 
   constructor(node: ProseMirrorNode) {
     this.node = node
@@ -148,7 +151,10 @@ class ChoiceGridView implements NodeView {
   read(): Reading | null {
     const width = this.dom.clientWidth
     if (!width) return null
-    const gap = parseFloat(getComputedStyle(this.dom).columnGap) || 0
+    const style = getComputedStyle(this.dom)
+    // As the resize observer reports it (the content box), so its first report after this measure changes nothing.
+    this.measuredWidth = Math.round(width - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0))
+    const gap = parseFloat(style.columnGap) || 0
     let widest = 0
     for (const cell of Array.from(this.dom.children)) {
       if (cell instanceof HTMLElement) widest = Math.max(widest, cell.offsetWidth)

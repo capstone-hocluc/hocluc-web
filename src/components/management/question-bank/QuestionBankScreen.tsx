@@ -338,11 +338,20 @@ export default function QuestionBankScreen({ readOnly = false, title, onNavigate
   // Exams are composed, and papers loaded and read, in the AI workspace; every viewer of the bank may open it.
   const openAssistant =
     onNavigate && profile && canAccessPage(profile.role, 'ai-assistant') ? () => onNavigate('ai-assistant') : undefined
+  // Questions are labelled by the exam framework, so it is kept from here.
+  const openTaxonomy =
+    onNavigate && profile && canAccessPage(profile.role, 'taxonomy') ? () => onNavigate('taxonomy') : undefined
 
   return (
     <>
       <PageHeading title={title} readOnly={readOnly} action={(
         <>
+          {openTaxonomy && (
+            <Button appearance="outline" onClick={openTaxonomy}>
+              <ListTree size={16} />
+              Khung đề thi
+            </Button>
+          )}
           {openAssistant && (
             <Button appearance="outline" onClick={openAssistant}>
               <Sparkles size={16} />

@@ -528,12 +528,10 @@ function listLevels(ordered: boolean, start = 1) {
 interface BuildOptions {
   /** Options per row of each 'auto' choice grid as the sheet shows it, in document order. */
   shownColumns?: number[]
-  /** Code of the exam variant (mã đề), for the file name. */
-  code?: string | null
 }
 
 /** The document as a Word file laid out like the printed sheet. */
-export async function buildDocx(doc: JSONContent, { shownColumns = [], code = null }: BuildOptions = {}): Promise<DocxResult> {
+export async function buildDocx(doc: JSONContent, { shownColumns = [] }: BuildOptions = {}): Promise<DocxResult> {
   const writer = new DocxWriter(shownColumns)
   const children = await writer.blocks(doc.content, { width: TEXT_WIDTH, level: -1 })
   const heading = (sizePt: number, before: number, after: number) => ({
@@ -577,7 +575,7 @@ export async function buildDocx(doc: JSONContent, { shownColumns = [], code = nu
   })
   return {
     blob: await Packer.toBlob(document),
-    fileName: fileNameFor(doc, 'docx', code),
+    fileName: fileNameFor(doc, 'docx'),
     formulas: writer.formulas,
     missingImages: writer.missingImages,
   }
@@ -595,9 +593,9 @@ function shownChoiceColumns(editor: Editor): number[] {
   return columns
 }
 
-/** Downloads the editor's document (the original, or the variant `code` being viewed) as a .docx named after its title. */
-export async function exportDocx(editor: Editor, code: string | null = null): Promise<DocxResult> {
-  const result = await buildDocx(editor.getJSON(), { shownColumns: shownChoiceColumns(editor), code })
+/** Downloads the editor's document as a .docx named after its title. */
+export async function exportDocx(editor: Editor): Promise<DocxResult> {
+  const result = await buildDocx(editor.getJSON(), { shownColumns: shownChoiceColumns(editor) })
   downloadBlob(result.blob, result.fileName)
   return result
 }

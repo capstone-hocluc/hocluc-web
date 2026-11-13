@@ -1,5 +1,5 @@
 import SelectField from '../../components/console/select-field'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Check, ClipboardCheck, RefreshCw } from '../../components/console/icons'
 import { getMainCourses, type Course } from '../../services/courseService'
 import { getCourseSchedules } from '../../services/scheduleService'
@@ -37,7 +37,11 @@ function requireData<T>(response: { data?: T }, message: string): T {
   return response.data
 }
 
-export default function AttendanceManagementPage() {
+export default function AttendanceManagementPage({ title = 'Điểm danh', navigation }: {
+  title?: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
+}) {
   const [courseId, setCourseId] = useState('')
   const [scheduleId, setScheduleId] = useState('')
   const [drafts, setDrafts] = useState<Record<string, AttendanceStatus>>({})
@@ -116,7 +120,7 @@ export default function AttendanceManagementPage() {
   return (
     <div className="space-y-5">
       <PageHeading
-        title="Điểm danh"
+        title={title}
         subtitle="Chỉ áp dụng cho lịch đơn."
         action={
           <Button
@@ -130,6 +134,7 @@ export default function AttendanceManagementPage() {
           </Button>
         }
       />
+      {navigation}
 
       {busy && <Notice tone="info">Đang lưu điểm danh…</Notice>}
       {error && <Notice tone="danger">{error}</Notice>}

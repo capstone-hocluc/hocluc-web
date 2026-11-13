@@ -1,22 +1,17 @@
 import { useState } from 'react'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { isQuizPage, quizMenuPage } from '../../../lib/console-routes'
-import { findNavItem } from '../../../lib/console-nav'
+import { pageTabs } from '../../../lib/console-nav'
 import type { UserRole } from '../../../services/userService'
 import { ForbiddenPage } from '../../console/access-states'
 import { useConsoleFocused } from '../../console/console-focus'
 import Notice from '../../console/notice'
+import { PageTabsList } from '../../console/page-tabs'
 import { TeacherAttempts } from '../quiz-review-screens'
 import QuizScreen from './QuizScreen'
 import MockExamScreen from './MockExamScreen'
 import QuizDetails from './QuizDetails'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/Tabs'
-
-const assessmentTabs = [
-  { page: 'quizzes', label: 'Bài học / chương' },
-  { page: 'placements', label: 'Đánh giá đầu vào' },
-  { page: 'mock-exams', label: 'Thi thử' },
-]
+import { Tabs, TabsContent } from '../../ui/Tabs'
 
 function QuizPage({ role, page, readOnly, onNavigate }: {
   role: UserRole; page: string; readOnly: boolean; onNavigate: (page: string) => void
@@ -32,15 +27,14 @@ function QuizPage({ role, page, readOnly, onNavigate }: {
   // A direct editor URL is denied before fetching or mounting any editor.
   if (readOnly && (creating || editing)) return <ForbiddenPage />
   if (viewing) return <QuizDetails quizId={viewing} expectedType={menu === 'placements' ? 'PLACEMENT' : undefined} onBack={() => onNavigate(menu)} />
-  if (menu === 'attempts') return <TeacherAttempts />
-  const tabs = assessmentTabs.filter(tab => findNavItem(role, tab.page))
-  const navigation = <TabsList aria-label="Loại bài kiểm tra" className="w-full gap-4 sm:gap-6">
-    {tabs.map(tab => <TabsTrigger key={tab.page} value={tab.page}>{tab.label}</TabsTrigger>)}
-  </TabsList>
+  const tabs = pageTabs(role, menu)
+  const navigation = tabs.length > 0 ? <PageTabsList tabs={tabs} label="Loại bài kiểm tra" /> : undefined
   return <Tabs value={menu} onValueChange={onNavigate} activationMode="manual" className="min-w-0">
     <TabsContent value={menu} className="flex min-w-0 flex-col gap-4">
       {notice && !workspaceOpen && <Notice role="status">{notice}</Notice>}
-      {menu === 'mock-exams' || menu === 'placements'
+      {menu === 'attempts'
+        ? <TeacherAttempts navigation={navigation} />
+        : menu === 'mock-exams' || menu === 'placements'
         ? <MockExamScreen navigation={navigation} assessmentType={menu === 'placements' ? 'PLACEMENT' : 'EXAM'} readOnly={readOnly} startCreating={creating} initialEditorId={editing}
             onBack={() => onNavigate('dashboard')} onAction={setNotice} />
         : <QuizScreen navigation={navigation} course={{ id: courseId, name: 'Khóa học' }} readOnly={readOnly}
