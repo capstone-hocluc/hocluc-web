@@ -24,7 +24,7 @@ import {
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
 import QuestionBankScreen from './question-bank/QuestionBankScreen'
-import AiAssistantScreen from './ai-assistant/AiAssistantScreen'
+import AiAssistantWorkspace from './ai-assistant/AiAssistantWorkspace'
 import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import {
   buildNavSections,
@@ -206,7 +206,7 @@ function ManagementDashboard({
   // The assistant is its own full-screen workspace, outside the console chrome.
   if (page === 'ai-assistant' && canAccessPage(role, page)) {
     return (
-      <AiAssistantScreen
+      <AiAssistantWorkspace
         onBack={() => onNavigate('question-bank')}
         // The backend lets staff and above load a paper (it costs tokens); a teacher only opens loaded ones.
         canImport={role === 'STAFF' || role === 'MANAGER' || role === 'ADMINISTRATOR'}

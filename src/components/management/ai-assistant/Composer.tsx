@@ -6,20 +6,21 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react'
+import { ComposerPrimitive, useAuiEvent, useAuiState } from '@assistant-ui/react'
 import { Gallery, Paperclip2 } from '@tailgrids/icons'
 import { cn } from '../../../lib/cn'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import {
-  ArrowUp,
   Check,
   ChevronDown,
   ClipboardList,
   FileCheck2,
   Filter,
   Sparkles,
-  Square,
   type LucideIcon,
 } from '../../console/icons'
+import { ComposerSend } from '../../assistant-ui/elements/composer'
+import { composerChip, composerTool, floating, paper } from '../../assistant-ui/elements/surfaces'
 import Button from '../../console/button'
 import Notice from '../../console/notice'
 import type { SelectOption } from '../../console/select-field'
@@ -96,22 +97,16 @@ const MODES: {
   },
 ]
 
-// Chips of the composer; below 20rem of composer width the mode chip keeps only its icon.
-const CHIP =
-  'inline-flex h-8 min-w-0 items-center gap-1 rounded-lg px-1.5 text-[12.5px] font-medium whitespace-nowrap transition-colors hover:bg-background-gray-secondary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border'
 // The menus open upwards over the composer, as wide as it is (capped): aligned to its right edge under the panel's
 // chips, to its left edge under the bar's, which sit first.
-const MENU =
-  'absolute right-0 bottom-full left-0 z-50 mb-2 rounded-xl border border-card-border bg-card-background shadow-card-hover'
+const MENU = cn(floating, 'absolute right-0 bottom-full left-0 z-50 mb-2 rounded-2xl')
 const menuAt = (compact: boolean) => cn(MENU, compact ? 'mr-auto' : 'ml-auto')
 
 interface ComposerProps {
   mode: AiAssistantMode
   onModeChange: (mode: AiAssistantMode) => void
-  value: string
-  onChange: (value: string) => void
-  onSend: () => void
   busy: boolean
+  /** Stops the run going on (the send button turns into it). */
   onStop: () => void
   hasMessages: boolean
   notice: string | null
@@ -133,12 +128,13 @@ interface ComposerProps {
   trailing?: ReactNode
 }
 
+/**
+ * The box the teacher writes to the assistant in, on assistant-ui's composer: its words live in the chat runtime, so
+ * they stay when the box unmounts (the bar shows the run's progress in its place) and come back when a send does not go.
+ */
 export default function Composer({
   mode,
   onModeChange,
-  value,
-  onChange,
-  onSend,
   busy,
   onStop,
   hasMessages,
@@ -156,51 +152,33 @@ export default function Composer({
 }: ComposerProps) {
   const bar = variant === 'bar'
   const active = MODES.find((item) => item.id === mode) ?? MODES[0]
-  const ownRef = useRef<HTMLTextAreaElement>(null)
-  const textareaRef = inputRef ?? ownRef
   const missingConfig = mode === 'mock-exam' && !settings.bankSourceId
-  const blocked = missingConfig
-  const canSend = Boolean(value.trim()) && !busy && !blocked
+  const text = useAuiState(({ composer }) => composer.text)
   // Counts the sends; the settings menu is keyed by it, so it closes and does not cover the progress.
   const [sends, setSends] = useState(0)
-  const send = () => {
-    setSends((count) => count + 1)
-    onSend()
-  }
-
-  useEffect(() => {
-    const element = textareaRef.current
-    if (!element) return
-    element.style.height = 'auto'
-    element.style.height = `${Math.min(element.scrollHeight, bar ? 160 : 200)}px`
-  }, [value, textareaRef, bar])
+  useAuiEvent('composer.send', () => setSends((count) => count + 1))
 
   const textarea = (
-    <textarea
-      ref={textareaRef}
+    <ComposerPrimitive.Input
+      ref={inputRef}
       aria-label="Tin nhắn cho trợ lý AI"
-      rows={1}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-          event.preventDefault()
-          if (canSend) send()
-        }
-      }}
       placeholder={active.placeholder}
-      style={{ minHeight: bar || hasMessages ? 24 : 48 }}
-      className={cn(
-        'block w-full resize-none bg-transparent text-sm leading-6 text-text-primary outline-none placeholder:text-input-placeholder-text',
-        // The bar's box stops growing sooner and scrolls past it.
-        bar ? 'overflow-y-auto' : 'overflow-hidden'
-      )}
+      // Escape belongs to the bar (it folds) and the chip menus, not to stopping the run; the box takes focus only
+      // when the teacher puts it there.
+      cancelOnEscape={false}
+      unstable_focusOnRunStart={false}
+      unstable_focusOnScrollToBottom={false}
+      unstable_focusOnThreadSwitched={false}
+      minRows={bar || hasMessages ? 1 : 2}
+      // The bar's box stops growing sooner and scrolls past it.
+      maxRows={bar ? 6 : 8}
+      className="block w-full resize-none overflow-y-auto bg-transparent text-sm leading-6 text-text-primary outline-none placeholder:text-text-tertiary"
     />
   )
   const settingsMenu = mode !== 'ask' && (
     <SettingsMenu
       key={sends}
-      summary={settingsSummary(mode, settings, requestedCount(value))}
+      summary={settingsSummary(mode, settings, requestedCount(text))}
       missing={missingConfig}
       hasError={Boolean(mode === 'mock-exam' && papersError)}
       compact={bar}
@@ -212,28 +190,24 @@ export default function Composer({
       />
     </SettingsMenu>
   )
-  const sendButton = (
-    <Button
-      type={busy ? 'button' : 'submit'}
-      onClick={busy ? onStop : undefined}
-      disabled={!busy && (!value.trim() || blocked)}
-      aria-label={busy ? 'Dừng tạo câu trả lời' : 'Gửi tin nhắn'}
-      title={busy ? 'Dừng tạo câu trả lời' : 'Gửi (Enter)'}
-      size="icon"
-      shape="pill"
-      // The shared button sizes every icon to 20px and rings it on any focus: here the stop square stays a
-      // small glyph and the ring shows for keyboard focus only (a click on Gửi would otherwise keep it).
-      className={cn(
-        'size-8 shrink-0 focus:ring-0 focus-visible:ring-2',
-        busy ? '[&>svg]:size-3.5' : '[&>svg]:size-4'
-      )}
-    >
-      {busy ? (
-        <Square strokeWidth={0} fill="currentColor" />
-      ) : (
-        <ArrowUp size={16} strokeWidth={2.2} />
-      )}
-    </Button>
+  // Ink once there are words to send; the send primitive turns it off while there are none (or no paper is chosen).
+  const sendButton = busy ? (
+    <ComposerSend
+      streaming
+      idle={false}
+      onClick={onStop}
+      aria-label="Dừng tạo câu trả lời"
+      title="Dừng tạo câu trả lời"
+    />
+  ) : (
+    <ComposerPrimitive.Send asChild>
+      <ComposerSend
+        streaming={false}
+        idle={!text.trim() || missingConfig}
+        aria-label="Gửi tin nhắn"
+        title="Gửi (Enter)"
+      />
+    </ComposerPrimitive.Send>
   )
 
   return (
@@ -248,16 +222,15 @@ export default function Composer({
       )}
       {/* The chip menus position against this box, so they never overflow a narrow panel. */}
       <div className="relative">
-        <form
-          onSubmit={(event) => {
-            event.preventDefault()
-            if (!busy) send()
-          }}
+        <ComposerPrimitive.Root
           className={cn(
             '@container',
-            // The bar is the box itself; the panel's composer is a card of its own.
+            // The bar is the box itself; the panel's composer is a card of its own (Elements' composer bar).
             !bar &&
-              'rounded-xl border border-card-border bg-card-background shadow-card-soft transition-[border-color,box-shadow] focus-within:border-input-primary-focus-border focus-within:shadow-card'
+              cn(
+                paper,
+                'flex flex-col gap-1 rounded-[24px] p-2.5 shadow-xs transition-colors focus-within:border-text-primary/25'
+              )
           )}
         >
           {bar ? (
@@ -272,29 +245,27 @@ export default function Composer({
             </div>
           ) : (
             <>
-              <div className="px-3 pt-3 pb-1">{textarea}</div>
-              <div className="flex min-w-0 items-center gap-1.5 px-2 pb-2">
-                <div className="flex shrink-0 items-center gap-0.5">
-                  <Button
-                    appearance="ghost"
-                    size="icon"
+              <div className="px-2 pt-1">{textarea}</div>
+              <div className="flex min-w-0 items-center gap-1.5">
+                <div className="flex shrink-0 items-center">
+                  <button
+                    type="button"
                     disabled
                     aria-label="Thêm ảnh vào yêu cầu"
                     title="Sắp có"
-                    className="size-8 text-icon-tertiary"
+                    className={composerTool}
                   >
-                    <Gallery size={17} aria-hidden />
-                  </Button>
-                  <Button
-                    appearance="ghost"
-                    size="icon"
+                    <Gallery size={16} aria-hidden />
+                  </button>
+                  <button
+                    type="button"
                     disabled
                     aria-label="Đính kèm tệp (chưa hỗ trợ)"
                     title="Đính kèm tệp (chưa hỗ trợ)"
-                    className="size-8 text-icon-tertiary"
+                    className={composerTool}
                   >
-                    <Paperclip2 size={17} aria-hidden />
-                  </Button>
+                    <Paperclip2 size={16} aria-hidden />
+                  </button>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
                   <ModeMenu mode={mode} onModeChange={onModeChange} />
@@ -304,7 +275,7 @@ export default function Composer({
               </div>
             </>
           )}
-        </form>
+        </ComposerPrimitive.Root>
       </div>
     </div>
   )
@@ -334,9 +305,14 @@ function ModeMenu({
         aria-label="Chế độ trả lời"
         title={`Chế độ trả lời: ${active.label}`}
         onClick={() => setOpen((value) => !value)}
-        className={cn(CHIP, mode === 'ask' ? 'text-text-secondary' : 'text-primary-text')}
+        className={cn(composerChip, 'gap-1')}
       >
-        <ActiveIcon size={14} strokeWidth={1.7} aria-hidden className="shrink-0" />
+        <ActiveIcon
+          size={14}
+          strokeWidth={1.7}
+          aria-hidden
+          className={cn('shrink-0', mode !== 'ask' && 'text-primary-text')}
+        />
         {/* Ask has no settings chip beside it, so its label always fits. */}
         <span
           className={cn(
@@ -350,7 +326,7 @@ function ModeMenu({
           size={12}
           strokeWidth={1.8}
           aria-hidden
-          className={cn('shrink-0 text-icon-tertiary transition-transform', open && 'rotate-180')}
+          className={cn('shrink-0 opacity-60 transition-transform', open && 'rotate-180')}
         />
       </button>
       {open && (
@@ -372,15 +348,15 @@ function ModeMenu({
                   onModeChange(item.id)
                   setOpen(false)
                 }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-background-gray-secondary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border"
+                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors outline-none hover:bg-text-primary/[0.05] focus-visible:ring-1 focus-visible:ring-text-primary/25 dark:hover:bg-text-primary/[0.08]"
               >
                 <span
                   aria-hidden
                   className={cn(
-                    'grid size-9 shrink-0 place-items-center rounded-lg',
+                    'grid size-9 shrink-0 place-items-center rounded-xl',
                     selected
                       ? 'bg-badge-primary-background text-primary-text'
-                      : 'bg-background-gray-secondary text-icon-tertiary'
+                      : 'bg-text-primary/[0.05] text-text-tertiary'
                   )}
                 >
                   <Icon size={18} strokeWidth={1.6} />
@@ -394,9 +370,7 @@ function ModeMenu({
                   </span>
                 </span>
                 {selected && (
-                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-button-primary-background text-button-primary-text">
-                    <Check size={12} strokeWidth={3} />
-                  </span>
+                  <Check size={15} strokeWidth={2.2} aria-hidden className="shrink-0 text-text-primary" />
                 )}
               </button>
             )
@@ -464,16 +438,13 @@ function SettingsMenu({
         aria-label="Tùy chọn"
         title={summary || 'Tùy chọn'}
         onClick={() => setOpen((value) => !value)}
-        className={cn(
-          CHIP,
-          attention ? 'text-danger' : 'text-text-secondary hover:text-text-primary'
-        )}
+        className={cn(composerChip, 'gap-1', attention && 'text-danger hover:text-danger')}
       >
         <Filter
           size={14}
           strokeWidth={1.7}
           aria-hidden
-          className={cn('shrink-0', !compact && '@max-xs:hidden')}
+          className={cn('shrink-0', !compact && '@max-sm:hidden')}
         />
         <span className={cn('min-w-0 truncate', compact && 'sr-only')}>
           {missing ? 'Chọn cấu hình đề' : 'Tùy chọn'}
@@ -482,7 +453,7 @@ function SettingsMenu({
           size={12}
           strokeWidth={1.8}
           aria-hidden
-          className={cn('shrink-0 text-icon-tertiary transition-transform', open && 'rotate-180')}
+          className={cn('shrink-0 opacity-60 transition-transform', open && 'rotate-180')}
         />
       </button>
       {open && (

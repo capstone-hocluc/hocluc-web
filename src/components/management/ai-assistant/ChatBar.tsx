@@ -3,13 +3,17 @@
 // folds it to a button; its menu puts it back beside the paper or turns it off.
 import { useRef, useState } from 'react'
 import * as Menu from '@radix-ui/react-dropdown-menu'
+import { runStagesOf, type AiRunStore } from '../../../hooks/useAiAssistant'
 import { cn } from '../../../lib/cn'
-import { MoreHorizontal, PanelBottom, PanelRight, Sparkles, Square, X } from '../../console/icons'
+import { useStoreValue } from '../../../lib/value-store'
+import { ComposerSend } from '../../assistant-ui/elements/composer'
+import { ThinkingIndicator } from '../../assistant-ui/elements/thinking-indicator'
+import { MoreHorizontal, PanelBottom, PanelRight, Sparkles, X } from '../../console/icons'
 import { MenuContent, MenuItem } from '../exam-doc/menubar/menu-ui'
 import AiOrb from './AiOrb'
-import AssistantMessage from './AssistantMessage'
 import type { ChatPanelProps } from './ChatPanel'
 import AssistantSources from './chat/AssistantSources'
+import { ChatTurn } from './chat/ChatThread'
 import Composer from './Composer'
 
 const ICON_BUTTON =
@@ -19,9 +23,7 @@ type ChatBarProps = Pick<
   ChatPanelProps,
   | 'messages'
   | 'mode'
-  | 'value'
   | 'pending'
-  | 'stages'
   | 'notice'
   | 'onDismissNotice'
   | 'settings'
@@ -31,15 +33,10 @@ type ChatBarProps = Pick<
   | 'papersError'
   | 'onReloadPapers'
   | 'onModeChange'
-  | 'onValueChange'
-  | 'onSend'
   | 'onStop'
-  | 'onRegenerate'
-  | 'onDownload'
-  | 'onAnswerKey'
-  | 'onRetry'
-  | 'onChooseSubject'
 > & {
+  /** The run going on; the bar shows the stage it is at. */
+  run: AiRunStore
   /** Puts the assistant back beside the paper, its whole thread in view. */
   onDockSide: () => void
   /** Turns the bar off; "Hỏi AI" brings it back. */
@@ -50,9 +47,8 @@ type ChatBarProps = Pick<
 export default function ChatBar({
   messages,
   mode,
-  value,
   pending,
-  stages,
+  run,
   notice,
   onDismissNotice,
   settings,
@@ -62,14 +58,7 @@ export default function ChatBar({
   papersError,
   onReloadPapers,
   onModeChange,
-  onValueChange,
-  onSend,
   onStop,
-  onRegenerate,
-  onDownload,
-  onAnswerKey,
-  onRetry,
-  onChooseSubject,
   onDockSide,
   onHide,
   className,
@@ -88,7 +77,7 @@ export default function ChatBar({
   const answer = answerShown
     ? [...messages].reverse().find((message) => message.role !== 'user')
     : undefined
-  const running = stages.find((stage) => stage.state === 'running')
+  const running = useStoreValue(run, runStagesOf).find((stage) => stage.state === 'running')
 
   function expand() {
     setCollapsed(false)
@@ -184,14 +173,7 @@ export default function ChatBar({
               </button>
             </div>
             <div className="max-h-[min(45vh,420px)] overflow-y-auto px-4 pb-3">
-              <AssistantMessage
-                message={answer}
-                onRegenerate={onRegenerate}
-                onDownload={onDownload}
-                onAnswerKey={onAnswerKey}
-                onRetry={onRetry}
-                onChooseSubject={onChooseSubject}
-              />
+              <ChatTurn messageId={answer.id} />
             </div>
           </div>
         )}
@@ -201,19 +183,17 @@ export default function ChatBar({
             aria-live="polite"
             className="flex min-w-0 items-center gap-3 py-2 pr-2 pl-4"
           >
-            <AiOrb active />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-secondary">
-              {running?.title ?? 'Trợ lý AI đang xử lý'}
-            </span>
-            <button
-              type="button"
+            <ThinkingIndicator
+              label={running?.title ?? 'Trợ lý AI đang xử lý'}
+              className="flex-1 font-medium text-text-secondary"
+            />
+            <ComposerSend
+              streaming
+              idle={false}
               onClick={onStop}
               aria-label="Dừng tạo câu trả lời"
               title="Dừng tạo câu trả lời"
-              className="grid size-8 shrink-0 place-items-center rounded-full bg-button-primary-background text-button-primary-text transition-colors hover:bg-button-primary-hover-background focus-visible:ring-2 focus-visible:ring-button-primary-focus-ring"
-            >
-              <Square size={13} strokeWidth={0} fill="currentColor" />
-            </button>
+            />
           </div>
         ) : (
           <>
@@ -235,9 +215,6 @@ export default function ChatBar({
               trailing={menu}
               mode={mode}
               onModeChange={onModeChange}
-              value={value}
-              onChange={onValueChange}
-              onSend={onSend}
               busy={pending}
               onStop={onStop}
               hasMessages={messages.length > 0}

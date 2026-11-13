@@ -2,7 +2,7 @@ import type { Editor, JSONContent } from '@tiptap/react'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { showErrorToast } from '../../../lib/toastBus'
 import type { AiSolutionStyle } from '../../../services/aiAssistantService'
-import type { ExamPaper, ExamPaperPart, ExamPaperQuestion } from '../ai-assistant/exam-format'
+import { compareDifficulty, type ExamPaper, type ExamPaperPart, type ExamPaperQuestion } from '../ai-assistant/exam-format'
 import { inlineContent, textBlocks } from './draft-to-doc'
 import { END_LINE } from './exam-lines'
 
@@ -146,16 +146,24 @@ export function answerKeyBlocks(doc: ProseMirrorNode, paper: ExamPaper, style: A
   const sections = keySections(doc, paper)
   if (sections.length === 0) return []
   const many = sections.length > 1
-  const review = sections.flatMap((section) => section.entries).filter((entry) => entry.question.needsReview)
+  const entries = sections.flatMap((section) => section.entries)
+  const review = entries.filter((entry) => entry.question.needsReview)
+  // The AI's check judged these easier or harder than the level asked for; they were kept as written, not rewritten.
+  const off = (sign: number) =>
+    entries.filter(({ question }) => {
+      const estimate = question.estimatedDifficulty
+      return estimate ? Math.sign(compareDifficulty(estimate, question.difficulty)) === sign : false
+    })
+  const notes: [string, KeyEntry[]][] = [
+    ['Câu cần thầy cô kiểm tra lại trước khi dùng', review],
+    ['Câu AI ước lượng dễ hơn mức yêu cầu', off(-1)],
+    ['Câu AI ước lượng khó hơn mức yêu cầu', off(1)],
+  ]
   const blocks: JSONContent[] = [{ type: 'pageBreak', attrs: { examKey: 'table' } }, title('BẢNG ĐÁP ÁN', 'table')]
   for (const section of sections) blocks.push(...sectionTitle(section, 'table', many), answerTable(section.entries))
-  if (review.length > 0) {
-    blocks.push(
-      paragraph(
-        [text(`Câu cần thầy cô kiểm tra lại trước khi dùng: ${review.map((entry) => entry.number).join(', ')}.`, ['italic'])],
-        'guide'
-      )
-    )
+  for (const [lead, listed] of notes) {
+    if (listed.length === 0) continue
+    blocks.push(paragraph([text(`${lead}: ${listed.map((entry) => entry.number).join(', ')}.`, ['italic'])], 'guide'))
   }
   blocks.push({ type: 'pageBreak', attrs: { examKey: 'guide' } }, title('HƯỚNG DẪN GIẢI', 'guide'))
   for (const section of sections) {

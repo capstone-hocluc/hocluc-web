@@ -61,7 +61,11 @@
   display: none !important;
 }
 
-.exam-doc-content > * + * {
+/*
+ * Every block but the first, written without a sibling combinator: with `> * + *`, Chrome restyles every element of
+ * the sheet whenever a block is added or removed (a question landing, a page gap moving). Same specificity (0,1,0).
+ */
+.exam-doc-content > :where(:not(:first-child)) {
   margin-top: 0.25em;
 }
 

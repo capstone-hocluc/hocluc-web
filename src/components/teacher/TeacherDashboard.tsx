@@ -9,7 +9,7 @@ import QuizConsoleScreen from '../management/quiz/QuizConsoleScreen'
 import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import { DashboardActions, RoleDashboardWelcome } from '../common/DashboardWelcome'
 import { ManagementScreen } from '../management/ManagementDashboard'
-import AiAssistantScreen from '../management/ai-assistant/AiAssistantScreen'
+import AiAssistantWorkspace from '../management/ai-assistant/AiAssistantWorkspace'
 import { ForbiddenPage } from '../console/access-states'
 import { buildNavSections, canAccessPage, sidebarPage } from '../../lib/console-nav'
 import { roleHome } from '../../lib/role-home'
@@ -107,7 +107,7 @@ function TeacherDashboard({
   ]
   if (allowed && menuPageOf(view) === 'ai-assistant') {
     return (
-      <AiAssistantScreen onBack={() => navigate('dashboard')} backHref={roleHome('TEACHER')} backLabel="Về trang tổng quan" />
+      <AiAssistantWorkspace onBack={() => navigate('dashboard')} backHref={roleHome('TEACHER')} backLabel="Về trang tổng quan" />
     )
   }
   return (

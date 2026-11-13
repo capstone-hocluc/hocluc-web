@@ -1776,6 +1776,62 @@ test('a finished compose run writes the answer table and the full solution guide
     .toEqual(expect.arrayContaining(['BẢNG ĐÁP ÁN', 'HƯỚNG DẪN GIẢI', 'Câu 2. Chọn A.']))
 })
 
+test('the key names the questions the check judged easier or harder than asked, and those it holds for review', async ({ page }) => {
+  const judged = (id: string, position: number, words: string, auditDifficulty: string, needsReview = false) =>
+    item('conv-9', id, position, words, { passed: !needsReview, needsReview, auditDifficulty })
+  const items = [
+    judged('item-1', 1, 'Tính giá trị của biểu thức x cộng 1.', 'DE'),
+    judged('item-2', 2, 'Rút gọn biểu thức hai x trừ x.', 'KHO', true),
+    judged('item-3', 3, 'Tìm x biết x cộng 2 bằng 5.', 'TB'),
+  ]
+  await installAiFixture(page, 'MANAGER', {
+    conversations: [savedExam],
+    messages: {
+      'conv-9': [
+        { id: 'm1', conversationId: 'conv-9', role: 'USER', mode: 'compose', content: 'Soạn 3 câu đại số', createdAt: stamp },
+        { id: 'm2', conversationId: 'conv-9', role: 'ASSISTANT', mode: 'compose', content: 'Đã thêm 3 câu vào đề.', createdAt: stamp },
+      ],
+    },
+    drafts: {
+      'conv-9': {
+        draft: { id: 'draft-conv-9', conversationId: 'conv-9', name: savedExam.title, examFormat: 'VACT_2025', status: 'DRAFT' },
+        items,
+      },
+    },
+    documents: {
+      'conv-9': {
+        mode: 'FREE',
+        version: 2,
+        updatedAt: stamp,
+        content: {
+          type: 'doc',
+          attrs: { deliveredItems: items.map((entry) => entry.id) },
+          content: [
+            heading(1, 'ĐỀ KIỂM TRA TOÁN 10'),
+            ...items.flatMap((entry) => [
+              { type: 'paragraph', attrs: { examItem: entry.id }, content: [run(`Câu ${entry.position}. `, 'bold'), run(String(entry.question.text))] },
+              choiceGrid('Đáp án đúng', 'Đáp án sai', 'Đáp án gần đúng', 'Không xác định'),
+            ]),
+            paragraph(run('--- HẾT ---', 'bold')),
+          ],
+        },
+      },
+    },
+  })
+  await openSavedDocument(page, 'Rút gọn biểu thức')
+
+  await page.getByRole('button', { name: 'Cập nhật đáp án', exact: true }).click()
+  const sheet = docEditor(page)
+  // Each question stays at the level it was asked for; the key tells the teacher where the check judged otherwise.
+  await expect.poll(async () => (await afterEndLine(sheet)).slice(0, 5)).toEqual([
+    'BẢNG ĐÁP ÁN',
+    'Câu123Đáp ánAAA',
+    'Câu cần thầy cô kiểm tra lại trước khi dùng: 2.',
+    'Câu AI ước lượng dễ hơn mức yêu cầu: 1.',
+    'Câu AI ước lượng khó hơn mức yêu cầu: 2.',
+  ])
+})
+
 test('a short solution style is asked for and shown, and the key is written again without doubling', async ({ page }) => {
   const { state } = await installAiFixture(page)
   await openAssistant(page)
@@ -1922,6 +1978,8 @@ test('"Sửa câu 2" rewrites only that question where it stands and writes its 
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
 
   await expect(page.getByText('Đã sửa 1 câu trong đề')).toBeVisible({ timeout: 15_000 })
+  // The revision's reply offers the exam's files, as the compose run's does.
+  await expect(page.getByRole('button', { name: 'Tải Word', exact: true })).toHaveCount(2)
   const sent = state.requests.filter((entry) => entry.method === 'POST' && entry.path === `${BASE}/conversations/conv-1/messages`).at(-1)
   expect(sent?.body).toMatchObject({ mode: 'revise', config: { items: [{ itemId: 'item-2', number: 2 }], instruction: 'Sửa câu 2 cho khó hơn' } })
   // The run's steps read as what they did, once its stage is opened.
@@ -2086,6 +2144,8 @@ test('a compose request naming no subject is answered with the subjects to choos
   expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 5 câu trung bình môn Toán học', mode: 'compose' })
   // The choices are gone once one is taken.
   await expect(page.getByRole('list', { name: 'Chọn môn' })).toHaveCount(0)
+  // The question stays a question: only the run that made the exam offers its files.
+  await expect(page.getByRole('button', { name: 'Tải Word', exact: true })).toHaveCount(1)
 })
 
 test('a request naming no subject also offers the whole paper when the teacher can teach every subject', async ({ page }) => {
@@ -2100,6 +2160,29 @@ test('a request naming no subject also offers the whole paper when the teacher c
   await choices.getByRole('button', { name: 'Cả đề' }).click()
   await expect.poll(() => messagePosts(state).length).toBe(2)
   expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 5 câu trung bình cả đề', mode: 'compose' })
+})
+
+test('the subjects stay offered while what answers their question is refused', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', { subjectRequired: true })
+  await openAssistant(page)
+  const input = page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+  await input.fill('Soạn 5 câu trung bình')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  const choices = page.getByRole('list', { name: 'Chọn môn' })
+  await expect(choices.getByRole('button')).toHaveText(['Toán học', 'Vật lí'])
+
+  // The teacher names the subject in words, and the send is refused: the question is still open.
+  state.busy = true
+  await input.fill('Soạn 5 câu trung bình môn Vật lí')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await expect(page.getByText('Trợ lý AI báo lỗi')).toBeVisible()
+  await expect(choices.getByRole('button')).toHaveText(['Toán học', 'Vật lí'])
+
+  state.busy = false
+  await choices.getByRole('button', { name: 'Toán học' }).click()
+  await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 5 câu trung bình môn Toán học', mode: 'compose' })
+  await expect(choices).toHaveCount(0)
 })
 
 test('a refused request, a stopped run and the next request all stay in the thread', async ({ page }) => {
@@ -2185,6 +2268,33 @@ test('a failed send leaves no empty exam behind and can be tried again', async (
   await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('Trợ lý AI báo lỗi')).toHaveCount(0)
   expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 2 câu đại số cơ bản' })
+})
+
+test('a new exam the server refuses leaves the current questions and their answer key as they were', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER')
+  await openAssistant(page)
+  const sheet = docEditor(page)
+  await sendCompose(page)
+  await expect(sheet.getByRole('heading', { name: 'BẢNG ĐÁP ÁN', exact: true })).toHaveCount(1)
+  await expect.poll(async () => (await afterEndLine(sheet)).includes('HƯỚNG DẪN GIẢI')).toBe(true)
+  const questions = await questionLines(sheet).allTextContents()
+  expect(questions).toHaveLength(2)
+  const key = await afterEndLine(sheet)
+
+  // Another of the teacher's exams holds the machine: the new exam is refused, so it replaces nothing.
+  state.busy = true
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn 2 câu hình học')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await page.getByRole('dialog', { name: 'Soạn đề mới thay đề hiện tại?' }).getByRole('button', { name: 'Thay đề' }).click()
+  await expect(page.getByText('Trợ lý AI báo lỗi')).toBeVisible()
+  // No run ended, so the key is not written again (from a draft the send had emptied, it would be gone).
+  await page.waitForTimeout(1_000)
+  await expect(questionLines(sheet)).toHaveText(questions)
+  expect(await afterEndLine(sheet)).toEqual(key)
+  // The draft has its questions back: the key written on request is the same one.
+  await page.getByRole('button', { name: 'Cập nhật đáp án', exact: true }).click()
+  await page.waitForTimeout(500)
+  expect(await afterEndLine(sheet)).toEqual(key)
 })
 
 test('the plan step tells what it changed, and the config chip follows the count the words ask for', async ({ page }) => {
@@ -3072,6 +3182,53 @@ test('reopening a document writes in only the draft questions it has never recei
     version: 4,
     content: { attrs: { deliveredItems: ['item-1', 'item-2', 'item-3'] } },
   })
+})
+
+test('a question the teacher takes off the sheet is kept as received, so reopening does not write it back', async ({ page }) => {
+  // Câu 1's line is on the sheet but the saved list does not name it, as for a question a run wrote in since it opened.
+  const { state } = await installAiFixture(page, 'MANAGER', {
+    conversations: [savedExam],
+    drafts: {
+      'conv-9': {
+        draft: { id: 'draft-conv-9', conversationId: 'conv-9', name: savedExam.title, examFormat: 'VACT_2025', status: 'DRAFT' },
+        items: [item('conv-9', 'item-1', 1, 'Tính giá trị của biểu thức x cộng 1.')],
+      },
+    },
+    documents: {
+      'conv-9': {
+        mode: 'FREE',
+        version: 4,
+        updatedAt: stamp,
+        content: {
+          type: 'doc',
+          attrs: { deliveredItems: [] },
+          content: [
+            heading(1, 'ĐỀ KIỂM TRA TOÁN 10'),
+            { type: 'heading', attrs: { level: 2, examPart: 'P2' }, content: [run('PHẦN 2. TOÁN HỌC')] },
+            { type: 'paragraph', attrs: { examItem: 'item-1' }, content: [run('Câu 1. ', 'bold'), run('Tính giá trị của biểu thức x cộng 1.')] },
+            paragraph(run('--- HẾT ---', 'bold')),
+          ],
+        },
+      },
+    },
+  })
+  await openSavedDocument(page, 'Tính giá trị của biểu thức x cộng 1.')
+  const sheet = docEditor(page)
+  await expect(questionLines(sheet)).toHaveText(['Câu 1. Tính giá trị của biểu thức x cộng 1.'])
+
+  // Backspace at the start of its line joins it into the heading above: the line leaves the sheet, and the list names it.
+  await sheet.getByText('Câu 1.').click()
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Backspace')
+  await expect(questionLines(sheet)).toHaveCount(0)
+  await expect
+    .poll(() => (documentSaves(state, 'conv-9').at(-1)?.content as DocNode | undefined)?.attrs)
+    .toEqual({ deliveredItems: ['item-1'] })
+
+  // Reopened once the AI wrote another question: that one is written in, Câu 1 is not written back.
+  state.drafts.get('conv-9')!.items.push(item('conv-9', 'item-2', 2, 'Rút gọn biểu thức hai x trừ x.'))
+  await page.reload()
+  await expect(questionLines(sheet)).toHaveText(['Câu 2. Rút gọn biểu thức hai x trừ x.'], { timeout: 15_000 })
 })
 
 test('switching a saved free document to question cards saves the mode and turns the free-only tools off', async ({ page }) => {

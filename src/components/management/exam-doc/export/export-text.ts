@@ -1,6 +1,7 @@
 import type { Editor, JSONContent } from '@tiptap/core'
 import { chartPicture, normalizeChart } from '../chart-data'
 import { normalizeLinkHref } from '../link-url'
+import { examDocJSON } from '../exam-tags'
 import { CHOICE_LABELS } from '../nodes/choice-grid'
 import { downloadBlob, fileNameFor, plainText } from './file-name'
 
@@ -249,7 +250,7 @@ export function exportMarkdown(editor: Editor) {
 
 /** Downloads the editor's document as JSON in the `hocluc-exam-doc` envelope, which "Mở file" reads back as it was. */
 export function exportJson(editor: Editor) {
-  const doc = editor.getJSON()
+  const doc = examDocJSON(editor)
   const text = JSON.stringify({ format: DOC_FORMAT, version: DOC_FORMAT_VERSION, content: doc }, null, 2)
   downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), fileNameFor(doc, 'json'))
 }

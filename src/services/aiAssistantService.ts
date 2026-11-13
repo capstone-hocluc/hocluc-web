@@ -155,6 +155,8 @@ export interface AiCheckResult {
   labelPattern?: string | null
   labelConfidence?: number | null
   reviewedAnswer?: unknown
+  /** The level (DE, TB, KHO) the answer audit judged the question to be; null when it was not judged. */
+  auditDifficulty?: string | null
 }
 
 export interface AiDraftItem {

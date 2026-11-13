@@ -3,13 +3,13 @@ import { cn } from '../../../lib/cn'
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import type { SelectOption } from '../../console/select-field'
+import { EmptyState, EmptyStateGreeting } from '../../assistant-ui/elements/empty-state'
 import { ChevronRight, Clock, PanelBottom, Sparkles, SquarePen, X } from '../../console/icons'
 import AssistantSources from './chat/AssistantSources'
+import ChatThread from './chat/ChatThread'
 import Composer from './Composer'
-import MessageThread from './MessageThread'
-import type { ExamDownload } from './AssistantMessage'
 import StarterSuggestions from './StarterSuggestions'
-import type { AiChatMessage, AiTraceStage } from './exam-format'
+import type { AiChatMessage } from './exam-format'
 
 // Modes whose runs read a bank paper. Compose ignores the source: the hook sends bankSourceId only for
 // mock-exam, and the backend treats any source as "Mô phỏng đề".
@@ -21,10 +21,8 @@ const ICON_BUTTON =
 export interface ChatPanelProps {
   messages: readonly AiChatMessage[]
   mode: AiAssistantMode
-  value: string
+  /** A send is on its way or a run goes on. */
   pending: boolean
-  stages: readonly AiTraceStage[]
-  trace: readonly string[]
   loading: boolean
   greeting: string
   notice: string | null
@@ -36,19 +34,12 @@ export interface ChatPanelProps {
   papersError: string | null
   onReloadPapers: () => void
   onModeChange: (mode: AiAssistantMode) => void
-  onValueChange: (value: string) => void
-  onSend: () => void
   onStop: () => void
-  onRegenerate: () => void
   onStartNew: () => void
   conversationsOpen: boolean
   onOpenConversations: () => void
+  /** Fills the composer with a starter prompt (it is not sent). */
   onPickPrompt: (mode: AiAssistantMode, prompt: string) => void
-  /** Downloads the exam on the sheet: a Word file, or the print dialog to save it as PDF. */
-  onDownload: (format: ExamDownload) => void
-  onAnswerKey: () => void
-  onRetry: (messageId: string) => void
-  onChooseSubject: (messageId: string, subjectName: string | null) => void
   onCollapse?: () => void
   onClose?: () => void
   /** Moves the assistant to a bar at the bottom of the paper. */
@@ -62,10 +53,7 @@ export interface ChatPanelProps {
 export default function ChatPanel({
   messages,
   mode,
-  value,
   pending,
-  stages,
-  trace,
   loading,
   greeting,
   notice,
@@ -77,18 +65,11 @@ export default function ChatPanel({
   papersError,
   onReloadPapers,
   onModeChange,
-  onValueChange,
-  onSend,
   onStop,
-  onRegenerate,
   onStartNew,
   conversationsOpen,
   onOpenConversations,
   onPickPrompt,
-  onDownload,
-  onAnswerKey,
-  onRetry,
-  onChooseSubject,
   onCollapse,
   onClose,
   onDockBottom,
@@ -191,28 +172,17 @@ export default function ChatPanel({
         </header>
 
         {empty ? (
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden px-6 text-center">
-            <p className="max-w-[320px] text-[26px] leading-[1.25] font-semibold tracking-[-0.01em] text-balance text-primary-text">
-              {greeting}
-            </p>
+          <div className="app-scroll flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-5 py-6">
+            <EmptyState className="my-auto">
+              <EmptyStateGreeting className="max-w-[340px]">{greeting}</EmptyStateGreeting>
+              <StarterSuggestions mode={mode} onPick={pickPrompt} disabled={pending} />
+            </EmptyState>
           </div>
         ) : (
-          <MessageThread
-            messages={messages}
-            pending={pending}
-            stages={stages}
-            trace={trace}
-            loading={loading}
-            onRegenerate={onRegenerate}
-            onDownload={onDownload}
-            onAnswerKey={onAnswerKey}
-            onRetry={onRetry}
-            onChooseSubject={onChooseSubject}
-          />
+          <ChatThread loading={loading} />
         )}
 
         <div className="flex shrink-0 flex-col gap-2 px-3 pt-1 pb-2">
-          {empty && <StarterSuggestions mode={mode} onPick={pickPrompt} disabled={pending} />}
           {SOURCE_MODES.includes(mode) && (
             <AssistantSources
               papers={papers}
@@ -227,9 +197,6 @@ export default function ChatPanel({
           <Composer
             mode={mode}
             onModeChange={onModeChange}
-            value={value}
-            onChange={onValueChange}
-            onSend={onSend}
             busy={pending}
             onStop={onStop}
             hasMessages={hasMessages}

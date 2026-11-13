@@ -1,10 +1,10 @@
 // The AI exam composer, laid out like a document editor: header with menus, formatting toolbar, the document
 // panel (the exams, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { AssistantRuntimeProvider } from '@assistant-ui/react'
 import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
-import { cn } from '../../../lib/cn'
 import { getErrorMessage } from '../../../lib/errors'
 import ThemeProvider from '../../common/ThemeProvider'
 import Button from '../../console/button'
@@ -46,18 +46,17 @@ import AiSuggestionBar from '../exam-doc/ai-suggestion-bar'
 import { useProofread } from '../exam-doc/use-proofread'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
 import { revisedNumbers } from './revise-request'
-import type { ExamDownload } from './AssistantMessage'
+import { useAssistantChatRuntime } from './chat/assistant-runtime'
+import { ChatActionsProvider, type ChatActions, type ExamDownload } from './chat/ChatThread'
 import { showErrorToast, showSuccessToast } from '../../../lib/toastBus'
 import { downloadDocument, downloadPdf } from '../exam-doc/export'
-import { liveDraftView } from '../exam-doc/live-draft'
-import { useFollowWriting } from '../exam-doc/use-follow-writing'
-import { liveDraftKey } from '../exam-doc/nodes/live-draft-widget'
 import { useDocEditor } from '../exam-doc/use-doc-editor'
 import { useExamDocument } from '../exam-doc/use-exam-document'
 import type { BankSource } from '../../../services/questionBankService'
 import BankImportDialog from '../question-bank/BankImportDialog'
 import { useSourceActions } from '../question-bank/use-source-actions'
 import PaperReadingWorkspace from './PaperReadingWorkspace'
+import SheetWriting from './SheetWriting'
 import { useBankPapers } from './use-bank-papers'
 import { clearRequestedPaper, requestedPaper, showPaperInAddress } from './open-paper'
 
@@ -103,8 +102,8 @@ export default function AiAssistantScreen({
   /** The viewer may load papers into the bank (the AI reads them here, as it writes an exam). */
   canImport?: boolean
 }) {
-  const ai = useAiAssistant()
   const bankPapers = useBankPapers(true)
+  const ai = useAiAssistant(bankPapers)
   // The loaded paper on the sheet instead of an exam: one asked for by the bank's list (or kept in the address) at
   // first. The list refreshes it; `queued` covers one just loaded, before the list has it.
   const [viewingId, setViewingId] = useState<string | null>(requestedPaper)
@@ -115,7 +114,7 @@ export default function AiAssistantScreen({
     ? (bankPapers.papers.find((paper) => paper.id === viewingId) ?? (queued?.id === viewingId ? queued : null))
     : null
   // A paper that is not in the list (deleted, or not allowed) leaves the address once the list is in.
-  const shownPaperId = bankPapers.loading ? viewingId : (viewingPaper?.id ?? null)
+  const shownPaperId = bankPapers.settled ? (viewingPaper?.id ?? null) : viewingId
   useEffect(() => showPaperInAddress(shownPaperId), [shownPaperId])
   const { refresh: refreshPapers } = bankPapers
   const openQueued = useCallback(
@@ -126,7 +125,8 @@ export default function AiAssistantScreen({
     },
     [refreshPapers]
   )
-  const sourceActions = useSourceActions(openQueued)
+  // Whether Jev can label a paper only matters once one is open here.
+  const sourceActions = useSourceActions(openQueued, { watchLabelling: canImport && viewingPaper !== null })
   const { actionError, setActionError: clearActionError } = sourceActions
   useEffect(() => {
     if (!actionError) return
@@ -193,7 +193,7 @@ export default function AiAssistantScreen({
   // the document remembers which items it received, so one the teacher deleted is not written again.
   useEffect(() => {
     if (!editor || examDoc.loading || ai.draftLoading) return
-    const delivered = deliveredItems(editor.state.doc)
+    const delivered = deliveredItems(editor.state)
     if (delivered === null) {
       // Saved before items were tracked: what the draft holds now counts as written.
       const ids = ai.paper.questions.map((question) => question.id)
@@ -217,57 +217,30 @@ export default function AiAssistantScreen({
         editor.schema.nodeFromJSON(block)
       )
       tr.insert(questionInsertPos(tr.doc, question.partId), nodes)
-      delivered.add(question.id)
     }
-    tr.setDocAttribute('deliveredItems', [...delivered]).setMeta('addToHistory', false)
-    editor.view.dispatch(tr)
+    // Each question's "Câu n." line marks it as written (see ExamTags): no doc attribute changes, which would draw the
+    // whole sheet again for every question that lands.
+    editor.view.dispatch(tr.setMeta('addToHistory', false))
   }, [ai.paper, ai.draftLoading, examDoc.loading, editor])
 
-  // The question the AI is writing shows on the sheet where it will land, word by word, until the checked question
-  // replaces it. Only a decoration changes: nothing is saved and nothing goes into undo.
-  const liveDraft = ai.liveDraft
-  useEffect(() => {
-    if (!editor || editor.isDestroyed) return
-    const shown = liveDraft ? { partId: liveDraft.section, view: liveDraftView(liveDraft.text) } : null
-    editor.view.dispatch(editor.state.tr.setMeta(liveDraftKey, shown).setMeta('addToHistory', false))
-  }, [editor, liveDraft])
-
-  // While the AI writes, the sheet follows it; the teacher scrolling lets go, and a button picks it up again.
   const sheetScroller = useRef<HTMLElement>(null)
   // Ctrl + wheel or a pinch over the sheet zooms the paper, not the page.
   useWheelZoom(sheetScroller, zoom, setZoom)
-  const followTarget = liveDraft
-    ? '[data-live-draft]'
-    : ai.lastItemId
-      ? `[data-exam-item="${CSS.escape(ai.lastItemId)}"]`
-      : null
-  const writing = useFollowWriting(
-    sheetScroller,
-    ai.running && examDoc.mode === 'FREE',
-    followTarget,
-    `${ai.lastItemId ?? ''}:${liveDraft?.text.length ?? 0}`
-  )
 
   // A compose run that ends leaves the answer key after the exam: the answer table and the solution guide, written
   // once every question it added is on the sheet. The teacher's later edits to the key stay until they ask for a new
-  // one ("Cập nhật đáp án").
-  const keyDue = useRef(false)
-  const lastRunMode = useRef(ai.runMode)
-  useEffect(() => {
-    // A revise run only updates a key the exam already has (as each rewritten question arrives, below).
-    if (lastRunMode.current && lastRunMode.current !== 'ask' && lastRunMode.current !== 'revise' && !ai.runMode) {
-      keyDue.current = true
-    }
-    lastRunMode.current = ai.runMode
-  }, [ai.runMode])
+  // one ("Cập nhật đáp án"). Only a run the server took counts: a refused send changed nothing, so its key stays. A
+  // revise run only updates a key the exam already has (as each rewritten question arrives, below).
+  const keyWrittenFor = useRef(ai.examRunsEnded)
   const solutionStyle = ai.settings.solutionStyle
   useEffect(() => {
-    if (!keyDue.current || ai.running || !editor || examDoc.loading || ai.draftLoading || examDoc.mode !== 'FREE') return
-    const delivered = deliveredItems(editor.state.doc)
+    if (keyWrittenFor.current === ai.examRunsEnded) return
+    if (ai.running || !editor || examDoc.loading || ai.draftLoading || examDoc.mode !== 'FREE') return
+    const delivered = deliveredItems(editor.state)
     if (delivered && ai.paper.questions.some((question) => !delivered.has(question.id))) return
-    keyDue.current = false
+    keyWrittenFor.current = ai.examRunsEnded
     replaceAnswerKey(editor, ai.paper, solutionStyle)
-  }, [ai.paper, ai.running, ai.runMode, ai.draftLoading, examDoc.loading, examDoc.mode, editor, solutionStyle])
+  }, [ai.examRunsEnded, ai.paper, ai.running, ai.draftLoading, examDoc.loading, examDoc.mode, editor, solutionStyle])
 
   // A question the AI rewrote ("Sửa câu 2") replaces its blocks where it stands, keeping its number; an exam that has
   // an answer key gets it written again for the new answer, and the sheet shows the question.
@@ -386,8 +359,19 @@ export default function AiAssistantScreen({
   const bankAllowed = quizAccess.role === 'STAFF' || quizAccess.role === 'MANAGER' || quizAccess.role === 'ADMINISTRATOR'
   const writtenQuestions = useMemo(() => ai.paper.questions.filter((question) => !question.failure), [ai.paper])
   const bankKey = ai.running ? 'running' : ai.paper.questions.map((question) => question.id).join(',')
-  const bank = useDraftBank(ai.activeId ?? null, bankKey, bankAllowed)
+  // Looked up once the draft is in, so opening an exam asks once (not for the empty draft, then again for its questions).
+  const bank = useDraftBank(ai.draftLoading ? null : (ai.activeId ?? null), bankKey, bankAllowed)
   const [pendingReplace, setPendingReplace] = useState<{ total: number; kept: number } | null>(null)
+  // The chat on assistant-ui: its thread and composer read the conversation the hook keeps, and its sends come here.
+  const chatRuntime = useAssistantChatRuntime({
+    messages: ai.messages,
+    running: ai.running,
+    loading: ai.draftLoading,
+    sendBlocked: ai.mode === 'mock-exam' && !ai.settings.bankSourceId,
+    onSend: (text) => sendMessage(text),
+    onCancel: ai.cancel,
+    onRegenerate: ai.regenerate,
+  })
   const [bankDialog, setBankDialog] = useState(false)
   const [quizDialog, setQuizDialog] = useState(false)
   const canSaveToBank = bank.ready && writtenQuestions.some((question) => bank.authorable(question.id))
@@ -423,27 +407,26 @@ export default function AiAssistantScreen({
   }
 
   /**
-   * Sends the composer's text. "Sửa câu 2 …" in compose mode rewrites those questions: each number is the one the sheet
-   * prints (or the question cards show), looked up to its draft question before anything is sent.
+   * Sends the composer's words; resolves false when they do not go, and the composer gets them back. "Sửa câu 2 …" in
+   * compose mode rewrites those questions: each number is the one the sheet prints (or the question cards show), looked
+   * up to its draft question before anything is sent. `replacing`: the teacher already agreed to replace the exam.
    */
-  function sendMessage() {
+  function sendMessage(text: string, replacing = false): Promise<boolean> {
     const onSheet = examDoc.mode === 'FREE' && editor ? editor : null
     // A question about the exam reads the sheet the teacher sees.
     if (ai.mode === 'ask') {
-      ai.send(onSheet ? { document: sheetDocument(onSheet.state.doc) } : undefined)
-      return
+      return ai.send(text, onSheet ? { document: sheetDocument(onSheet.state.doc) } : undefined)
     }
     // "Sửa câu 2 …" revises in compose and mock-exam alike, once there is an exam to revise.
     const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
-    const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(ai.value) : null
+    const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(text) : null
     if (!numbers) {
       // A new run replaces the draft, the questions kept included: ask first.
-      if (ai.paper.questions.length > 0 && ai.value.trim()) {
+      if (!replacing && ai.paper.questions.length > 0) {
         setPendingReplace({ total: ai.paper.questions.length, kept: ai.paper.questions.filter((question) => question.kept).length })
-        return
+        return Promise.resolve(false)
       }
-      ai.send()
-      return
+      return ai.send(text)
     }
     const targets: AiRevisedItem[] = []
     const missing: number[] = []
@@ -469,9 +452,24 @@ export default function AiAssistantScreen({
     }
     if (missing.length > 0) {
       ai.setNotice(`Đề không có câu ${missing.join(', ')} để sửa.`)
-      return
+      return Promise.resolve(false)
     }
-    ai.send({ revise: targets })
+    return ai.send(text, { revise: targets })
+  }
+
+  /** Words a send of the page's own (a retry, a subject chosen) did not get through go back to an empty composer. */
+  function giveBack(text: string | null) {
+    const composer = chatRuntime.thread.composer
+    if (text && !composer.getState().text) composer.setText(text)
+  }
+
+  /** "Thay đề" in the question before a new run: the composer's words go, past the question. */
+  function replaceExam() {
+    setPendingReplace(null)
+    const composer = chatRuntime.thread.composer
+    const text = composer.getState().text
+    composer.setText('')
+    void sendMessage(text, true).then((sent) => giveBack(sent ? null : text))
   }
 
   /** "Nhờ AI sửa" on a selection: the exam's conversation (made now for a new exam) asks the AI for the new words. */
@@ -519,6 +517,7 @@ export default function AiAssistantScreen({
   function startNew() {
     setViewingId(null)
     ai.startNew()
+    chatRuntime.thread.composer.setText('')
     setOutlineSheet(false)
     setEditingId(null)
     setFocusedId(null)
@@ -533,7 +532,7 @@ export default function AiAssistantScreen({
 
   function pickPrompt(mode: AiAssistantMode, prompt: string) {
     ai.setMode(mode)
-    ai.setValue(prompt)
+    chatRuntime.thread.composer.setText(prompt)
   }
 
   function toggleChat() {
@@ -572,10 +571,7 @@ export default function AiAssistantScreen({
   const chatPanelProps = {
     messages: ai.messages,
     mode: ai.mode,
-    value: ai.value,
     pending: ai.running,
-    stages: ai.stages,
-    trace: ai.trace,
     loading: ai.draftLoading,
     greeting,
     notice: ai.notice,
@@ -588,18 +584,19 @@ export default function AiAssistantScreen({
     papersError: ai.papersError,
     onReloadPapers: ai.reloadPapers,
     onModeChange: ai.setMode,
-    onValueChange: ai.setValue,
-    onSend: sendMessage,
     onStop: ai.cancel,
-    onRegenerate: ai.regenerate,
     onStartNew: startNew,
     conversationsOpen: outlineOpen || outlineSheet,
     onOpenConversations: toggleTree,
     onPickPrompt: pickPrompt,
+  }
+  // What the turns of the thread do: the reply's own buttons, and the run its progress follows.
+  const chatActions: ChatActions = {
+    run: ai.runStore,
     onDownload: downloadExam,
     onAnswerKey: writeAnswerKey,
-    onRetry: ai.retry,
-    onChooseSubject: ai.chooseSubject,
+    onRetry: (messageId) => void ai.retry(messageId).then(giveBack),
+    onChooseSubject: (messageId, subjectName) => void ai.chooseSubject(messageId, subjectName).then(giveBack),
   }
 
   /** The left panel: every exam and loaded paper, grouped. */
@@ -693,6 +690,8 @@ export default function AiAssistantScreen({
 
   return (
     <ThemeProvider>
+      <AssistantRuntimeProvider runtime={chatRuntime}>
+      <ChatActionsProvider value={chatActions}>
       <ExamDocContext.Provider value={docContext}>
       <div className="flex h-dvh w-full flex-col overflow-hidden bg-background-gray-secondary_alt_2 font-sans text-text-primary">
         <AiSelectionMenu
@@ -855,25 +854,18 @@ export default function AiAssistantScreen({
                     )}
                   </div>
                   )}
-                  {/* Shown once the teacher scrolled away from the writing; it stays at the bottom of the sheet's view. */}
-                  {ai.running && !writing.following && examDoc.mode === 'FREE' && (
-                    <div
-                    className={cn('pointer-events-none sticky z-20 flex justify-center', chatBar ? 'bottom-24' : 'bottom-5')}
-                  >
-                      <button
-                        type="button"
-                        onClick={writing.follow}
-                        className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-button-primary-background px-4 py-2 text-sm font-semibold text-button-primary-text shadow-card-hover transition-colors hover:bg-button-primary-hover-background focus-visible:ring-4 focus-visible:ring-button-primary-focus-ring"
-                      >
-                        <span aria-hidden className="size-2 rounded-full bg-current motion-safe:animate-pulse" />
-                        Theo dõi AI đang viết
-                      </button>
-                    </div>
-                  )}
+                  <SheetWriting
+                    editor={editor}
+                    run={ai.runStore}
+                    scroller={sheetScroller}
+                    following={ai.running && examDoc.mode === 'FREE'}
+                    raised={chatBar}
+                  />
                 </main>
                 {chatBar && (
                   <ChatBar
                     {...chatPanelProps}
+                    run={ai.runStore}
                     onDockSide={dockSide}
                     onHide={() => setChatOpen(false)}
                   />
@@ -1004,10 +996,7 @@ export default function AiAssistantScreen({
             confirmLabel="Thay đề"
             variant="danger"
             onCancel={() => setPendingReplace(null)}
-            onConfirm={() => {
-              setPendingReplace(null)
-              ai.send()
-            }}
+            onConfirm={replaceExam}
           />
         )}
 
@@ -1030,6 +1019,8 @@ export default function AiAssistantScreen({
         <StatusBar />
       </div>
       </ExamDocContext.Provider>
+      </ChatActionsProvider>
+      </AssistantRuntimeProvider>
     </ThemeProvider>
   )
 }
