@@ -54,6 +54,8 @@ import { IconAction, RowActions } from '../../console/icon-action'
 import { fieldControlClass, textareaControlClass } from '../../console/form-field'
 import QuizCatalog from './QuizCatalog'
 import QuizImportDialog from './QuizImportDialog'
+import QuizAnswerReviewSetting from './QuizAnswerReviewSetting'
+import QuizAnswerReviewDialog from './QuizAnswerReviewDialog'
 import Card from '../../console/card'
 import DateTimeField from '../../console/date-time-field'
 import { Checkbox } from '../../tailgrids/core/checkbox'
@@ -426,6 +428,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
   const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
+  const [answerSettingsQuiz, setAnswerSettingsQuiz] = useState<TeacherQuizRecord | null>(null)
   const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
 
   const refresh = () => quizzes.reload()
@@ -542,6 +545,11 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
                   <DropdownMenu>
                     <DropdownMenuTrigger isDisabled={busyId !== null} aria-label={'Thao tác khác với ' + exam.title} className="grid size-9 place-items-center rounded-lg border border-card-border text-icon-tertiary hover:bg-background-gray-secondary data-disabled:opacity-50"><MoreHorizontal size={16} /></DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      {!placement && exam.status !== 'ARCHIVED' && (
+                        <DropdownMenuItem isDisabled={busyId !== null} onAction={() => setAnswerSettingsQuiz(exam)}>
+                          <Eye size={15} />Cấu hình xem đáp án
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem isDisabled={busyId !== null} onAction={() => void runAction(exam, () => duplicateTeacherQuiz(exam.id), 'Đã sao chép đề thi thành bản nháp.')}>
                         <Copy size={15} />Sao chép thành bản nháp
                       </DropdownMenuItem>
@@ -559,6 +567,14 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
                   </>}
         </RowActions>} />
 
+      {!readOnly && !placement && answerSettingsQuiz && (
+        <QuizAnswerReviewDialog quiz={answerSettingsQuiz} busy={busyId === answerSettingsQuiz.id}
+          onCancel={() => setAnswerSettingsQuiz(null)}
+          onSave={(showAnswers) => void runAction(answerSettingsQuiz, async () => {
+            await updateTeacherQuiz(answerSettingsQuiz.id, { showAnswers })
+            setAnswerSettingsQuiz(null)
+          }, 'Đã lưu cấu hình xem đáp án.')} />
+      )}
       {!readOnly && confirmDelete && (
         <ConfirmDialog
           title={placement ? 'Xóa bài đánh giá đầu vào?' : 'Xóa đề thi thử?'}
@@ -1329,9 +1345,7 @@ function TeacherMockExamForm({
               />
             </div>
             <div className="flex flex-wrap gap-x-8 gap-y-3 md:col-span-3">
-              <Checkbox isSelected={settings.showAnswers} onChange={(checked) => updateSettings('showAnswers', checked)} isDisabled={fieldsLocked || busy} className="text-sm text-text-primary">
-                Cho phép xem đáp án sau khi nộp
-              </Checkbox>
+              <QuizAnswerReviewSetting enabled={settings.showAnswers} onChange={(checked) => updateSettings('showAnswers', checked)} disabled={fieldsLocked || busy} />
               <Checkbox isSelected={settings.practiceAllowed} onChange={(checked) => updateSettings('practiceAllowed', checked)} isDisabled={fieldsLocked || busy} className="text-sm text-text-primary">
                 Cho phép học viên luyện tập lại
               </Checkbox>

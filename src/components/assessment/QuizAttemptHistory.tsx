@@ -21,7 +21,7 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
       <CardTitle className="mb-4 text-xl">Lịch sử làm bài</CardTitle>
       <div className="flex flex-col gap-3">
         {sorted.map((attempt) => {
-          const canReview = allowReview && attempt.status !== 'IN_PROGRESS'
+          const hasResult = attempt.status === 'GRADED'
           return (
             <div
               className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-card bg-surface-sky px-4 py-3.5"
@@ -46,7 +46,7 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
                 )}
                 <span>{formatDateTime(attempt.submittedAt || attempt.startedAt || '')}</span>
               </div>
-              {canReview && (
+              {hasResult && (
                 <Button
                   appearance="outline"
                   shape="pill"
@@ -55,7 +55,7 @@ function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttempt
                   onClick={() => onOpenReview(attempt.attemptId)}
                 >
                   <Eye size={16} />
-                  Xem lại
+                  {allowReview ? 'Xem lại' : 'Xem kết quả'}
                 </Button>
               )}
             </div>

@@ -177,12 +177,14 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     await select(page, 'Chương', 'Chương nháp')
     await select(page, 'Bài học', 'Bài nháp')
     await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`Quiz mới ${role}`)
+    await page.getByText('Cho phép xem đáp án sau khi nộp', { exact: true }).click()
+    await expect(page.getByRole('checkbox', { name: 'Cho phép xem đáp án sau khi nộp' })).toBeChecked()
     await page.locator('textarea').first().fill('Câu mới')
     for (const letter of ['A', 'B', 'C', 'D']) await page.getByLabel(`Nội dung lựa chọn ${letter} cho câu 1`, { exact: true }).fill(`Nội dung ${letter}`)
     await page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true }).check()
     await page.getByRole('button', { name: 'Lưu bản nháp', exact: true }).click()
     await expect(page.getByRole('heading', { name: `Quiz mới ${role}`, exact: true })).toBeVisible()
-    expect(writes(state).find(r => r.path === '/api/v1/teacher/quizzes')?.body).toMatchObject({ type: 'QUICK', lessonId: QUIZ_IDS.lesson })
+    expect(writes(state).find(r => r.path === '/api/v1/teacher/quizzes')?.body).toMatchObject({ type: 'QUICK', lessonId: QUIZ_IDS.lesson, showAnswers: true })
     expect(writes(state).some(r => r.path.endsWith('/questions'))).toBe(true)
     expect(state.requests.some(r => r.path === '/api/v1/courses/main')).toBe(false)
     expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
@@ -226,6 +228,23 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
       expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
     })
   }
+}
+
+for (const [screen, type] of [['quizzes', 'QUICK'], ['mock-exams', 'EXAM']] as const) {
+  test(`Staff can configure answer review for a published ${type} with attempts`, async ({ page }) => {
+    const state = await installQuizFixture(page, 'STAFF')
+    const quiz = state.quizzes.find(item => item.type === type)!
+    quiz.status = 'PUBLISHED'
+    quiz.attemptCount = 1
+    await page.goto(`/console/staff/${screen}`)
+    await page.getByRole('button', { name: `Thao tác khác với ${quiz.title}` }).click()
+    await page.getByRole('menuitem', { name: 'Cấu hình xem đáp án' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Bật xem đáp án' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    expect(writes(state)).toMatchObject([{ method: 'PUT', path: `/api/v1/teacher/quizzes/${quiz.id}`, body: { showAnswers: true } }])
+    expect(Object.keys(writes(state)[0].body)).toEqual(['showAnswers'])
+    expect(quiz.status).toBe('PUBLISHED')
+  })
 }
 
 test('Quiz type and hierarchy changes preserve content and clear invalid child targets', async ({ page }) => {
@@ -408,6 +427,89 @@ test('Mentor cannot open quiz screens even with direct console URLs', async ({ p
   expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/'))).toEqual([])
 })
 
+test('Student quiz detail fills the available width as the sidebar and viewport change', async ({ page }) => {
+  const state = await installQuizFixture(page, 'STUDENT')
+  state.studentStatus = 'GRADED'
+  await page.setViewportSize({ width: 1600, height: 950 })
+  await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}`)
+
+  const main = page.getByRole('main')
+  const details = main.locator('section').filter({ has: page.getByRole('heading', { name: 'Quiz Student' }) }).last()
+  const history = main.locator('section').filter({ has: page.getByRole('heading', { name: 'Lịch sử làm bài' }) }).last()
+  const facts = details.getByRole('listitem')
+  await expect(history).toBeVisible()
+
+  const contentWidth = () => main.evaluate(element => {
+    const { paddingLeft, paddingRight } = getComputedStyle(element)
+    return element.clientWidth - parseFloat(paddingLeft) - parseFloat(paddingRight)
+  })
+  const panelWidth = (panel: Locator) => panel.evaluate(element => element.getBoundingClientRect().width)
+  const expandedWidth = await contentWidth()
+  expect(await panelWidth(details)).toBe(expandedWidth)
+  expect(await panelWidth(history)).toBe(expandedWidth)
+  expect((await facts.first().boundingBox())?.y).toBe((await facts.last().boundingBox())?.y)
+
+  await page.getByRole('button', { name: 'Thu gọn thanh điều hướng' }).click()
+  await expect.poll(() => panelWidth(details)).toBe(expandedWidth + 168)
+  expect(await panelWidth(history)).toBe(await contentWidth())
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await panelWidth(details)).toBe(await contentWidth())
+  expect((await facts.last().boundingBox())?.y).toBeGreaterThan((await facts.first().boundingBox())?.y ?? 0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await expect(details.getByRole('button', { name: 'Bắt đầu làm bài' })).toBeVisible()
+})
+
+test('Student returns to the course exam tab after submitting and reloading the result', async ({ page }) => {
+  test.setTimeout(60_000)
+  await installQuizFixture(page, 'STUDENT')
+  const studyPath = `/student/courses/${QUIZ_IDS.course}/study`
+  await page.goto(studyPath)
+  await page.getByRole('tab', { name: 'Bài thi', exact: true }).click()
+  await page.getByRole('button', { name: 'Xem bài thi Đề thi được giao' }).click()
+  await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
+  await page.getByRole('radio', { name: 'Đáp án Student' }).click()
+  await page.getByRole('button', { name: 'Nộp bài', exact: true }).first().click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Nộp bài', exact: true }).click()
+  await expect(page).toHaveURL(/\/review$/)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Quay lại bài kiểm tra', exact: true }).click()
+  await expect(page).toHaveURL(`/student/assessments/quizzes/${QUIZ_IDS.exam}`)
+  await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
+  await expect(page).toHaveURL(`${studyPath}?tab=exams`)
+  await expect(page.getByRole('tab', { name: 'Bài thi', selected: true })).toBeVisible()
+})
+
+test('Student exits a quiz to its course content or lesson and can return from a direct quiz URL', async ({ page }) => {
+  test.setTimeout(60_000)
+  const state = await installQuizFixture(page, 'STUDENT')
+  state.quizzes[0].courseId = QUIZ_IDS.otherCourse
+  const studyPath = `/student/courses/${QUIZ_IDS.course}/study`
+  const lessonPath = `/student/courses/${QUIZ_IDS.otherCourse}/study/lessons/${QUIZ_IDS.lesson}`
+  const quizPath = `/student/assessments/quizzes/${QUIZ_IDS.quiz}`
+  await page.goto(studyPath)
+  await page.getByRole('button', { name: /Quiz được giao/ }).click()
+  await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
+  await page.getByRole('button', { name: 'Thoát bài kiểm tra', exact: true }).click()
+  await expect(page).toHaveURL(quizPath)
+  await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
+  await expect(page).toHaveURL(studyPath)
+  await expect(page.getByRole('tab', { name: 'Nội dung học', selected: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Tiếp tục học', exact: true }).click()
+  await expect(page).toHaveURL(lessonPath)
+  await page.getByRole('button', { name: /Quiz được giao/ }).click()
+  await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
+  await expect(page).toHaveURL(lessonPath)
+  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await expect(page).toHaveURL(studyPath)
+
+  await page.goto(quizPath)
+  await expect(page.getByRole('heading', { name: 'Quiz Student' })).toBeVisible()
+  await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
+  await expect(page).toHaveURL(lessonPath)
+})
+
 test('Student quiz start, answer, submit and review still use the assessment API', async ({ page }) => {
   const state = await installQuizFixture(page, 'STUDENT')
   await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}`)
@@ -417,10 +519,68 @@ test('Student quiz start, answer, submit and review still use the assessment API
   await page.getByRole('button', { name: 'Nộp bài', exact: true }).first().click()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Nộp bài', exact: true }).click()
   await expect(page).toHaveURL(/\/review$/)
+  await expect(page.getByText('Giải thích đáp án Student', { exact: true })).toBeVisible()
   expect(state.requests.some(r => r.path.endsWith('/answers'))).toBe(true)
   expect(state.requests.some(r => r.path.endsWith('/submit'))).toBe(true)
   expect(state.requests.some(r => r.path.startsWith('/api/v1/teacher/'))).toBe(false)
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+})
+
+test('Student can retry a failed answer and reopen the score when the answer key is hidden', async ({ page }) => {
+  test.setTimeout(60_000)
+  const state = await installQuizFixture(page, 'STUDENT')
+  state.studentShowAnswers = false
+  state.studentAnswerFailures = 1
+  await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}`)
+  await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
+  await page.getByRole('radio', { name: 'Đáp án Student' }).click()
+  const retryAnswer = page.getByRole('button', { name: 'Lưu lại đáp án' })
+  await expect(retryAnswer).toBeVisible()
+
+  const confirmSubmit = async () => {
+    await page.getByRole('button', { name: 'Nộp bài', exact: true }).first().click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Nộp bài', exact: true }).click()
+  }
+  await confirmSubmit()
+  await expect(retryAnswer).toBeEnabled()
+  expect(state.requests.filter(r => r.path.endsWith('/submit'))).toHaveLength(0)
+
+  await retryAnswer.click()
+  await expect(page.getByText('Đã lưu', { exact: true })).toBeVisible()
+  await confirmSubmit()
+  await expect(page).toHaveURL(/\/review$/)
+  await expect(page.getByText('Điểm: 1/1')).toBeVisible()
+  await expect(page.getByText('Bài kiểm tra này không hiển thị đáp án sau khi nộp.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Chi tiết bài làm' })).toHaveCount(0)
+
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Điểm: 1/1')).toBeVisible()
+  await page.getByRole('button', { name: 'Quay lại bài kiểm tra' }).click()
+  await page.getByRole('button', { name: 'Xem kết quả', exact: true }).click()
+  await expect(page.getByText('Điểm: 1/1')).toBeVisible()
+  expect(state.requests.filter(r => r.path.endsWith('/submit'))).toHaveLength(1)
+  expect(state.requests.filter(r => r.path.endsWith('/review'))).toHaveLength(0)
+  expect(state.pageErrors).toEqual([])
+})
+
+test('Student auto-submits at the deadline when an answer could not be saved', async ({ page }) => {
+  test.setTimeout(60_000)
+  const state = await installQuizFixture(page, 'STUDENT')
+  state.studentShowAnswers = false
+  state.studentAnswerFailures = 1
+  const now = new Date('2026-11-10T08:00:00Z')
+  state.studentDeadline = new Date(now.getTime() + 60_000).toISOString()
+  await page.clock.install({ time: now })
+  await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}`)
+  await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
+  await page.getByRole('radio', { name: 'Đáp án Student' }).click()
+  await expect(page.getByRole('button', { name: 'Lưu lại đáp án' })).toBeVisible()
+  await page.clock.fastForward(60_000)
+  await expect(page).toHaveURL(/\/review$/)
+  await expect(page.getByText('Điểm: 0/1')).toBeVisible({ timeout: 15_000 })
+  expect(state.requests.filter(r => r.path.endsWith('/submit'))).toHaveLength(1)
+  expect(state.requests.filter(r => r.path.endsWith('/review'))).toHaveLength(0)
+  expect(state.pageErrors).toEqual([])
 })
 
 test('Teacher write service backstop rejects every mutation before any HTTP request', async ({ page }) => {

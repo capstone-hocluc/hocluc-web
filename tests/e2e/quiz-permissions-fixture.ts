@@ -52,6 +52,7 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
     activeStudentQuizId: QUIZ_IDS.quiz,
     writeGate: null as Promise<void> | null,
     studentStatus: 'IN_PROGRESS', studentOption: '', studentLockReason: null as string | null,
+    studentShowAnswers: true, studentAnswerFailures: 0, studentDeadline: '2100-01-01T00:00:00Z',
   }
   page.on('pageerror', error => state.pageErrors.push(error.message))
   if (authenticated) await page.addInitScript((token) => {
@@ -85,6 +86,27 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
       state.role = body.role as UserRole
       return answer({ accessToken: quizToken(state.role) })
     }
+    if (activeRole === 'STUDENT' && method === 'GET') {
+      if (path === `/api/v1/courses/${QUIZ_IDS.course}/study`) {
+        return answer({ courseId: QUIZ_IDS.course, title: 'Khóa học Student', courseType: 'MAIN',
+          totalLessons: 1, completedLessons: 0, progressPercentage: 0, continueLessonId: QUIZ_IDS.lesson,
+          continueSectionCourseId: QUIZ_IDS.otherCourse,
+          phases: [{ id: null, sequence: 1, gifts: [], sections: [{ sectionCourseId: QUIZ_IDS.otherCourse, title: 'Nội dung khóa',
+            sequence: 1, lessonCount: 1, completedLessonCount: 0, chapters: [{ id: QUIZ_IDS.chapter, title: 'Chương học',
+              sequence: 1, lessonCount: 1, completedLessonCount: 0, quizzes: [], lessons: [{ id: QUIZ_IDS.lesson,
+                title: 'Bài học Student', contentType: 'TEXT', sequence: 1, status: 'IN_PROGRESS', quizzes: [state.quizzes[0]] }] }] }] }] })
+      }
+      if (path === `/api/v1/courses/${QUIZ_IDS.course}/exams`) return answer([state.quizzes[1]])
+      if (path === `/api/v1/lessons/${QUIZ_IDS.lesson}`) {
+        return answer({ id: QUIZ_IDS.lesson, title: 'Bài học Student', sectionCourseId: QUIZ_IDS.otherCourse,
+          sectionCourseTitle: 'Khóa học Student', contentType: 'TEXT', content: 'Nội dung học', owned: true,
+          quizzes: [state.quizzes[0]] })
+      }
+    }
+    if (activeRole === 'STUDENT' && method === 'PUT' && path === `/api/v1/lessons/${QUIZ_IDS.lesson}/progress`) {
+      return answer({ lessonId: QUIZ_IDS.lesson, status: 'IN_PROGRESS', progressPercentage: 0,
+        watchDurationSeconds: 0, sectionCourseId: QUIZ_IDS.otherCourse })
+    }
     if (activeRole === 'STUDENT' && path.startsWith('/api/v1/assessments/')) {
       const placement = state.quizzes.filter(q => q.type === 'PLACEMENT' && q.status === 'PUBLISHED')
         .sort((a,b) => Date.parse(b.createdAt!) - Date.parse(a.createdAt!))[0]
@@ -95,20 +117,37 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
         wrongCount: 0, score: state.questions.length, overallPercentage: 100, timeSpentSeconds: 60, level: 'ADVANCED',
         categories: state.questions.some(q => q.categoryId) ? [{ categoryId: 'category-1', categoryName: 'Toán', correctCount: 1, wrongCount: 0, totalCount: 1, score: 1, percentage: 100 }] : [],
         weakCategoryName: null, strongCategoryName: null })
-      if (path.endsWith('/answers')) { state.studentOption = body.selectedOptionId as string; return answer(null) }
+      if (path.endsWith('/answers')) {
+        if (state.studentAnswerFailures > 0) {
+          state.studentAnswerFailures--
+          return answer(null, 503, 'Không thể lưu đáp án.')
+        }
+        state.studentOption = body.selectedOptionId as string
+        return answer(null)
+      }
       if (path.endsWith('/submit')) { state.studentStatus = 'GRADED'; return answer({ attemptId: QUIZ_IDS.attempt, percentage: 100 }) }
-      if (path.endsWith('/review')) return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, quizTitle: 'Quiz Student', totalQuestions: 1, correctCount: 1, overallPercentage: 100, questions: [] })
+      if (path.endsWith('/review')) {
+        if (!state.studentShowAnswers) return answer(null, 409, 'This quiz does not reveal its answer key.')
+        return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, quizTitle: 'Quiz Student', totalQuestions: 1, correctCount: 1, overallPercentage: 100,
+          questions: [{ questionId: QUIZ_IDS.question, sequence: 1, questionText: 'Câu hỏi Student', explanation: 'Giải thích đáp án Student',
+            answered: true, correct: true, selectedOptionId: 'option-A', options: [{ optionId: 'option-A', optionText: 'Đáp án Student', correct: true, sequence: 1 }] }] })
+      }
       if (path.endsWith('/attempts') && method === 'POST') {
         if (path.includes('/placement/') && !placement) return answer(null, 404, 'No placement quiz has been published yet.')
-        state.activeStudentQuizId = path.includes('/placement/') ? placement.id : QUIZ_IDS.quiz
-        return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, resumed: false, deadlineAt: '2100-01-01T00:00:00Z' })
+        state.activeStudentQuizId = path.includes('/placement/') ? placement.id : path.split('/').at(-2)!
+        return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, resumed: false, deadlineAt: state.studentDeadline })
       }
       if (path.includes('/attempts/')) return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, status: state.studentStatus,
-        attemptNumber: 1, startedAt: stamp, deadlineAt: '2100-01-01T00:00:00Z', remainingSeconds: 1800,
+        attemptNumber: 1, startedAt: stamp, deadlineAt: state.studentDeadline, remainingSeconds: 1800,
         totalQuestions: 1, answeredCount: state.studentOption ? 1 : 0,
         answers: state.studentOption ? [{ questionId: QUIZ_IDS.question, selectedOptionId: state.studentOption }] : [] })
-      return answer({ ...state.quizzes[0], title: 'Quiz Student', locked: Boolean(state.studentLockReason), lockReason: state.studentLockReason, attemptsUsed: 0,
-        showAnswers: true, inProgressAttemptId: null, attempts: [], questions: [{ id: QUIZ_IDS.question,
+      const quiz = state.quizzes.find(item => path.endsWith(`/quizzes/${item.id}`)) ?? state.quizzes[0]
+      return answer({ ...quiz, title: 'Quiz Student', sectionCourseId: quiz.courseId,
+        locked: Boolean(state.studentLockReason), lockReason: state.studentLockReason, attemptsUsed: 0,
+        showAnswers: state.studentShowAnswers, inProgressAttemptId: null,
+        attempts: state.studentStatus === 'GRADED' ? [{ attemptId: QUIZ_IDS.attempt, status: 'GRADED', attemptNumber: 1,
+          score: state.studentOption ? 1 : 0, maxScore: 1, percentage: state.studentOption ? 100 : 0, startedAt: stamp, submittedAt: stamp }] : [],
+        questions: [{ id: QUIZ_IDS.question,
           questionText: 'Câu hỏi Student', questionType: 'SINGLE_CHOICE', sequence: 1, imageUrl: null,
           options: [{ id: 'option-A', optionText: 'Đáp án Student', sequence: 1 }] }] })
     }
