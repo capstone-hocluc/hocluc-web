@@ -6,6 +6,7 @@ import { useAttemptSession } from '../../hooks/useAttemptSession'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getAttempt, getQuiz } from '../../services/assessmentService'
 import { getAssessmentLockMessage } from '../../lib/quizLock'
+import { refreshCredits } from '../../lib/credits'
 import { bySequence } from '../../lib/sequence'
 
 interface QuizAttemptPageProps {
@@ -18,7 +19,10 @@ interface QuizAttemptPageProps {
 // Taking a course quiz: loads the quiz + attempt, the shared attempt session
 // handles answers / timer / submit, AttemptWorkspace renders it.
 function QuizAttemptPage({ quizId, attemptId, onExit, onSubmitted }: QuizAttemptPageProps) {
-  const session = useAttemptSession(onSubmitted)
+  const session = useAttemptSession((submittedId) => {
+    void refreshCredits()
+    onSubmitted(submittedId)
+  })
   const { data, status, errorMessage, reload } = usePageResource(
     async () => {
       const [quiz, attempt] = await Promise.all([getQuiz(quizId), getAttempt(attemptId)])

@@ -1,20 +1,26 @@
 import { useMemo, useState } from 'react'
 import { matchesSearch } from '../../lib/search'
-import { CalendarDays, Info } from '../../components/console/icons'
+import { CalendarDays } from '../../components/console/icons'
+import { ApiError } from '../../lib/api'
 import type {
   AttendanceResponse,
   AttendanceStatus,
+  ClassSessionResponse,
   ScheduleCalendarItem,
 } from '../../types/scheduling'
 import { getMyCourses, type MyCourseEnrollment } from '../../services/courseService'
 import { getStudentSchedules } from '../../services/scheduleService'
+import { getCourseClassSessions } from '../../services/classSessionService'
+import { getClassSessionRecordings } from '../../services/classSessionRecordingService'
 import { getMyAttendanceForSchedule, getMyCourseAttendance } from '../../services/attendanceService'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import {
   addLocalDays,
   filterScheduleItemsToInstantRange,
+  itemSubtitle,
   localDateTimeToInstant,
   localToday,
+  safeExternalUrl,
   sortScheduleItems,
   startOfLocalWeek,
   SCHEDULING_TIMEZONE,
@@ -37,13 +43,30 @@ function responseData<T>(response: { data?: T }, message: string): T {
   return response.data
 }
 
-function getWeekRange(date: string) {
-  const start = startOfLocalWeek(date)
+function getWeekRange(start: string) {
   const end = addLocalDays(start, 7)
   return {
     startDate: localDateTimeToInstant(start, 0, 0),
     endDate: localDateTimeToInstant(end, 0, 0),
   }
+}
+
+async function loadCourseSessions(courseIds: string[], startDate: string) {
+  // This endpoint takes inclusive local dates, unlike the weekly schedule endpoint.
+  const range = { startDate, endDate: addLocalDays(startDate, 6) }
+  const results = await Promise.allSettled(courseIds.map((id) => getCourseClassSessions(id, range)))
+  const sessions = new Map<string, ClassSessionResponse>()
+  let incomplete = false
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      for (const session of result.value) sessions.set(session.id, session)
+    } else {
+      const error: unknown = result.reason
+      const noAccess = error instanceof ApiError && error.status === 403 && error.code === 'COURSE_NOT_PURCHASED'
+      incomplete ||= !noAccess
+    }
+  }
+  return { sessions: [...sessions.values()], incomplete }
 }
 
 function courseIdOf(enrollment: MyCourseEnrollment) {
@@ -62,14 +85,24 @@ export default function StudentSchedulePage() {
     return responseData(response, 'Không thể tải danh sách khóa học của bạn.')
   })
 
-  const scheduleRange = useMemo(() => getWeekRange(date), [date])
+  const weekStart = startOfLocalWeek(date)
+  const scheduleRange = useMemo(() => getWeekRange(weekStart), [weekStart])
   const schedules = useScheduleResource(
     'student-schedules:' + scheduleRange.startDate + ':' + scheduleRange.endDate,
     () => getStudentSchedules(scheduleRange)
   )
+  const courseNames = useMemo(
+    () => new Map(courses.data?.map(({ course }) => [course.id, course.title])),
+    [courses.data]
+  )
+  const courseIds = [...courseNames.keys()].sort()
+  const classSessions = useScheduleResource(
+    courseIds.length ? `student-class-sessions:${weekStart}:${courseIds.join(',')}` : null,
+    () => loadCourseSessions(courseIds, weekStart)
+  )
 
   const availableCourses = courses.data ?? []
-  const activeCourseId = courseId || (availableCourses[0] ? courseIdOf(availableCourses[0]) : '')
+  const activeCourseId = courseNames.has(courseId) ? courseId : availableCourses[0]?.course.id ?? ''
   const attendance = useScheduleResource(
     activeCourseId ? 'student-attendance:' + activeCourseId : null,
     () => getMyCourseAttendance(activeCourseId)
@@ -78,17 +111,30 @@ export default function StudentSchedulePage() {
   const items = useMemo<ScheduleCalendarItem[]>(
     () =>
       filterScheduleItemsToInstantRange(
-        (schedules.data ?? []).map((item) => ({ kind: 'schedule', sourceId: item.id, item })),
+        [
+          ...(schedules.data ?? []).map((item) => ({ kind: 'schedule' as const, sourceId: item.id, item })),
+          ...(classSessions.data?.sessions ?? []).map((item) => ({
+            kind: 'classSession' as const, sourceId: item.id, item, courseName: courseNames.get(item.courseId),
+          })),
+        ],
         scheduleRange
       ),
-    [scheduleRange, schedules.data]
+    [scheduleRange, schedules.data, classSessions.data, courseNames]
   )
   const filteredItems = useMemo(() => {
     const scoped = sortScheduleItems(items)
-    return scoped.filter((item) =>
-      matchesSearch(query, item.item.title, item.kind === 'schedule' ? item.item.courseName : '')
-    )
+    return scoped.filter((item) => matchesSearch(query, item.item.title, itemSubtitle(item)))
   }, [items, query])
+  const calendarLoading = schedules.status === 'loading' || courses.status === 'loading' || classSessions.status === 'loading'
+  const calendarIncomplete = [schedules.status, courses.status, classSessions.status].some(
+    (status) => status === 'error' || status === 'forbidden' || status === 'not-found'
+  ) || classSessions.data?.incomplete
+  const reloadCalendar = () => {
+    setSelectedItem(null)
+    schedules.reload()
+    courses.reload()
+    classSessions.reload()
+  }
   const changeDate = (nextDate: string) => {
     setDate(nextDate)
     setSelectedItem(null)
@@ -108,22 +154,13 @@ export default function StudentSchedulePage() {
           <Button
             appearance="outline"
             className="max-[767px]:min-h-11"
-            onClick={() => {
-              setSelectedItem(null)
-              schedules.reload()
-            }}
+            onClick={reloadCalendar}
           >
             <CalendarDays size={16} />
             Tải lại
           </Button>
         }
       />
-
-      <Notice tone="info">
-        <Info size={17} aria-hidden="true" />
-        Một số buổi thuộc chuỗi chưa hiển thị trong lịch này. Chúng sẽ xuất hiện khi quyền truy cập
-        lớp học được xác nhận.
-      </Notice>
 
       <ScheduleFilters
         date={date}
@@ -134,18 +171,22 @@ export default function StudentSchedulePage() {
         onViewChange={setView}
       />
 
+      {calendarIncomplete && (
+        <Notice tone="warning" className="flex-wrap justify-between gap-3">
+          Chưa tải được đầy đủ lịch học.
+          <Button size="sm" appearance="outline" onClick={reloadCalendar}>Thử tải lại lịch</Button>
+        </Notice>
+      )}
       <ScheduleResourceState
-        status={schedules.status}
-        errorMessage={schedules.errorMessage}
-        empty={!filteredItems.length}
+        status={calendarLoading && !filteredItems.length ? 'loading' : 'ready'}
+        empty={!filteredItems.length && !calendarIncomplete}
         emptyMessage={
           query.trim()
             ? 'Không tìm thấy lịch phù hợp trong tuần này.'
             : 'Bạn chưa có lịch học trong tuần này.'
         }
-        onRetry={schedules.reload}
       >
-        {view === 'agenda' ? (
+        {!filteredItems.length ? null : view === 'agenda' ? (
           <ScheduleList items={filteredItems} onSelect={setSelectedItem} />
         ) : (
           <ScheduleCalendar
@@ -227,10 +268,36 @@ export default function StudentSchedulePage() {
               key={selectedItem.item.id}
               scheduleId={selectedItem.item.id}
             />
+          ) : selectedItem?.kind === 'classSession' ? (
+            <StudentSessionRecordings key={selectedItem.item.id} sessionId={selectedItem.item.id} />
           ) : undefined
         }
       />
     </StudentPageContainer>
+  )
+}
+
+function StudentSessionRecordings({ sessionId }: { sessionId: string }) {
+  const recordings = useScheduleResource(`student-class-session-recordings:${sessionId}`, () => getClassSessionRecordings(sessionId))
+  return (
+    <ScheduleResourceState status={recordings.status} errorMessage={recordings.errorMessage}
+      empty={!recordings.data?.length} emptyMessage="Buổi học chưa có bản ghi." onRetry={recordings.reload}>
+      <ul className="space-y-2">
+        {recordings.data?.map((record) => {
+          const url = safeExternalUrl(record.streamUrl) ?? safeExternalUrl(record.videoUrl)
+          return (
+            <li key={record.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line-card p-3">
+              <span className="min-w-0 break-words text-sm font-semibold text-text-heading">{record.title}</span>
+              {url ? (
+                <Button asChild size="sm" appearance="outline">
+                  <a href={url} target="_blank" rel="noreferrer">Xem bản ghi</a>
+                </Button>
+              ) : <span className="text-sm text-text-muted">Chưa có link xem</span>}
+            </li>
+          )
+        })}
+      </ul>
+    </ScheduleResourceState>
   )
 }
 

@@ -36,11 +36,12 @@ interface CreditState {
   balance: CreditBalance | null
   streak: StreakView | null
   loading: boolean
+  balanceError: boolean
 }
 
-let state: CreditState = { balance: null, streak: null, loading: false }
+let state: CreditState = { balance: null, streak: null, loading: false, balanceError: false }
 let loaded = false
-/** Bumped on reset so a request that started for the previous account cannot fill the next one's state. */
+/** Only the latest refresh for the current account can update the store. */
 let generation = 0
 const listeners = new Set<() => void>()
 
@@ -54,16 +55,17 @@ function set(next: Partial<CreditState>) {
  * a photo, a freeze); every view of the balance updates together.
  */
 export async function refreshCredits() {
-  const started = generation
-  set({ loading: true })
-  try {
-    const [balance, streak] = await Promise.all([creditService.balance(), creditService.streak()])
-    if (started !== generation) return
-    loaded = true
-    set({ balance, streak, loading: false })
-  } catch {
-    if (started === generation) set({ loading: false })
-  }
+  const started = ++generation
+  set({ loading: true, balanceError: false })
+  const [balance, streak] = await Promise.allSettled([creditService.balance(), creditService.streak()])
+  if (started !== generation) return
+  loaded = balance.status === 'fulfilled' && streak.status === 'fulfilled'
+  set({
+    balance: balance.status === 'fulfilled' ? balance.value : state.balance,
+    streak: streak.status === 'fulfilled' ? streak.value : state.streak,
+    balanceError: balance.status === 'rejected',
+    loading: false,
+  })
 }
 
 export function setStreak(streak: StreakView) {
@@ -89,7 +91,7 @@ export function useCredits() {
 export function resetCredits() {
   generation++
   loaded = false
-  set({ balance: null, streak: null, loading: false })
+  set({ balance: null, streak: null, loading: false, balanceError: false })
 }
 
 // Logout, an expired session, another account or another active role all start from an empty state.

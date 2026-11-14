@@ -14,6 +14,8 @@ const PNG = Buffer.from(
 async function install(page: Page, role = 'STUDENT') {
   const state = {
     balance: { available: 42, bonus: 12, paid: 30, held: 0 },
+    balanceFailures: 0,
+    streakFailures: 0,
     solvePolls: 0,
     freezeBought: 0,
     freezes: 1,
@@ -51,11 +53,16 @@ async function install(page: Page, role = 'STUDENT') {
     if (path === '/api/v1/users/profiles')
       return answer({ id: USER, role, roles: [role], displayName: 'Học sinh', firstName: 'Học', lastName: 'Sinh',
         email: 'student@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
-    if (path === '/api/v1/credits/me') return answer(state.balance)
-    if (path === '/api/v1/credits/streak')
+    if (path === '/api/v1/credits/me') {
+      if (state.balanceFailures > 0) { state.balanceFailures--; return answer(null, 503) }
+      return answer(state.balance)
+    }
+    if (path === '/api/v1/credits/streak') {
+      if (state.streakFailures > 0) { state.streakFailures--; return answer(null, 503) }
       return answer({ current: 5, longest: 9, doneToday: true, freezesAvailable: state.freezes, maxFreezes: 2, freezePrice: 10,
         today: '2026-11-05', days: [{ date: '2026-11-05', qualified: true, frozen: false, lessonsCompleted: 1, quizzesPassed: 0 },
           { date: '2026-11-04', qualified: false, frozen: true, lessonsCompleted: 0, quizzesPassed: 0 }] })
+    }
     if (path === '/api/v1/credits/me/history')
       return answer({ content: [
         { id: 'h1', type: 'PURCHASE', amount: 30, balanceAfter: 42, refType: 'ORDER', refId: ORDER, expiresAt: null, note: 'Gói 50', createdAt: stamp },
@@ -141,6 +148,20 @@ test('wallet shows the balance, the packs and the history, and a pack opens its 
   await expect(page.getByText('Thanh toán gói Sao')).toBeVisible()
   expect(state.checkout).toHaveLength(1)
   expect(state.pageErrors).toEqual([])
+})
+
+test('the wallet retries a failed balance load independently of the streak', async ({ page }) => {
+  const state = await install(page)
+  state.balanceFailures = 1
+  await page.goto('/student/wallet')
+  await expect(page.getByText('Không tải được số dư Ví Sao.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Chuỗi 5 ngày' })).toBeVisible()
+
+  state.streakFailures = 1
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click()
+  await expect(page.getByText('12 Sao thưởng · 30 Sao đã mua')).toBeVisible()
+  await expect(page.getByRole('button', { name: '42 Sao' })).toBeVisible()
+  await expect(page.getByText('Không tải được số dư Ví Sao.')).toHaveCount(0)
 })
 
 test('the AI tutor sends a photo and shows the worked solution', async ({ page }) => {

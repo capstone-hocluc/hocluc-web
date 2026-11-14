@@ -13,7 +13,7 @@ import { usePageResource } from '../../hooks/usePageResource'
 import { ApiError } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/courseFormat'
-import { CREDIT_ENTRY_LABELS, CREDIT_UNIT, creditEntryPurpose, useCredits } from '../../lib/credits'
+import { CREDIT_ENTRY_LABELS, CREDIT_UNIT, creditEntryPurpose, refreshCredits, useCredits } from '../../lib/credits'
 import { creditService, type CreditEntry, type CreditPack } from '../../services/creditService'
 import { cn } from '../../lib/cn'
 
@@ -39,27 +39,41 @@ function StudentWalletPage({ onOpenPayment }: StudentWalletPageProps) {
 }
 
 function BalanceCard() {
-  const { balance } = useCredits()
-  if (!balance) return <Skeleton className="h-[132px] rounded-2xl" />
+  const { balance, balanceError } = useCredits()
+  if (!balance) {
+    return balanceError ? <BalanceLoadError /> : <Skeleton className="h-[132px] rounded-2xl" />
+  }
   return (
-    <Card variant="panel" radius="lg" padding="lg" className="flex flex-wrap items-center gap-5">
-      <CreditIcon size={64} />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="text-[34px] leading-none font-bold text-text-heading tabular-nums">
-          {balance.available.toLocaleString('vi-VN')}
-          <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
-        </p>
-        <p className="text-sm text-text-body">
-          {balance.bonus.toLocaleString('vi-VN')} {CREDIT_UNIT} thưởng · {balance.paid.toLocaleString('vi-VN')}{' '}
-          {CREDIT_UNIT} đã mua
-        </p>
-        {balance.held > 0 && (
-          <p className="text-sm text-text-muted">
-            {balance.held.toLocaleString('vi-VN')} {CREDIT_UNIT} đang tạm giữ cho câu hỏi chưa có lời giải.
+    <>
+      {balanceError && <BalanceLoadError hasPreviousBalance />}
+      <Card variant="panel" radius="lg" padding="lg" className="flex flex-wrap items-center gap-5">
+        <CreditIcon size={64} />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-[34px] leading-none font-bold text-text-heading tabular-nums">
+            {balance.available.toLocaleString('vi-VN')}
+            <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
           </p>
-        )}
-      </div>
-    </Card>
+          <p className="text-sm text-text-body">
+            {balance.bonus.toLocaleString('vi-VN')} {CREDIT_UNIT} thưởng · {balance.paid.toLocaleString('vi-VN')}{' '}
+            {CREDIT_UNIT} đã mua
+          </p>
+          {balance.held > 0 && (
+            <p className="text-sm text-text-muted">
+              {balance.held.toLocaleString('vi-VN')} {CREDIT_UNIT} đang tạm giữ cho câu hỏi chưa có lời giải.
+            </p>
+          )}
+        </div>
+      </Card>
+    </>
+  )
+}
+
+function BalanceLoadError({ hasPreviousBalance = false }: { hasPreviousBalance?: boolean }) {
+  return (
+    <Notice tone="danger" className="flex-wrap justify-between gap-3">
+      <span>{hasPreviousBalance ? 'Không thể cập nhật số dư. Bạn đang xem số dư lần tải trước.' : 'Không tải được số dư Ví Sao.'}</span>
+      <Button appearance="outline" size="sm" onClick={() => void refreshCredits()}>Thử lại</Button>
+    </Notice>
   )
 }
 

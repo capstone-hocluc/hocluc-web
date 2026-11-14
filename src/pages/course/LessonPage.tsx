@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import LessonBreadcrumb from '../../components/lesson/LessonBreadcrumb'
 import LessonContent from '../../components/lesson/LessonContent'
 import LessonInfoCard from '../../components/lesson/LessonInfoCard'
@@ -8,7 +8,8 @@ import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getLesson, updateLessonProgress } from '../../services/lessonService'
+import { getLesson, updateLessonProgress, type LessonProgress } from '../../services/lessonService'
+import { refreshCredits } from '../../lib/credits'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast, showSuccessToast } from '../../lib/toastBus'
 
@@ -37,7 +38,14 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz }: L
   })
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const savingRef = useRef(false)
+  const savingRef = useRef<Promise<LessonProgress | null> | null>(null)
+  const leavingRef = useRef(false)
+  const mountedRef = useRef(false)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   const clampWatchSeconds = () => {
     let seconds = Math.max(0, Math.floor(watchSecondsRef.current))
@@ -47,23 +55,39 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz }: L
     return seconds
   }
 
-  // Fire-and-forget checkpoint save (video pause, leaving the lesson). Never
-  // sent on every timeupdate tick - only at these controlled moments.
+  // A completion waits for any pending video checkpoint instead of being dropped.
   const saveProgress = async (completed: boolean) => {
-    if (!lesson || !lesson.owned || savingRef.current) return null
-    savingRef.current = true
+    if (!lesson?.owned) return null
+    const pending = savingRef.current
+    if (pending && !completed) return pending
+
+    const saving = (async () => {
+      const previous = await pending
+      try {
+        const updated = await updateLessonProgress(lesson.id, {
+          completed,
+          watchDurationSeconds: clampWatchSeconds(),
+        })
+        setLesson((prev) => (prev ? { ...prev, progress: updated } : prev))
+        if (updated.status === 'COMPLETED' && (previous ?? lesson.progress)?.status !== 'COMPLETED') {
+          void refreshCredits()
+          if (lesson.quizzes.some((quiz) => quiz.locked)) {
+            void getLesson(lesson.id)
+              .then(({ quizzes }) => setLesson((prev) => (prev ? { ...prev, quizzes } : prev)))
+              .catch(() => showErrorToast('Tiến độ đã lưu. Hãy tải lại trang để cập nhật trạng thái bài kiểm tra.'))
+          }
+        }
+        return updated
+      } catch (error) {
+        showErrorToast(getErrorMessage(error))
+        return null
+      }
+    })()
+    savingRef.current = saving
     try {
-      const updated = await updateLessonProgress(lesson.id, {
-        completed,
-        watchDurationSeconds: clampWatchSeconds(),
-      })
-      setLesson((prev) => (prev ? { ...prev, progress: updated } : prev))
-      return updated
-    } catch (error) {
-      showErrorToast(getErrorMessage(error))
-      return null
+      return await saving
     } finally {
-      savingRef.current = false
+      if (savingRef.current === saving) savingRef.current = null
     }
   }
 
@@ -84,14 +108,12 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz }: L
     if (updated) showSuccessToast('Đã đánh dấu hoàn thành bài học.')
   }
 
-  const goToLesson = (targetLessonId: string) => {
-    void saveProgress(false)
-    onNavigateLesson(targetLessonId)
-  }
-
-  const goBackToStudy = () => {
-    void saveProgress(false)
-    onBackToStudy()
+  const leaveLesson = async (navigate: () => void) => {
+    if (leavingRef.current) return
+    leavingRef.current = true
+    await saveProgress(false)
+    leavingRef.current = false
+    if (mountedRef.current) navigate()
   }
 
   return (
@@ -124,7 +146,7 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz }: L
 
       {status === 'ready' && lesson && (
         <div className="flex flex-col gap-4">
-          <LessonBreadcrumb lesson={lesson} onBack={goBackToStudy} />
+          <LessonBreadcrumb lesson={lesson} onBack={() => void leaveLesson(onBackToStudy)} />
           <LessonContent
             lesson={lesson}
             videoRef={videoRef}
@@ -140,7 +162,7 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz }: L
           <LessonNavFooter
             previousLessonId={lesson.previousLessonId}
             nextLessonId={lesson.nextLessonId}
-            onNavigate={goToLesson}
+            onNavigate={(id) => void leaveLesson(() => onNavigateLesson(id))}
           />
         </div>
       )}
