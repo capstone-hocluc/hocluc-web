@@ -31,10 +31,9 @@ function useFitToWidth(paper: RefObject<HTMLDivElement | null>) {
  * editor flowing over them, the ruler above, all scaled by the zoom.
  */
 export default function DocSheet() {
-  const { editor, zoom: chosenZoom, showRuler, pages, loading, activeVariant } = useExamDoc()
-  // While the document is read the editor exists but is empty: the sheet shows a skeleton instead (a variant is
-  // built from an already loaded document, so it is never waiting).
-  const ready = editor && !(loading && activeVariant === null)
+  const { editor, zoom: chosenZoom, showRuler, pages, loading } = useExamDoc()
+  // While the document is read the editor exists but is empty: the sheet shows a skeleton instead.
+  const ready = editor && !loading
   const paper = useRef<HTMLDivElement>(null)
   const fit = useFitToWidth(paper)
   // At 100% the sheet shrinks to the column it sits in (like a docs app beside open side panels); other zoom levels are

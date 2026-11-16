@@ -1,5 +1,5 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { END_LINE } from './variants/parse-exam'
+import { END_LINE } from './exam-lines'
 
 /*
  * The exam as the sheet shows it, read as plain text for the AI assistant: what "câu 5" says now (the teacher may have

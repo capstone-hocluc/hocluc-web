@@ -70,7 +70,7 @@
 }
 
 /* Chart: its drawing at a share of the text width (set by the node view), centred. Its edit button shows on the
-   selected chart of an editable document only: not on a read-only exam variant, nor on a page copied for the PDF. */
+   selected chart of an editable document only: not on a read-only sheet, nor on a page copied for the PDF. */
 .exam-chart {
   position: relative;
   margin-right: auto;

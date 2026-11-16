@@ -89,14 +89,14 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
           <Command.Empty className="py-8 text-center text-sm text-text-tertiary">Không tìm thấy trang phù hợp.</Command.Empty>
           {groups.map((section) => (
             <Command.Group
-              key={section.label}
+              key={section.id}
               heading={section.label}
               className="py-1.5 **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-[11px] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-text-tertiary **:[[cmdk-group-heading]]:uppercase"
             >
               {section.items.map((item) => (
                 <Command.Item
                   key={item.key}
-                  value={`${section.label} ${item.title}`}
+                  value={`${section.label ?? ''} ${item.title}`}
                   onSelect={() => handleSelect(item.key)}
                   className="flex cursor-pointer items-center rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-background-gray-primary data-[selected=true]:bg-background-gray-primary data-[selected=true]:text-text-primary"
                 >

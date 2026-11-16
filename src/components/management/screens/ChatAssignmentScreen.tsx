@@ -181,7 +181,10 @@ export default function ChatAssignmentScreen({ role, conversationId, onSelectCon
       setAssignOpen(false); setReason('')
     } catch (error) {
       if (epoch !== detailEpoch.current) return
-      if (error instanceof ApiError && error.status === 409) {
+      // A paused mentor or one at today's limit is also a 409, but nothing changed: say why and stay.
+      if (error instanceof ApiError && (error.code === 'MENTOR_NOT_AVAILABLE' || error.code === 'MENTOR_DAILY_LIMIT_REACHED')) {
+        setAssignmentError(failure(error))
+      } else if (error instanceof ApiError && error.status === 409) {
         setAssignmentError('Phân công đã thay đổi. Đang tải lại thông tin; hãy kiểm tra rồi phân công lại.')
         try {
           const updated = data(await chatService.getManagementConversation(current.id))

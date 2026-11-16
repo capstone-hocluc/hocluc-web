@@ -10,6 +10,7 @@ import { Placeholder } from '@tiptap/extensions'
 import { Boxed, Indent, LineSpacing, MathNode, PageBreak, ParagraphStyles, type MathOptions } from './extensions'
 import { ExamTags } from './exam-tags'
 import { LiveDraftWidget } from './nodes/live-draft-widget'
+import { AiSuggestions } from './nodes/ai-suggestions'
 import { EXAM_NODES } from './nodes'
 import { ExamPagination } from './pagination'
 
@@ -49,6 +50,7 @@ export function examDocExtensions({ onEditFormula, onPages }: ExamDocExtensionOp
     MathNode.configure({ onEdit: onEditFormula }),
     ExamTags,
     LiveDraftWidget,
+    AiSuggestions,
     ExamPagination.configure({ onPages }),
     ...EXAM_NODES,
   ]

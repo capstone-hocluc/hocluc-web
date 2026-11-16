@@ -397,7 +397,7 @@ export default function CourseEditorDialog({
                 label="Đợt thi"
                 hint={
                   examYears.status === 'ready' && (examYears.data ?? []).length === 0
-                    ? 'Chưa có năm thi: tạo ở trang “Năm thi & đợt thi”.'
+                    ? 'Chưa có năm thi: tạo ở tab “Đợt thi” của trang Khóa học.'
                     : 'Ngày thi lấy theo đợt thi đã chọn.'
                 }
               >

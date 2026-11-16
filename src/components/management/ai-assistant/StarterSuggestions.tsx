@@ -1,4 +1,5 @@
 import type { AiAssistantMode } from '../../../services/aiAssistantService'
+import { EmptyStateSuggestion, EmptyStateSuggestions } from '../../assistant-ui/elements/empty-state'
 
 interface Suggestion {
   label: string
@@ -9,46 +10,46 @@ interface Suggestion {
 const SUGGESTIONS: Record<Exclude<AiAssistantMode, 'revise'>, Suggestion[]> = {
   ask: [
     {
-      label: 'Giải thích vì sao tại điểm cực trị đạo hàm bằng 0',
+      label: 'Vì sao đạo hàm bằng 0 tại cực trị?',
       prompt: 'Giải thích vì sao tại điểm cực trị đạo hàm lại bằng 0, kèm ví dụ.',
     },
     {
-      label: 'Tóm tắt các bước giải phương trình lượng giác',
+      label: 'Các bước giải phương trình lượng giác',
       prompt: 'Tóm tắt các bước giải phương trình lượng giác cơ bản.',
     },
     {
-      label: 'Gợi ý cách dạy tích phân cho học sinh trung bình',
+      label: 'Cách dạy tích phân cho học sinh trung bình',
       prompt: 'Gợi ý cách dạy bài tích phân cho học sinh trung bình, kèm ví dụ minh hoạ.',
     },
   ],
   // Each request of an exam names its subject and its count: without them the assistant has to ask.
   compose: [
     {
-      label: 'Soạn 10 câu trắc nghiệm Toán mức trung bình',
+      label: '10 câu trắc nghiệm Toán, mức trung bình',
       prompt: 'Soạn 10 câu trắc nghiệm Toán mức trung bình, kèm lời giải.',
     },
     {
-      label: 'Soạn 5 câu vận dụng môn Toán về hàm số',
+      label: '5 câu vận dụng Toán về hàm số',
       prompt: 'Soạn 5 câu vận dụng môn Toán về hàm số, kèm lời giải chi tiết.',
     },
     {
-      label: 'Soạn 8 câu Toán về xác suất, mức dễ',
+      label: '8 câu Toán xác suất, mức dễ',
       prompt: 'Soạn 8 câu Toán về xác suất, mức dễ, kèm lời giải.',
     },
   ],
   'mock-exam': [
     {
-      label: 'Mô phỏng 10 câu Toán từ đề mẫu đã chọn',
+      label: 'Mô phỏng 10 câu từ đề mẫu',
       prompt: 'Mô phỏng 10 câu Toán từ đề mẫu đã chọn, giữ dạng câu và độ khó của từng câu.',
     },
     {
-      label: 'Mô phỏng 5 câu Toán, đổi số liệu và ngữ cảnh',
+      label: 'Mô phỏng 5 câu, đổi số liệu',
       prompt: 'Mô phỏng 5 câu Toán từ đề mẫu đã chọn, đổi số liệu và ngữ cảnh của từng câu.',
     },
   ],
 }
 
-/** Starter cards stacked above the composer; a card fills the composer, it does not send. */
+/** The starters under the greeting of an empty conversation; one fills the composer, it does not send. */
 export default function StarterSuggestions({
   mode,
   onPick,
@@ -59,20 +60,19 @@ export default function StarterSuggestions({
   disabled?: boolean
 }) {
   return (
-    <ul aria-label="Gợi ý yêu cầu" className="flex flex-col gap-1.5">
-      {(mode === 'revise' ? [] : SUGGESTIONS[mode]).map((suggestion) => (
-        <li key={suggestion.label}>
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onPick(mode, suggestion.prompt)}
-            title={suggestion.prompt}
-            className="block w-full rounded-xl border border-card-border bg-card-background px-3 py-2.5 text-left text-[13.5px] leading-5 text-text-primary transition-colors hover:border-input-primary-focus-border hover:bg-background-gray-secondary focus-visible:ring-2 focus-visible:ring-input-primary-focus-border disabled:pointer-events-none disabled:opacity-50"
-          >
-            {suggestion.label}
-          </button>
-        </li>
+    // Keyed by the mode, so the pills come in again when it changes.
+    <EmptyStateSuggestions key={mode} aria-label="Gợi ý yêu cầu">
+      {(mode === 'revise' ? [] : SUGGESTIONS[mode]).map((suggestion, index) => (
+        <EmptyStateSuggestion
+          key={suggestion.label}
+          index={index}
+          disabled={disabled}
+          onClick={() => onPick(mode, suggestion.prompt)}
+          title={suggestion.prompt}
+        >
+          {suggestion.label}
+        </EmptyStateSuggestion>
       ))}
-    </ul>
+    </EmptyStateSuggestions>
   )
 }

@@ -78,6 +78,7 @@ export class ApiError extends Error {
 export interface RequestOptions {
   headers?: Record<string, string>
   timeoutMs?: number
+  signal?: AbortSignal
   method?: string
   body?: unknown
   auth?: boolean
@@ -142,6 +143,7 @@ export async function request<T = unknown>(
     guardIdentity = false,
     headers = {},
     timeoutMs,
+    signal: callerSignal,
   }: RequestOptions = {}
 ): Promise<ApiResponse<T>> {
   const attachesToken = auth || optionalAuth
@@ -159,7 +161,8 @@ export async function request<T = unknown>(
     }
   }
   let response: Response
-  const signal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
+  const timeoutSignal = timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined
+  const signal = callerSignal && timeoutSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : callerSignal ?? timeoutSignal
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       method,
@@ -168,13 +171,14 @@ export async function request<T = unknown>(
       body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined,
       signal,
     })
-  } catch {
+  } catch (error) {
+    if (callerSignal?.aborted) throw error
     if (signal?.aborted)
       throw new Error(
-        'Máy chủ phản hồi quá lâu. Bạn có thể thử lại để kiểm tra kết quả của yêu cầu này.'
+        'Máy chủ phản hồi quá lâu. Bạn có thể thử lại để kiểm tra kết quả của yêu cầu này.', { cause: error }
       )
     // fetch itself threw: no network / server unreachable, there is no response to read.
-    throw new Error('Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.')
+    throw new Error('Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.', { cause: error })
   }
 
   const data = await response.json().catch(() => null)
@@ -193,6 +197,7 @@ export async function request<T = unknown>(
         guardIdentity,
         headers,
         timeoutMs,
+        signal: callerSignal,
       })
     }
     throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
@@ -210,6 +215,7 @@ export async function request<T = unknown>(
         guardIdentity,
         headers,
         timeoutMs,
+        signal: callerSignal,
       })
     }
     if (!optionalAuth) handleSessionExpired()

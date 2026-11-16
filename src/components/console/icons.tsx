@@ -168,3 +168,25 @@ export const Filter = (props: IconProps) => <Sized icon={FilterIcon} {...props} 
 export const Eye = (props: IconProps) => <Sized icon={EyeIcon} {...props} />
 export const Trash2 = (props: IconProps) => <Sized icon={TrashBinIcon} {...props} />
 export const X = (props: IconProps) => <Sized icon={CloseIcon} {...props} />
+/** A window with its last strip apart: where a panel docks (the AI assistant's side panel or bottom bar). */
+function DockIcon({ side, size = 20, ...props }: IconProps & { side: 'right' | 'bottom' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <rect x="3.5" y="4" width="17" height="16" rx="2.5" />
+      {side === 'right' ? <path d="M14.5 4v16" /> : <path d="M3.5 14.5h17" />}
+    </svg>
+  )
+}
+
+export const PanelRight = (props: IconProps) => <DockIcon side="right" {...props} />
+export const PanelBottom = (props: IconProps) => <DockIcon side="bottom" {...props} />

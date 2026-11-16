@@ -25,10 +25,13 @@ export default function PurchaseGuard({
     } else if (token && status === 'idle') void loadCurrentUser().catch(() => undefined)
   }, [token, status, loadCurrentUser, onNavigate, session.checking, session.error])
   if (session.checking || (!session.error && (!token || status === 'idle' || status === 'loading')))
+    // The page stays empty while the account is checked: a reload takes a moment, and a waiting notice only flashed.
     return (
-      <PurchaseLayout title="Đang xác thực tài khoản">
-        <p role="status">Vui lòng chờ trong giây lát…</p>
-      </PurchaseLayout>
+      <div aria-busy="true" className="hl-purchase">
+        <p role="status" className="sr-only">
+          Đang xác thực tài khoản
+        </p>
+      </div>
     )
   if (session.error || status === 'error' || !profile)
     return (

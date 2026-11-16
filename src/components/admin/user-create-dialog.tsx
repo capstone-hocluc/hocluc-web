@@ -8,7 +8,12 @@ import { Input } from '../tailgrids/core/input'
 import { Label } from '../tailgrids/core/label'
 import { TextField } from '../tailgrids/core/text-field'
 import { Checkbox } from '../tailgrids/core/checkbox'
+import { Skeleton } from '../tailgrids/core/skeleton'
+import Notice from '../console/notice'
+import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { PERSONNEL_ROLES } from '../../lib/role-home'
+import { subjectRows } from '../../lib/subject-rows'
+import { getCategories } from '../../services/categoryService'
 import { ROLE_LABELS, getErrorMessage } from './user-labels'
 
 type CreateUserForm = Required<Pick<CreateUserRequest, 'email' | 'password' | 'firstName' | 'lastName' | 'role'>> & {
@@ -40,15 +45,23 @@ interface UserCreateDialogProps {
 
 function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateDialogProps) {
   const [form, setForm] = useState<CreateUserForm>(() => emptyForm(accountType))
+  const [mentorSubjects, setMentorSubjects] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const mentor = form.roles.includes('MENTOR')
+  const subjects = useScheduleResource(open && mentor ? 'create-user:subjects' : null, async () => subjectRows(await getCategories()))
 
   const set = <K extends keyof CreateUserForm>(key: K, value: CreateUserForm[K]) =>
     setForm((current) => ({ ...current, [key]: value }))
 
+  const reset = () => {
+    setForm(emptyForm(accountType))
+    setMentorSubjects([])
+  }
+
   const close = () => {
     if (loading) return
-    setForm(emptyForm(accountType))
+    reset()
     setError('')
     onClose()
   }
@@ -60,6 +73,10 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
       setError('Chọn ít nhất một vai trò và vai trò khởi đầu trong danh sách đã chọn.')
       return
     }
+    if (mentor && !mentorSubjects.length) {
+      setError('Chọn ít nhất một môn cho Mentor.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -67,8 +84,9 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
         ...form,
         displayName: form.displayName.trim() || undefined,
         phone: form.phone.trim() || undefined,
+        scopes: mentor ? mentorSubjects.map((categoryId) => ({ categoryId, capability: 'MENTOR' as const })) : undefined,
       })
-      setForm(emptyForm(accountType))
+      reset()
       onCreated()
     } catch (requestError: unknown) {
       setError(getErrorMessage(requestError))
@@ -142,6 +160,30 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
             <SelectField ariaLabel="Vai trò khởi đầu" options={form.roles.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
               value={form.roles.includes(form.role) ? form.role : ''} disabled={loading || !form.roles.length}
               placeholder="Chọn vai trò khởi đầu" onChange={(value) => set('role', value as UserRole)} />
+          </fieldset>
+        )}
+
+        {mentor && (
+          <fieldset disabled={loading} className="flex flex-col gap-2">
+            <legend className="mb-2 text-sm font-medium text-text-primary">Môn phụ trách</legend>
+            {subjects.status === 'ready' && subjects.data ? (
+              <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-lg border border-card-border p-3">
+                {subjects.data.map(({ category, child }) => (
+                  <Checkbox key={category.id} className={child ? 'pl-6' : undefined}
+                    isSelected={mentorSubjects.includes(category.id)} isDisabled={loading}
+                    onChange={(checked) => setMentorSubjects((current) =>
+                      checked ? [...current, category.id] : current.filter((id) => id !== category.id))}>
+                    {category.name}
+                  </Checkbox>
+                ))}
+              </div>
+            ) : subjects.status === 'loading' ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-card-border p-3">
+                {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-5 w-48" />)}
+              </div>
+            ) : (
+              <Notice tone="danger">{subjects.errorMessage || 'Không thể tải môn học.'}</Notice>
+            )}
           </fieldset>
         )}
 

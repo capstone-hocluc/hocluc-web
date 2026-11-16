@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import PageHeading from '../../console/page-heading'
 import Button from '../../console/button'
@@ -99,10 +99,13 @@ function buildSubjectOptions(
 
 export default function CourseManagement({
   readOnly = false,
-  title = 'Môn học và khóa học',
+  title = 'Khóa học',
+  navigation,
 }: {
   readOnly?: boolean
   title?: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }) {
   const [query, setQuery] = useState<CourseQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
@@ -497,6 +500,7 @@ export default function CourseManagement({
           </>
         }
       />
+      {navigation}
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>

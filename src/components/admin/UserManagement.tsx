@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   AlertCircle,
@@ -61,11 +61,13 @@ interface UserManagementProps {
   /** Students are the platform's customers and personnel run it, so each has its own list. */
   audience: 'staff' | 'students'
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
   readOnly?: boolean
   canCreateUsers?: boolean
 }
 
-function UserManagement({ audience, title, readOnly = false, canCreateUsers = false }: UserManagementProps) {
+function UserManagement({ audience, title, navigation, readOnly = false, canCreateUsers = false }: UserManagementProps) {
   const students = audience === 'students'
   const noun = students ? 'học viên' : 'tài khoản'
   const [page, setPage] = useState(0)
@@ -334,6 +336,7 @@ function UserManagement({ audience, title, readOnly = false, canCreateUsers = fa
           )
         }
       />
+      {navigation}
       <section
         className="overflow-hidden rounded-xl border border-card-border bg-card-background"
         aria-busy={loading}

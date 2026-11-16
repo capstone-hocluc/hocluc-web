@@ -12,6 +12,9 @@ export interface NavEntry {
 }
 
 export interface NavSection {
-  label: string;
+  /** Stable key: the group's DOM id and its folded state are stored under it. */
+  id: string;
+  /** Omitted for a group that sits on top without a heading. */
+  label?: string;
   items: NavEntry[];
 }

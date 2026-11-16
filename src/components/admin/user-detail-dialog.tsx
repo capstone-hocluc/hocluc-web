@@ -1,5 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
-import { cn } from '../../lib/cn'
+import { useState, type FormEvent } from 'react'
 import Button from '../console/button'
 import { grantedRoles as getGrantedRoles } from '../../lib/role-home'
 import { LoaderCircle } from '../console/icons'
@@ -20,6 +19,8 @@ import { getInitials } from '../console/profile-utils'
 import { Avatar, AvatarFallback, AvatarImage } from '../tailgrids/core/avatar'
 import { Checkbox } from '../tailgrids/core/checkbox'
 import SubjectScopeEditor from './subject-scope-editor'
+import FactGrid from './fact-grid'
+import MentorProfilePanel from './mentor-profile-panel'
 import {
   ROLE_LABELS,
   STATUS_LABELS,
@@ -43,35 +44,13 @@ interface UserDetailDialogProps {
 
 const LISTED_COURSES = 3
 
-type UserTab = 'overview' | 'learning' | 'profile' | 'roles' | 'subjects' | 'system'
+type UserTab = 'overview' | 'learning' | 'profile' | 'mentor' | 'roles' | 'subjects' | 'system'
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' }
 const TRACK_LABELS: Record<string, string> = {
   NATURAL_SCIENCES: 'Khoa học tự nhiên',
   SOCIAL_SCIENCES: 'Khoa học xã hội',
   COMBINED: 'Tổ hợp',
-}
-
-interface Fact {
-  label: string
-  value: ReactNode
-  wide?: boolean
-}
-
-// Every field of the profile is listed, "—" when empty, so an admin sees what the account is missing.
-function FactGrid({ facts }: { facts: Fact[] }) {
-  return (
-    <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-      {facts.map((fact) => (
-        <div key={fact.label} className={cn('min-w-0', fact.wide && 'sm:col-span-2')}>
-          <dt className="text-xs text-text-tertiary">{fact.label}</dt>
-          <dd className="mt-1 text-sm font-medium break-words whitespace-pre-line text-text-primary">
-            {fact.value === null || fact.value === undefined || fact.value === false || fact.value === '' ? '—' : fact.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  )
 }
 
 function UserDetailDialog(props: UserDetailDialogProps) {
@@ -97,6 +76,9 @@ function UserDetail({
   const showRoleTab = canGrantRoles && !!user && !isStudent
   // Subject permissions are granted by administrators and managers, to staff-side accounts only.
   const showSubjectTab = !!user && !isStudent && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER')
+  // The back office reads a mentor's profile; only administrators change it.
+  const showMentorTab =
+    grantedRoles.includes('MENTOR') && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
   const [tab, setTab] = useState<UserTab>('overview')
   const busy = grantingRoles || savingProfile
   const [editing, setEditing] = useState(false)
@@ -173,7 +155,8 @@ function UserDetail({
       open={Boolean(user)}
       onClose={onClose}
       title="Chi tiết tài khoản"
-      maxWidth={920}
+      maxWidth={1120}
+      height={840}
       dismissable={!busy}
       onSubmit={editing ? (event) => void save(event) : undefined}
       footer={footer}
@@ -274,6 +257,7 @@ function UserDetail({
                   <ConsoleTabsTrigger value="overview">Tổng quan</ConsoleTabsTrigger>
                   {isStudent && <ConsoleTabsTrigger value="learning">Học tập</ConsoleTabsTrigger>}
                   {isStudent && <ConsoleTabsTrigger value="profile">Hồ sơ</ConsoleTabsTrigger>}
+                  {showMentorTab && <ConsoleTabsTrigger value="mentor">Hồ sơ Mentor</ConsoleTabsTrigger>}
                   {showRoleTab && <ConsoleTabsTrigger value="roles">Vai trò</ConsoleTabsTrigger>}
                   {showSubjectTab && <ConsoleTabsTrigger value="subjects">Quyền theo môn</ConsoleTabsTrigger>}
                   <ConsoleTabsTrigger value="system">Hệ thống</ConsoleTabsTrigger>
@@ -324,6 +308,12 @@ function UserDetail({
                           { label: 'Năm tốt nghiệp', value: student?.graduationYear },
                         ]}
                       />
+                    </ConsoleTabsContent>
+                  )}
+
+                  {showMentorTab && (
+                    <ConsoleTabsContent value="mentor">
+                      <MentorProfilePanel userId={user.id} canEdit={viewer?.role === 'ADMINISTRATOR'} />
                     </ConsoleTabsContent>
                   )}
 

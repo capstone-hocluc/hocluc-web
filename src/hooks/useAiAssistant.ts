@@ -9,6 +9,7 @@ import {
   getAiConversations,
   getAiDraft,
   getAiMessages,
+  publishAiConversation,
   removeAiDraftItem,
   renameAiConversation,
   reorderAiDraftItems,
@@ -23,6 +24,7 @@ import {
   type AiDraftResponse,
   type AiExamFormat,
   type AiMessage,
+  type AiPublishedAs,
   type AiRevisedItem,
   type AiSendConfig,
   type AiSheetDocument,
@@ -30,7 +32,7 @@ import {
   type AiStreamEvent,
 } from '../services/aiAssistantService'
 import { ApiError } from '../lib/api'
-import { getBankSources } from '../services/questionBankService'
+import type { BankSource } from '../services/questionBankService'
 import type { SelectOption } from '../components/console/select-field'
 import {
   buildPaper,
@@ -44,7 +46,16 @@ import {
   type AiTraceItem,
   type AiTraceStage,
 } from '../components/management/ai-assistant/exam-format'
-import { liveDraftTail, liveDraftView, type LiveDraft } from '../components/management/exam-doc/live-draft'
+import {
+  liveDraftTail,
+  liveDraftView,
+  type LiveDraft,
+  type LiveDraftView,
+} from '../components/management/exam-doc/live-draft'
+import { createValueStore, useStoreValue, type ValueStore } from '../lib/value-store'
+import { readSessionCache, writeSessionCache } from '../lib/session-cache'
+
+const CONVERSATIONS_CACHE = 'ai-assistant.conversations'
 import { revisedNumbers } from '../components/management/ai-assistant/revise-request'
 
 /**
@@ -77,7 +88,10 @@ export interface SheetRewrite {
   question: AiDraftQuestion
 }
 
-interface AiRun {
+/** The unit the AI is writing, with its words read once into questions and options (the sheet and the chat show them). */
+export type LiveWriting = LiveDraft & { view: LiveDraftView }
+
+export interface AiRun {
   mode: AiAssistantMode
   messageId: string | null
   jobId: string | null
@@ -86,8 +100,27 @@ interface AiRun {
   itemIds: string[]
   knownAssistantIds: string[]
   /** The unit the AI is writing right now, as far as its words have come. */
-  draft: LiveDraft | null
+  draft: LiveWriting | null
 }
+
+/**
+ * The run going on, if any. It changes with every word the AI writes, so it lives outside React state: read it with
+ * {@link useStoreValue} and one of the selectors below, and only that component re-renders.
+ */
+export type AiRunStore = ValueStore<AiRun | null>
+
+const NO_STAGES: AiTraceStage[] = []
+const NO_TRACE: string[] = []
+export const runStagesOf = (run: AiRun | null) => run?.stages ?? NO_STAGES
+export const runTraceOf = (run: AiRun | null) => run?.trace ?? NO_TRACE
+export const runWritingOf = (run: AiRun | null) => run?.draft ?? null
+/** The question the run added last, for following the writing on the sheet. */
+export const runLastItemOf = (run: AiRun | null) => run?.itemIds.at(-1) ?? null
+const runGoingOn = (run: AiRun | null) => run !== null
+
+/** The question "Bạn muốn soạn môn nào?", answered by a send (its subjects no longer offered) or asked again. */
+const answerSubjects = (message: AiChatMessage, answered: boolean): AiChatMessage =>
+  message.subjectChoices ? { ...message, subjectChoices: { ...message.subjectChoices, answered } } : message
 
 interface StreamHandle {
   controller: AbortController
@@ -315,19 +348,33 @@ function endSummary(event: Extract<AiStreamEvent, { type: 'end' }>['data'], item
   return `${parts.join(', ')}.`
 }
 
+/** The papers loaded into the bank, as the workspace's list holds them: one request serves the list and the composer. */
+export interface BankPaperList {
+  papers: BankSource[]
+  loading: boolean
+  error: string | null
+  refresh: () => void
+}
+
 /** The AI assistant page: conversations, the live stream of a run, and the draft it writes into. */
-export function useAiAssistant() {
-  const [conversations, setConversations] = useState<AiConversation[]>([])
-  const [conversationsLoading, setConversationsLoading] = useState(true)
+export function useAiAssistant(bank: BankPaperList) {
+  // After a reload the list this tab showed last is shown at once, while it is asked for again.
+  const [cachedConversations] = useState(() => readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE))
+  const [conversations, setConversations] = useState<AiConversation[]>(cachedConversations ?? [])
+  const [conversationsLoading, setConversationsLoading] = useState(cachedConversations === null)
+  /** The server's list has come in at least once (until then the list shown may be this tab's copy, or nothing). */
+  const [listed, setListed] = useState(false)
+  const listedRef = useRef(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<AiChatMessage[]>([])
   const [draft, setDraft] = useState<AiDraftResponse | null>(null)
   const [draftLoading, setDraftLoading] = useState(false)
   const [mode, setMode] = useState<AiAssistantMode>('compose')
-  const [value, setValue] = useState('')
-  const [run, setRun] = useState<AiRun | null>(null)
+  const [runStore] = useState<AiRunStore>(() => createValueStore<AiRun | null>(null))
   const [sending, setSending] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  // Counts the exam runs (compose, mock exam) the server took that have ended on the open exam, its draft read again.
+  const [examRunsEnded, setExamRunsEnded] = useState(0)
   const [saving, setSaving] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [settings, setSettings] = useState<AiComposeSettings>(DEFAULT_SETTINGS)
@@ -335,9 +382,16 @@ export function useAiAssistant() {
   const settingsRef = useRef<AiComposeSettings>(DEFAULT_SETTINGS)
   /** What the teacher last chose in the settings panel; a new exam starts from it, never from another exam's request. */
   const preferredSettingsRef = useRef<AiComposeSettings>(DEFAULT_SETTINGS)
-  const [papers, setPapers] = useState<SelectOption[]>([])
-  const [papersLoading, setPapersLoading] = useState(false)
-  const [papersError, setPapersError] = useState<string | null>(null)
+  /** The papers a mock exam can be built on: those the bank has finished reading. */
+  const papers = useMemo<SelectOption[]>(
+    () =>
+      bank.papers
+        .filter((source) => source.status === 'DONE')
+        .map((source) => ({ id: source.id, label: source.year ? `${source.title} · ${source.year}` : source.title })),
+    [bank.papers]
+  )
+  const papersLoading = bank.loading
+  const papersError = bank.error ?? (!bank.loading && papers.length === 0 ? 'Ngân hàng chưa có đề đã đọc xong.' : null)
   const [creatingConversation, setCreatingConversation] = useState(false)
   /** The conversation this page created last for a new exam (its document takes over what the exam held). */
   const [createdConversationId, setCreatedConversationId] = useState<string | null>(null)
@@ -346,7 +400,7 @@ export function useAiAssistant() {
   const creationRef = useRef<{ generation: number; promise: Promise<string | null> } | null>(null)
   /** Bumped whenever the teacher opens another exam or a new one; a creation from before is then not adopted. */
   const generationRef = useRef(0)
-  const conversationsRef = useRef<AiConversation[]>([])
+  const conversationsRef = useRef<AiConversation[]>(cachedConversations ?? [])
   const messagesRef = useRef<AiChatMessage[]>([])
   const draftRef = useRef<AiDraftResponse | null>(null)
   const runRef = useRef<AiRun | null>(null)
@@ -356,9 +410,10 @@ export function useAiAssistant() {
   const runTimerRef = useRef<number | null>(null)
   const cancelTimerRef = useRef<number | null>(null)
   const autoSelectRef = useRef(true)
-  const papersTriedRef = useRef(false)
   const cancelRequestedRef = useRef(false)
   const addressConversationRef = useRef<string | null>(conversationInAddress())
+  /** An exam opened before the list arrived: its mode comes from the list, unless the teacher picks one first. */
+  const modeFromListRef = useRef<string | null>(null)
   /** Questions streamed in since the last paint; they reach the draft (and the document) together. */
   const pendingItemsRef = useRef<AiDraftItem[]>([])
   const itemFlushRef = useRef<number | null>(null)
@@ -366,6 +421,12 @@ export function useAiAssistant() {
   const revisionRef = useRef(0)
   /** Questions only the sheet holds that the AI rewrote, in order; the page writes each once (by `seq`). */
   const [rewrites, setRewrites] = useState<SheetRewrite[]>([])
+
+  /** The mode the teacher picks; an exam opened before the list arrived then keeps it. */
+  const chooseMode = useCallback((next: AiAssistantMode) => {
+    modeFromListRef.current = null
+    setMode(next)
+  }, [])
 
   const showSettings = useCallback((next: AiComposeSettings) => {
     settingsRef.current = next
@@ -385,6 +446,7 @@ export function useAiAssistant() {
   const updateConversations = useCallback((next: AiConversation[]) => {
     conversationsRef.current = next
     setConversations(next)
+    writeSessionCache(CONVERSATIONS_CACHE, next)
   }, [])
 
   const updateMessages = useCallback((next: AiChatMessage[]) => {
@@ -399,8 +461,8 @@ export function useAiAssistant() {
 
   const updateRun = useCallback((next: AiRun | null) => {
     runRef.current = next
-    setRun(next)
-  }, [])
+    runStore.set(next)
+  }, [runStore])
 
   /**
    * Puts the streamed questions waiting in the buffer into the draft in one update. A long exam streams a question every
@@ -471,6 +533,12 @@ export function useAiAssistant() {
     }
   }, [updateDraft])
 
+  /** An exam run the server took has ended and the exam's draft was read again: the answer key is due. */
+  const examRunEnded = useCallback((conversationId: string, runMode: AiAssistantMode) => {
+    if (runMode === 'ask' || runMode === 'revise' || activeIdRef.current !== conversationId) return
+    setExamRunsEnded((count) => count + 1)
+  }, [])
+
   const finishRun = useCallback(
     async (event: AiStreamEvent, conversationId: string) => {
       const finished = runRef.current
@@ -485,6 +553,7 @@ export function useAiAssistant() {
         updateRun(null)
         if (finished && finished.mode !== 'ask') {
           await refreshDraft(conversationId)
+          examRunEnded(conversationId, finished.mode)
         }
         return
       }
@@ -504,6 +573,7 @@ export function useAiAssistant() {
         refreshMessages(conversationId),
         refreshDraft(conversationId),
       ])
+      examRunEnded(conversationId, finished.mode)
       if (!messagesLoaded || activeIdRef.current !== conversationId) return
 
       const known = new Set(finished.knownAssistantIds)
@@ -541,7 +611,7 @@ export function useAiAssistant() {
         },
       ])
     },
-    [clearRunTimer, flushItems, refreshDraft, refreshMessages, stopStream, updateMessages, updateRun]
+    [clearRunTimer, examRunEnded, flushItems, refreshDraft, refreshMessages, stopStream, updateMessages, updateRun]
   )
 
   const applyEvent = useCallback(
@@ -636,13 +706,15 @@ export function useAiAssistant() {
           // The words of the unit being written; a new unit or a new attempt starts over.
           const previous = current.draft
           const continuing = previous !== null && previous.unit === event.data.unit && !event.data.reset
-          const draft: LiveDraft = {
+          const text = (continuing ? previous.text : '') + event.data.text
+          const draft: LiveWriting = {
             unit: event.data.unit,
             section: event.data.section,
             positions: event.data.positions,
-            text: (continuing ? previous.text : '') + event.data.text,
+            text,
+            view: liveDraftView(text),
           }
-          const tail = liveDraftTail(liveDraftView(draft.text))
+          const tail = liveDraftTail(draft.view)
           const stages = finishBefore(current.stages, 'write')
           const items = (stages.find((stage) => stage.id === 'write')?.items ?? []).filter((entry) => entry.id !== 'draft')
           updateRun({
@@ -739,19 +811,18 @@ export function useAiAssistant() {
         if (runRef.current && activeIdRef.current === conversationId) {
           setNotice('Máy chủ chưa báo xong. Kết quả sẽ được tải lại.')
           void refreshMessages(conversationId)
-          void refreshDraft(conversationId)
+          void refreshDraft(conversationId).then(() => examRunEnded(conversationId, runMode))
           updateRun(null)
           stopStream()
         }
       }, runMode === 'ask' ? 120_000 : 600_000)
     },
-    [refreshDraft, refreshMessages, stopStream, updateRun]
+    [examRunEnded, refreshDraft, refreshMessages, stopStream, updateRun]
   )
 
   /**
    * Opens the stream and waits until the replay of older events is over, so nothing from a past run leaks in.
-   * 
-esumeFrom follows a run already going (the page was opened or reloaded during it): the stream starts right
+   * `resumeFrom` follows a run already going (the page was opened or reloaded during it): the stream starts right
    * before that run, so every event it replays is the run's own and is shown.
    */
   const beginStream = useCallback(
@@ -843,6 +914,8 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
       setActiveId(conversationId)
       const conversation = conversationsRef.current.find((item) => item.id === conversationId)
       const conversationMode = normalizeMode(conversation?.mode)
+      // Before the server's list is in, the mode shown is a guess (this tab's copy, or none) that the list corrects.
+      modeFromListRef.current = conversation && listedRef.current ? null : conversationId
       if (conversationMode) setMode(conversationMode)
       updateMessages([])
       updateDraft(null)
@@ -887,71 +960,55 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
   )
 
   const loadConversations = useCallback(async () => {
-    setConversationsLoading(true)
+    // A list already on screen (this tab's copy) stays while the server's comes in.
+    if (conversationsRef.current.length === 0) setConversationsLoading(true)
+    const wanted = addressConversationRef.current
+    addressConversationRef.current = null
+    if (wanted && !activeIdRef.current) {
+      // The exam the address names opens at once, alongside the list (it need not be on the list's first page).
+      autoSelectRef.current = false
+      void loadConversation(wanted)
+    }
     try {
       const page = await getAiConversations()
       updateConversations(page.content ?? [])
-      const wanted = addressConversationRef.current
-      addressConversationRef.current = null
-      if (wanted && !activeIdRef.current) {
-        // The exam the address names, even when it is not on the first page of the list.
-        autoSelectRef.current = false
-        void loadConversation(wanted)
-      } else if (autoSelectRef.current && !activeIdRef.current && page.content?.[0]) {
+      const opened = modeFromListRef.current
+      modeFromListRef.current = null
+      if (opened && opened === activeIdRef.current) {
+        const listedMode = normalizeMode(page.content?.find((item) => item.id === opened)?.mode)
+        if (listedMode) setMode(listedMode)
+      }
+      if (!wanted && autoSelectRef.current && !activeIdRef.current && page.content?.[0]) {
         void loadConversation(page.content[0].id)
       }
     } catch (error) {
       setNotice(errorMessage(error))
     } finally {
+      listedRef.current = true
+      setListed(true)
       setConversationsLoading(false)
     }
   }, [loadConversation, updateConversations])
 
-  const loadPapers = useCallback(async () => {
-    papersTriedRef.current = true
-    setPapersLoading(true)
-    setPapersError(null)
-    try {
-      const sources = await getBankSources()
-      const options = sources
-        .filter((source) => source.status === 'DONE')
-        .map((source) => ({
-          id: source.id,
-          label: source.year ? `${source.title} · ${source.year}` : source.title,
-        }))
-      setPapers(options)
-      if (options.length === 0) {
-        setPapersError('Ngân hàng chưa có đề đã đọc xong.')
-        return
-      }
-      const previous = settingsRef.current
-      if (!options.some((option) => option.id === previous.bankSourceId)) {
-        const next = { ...previous, bankSourceId: options[0].id }
-        preferredSettingsRef.current = { ...preferredSettingsRef.current, bankSourceId: next.bankSourceId }
-        showSettings(next)
-      }
-    } catch (error) {
-      setPapersError(errorMessage(error))
-    } finally {
-      setPapersLoading(false)
-    }
-  }, [showSettings])
-
   useEffect(() => {
     // The first fetch starts the request lifecycle; its loading flags drive the skeletons.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadConversations()
   }, [loadConversations])
 
   useEffect(() => {
     // Until the list has loaded the address may still name the exam to open, so it is left alone.
-    if (!conversationsLoading) showConversationInAddress(activeId)
-  }, [activeId, conversationsLoading])
+    if (listed) showConversationInAddress(activeId)
+  }, [activeId, listed])
 
   useEffect(() => {
-    // Same lifecycle, started the first time the teacher picks a bank-based mode.
-    if (mode === 'mock-exam' && !papersTriedRef.current) void loadPapers()
-  }, [mode, loadPapers])
+    // A mock exam is built on a paper the bank has read: settings naming none of them take the first one.
+    if (mode !== 'mock-exam' || papers.length === 0) return
+    const previous = settingsRef.current
+    if (papers.some((option) => option.id === previous.bankSourceId)) return
+    const next = { ...previous, bankSourceId: papers[0].id }
+    preferredSettingsRef.current = { ...preferredSettingsRef.current, bankSourceId: next.bankSourceId }
+    showSettings(next)
+  }, [mode, papers, settings.bankSourceId, showSettings])
 
   useEffect(
     () => () => {
@@ -1059,15 +1116,18 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     [updateConversations, updateDraft]
   )
 
+  /**
+   * Sends `text` and follows the run it starts. Resolves false when the words did not go: another send or run is on,
+   * or the server refused them (the error shows in the thread). A question back (which subject) counts as sent.
+   */
   const startRun = useCallback(
     async (
       text: string,
       runMode: AiAssistantMode = mode,
       revise?: AiRevisedItem[],
-      document?: AiSheetDocument,
-      restoreOnFailure = false
-    ) => {
-      if (sendingRef.current || runRef.current) return
+      document?: AiSheetDocument
+    ): Promise<boolean> => {
+      if (sendingRef.current || runRef.current) return false
       sendingRef.current = true
       cancelRequestedRef.current = false
       setSending(true)
@@ -1076,18 +1136,26 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
         .filter((message) => message.role === 'assistant')
         .map((message) => message.id)
       const localUserId = `local-${crypto.randomUUID()}`
-      // A new send answers what an earlier refusal asked: its retry and its subject choices are done with.
-      if (messagesRef.current.some((message) => message.retryText || message.subjectChoices)) {
+      // A new send answers what an earlier refusal asked: its retry is done with, and its question is answered (asked
+      // again if this send is refused too).
+      const answeredHere = new Set(
+        messagesRef.current
+          .filter((message) => message.subjectChoices && !message.subjectChoices.answered)
+          .map((message) => message.id)
+      )
+      if (answeredHere.size > 0 || messagesRef.current.some((message) => message.retryText)) {
         updateMessages(
           messagesRef.current
             .filter((message) => !message.retryText)
-            .map(({ subjectChoices, ...message }) => (subjectChoices ? { ...message, subjectChoices: undefined } : message))
+            .map((message) => (answeredHere.has(message.id) ? answerSubjects(message, true) : message))
         )
       }
 
       let conversationId = activeIdRef.current
       // Made for this send (not by an edit of the sheet): it is taken back when the send fails, leaving no empty exam.
       let createdHere = false
+      // The questions a compose run clears from the draft before it is sent; a refused send puts them back.
+      let replaced: { before: AiDraftResponse; cleared: AiDraftResponse } | null = null
       try {
         if (!conversationId) {
           const shared = creationRef.current !== null
@@ -1096,7 +1164,7 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
           if (!conversationId) {
             sendingRef.current = false
             setSending(false)
-            return
+            return true
           }
           createdHere = !shared
         }
@@ -1123,7 +1191,8 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
         updateRun(initialRun)
         // A new compose run replaces the draft; a revise run rewrites some of its questions in place.
         if (runMode !== 'ask' && runMode !== 'revise' && draftRef.current) {
-          updateDraft({ ...draftRef.current, items: [] })
+          replaced = { before: draftRef.current, cleared: { ...draftRef.current, items: [] } }
+          updateDraft(replaced.cleared)
         }
 
         const synced = beginStream(conversationId)
@@ -1150,10 +1219,14 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
           void cancelAiRun(conversationId)
         }
         armRunTimer(conversationId, runMode)
+        return true
       } catch (error) {
         stopStream()
         clearRunTimer()
         updateRun(null)
+        // The server took no run, so nothing replaces the exam's questions: they come back as they were, unless the
+        // draft has changed since (another exam was opened).
+        if (replaced && draftRef.current === replaced.cleared) updateDraft(replaced.before)
         if (createdHere && conversationId) discardConversation(conversationId)
         if (error instanceof ApiError && error.code === SUBJECT_REQUIRED && subjectsOf(error.data).length > 0) {
           // Not a failure: the assistant asks which subject, and the teacher's words stay above the question.
@@ -1170,10 +1243,13 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
           ])
           sendingRef.current = false
           setSending(false)
-          return
+          return true
         }
+        // Refused: the teacher's words leave the thread, and the question this send answered offers its subjects again.
         updateMessages(
-          messagesRef.current.filter((message) => message.id !== localUserId || message.role !== 'user')
+          messagesRef.current
+            .filter((message) => message.id !== localUserId || message.role !== 'user')
+            .map((message) => (answeredHere.has(message.id) ? answerSubjects(message, false) : message))
         )
         updateMessages([
           ...messagesRef.current,
@@ -1187,10 +1263,10 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
             ...(runMode !== 'revise' ? { retryText: text } : {}),
           },
         ])
-        // The error shows once, in the thread; the teacher's words go back to the input to send again.
-        if (restoreOnFailure) setValue((current) => current || text)
+        // The error shows once, in the thread; the caller gives the teacher's words back to the input to send again.
         sendingRef.current = false
         setSending(false)
+        return false
       }
     },
     [
@@ -1209,18 +1285,18 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
   )
 
   /**
-   * Sends the composer's text. `revise` (the questions "Sửa câu 2" names) makes it a revise run; `document` (the exam
-   * on the sheet) goes with an ask, so the assistant reads what the teacher sees.
+   * Sends the composer's words; resolves whether they went (false: the composer keeps them). `revise` (the questions
+   * "Sửa câu 2" names) makes it a revise run; `document` (the exam on the sheet) goes with an ask, so the assistant
+   * reads what the teacher sees.
    */
   const send = useCallback(
-    (extra?: { revise?: AiRevisedItem[]; document?: AiSheetDocument }) => {
-      const text = value.trim()
-      if (!text || sendingRef.current || runRef.current) return
-      setValue('')
+    (words: string, extra?: { revise?: AiRevisedItem[]; document?: AiSheetDocument }) => {
+      const text = words.trim()
+      if (!text) return Promise.resolve(false)
       const revise = extra?.revise
-      void startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document, true)
+      return startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document)
     },
-    [mode, startRun, value]
+    [mode, startRun]
   )
 
   /** A step the page took for the run going on (the answer key written again), shown with the run's own steps. */
@@ -1251,25 +1327,31 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     void startRun(lastUser.body, lastMode)
   }, [mode, startRun])
 
+  /** Sends words the page wrote (not the composer's); resolves to them when they did not go, for the input. */
+  const sendFor = useCallback(
+    async (text: string, runMode: AiAssistantMode) => ((await startRun(text, runMode)) ? null : text),
+    [startRun]
+  )
+
   /** "Thử lại" on the error of a send: the same words, sent again. */
   const retry = useCallback(
-    (messageId: string) => {
+    async (messageId: string) => {
       const failed = messagesRef.current.find((message) => message.id === messageId)
-      if (!failed?.retryText) return
-      void startRun(failed.retryText, failed.mode ?? mode, undefined, undefined, true)
+      if (!failed?.retryText) return null
+      return sendFor(failed.retryText, failed.mode ?? mode)
     },
-    [mode, startRun]
+    [mode, sendFor]
   )
 
   /** A subject (null: the whole paper) chosen for the question "Bạn muốn soạn môn nào?": the same request, with it added. */
   const chooseSubject = useCallback(
-    (messageId: string, subjectName: string | null) => {
+    async (messageId: string, subjectName: string | null) => {
       const asked = messagesRef.current.find((message) => message.id === messageId)
-      if (!asked?.subjectChoices) return
+      if (!asked?.subjectChoices || asked.subjectChoices.answered) return null
       const words = asked.subjectChoices.text.trim().replace(/[\s.,;:!?…]+$/u, '')
-      void startRun(subjectName === null ? `${words} cả đề` : `${words} môn ${subjectName}`, asked.mode ?? mode, undefined, undefined, true)
+      return sendFor(subjectName === null ? `${words} cả đề` : `${words} môn ${subjectName}`, asked.mode ?? mode)
     },
-    [mode, startRun]
+    [mode, sendFor]
   )
 
   const cancel = useCallback(() => {
@@ -1306,7 +1388,6 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     updateMessages([])
     updateDraft(null)
     updateRun(null)
-    setValue('')
     setSending(false)
     setCancelling(false)
     sendingRef.current = false
@@ -1340,6 +1421,32 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
         updateConversations(previous)
         setNotice(errorMessage(error))
         throw error
+      }
+    },
+    [updateConversations]
+  )
+
+  /**
+   * Moves the exam to the published ones at once. A file is recorded here; a quiz or mock exam was already recorded
+   * by its export, so only the list changes.
+   */
+  const markPublished = useCallback(
+    async (conversationId: string, as: AiPublishedAs) => {
+      const before = conversationsRef.current.find((conversation) => conversation.id === conversationId)
+      const mark = (publishedAt: string | null, publishedAs: AiPublishedAs | null) =>
+        updateConversations(
+          conversationsRef.current.map((conversation) =>
+            conversation.id === conversationId ? { ...conversation, publishedAt, publishedAs } : conversation
+          )
+        )
+      mark(new Date().toISOString(), as)
+      // A quiz export records it on the server itself; a file is recorded here.
+      if (as !== 'DOCX' && as !== 'PDF') return
+      try {
+        await publishAiConversation(conversationId, as)
+      } catch (error) {
+        mark(before?.publishedAt ?? null, before?.publishedAs ?? null)
+        setNotice(errorMessage(error))
       }
     },
     [updateConversations]
@@ -1529,7 +1636,8 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     [updateDraft]
   )
 
-  const running = Boolean(run) || sending
+  // Only whether a run goes on and what it does reach this hook's renders; its progress is read from `runStore`.
+  const running = useStoreValue(runStore, runGoingOn) || sending
   const canStop = Boolean(activeConversation) && running
 
   return {
@@ -1542,7 +1650,6 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     numberOf,
     draftLoading,
     mode,
-    value,
     running,
     sending,
     creatingConversation,
@@ -1555,8 +1662,7 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     papersLoading,
     papersError,
     canStop,
-    setMode,
-    setValue,
+    setMode: chooseMode,
     setSettings: changeSettings,
     setNotice,
     send,
@@ -1569,22 +1675,19 @@ esumeFrom follows a run already going (the page was opened or reloaded during it
     startNew,
     selectConversation,
     renameConversation,
+    markPublished,
     deleteConversation,
     reloadConversations: loadConversations,
-    reloadPapers: loadPapers,
+    reloadPapers: bank.refresh,
     updateQuestion,
     toggleKeep,
     deleteItem,
     moveItem,
     addManual,
-    stages: run?.stages ?? [],
-    /** What the run going on does (ask, compose, mock exam); null when none is. */
-    runMode: run?.mode ?? null,
+    /** The run going on: its stages, trace and the words being written (see `runStagesOf` and the other selectors). */
+    runStore,
+    /** Grows by one each time an exam run the server took ends on the open exam (done, stopped, failed, given up). */
+    examRunsEnded,
     rewrites,
-    /** The unit the AI is writing now, shown on the sheet until its checked question arrives. */
-    liveDraft: run?.draft ?? null,
-    /** The question this run added last, for following the writing on the sheet. */
-    lastItemId: run?.itemIds.at(-1) ?? null,
-    trace: run?.trace ?? [],
   }
 }

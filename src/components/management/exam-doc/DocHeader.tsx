@@ -6,13 +6,10 @@ import {
   AlertTriangle,
   ArrowLeft,
   Check,
-  Layers,
-  List,
   ListChecks,
   LoaderCircle,
   Pencil,
   Sparkles,
-  SquarePen,
   type LucideIcon,
 } from '../../console/icons'
 import { useExamDoc, type SaveState } from './exam-doc-context'
@@ -32,8 +29,8 @@ interface DocHeaderProps {
   onToggleOutline: () => void
   onNew: () => void
   /**
-   * `paper`: a loaded paper is shown read-only: no save state, no menus, no exam codes, and the right panel is the
-   * reading's progress instead of the AI chat.
+   * `paper`: a loaded paper is shown read-only: no save state, no menus, and the right panel is the reading's
+   * progress instead of the AI chat.
    */
   variant?: 'compose' | 'paper'
   /** Buttons for the open paper, before the panel toggles. */
@@ -41,8 +38,6 @@ interface DocHeaderProps {
 }
 
 const PRESSED_CLASS = 'border-primary-text/30 bg-badge-primary-background text-primary-text'
-/** Why "Mã đề" is off in the structured mode. */
-const FREE_MODE_ONLY = 'Chỉ có ở chế độ Văn bản tự do'
 
 const SAVE_STATES: Record<SaveState, { label: string; icon: LucideIcon; iconClass: string }> = {
   saved: { label: 'Đã lưu', icon: Check, iconClass: 'text-success-500' },
@@ -88,9 +83,7 @@ export default function DocHeader({
   actions,
 }: DocHeaderProps) {
   const paper = variant === 'paper'
-  const { saveState, saveError, loading, mode, sourceEditor, variantsOpen, setVariantsOpen } =
-    useExamDoc()
-  const structured = mode === 'STRUCTURED'
+  const { saveState, saveError, loading } = useExamDoc()
 
   function commitTitle(value: string) {
     if (!editable) return
@@ -100,7 +93,7 @@ export default function DocHeader({
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-1.5 bg-card-background px-2 sm:gap-2 sm:px-3">
+    <header className="exam-doc-ui flex h-14 shrink-0 items-center gap-1.5 bg-card-background px-2 sm:gap-2 sm:px-3">
       <a
         href={backHref}
         onClick={(event) => {
@@ -163,48 +156,6 @@ export default function DocHeader({
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {actions}
-        <Button
-          appearance="ghost"
-          size="sm"
-          onClick={onNew}
-          aria-label="Đề mới"
-          title="Đề mới"
-          className="hidden sm:inline-flex"
-        >
-          <SquarePen size={15} />
-          <span className="hidden lg:inline">Đề mới</span>
-        </Button>
-        <Button
-          appearance={outlineOpen ? 'outline' : 'ghost'}
-          size="sm"
-          aria-pressed={outlineOpen}
-          onClick={onToggleOutline}
-          aria-label="Mục lục"
-          title="Mục lục"
-          className={cn(outlineOpen && PRESSED_CLASS)}
-        >
-          <List size={15} />
-          <span className="hidden lg:inline">Mục lục</span>
-        </Button>
-        {!paper && (
-        <Button
-          appearance={variantsOpen ? 'outline' : 'ghost'}
-          size="sm"
-          aria-pressed={variantsOpen}
-          disabled={!sourceEditor || structured}
-          onClick={() => setVariantsOpen(!variantsOpen)}
-          aria-label="Tạo nhiều mã đề"
-          title={structured ? FREE_MODE_ONLY : 'Mã đề'}
-          // Pointer events stay on while disabled so the title says why.
-          className={cn(
-            'disabled:pointer-events-auto disabled:cursor-not-allowed',
-            variantsOpen && PRESSED_CLASS
-          )}
-        >
-          <Layers size={15} />
-          <span className="hidden md:inline">Mã đề</span>
-        </Button>
-        )}
         <Button
           appearance={chatOpen ? 'outline' : 'ghost'}
           size="sm"

@@ -24,6 +24,15 @@ const PITCH = PAGE.height + PAGE.gap
 const SLACK = 0.5
 /** Spacer updates in a row from the same content layout before the plugin stops correcting its own layout. */
 const MAX_SELF_UPDATES = 4
+/**
+ * Blocks that resize by themselves (formulas drawn, pictures decoded, fonts loaded, an option grid choosing its
+ * columns) are measured once they have been still this long, and at the latest after `SETTLE_MAX_MS`: an exam opening
+ * resizes hundreds of them in a burst, and each measure lays the whole sheet out three times.
+ */
+const SETTLE_MS = 120
+const SETTLE_MAX_MS = 500
+/** The AI's words growing on the sheet re-measure at most this often; the question that replaces them measures at once. */
+const LIVE_SETTLE_MS = 900
 
 const GAP_CLASS = 'exam-doc-page-gap'
 /** Set on the editor's parent for the instant the natural (spacer-free) layout is read. */
@@ -147,9 +156,13 @@ function readNatural(view: EditorView, zoom: number, placed: Placed[]): Block[] 
   return blocks
 }
 
-/** Where the spacers go, given the natural layout, and how many sheets that makes. */
-function paginate(blocks: Block[]): { gaps: Gap[]; pages: number } {
+/**
+ * Where the spacers go, given the natural layout, and how many sheets that makes; `tops` is where each block's border
+ * box will sit once they are in.
+ */
+function paginate(blocks: Block[]): { gaps: Gap[]; pages: number; tops: number[] } {
   const gaps: Gap[] = []
+  const tops: number[] = []
   let shift = 0
   let page = 0
   /** Something already sits on `page` (a block, or the tail of one that ran over). */
@@ -183,6 +196,7 @@ function paginate(blocks: Block[]): { gaps: Gap[]; pages: number } {
       page = target
     }
 
+    tops.push(top)
     const bottom = top + block.height
     forced = block.isBreak ? Math.floor((top + SLACK) / PITCH) + 1 : null
     occupied = true
@@ -191,7 +205,20 @@ function paginate(blocks: Block[]): { gaps: Gap[]; pages: number } {
     end = Math.max(end, bottom)
   }
 
-  return { gaps, pages: Math.max(1, Math.floor((end - SLACK) / PITCH) + 1) }
+  return { gaps, pages: Math.max(1, Math.floor((end - SLACK) / PITCH) + 1), tops }
+}
+
+/** The blocks sit where the spacers just put were computed to put them, at the same heights. */
+function landedAsPlanned(placed: Placed[], plan: { blocks: Block[]; tops: number[] }) {
+  return (
+    placed.length === plan.blocks.length &&
+    placed.every(
+      (box, index) =>
+        box.pos === plan.blocks[index].pos &&
+        Math.abs(box.top - plan.tops[index]) < SLACK &&
+        Math.abs(box.height - plan.blocks[index].height) < SLACK
+    )
+  )
 }
 
 class PaginationView {
@@ -199,22 +226,27 @@ class PaginationView {
   private readonly onPages: (pages: number) => void
   private readonly observer: ResizeObserver
   private frame = 0
+  private settleTimer = 0
+  /** When the blocks first resized by themselves since the last measure (0: they have not). */
+  private settleSince = 0
   private pages = 0
   private selfUpdates = 0
   /** The natural layout the last spacers were computed from, rounded. */
   private input = ''
   /** The block boxes when the spacers last matched the content; the same boxes need no new measuring. */
   private settled: Placed[] | null = null
+  /** The natural layout and planned tops of the spacers just put in, to check where the blocks landed. */
+  private planned: { blocks: Block[]; tops: number[] } | null = null
 
   constructor(view: EditorView, onPages: (pages: number) => void) {
     this.view = view
     this.onPages = onPages
     views.set(view, this)
     // Node views, images and fonts change block heights after the transaction that added them.
-    this.observer = new ResizeObserver(this.schedule)
+    this.observer = new ResizeObserver(this.settleLater)
     this.observer.observe(view.dom)
-    document.fonts?.addEventListener('loadingdone', this.schedule)
-    this.schedule()
+    document.fonts?.addEventListener('loadingdone', this.settleLater)
+    this.settleLater()
   }
 
   update(view: EditorView, previous: EditorState) {
@@ -229,21 +261,41 @@ class PaginationView {
   destroy() {
     cancelAnimationFrame(this.frame)
     this.frame = 0
+    window.clearTimeout(this.settleTimer)
+    this.settleTimer = 0
     this.observer.disconnect()
-    document.fonts?.removeEventListener('loadingdone', this.schedule)
+    document.fonts?.removeEventListener('loadingdone', this.settleLater)
     views.delete(this.view)
     this.settled = null
+    this.planned = null
   }
 
   /** Measures again on the next frame (zoom changes, which no observer reports). */
   request() {
     this.selfUpdates = 0
     this.settled = null
+    this.planned = null
     this.schedule()
   }
 
+  /** The document changed: measured on the next frame, so typing sees its page breaks at once. */
   readonly schedule = () => {
+    window.clearTimeout(this.settleTimer)
+    this.settleTimer = 0
+    this.settleSince = 0
     if (!this.frame) this.frame = requestAnimationFrame(this.run)
+  }
+
+  /** Blocks resized by themselves: measured once they are still (see `SETTLE_MS`). */
+  readonly settleLater = () => {
+    if (this.frame) return
+    const now = performance.now()
+    this.settleSince ||= now
+    const live = this.view.dom.querySelector('[data-live-draft]') !== null
+    const quiet = live ? LIVE_SETTLE_MS : SETTLE_MS
+    const wait = Math.min(quiet, Math.max(0, this.settleSince + (live ? LIVE_SETTLE_MS : SETTLE_MAX_MS) - now))
+    window.clearTimeout(this.settleTimer)
+    this.settleTimer = window.setTimeout(this.schedule, wait)
   }
 
   private readonly run = () => {
@@ -255,6 +307,13 @@ class PaginationView {
     if (!layout) return
     // Typing inside a line moves no block: skip taking the spacers out and laying everything out again.
     if (this.settled && sameLayout(this.settled, layout.placed)) return
+    // The spacers just put in moved the blocks exactly where planned: nothing else changed, so they stand.
+    const planned = this.planned
+    this.planned = null
+    if (planned && landedAsPlanned(layout.placed, planned)) {
+      this.settled = layout.placed
+      return
+    }
     const blocks = readNatural(view, layout.zoom, layout.placed)
     // Content that grew on its own (a formula rendered, an image decoded) is new input, not the layout correcting itself.
     const input = blocks.map((block) => `${block.top.toFixed(1)}:${block.height.toFixed(1)}`).join(' ')
@@ -262,7 +321,7 @@ class PaginationView {
       this.input = input
       this.selfUpdates = 0
     }
-    const { gaps, pages } = paginate(blocks)
+    const { gaps, pages, tops } = paginate(blocks)
     if (pages !== this.pages) {
       this.pages = pages
       this.onPages(pages)
@@ -275,10 +334,13 @@ class PaginationView {
     this.settled = null
     if (this.selfUpdates >= MAX_SELF_UPDATES) return
     this.selfUpdates += 1
+    this.planned = { blocks, tops }
     const tr = view.state.tr.setMeta(paginationKey, gaps).setMeta('addToHistory', false)
     // Follow the caret only when it was on screen: content added elsewhere must not pull the view back to it.
     if (view.hasFocus() && caretOnScreen(view)) tr.scrollIntoView()
     view.dispatch(tr)
+    // Where the blocks landed is checked on the next frame (cheaply, when as planned), not after the settling wait.
+    this.schedule()
   }
 }
 

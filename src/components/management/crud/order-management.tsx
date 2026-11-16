@@ -1,5 +1,5 @@
 import DateField from '../../console/date-field'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
@@ -30,10 +30,13 @@ export default function OrderManagement({
   readOnly = false,
   canConfirm = false,
   title,
+  navigation,
 }: {
   readOnly?: boolean
   canConfirm?: boolean
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }) {
   const [query, setQuery] = useState<OrderQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
@@ -144,6 +147,7 @@ export default function OrderManagement({
   return (
     <section className="flex flex-col gap-5">
       <PageHeading title={title} readOnly={readOnly} />
+      {navigation}
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
         <FilterToolbar>
           <form

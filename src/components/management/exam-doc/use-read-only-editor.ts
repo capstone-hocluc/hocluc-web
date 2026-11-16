@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useEditor, type Editor, type JSONContent } from '@tiptap/react'
-import { examDocExtensions } from '../editor-extensions'
+import { examDocExtensions } from './editor-extensions'
 
 const ignoreEdit = () => undefined
 
 /**
- * A read-only editor showing one exam variant on the paged sheets. It is built once, from the document editor's own
- * extension list, and given each variant's content as it changes.
+ * A read-only editor showing `content` on the paged sheets. It is built once, from the document editor's own
+ * extension list, and given the content again whenever it changes.
  */
-export function useVariantEditor(
-  content: JSONContent | null,
-  label = 'Mã đề đang xem (chỉ đọc)'
-): { editor: Editor | null; pages: number } {
+export function useReadOnlyEditor(content: JSONContent | null, label: string): { editor: Editor | null; pages: number } {
   const [pages, setPages] = useState(1)
   const editor = useEditor(
     {

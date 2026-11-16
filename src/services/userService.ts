@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { SubjectCapability } from './subjectScopeService'
 
 export type OnboardingState = 'NOT_SHOWN' | 'DEFERRED' | 'COMPLETED'
 export type SubjectLevel = 'STRONG' | 'NEEDS_WORK'
@@ -105,6 +106,8 @@ export interface CreateUserRequest {
   phone?: string
   role: UserRole
   roles?: UserRole[]
+  /** Subjects granted with the account, such as the subjects a mentor supports. */
+  scopes?: { categoryId: string; capability: SubjectCapability }[]
 }
 
 export async function getCurrentProfile() {
