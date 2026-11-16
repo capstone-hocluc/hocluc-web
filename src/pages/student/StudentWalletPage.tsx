@@ -10,6 +10,8 @@ import Notice from '../../components/ui/Notice'
 import Skeleton from '../../components/ui/Skeleton'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { CreditAmount, CreditIcon } from '../../components/credits/CreditIcon'
+import PurchaseArrival from '../../components/credits/PurchaseArrival'
+import { useShownBalance } from '../../components/credits/use-shown-balance'
 import { usePageResource } from '../../hooks/usePageResource'
 import { ApiError } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
@@ -35,12 +37,15 @@ function StudentWalletPage({ onOpenPayment }: StudentWalletPageProps) {
         <Packs onOpenPayment={onOpenPayment} />
         <History />
       </div>
+      <PurchaseArrival />
     </StudentPageContainer>
   )
 }
 
 function BalanceCard() {
   const { balance } = useCredits()
+  // A pack just bought is counted in here together with the top bar.
+  const shown = useShownBalance(balance?.available ?? null)
   if (!balance) return <Skeleton className="h-[148px] rounded-2xl" />
   return (
     <Card
@@ -55,7 +60,7 @@ function BalanceCard() {
       </span>
       <div className="relative flex min-w-0 flex-1 flex-col gap-2.5">
         <p className="text-[40px] leading-none font-bold text-text-heading tabular-nums">
-          {balance.available.toLocaleString('vi-VN')}
+          {(shown.value ?? balance.available).toLocaleString('vi-VN')}
           <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
         </p>
         <ul className="flex flex-wrap gap-2 text-[13px]">

@@ -15,6 +15,11 @@ export function isCreditPackOrder(order: Pick<Order, 'items'>) {
   return order.items.length > 0 && order.items.every((item) => Boolean(item.creditPackId))
 }
 
+/** The stars an order's packs add to the balance. */
+export function packCredits(order: Pick<Order, 'items'>) {
+  return order.items.reduce((sum, item) => sum + (item.credits ?? 0), 0)
+}
+
 export interface Order {
   id: string
   orderCode: string

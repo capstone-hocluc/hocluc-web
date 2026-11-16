@@ -12,6 +12,7 @@
 @import './styles/student/student-app.css';
 @import './styles/student/student-app-responsive.css';
 @import './styles/components/shared.css';
+@import './styles/components/credit-effects.css';
 @import './styles/scheduling/scheduling.css';
 
 /* New styles added after the split above go here. */

@@ -15,6 +15,7 @@ import { getUserDisplayName, getUserInitials } from '../../../lib/userDisplay'
 import { ROLE_LABELS } from '../../../lib/role-home'
 import { cn } from '../../../lib/cn'
 import { CreditIcon } from '../../credits/CreditIcon'
+import { useShownBalance } from '../../credits/use-shown-balance'
 import { CREDIT_UNIT } from '../../../lib/credits'
 
 interface StudentTopbarProps {
@@ -58,6 +59,7 @@ function StudentTopbar({
   logoutLoading = false,
   onNotify,
 }: StudentTopbarProps) {
+  const shown = useShownBalance(balance)
   return (
     <header className="student-topbar sticky top-0 z-50 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-4 bg-surface px-6 py-3 max-[760px]:gap-2 max-[760px]:px-4 max-[560px]:flex-wrap">
       <div className="flex min-w-0 flex-none items-center gap-3 max-[760px]:flex-[1_0_auto]">
@@ -103,15 +105,24 @@ function StudentTopbar({
 
         <button
           type="button"
+          data-credit-pill
           aria-label={balance === null ? `Ví ${CREDIT_UNIT}` : `${balance} ${CREDIT_UNIT}`}
           onClick={onOpenWallet}
-          className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 text-text-heading transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2"
+          className={cn(
+            'relative inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 text-text-heading transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2',
+            shown.counting && 'credit-pill-bump'
+          )}
         >
           <CreditIcon size={20} />
-          {balance === null ? (
+          {shown.value === null ? (
             <Skeleton className="h-4 w-8 rounded-md" />
           ) : (
-            <strong className="text-sm font-semibold tabular-nums">{balance.toLocaleString('vi-VN')}</strong>
+            <strong className="text-sm font-semibold tabular-nums">{shown.value.toLocaleString('vi-VN')}</strong>
+          )}
+          {shown.gain && (
+            <span key={shown.gain.orderId} className="credit-gain" aria-hidden="true">
+              +{shown.gain.amount.toLocaleString('vi-VN')}
+            </span>
           )}
         </button>
 
