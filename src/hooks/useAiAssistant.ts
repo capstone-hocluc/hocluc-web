@@ -461,6 +461,8 @@ export function useAiAssistant(bank: BankPaperList) {
   const [cancelling, setCancelling] = useState(false)
   // Counts the exam runs (compose, mock exam) the server took that have ended on the open exam, its draft read again.
   const [examRunsEnded, setExamRunsEnded] = useState(0)
+  // The assistant's runs that ended: they changed an exam, so only a key it already has is written again.
+  const [agentRunsEnded, setAgentRunsEnded] = useState(0)
   const [saving, setSaving] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [settings, setSettings] = useState<AiComposeSettings>(DEFAULT_SETTINGS)
@@ -627,9 +629,10 @@ export function useAiAssistant(bank: BankPaperList) {
   }, [updateDraft])
 
   /** An exam run the server took has ended and the exam's draft was read again: the answer key is due. */
-  const examRunEnded = useCallback((conversationId: string, runMode: AiAssistantMode) => {
+  const examRunEnded = useCallback((conversationId: string, runMode: AiAssistantMode, agent = false) => {
     if (runMode === 'ask' || runMode === 'revise' || activeIdRef.current !== conversationId) return
-    setExamRunsEnded((count) => count + 1)
+    if (agent) setAgentRunsEnded((count) => count + 1)
+    else setExamRunsEnded((count) => count + 1)
   }, [])
 
   const finishRun = useCallback(
@@ -655,7 +658,7 @@ export function useAiAssistant(bank: BankPaperList) {
         updateRun(null)
         if (finished && finished.mode !== 'ask') {
           await refreshDraft(conversationId)
-          examRunEnded(conversationId, finished.mode)
+          examRunEnded(conversationId, finished.mode, finished.agent)
         }
         return
       }
@@ -675,7 +678,7 @@ export function useAiAssistant(bank: BankPaperList) {
         refreshMessages(conversationId),
         refreshDraft(conversationId),
       ])
-      examRunEnded(conversationId, finished.mode)
+      examRunEnded(conversationId, finished.mode, finished.agent)
       if (!messagesLoaded || activeIdRef.current !== conversationId) return
 
       const known = new Set(finished.knownAssistantIds)
@@ -1332,7 +1335,8 @@ export function useAiAssistant(bank: BankPaperList) {
         // changes the exam there is (a request on an exam with questions, unless the teacher agreed to replace it). The
         // server keeps the exam as it was (to give it back if the run is stopped), so the sheet is saved first.
         const examRun = runMode !== 'ask' && runMode !== 'revise'
-        const holdsQuestions = (compose?.sheet?.questions.length ?? 0) > 0 || (draftRef.current?.items.length ?? 0) > 0
+        // The sheet says whether the exam has questions; the draft keeps the ones the teacher took off the sheet.
+        const holdsQuestions = compose?.sheet ? compose.sheet.questions.length > 0 : (draftRef.current?.items.length ?? 0) > 0
         const toAssistant = runMode === 'compose' && Boolean(draftRef.current?.composeAgent) && !compose?.confirmed && holdsQuestions
         const replacing = examRun && !toAssistant
         const initialRun: AiRun = {
@@ -1887,6 +1891,7 @@ export function useAiAssistant(bank: BankPaperList) {
     runStore,
     /** Grows by one each time an exam run the server took ends on the open exam (done, stopped, failed, given up). */
     examRunsEnded,
+    agentRunsEnded,
     attachSheet,
     rewrites,
     sheetEdits,

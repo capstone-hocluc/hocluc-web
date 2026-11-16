@@ -85,8 +85,12 @@ function move(tr: Transaction, edit: AiSheetEdit, named: SheetQuestion[], questi
   tr.insert(tr.mapping.map(target, -1), content)
 }
 
-/** Numbers the questions 1, 2, 3… in sheet order, and each passage lead's "câu a–b" after its questions. */
-function renumber(tr: Transaction, items?: ReadonlyMap<string, DraftPlace>) {
+/**
+ * Numbers the questions 1, 2, 3… in sheet order, and each passage lead's "câu a–b" after its questions. Also used when
+ * the assistant's new questions land on an exam it changed: they are written with the draft's numbers, which count the
+ * questions taken off the sheet.
+ */
+export function renumber(tr: Transaction, items?: ReadonlyMap<string, DraftPlace>) {
   const changes: Array<{ from: number; to: number; text: string }> = []
   const questions = sheetQuestions(tr.doc, items)
   questions.forEach((question, index) => {

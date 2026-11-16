@@ -41,7 +41,9 @@ import { downloadExamOnlyDocx, replaceAnswerKey } from '../exam-doc/answer-key'
 import { restoreSoloPassages } from '../exam-doc/solo-passages'
 import { replaceQuestionBlocks, replaceSheetRange } from '../exam-doc/replace-question'
 import { examSheet, sheetDocument, sheetQuestion, sheetQuestions, type DraftPlace } from '../exam-doc/doc-snapshot'
-import { applySheetEdit } from '../exam-doc/sheet-edits'
+import { applySheetEdit, renumber } from '../exam-doc/sheet-edits'
+import { useStoreValue } from '../../../lib/value-store'
+import type { AiRun } from '../../../hooks/useAiAssistant'
 import AiSelectionMenu from '../exam-doc/ai-selection-menu'
 import AiSuggestionBar from '../exam-doc/ai-suggestion-bar'
 import { useProofread } from '../exam-doc/use-proofread'
@@ -60,6 +62,8 @@ import PaperReadingWorkspace from './PaperReadingWorkspace'
 import SheetWriting from './SheetWriting'
 import { useBankPapers } from './use-bank-papers'
 import { clearRequestedPaper, requestedPaper, showPaperInAddress } from './open-paper'
+
+const runIsAgent = (run: AiRun | null) => Boolean(run?.agent)
 
 const GREETING_BUCKETS: Record<'morning' | 'afternoon' | 'evening' | 'night', string[]> = {
   morning: [
@@ -192,6 +196,18 @@ export default function AiAssistantScreen({
   // The runs that replace the exam save the sheet first, take the old exam off it once the server took them, and read
   // it again when the server puts the old exam back (the run was stopped).
   const [sheetCleared, setSheetCleared] = useState(0)
+  // Once the assistant changed the exam there is, its new questions are numbered by the sheet: the draft's numbers
+  // still count the questions it took off. A new exam replacing the sheet numbers from the draft again.
+  const numberOnSheet = useRef(false)
+  const agentRun = useStoreValue(ai.runStore, runIsAgent)
+  useEffect(() => {
+    if (agentRun) numberOnSheet.current = true
+  }, [agentRun])
+  // Where the draft put each AI question: the sheet reads a question's part and passage from it.
+  const draftPlaces = useMemo(
+    () => new Map<string, DraftPlace>(ai.paper.questions.map((question) => [question.id, { part: question.partId, group: question.groupId ?? null }])),
+    [ai.paper]
+  )
   const { attachSheet } = ai
   const { saveNow, reloadFromServer } = examDoc
   const freeEditor = examDoc.mode === 'FREE' ? editor : null
@@ -200,6 +216,7 @@ export default function AiAssistantScreen({
       save: saveNow,
       clear: () => {
         if (!freeEditor || freeEditor.isDestroyed) return
+        numberOnSheet.current = false
         clearExam(freeEditor)
         setSheetCleared((count) => count + 1)
         // Saved at once: a reload before the usual pause would read the old exam back and add the new one under it.
@@ -240,11 +257,12 @@ export default function AiAssistantScreen({
       )
       tr.insert(questionInsertPos(tr.doc, question.partId), nodes)
     }
+    if (numberOnSheet.current) renumber(tr, draftPlaces)
     // Each question's "Câu n." line marks it as written (see ExamTags): no doc attribute changes, which would draw the
     // whole sheet again for every question that lands.
     editor.view.dispatch(tr.setMeta('addToHistory', false))
     // A clear of the sheet also takes off questions of the new run that landed before it: they are written again.
-  }, [ai.paper, ai.draftLoading, examDoc.loading, editor, sheetCleared])
+  }, [ai.paper, ai.draftLoading, examDoc.loading, editor, sheetCleared, draftPlaces])
 
   const sheetScroller = useRef<HTMLElement>(null)
   // Ctrl + wheel or a pinch over the sheet zooms the paper, not the page.
@@ -315,12 +333,6 @@ export default function AiAssistantScreen({
     if (shown !== null) scrollToPos(editor, shown)
   }, [ai.rewrites, examDoc.loading, examDoc.mode, editor])
 
-  // Where the draft put each AI question: the sheet reads a question's part and passage from it.
-  const draftPlaces = useMemo(
-    () => new Map<string, DraftPlace>(ai.paper.questions.map((question) => [question.id, { part: question.partId, group: question.groupId ?? null }])),
-    [ai.paper]
-  )
-
   // The assistant took questions off the exam or moved them: the sheet changes the same way (once each), and an exam
   // with an answer key gets it written again for the new numbers.
   const madeEdits = useRef(new Set<string>())
@@ -346,6 +358,18 @@ export default function AiAssistantScreen({
     })
     if (hasKey && replaceAnswerKey(editor, ai.paper, solutionStyle)) addRunStep('Cập nhật đáp án')
   }
+
+  // An assistant run that ended changed the exam there is: an exam with an answer key gets it written again once the
+  // questions it added are on the sheet; one without a key gets none.
+  const keyRewrittenFor = useRef(ai.agentRunsEnded)
+  useEffect(() => {
+    if (keyRewrittenFor.current === ai.agentRunsEnded) return
+    if (ai.running || !editor || examDoc.loading || ai.draftLoading || examDoc.mode !== 'FREE') return
+    const delivered = deliveredItems(editor.state)
+    if (delivered && ai.paper.questions.some((question) => !delivered.has(question.id))) return
+    keyRewrittenFor.current = ai.agentRunsEnded
+    rewriteKey()
+  }, [ai.agentRunsEnded, ai.paper, ai.running, ai.draftLoading, examDoc.loading, examDoc.mode, editor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Charts are drawn again from their data when an exam opens, so one saved with an older drawing looks current.
   useEffect(() => {
@@ -483,7 +507,8 @@ export default function AiAssistantScreen({
       const sheet = onSheet ? examSheet(onSheet.state.doc, draftPlaces) : undefined
       // The assistant reads the exam and decides what the words ask for (add, remove, move, rewrite, or a new exam,
       // which it leaves for the teacher to agree to).
-      if (ai.mode === 'compose' && ai.composeAgent && total > 0) {
+      // The sheet says whether the exam has questions; the draft keeps the ones the teacher took off the sheet.
+      if (ai.mode === 'compose' && ai.composeAgent && (sheet ? sheet.questions.length : ai.paper.questions.length) > 0) {
         return ai.send(text, { compose: { ...(sheet ? { sheet } : {}), ...(replacing ? { confirmed: true } : {}) } })
       }
       // A new run replaces the exam, the questions kept and those typed on the sheet included: ask first.
