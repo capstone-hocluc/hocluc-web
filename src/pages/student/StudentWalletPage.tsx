@@ -174,7 +174,7 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
 /** One star per tier of the pack, a little apart: its size at a glance. */
 function StarStack({ count }: { count: number }) {
   return (
-    <span className="flex shrink-0 items-center gap-0.5 [&_svg]:size-10 max-[760px]:[&_svg]:size-7" aria-hidden="true">
+    <span className="flex shrink-0 items-center gap-0.5 [&_svg]:size-10 max-[760px]:[&_svg]:size-6" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
         <CreditIcon key={i} size={40} />
       ))}
@@ -215,7 +215,7 @@ function PackCard({
           Lợi nhất
         </StatusBadge>
       )}
-      <span className="grid h-14 place-items-center max-[760px]:h-auto max-[760px]:w-[88px] max-[760px]:justify-items-start">
+      <span className="grid h-14 place-items-center max-[760px]:h-auto max-[760px]:w-[76px] max-[760px]:justify-items-start">
         <StarStack count={tier} />
       </span>
       <div className="flex min-w-0 flex-col items-center gap-1 max-[760px]:flex-1 max-[760px]:items-start">
@@ -224,9 +224,11 @@ function PackCard({
           <span className="ml-1.5 text-base font-semibold text-text-muted">{CREDIT_UNIT}</span>
         </p>
         {name && <p className="text-sm text-text-body">{name}</p>}
-        <p className="text-xs whitespace-nowrap text-text-muted">
-          {perStar(pack).toLocaleString('vi-VN')}đ / {CREDIT_UNIT}
-          {saving > 0 && <span className="ml-1.5 font-semibold text-success">−{saving}%</span>}
+        <p className="flex flex-wrap justify-center gap-x-1.5 text-xs whitespace-nowrap text-text-muted max-[760px]:justify-start">
+          <span>
+            {perStar(pack).toLocaleString('vi-VN')}đ / {CREDIT_UNIT}
+          </span>
+          {saving > 0 && <span className="font-semibold text-success">−{saving}%</span>}
         </p>
       </div>
       <Button

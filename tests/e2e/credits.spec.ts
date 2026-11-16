@@ -175,6 +175,18 @@ test('a pack paid while the student waits lands in the wallet and the top bar co
   expect(state.pageErrors).toEqual([])
 })
 
+test('on a phone the top bar keeps the logo and the balance apart', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 780 })
+  await install(page)
+  await page.goto('/student/wallet')
+  const logo = page.getByRole('button', { name: 'Hocluc.com' })
+  const pill = page.getByRole('button', { name: '42 Sao' })
+  await expect(pill).toBeVisible()
+  await page.screenshot({ path: 'test-results/credits-phone-topbar.png' })
+  const [a, b] = [await logo.boundingBox(), await pill.boundingBox()]
+  expect(a && b && (a.x + a.width <= b.x || b.y >= a.y + a.height)).toBeTruthy()
+})
+
 test('reopening an order that is already paid does not play the arrival again', async ({ page }) => {
   const state = await install(page)
   state.paid = true

@@ -88,7 +88,13 @@ function StudentTopbar({
           onClick={onNavigateHome}
           className="flex min-h-11 cursor-pointer items-center p-0"
         >
-          <Logo wordmarkSize={24} />
+          {/* A phone has no room for the wordmark next to the balance, the bell and the avatar. */}
+          <span className="max-[480px]:hidden">
+            <Logo wordmarkSize={24} />
+          </span>
+          <span className="hidden max-[480px]:inline-flex">
+            <Logo markOnly wordmarkSize={24} />
+          </span>
         </button>
       </div>
 
