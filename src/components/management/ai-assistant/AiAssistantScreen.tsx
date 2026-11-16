@@ -35,7 +35,7 @@ import { parentHeadingText, partHeadings, questionsToBlocks } from '../exam-doc/
 import { scrollToPos } from '../exam-doc/doc-outline'
 import { EditorOutlineTree, PaperOutlineTree } from '../exam-doc/doc-tree'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
-import { deliveredItems, findTagged, partHeadingPlace, questionInsertPos } from '../exam-doc/exam-tags'
+import { clearExam, deliveredItems, findTagged, partHeadingPlace, questionInsertPos } from '../exam-doc/exam-tags'
 import { refreshChartImages } from '../exam-doc/chart-refresh'
 import { downloadExamOnlyDocx, replaceAnswerKey } from '../exam-doc/answer-key'
 import { restoreSoloPassages } from '../exam-doc/solo-passages'
@@ -188,6 +188,27 @@ export default function AiAssistantScreen({
     if (editor && editor.isEditable !== editable) editor.setEditable(editable, false)
   }, [editor, editable])
 
+  // The runs that replace the exam save the sheet first, take the old exam off it once the server took them, and read
+  // it again when the server puts the old exam back (the run was stopped).
+  const [sheetCleared, setSheetCleared] = useState(0)
+  const { attachSheet } = ai
+  const { saveNow, reloadFromServer } = examDoc
+  const freeEditor = examDoc.mode === 'FREE' ? editor : null
+  useEffect(() => {
+    attachSheet({
+      save: saveNow,
+      clear: () => {
+        if (!freeEditor || freeEditor.isDestroyed) return
+        clearExam(freeEditor)
+        setSheetCleared((count) => count + 1)
+        // Saved at once: a reload before the usual pause would read the old exam back and add the new one under it.
+        void saveNow()
+      },
+      reload: reloadFromServer,
+    })
+    return () => attachSheet(null)
+  }, [attachSheet, saveNow, reloadFromServer, freeEditor])
+
   // Draft questions the document has not received yet (the AI is writing, or the document was closed during a run)
   // are written under their own part. The teacher's caret stays where it is and Ctrl+Z does not take them back out;
   // the document remembers which items it received, so one the teacher deleted is not written again.
@@ -221,7 +242,8 @@ export default function AiAssistantScreen({
     // Each question's "Câu n." line marks it as written (see ExamTags): no doc attribute changes, which would draw the
     // whole sheet again for every question that lands.
     editor.view.dispatch(tr.setMeta('addToHistory', false))
-  }, [ai.paper, ai.draftLoading, examDoc.loading, editor])
+    // A clear of the sheet also takes off questions of the new run that landed before it: they are written again.
+  }, [ai.paper, ai.draftLoading, examDoc.loading, editor, sheetCleared])
 
   const sheetScroller = useRef<HTMLElement>(null)
   // Ctrl + wheel or a pinch over the sheet zooms the paper, not the page.
@@ -424,9 +446,10 @@ export default function AiAssistantScreen({
     const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
     const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(text) : null
     if (!numbers) {
-      // A new run replaces the draft, the questions kept included: ask first.
-      if (!replacing && ai.paper.questions.length > 0) {
-        setPendingReplace({ total: ai.paper.questions.length, kept: ai.paper.questions.filter((question) => question.kept).length })
+      // A new run replaces the exam, the questions kept and those typed on the sheet included: ask first.
+      const total = Math.max(ai.paper.questions.length, onSheet ? sheetQuestions(onSheet.state.doc).length : 0)
+      if (!replacing && total > 0) {
+        setPendingReplace({ total, kept: ai.paper.questions.filter((question) => question.kept).length })
         return Promise.resolve(false)
       }
       return ai.send(text)

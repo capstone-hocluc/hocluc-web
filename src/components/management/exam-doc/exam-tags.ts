@@ -1,7 +1,7 @@
 import { Extension, type Editor, type JSONContent } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state'
-import { END_LINE, TAIL_HEADING } from './exam-lines'
+import { END_LINE, QUESTION_LINE, TAIL_HEADING } from './exam-lines'
 
 /**
  * Ties blocks of the free document to the AI draft they came from, so later AI questions can be placed under their
@@ -30,6 +30,8 @@ export const ExamTags = Extension.create({
         state: {
           init: (_, state) => listedItems(state.doc),
           apply: (tr, listed) => {
+            // A new exam replaced the one on the sheet: none of the new draft's items has been written yet.
+            if (tr.getMeta(deliveredKey) === 'reset') return []
             // The page sets the list once, for a document saved before items were tracked.
             if (tr.doc.attrs.deliveredItems !== tr.before.attrs.deliveredItems) listed = joined(listed, listedItems(tr.doc))
             if (!listed || !tr.docChanged) return listed
@@ -110,6 +112,38 @@ export function examDocJSON(editor: Editor): JSONContent {
   const json = editor.getJSON()
   const ids = deliveredItems(editor.state)
   return ids ? { ...json, attrs: { ...json.attrs, deliveredItems: [...ids] } } : json
+}
+
+/** Starts the exam's body: a tagged block, a section or part heading, or a question the teacher typed. */
+function startsBody(node: ProseMirrorNode) {
+  const { attrs } = node
+  if (attrs.examPart || attrs.examGroup || attrs.examItem) return true
+  if (node.type.name === 'heading') return Number(attrs.level ?? 2) >= 2
+  return node.type.name === 'paragraph' && QUESTION_LINE.test(node.textContent)
+}
+
+/**
+ * Takes the exam off the sheet for a new one the AI writes: its parts, passages and questions (the AI's and the
+ * teacher's) and the answer key. The title and time line above them and the end line stay, and no draft item counts as
+ * written any more. Not an edit: Ctrl+Z does not bring the old exam back (stopping the new run does).
+ */
+export function clearExam(editor: Editor) {
+  const blocks: Array<{ node: ProseMirrorNode; pos: number }> = []
+  editor.state.doc.forEach((node, pos) => blocks.push({ node, pos }))
+  const start = blocks.findIndex(({ node }) => startsBody(node))
+  const end = blocks.findIndex(({ node }, index) => index >= Math.max(start, 0) && endsQuestions(node))
+  const ranges: Array<{ from: number; to: number }> = []
+  blocks.forEach(({ node, pos }, index) => {
+    const body = start >= 0 && index >= start && (end === -1 || index < end)
+    if (body || node.attrs.examKey) ranges.push({ from: pos, to: pos + node.nodeSize })
+  })
+  const tr = editor.state.tr
+  if (ranges.length === blocks.length) {
+    tr.replaceWith(0, tr.doc.content.size, editor.schema.nodes.paragraph.create())
+  } else {
+    for (const range of [...ranges].reverse()) tr.delete(range.from, range.to)
+  }
+  editor.view.dispatch(tr.setDocAttribute('deliveredItems', []).setMeta(deliveredKey, 'reset').setMeta('addToHistory', false))
 }
 
 /** The first block after the questions: the "--- HẾT ---" line, or an answer key / marking scheme heading. */

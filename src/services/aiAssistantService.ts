@@ -333,9 +333,12 @@ export type AiStreamEvent =
         written?: number | null
         reused?: number | null
         needsReview?: number | null
+        /** The run was stopped and the server put back the exam it replaced (questions and sheet). */
+        restored?: boolean
       }
     }
-  | { type: 'error'; data: { message: string } }
+  /** `restored`: the run wrote nothing and the server put back the exam it replaced. */
+  | { type: 'error'; data: { message: string; restored?: boolean } }
 
 const BASE = '/api/v1/ai-assistant'
 const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'text', 'item', 'rewrite', 'answer', 'end', 'error'])

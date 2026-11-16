@@ -390,8 +390,29 @@ export interface BankPaperList {
   refresh: () => void
 }
 
+/** The open exam's sheet, as the page lends it to the runs that replace its exam. */
+export interface ExamSheet {
+  /** Saves what waits to be saved, so the server keeps the exam a new run replaces as the teacher sees it. */
+  save: () => Promise<void>
+  /** Takes the replaced exam off the sheet, once the server took the run that writes the new one. */
+  clear: () => void
+  /** Reads the sheet again: the server put back the exam a stopped run replaced. */
+  reload: () => Promise<void>
+}
+
+/** How long a run's send waits for the sheet to be saved, or a stopped run for the sheet put back. */
+const SHEET_WAIT_MS = 10_000
+
+function atMost(promise: Promise<void>, ms: number) {
+  return Promise.race([promise, new Promise<void>((resolve) => window.setTimeout(resolve, ms))])
+}
+
 /** The AI assistant page: conversations, the live stream of a run, and the draft it writes into. */
 export function useAiAssistant(bank: BankPaperList) {
+  const sheetRef = useRef<ExamSheet | null>(null)
+  const attachSheet = useCallback((sheet: ExamSheet | null) => {
+    sheetRef.current = sheet
+  }, [])
   // After a reload the list this tab showed last is shown at once, while it is asked for again.
   const [cachedConversations] = useState(() => readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE))
   const [conversations, setConversations] = useState<AiConversation[]>(cachedConversations ?? [])
@@ -585,6 +606,15 @@ export function useAiAssistant(bank: BankPaperList) {
       setCancelling(false)
       setSending(false)
       sendingRef.current = false
+
+      // The sheet is read again before the draft: it already holds the questions the draft gets back.
+      // A stopped exam run gets back the exam it replaced from the stop itself; a failed one says so on its end.
+      const examRun = finished !== null && finished.mode !== 'ask' && finished.mode !== 'revise'
+      const stoppedRun = event.type === 'end' && event.data.status === 'CANCELLED'
+      const restored = (event.type === 'end' || event.type === 'error') && event.data.restored === true
+      if (examRun && (stoppedRun || restored) && activeIdRef.current === conversationId && sheetRef.current) {
+        await atMost(sheetRef.current.reload(), SHEET_WAIT_MS)
+      }
 
       if (event.type === 'error') {
         updateRun(null)
@@ -1084,23 +1114,23 @@ export function useAiAssistant(bank: BankPaperList) {
   const numberOf = useMemo(() => questionNumbers(paper), [paper])
 
   const buildConfig = useCallback(
-    (text: string, revise?: AiRevisedItem[], document?: AiSheetDocument): AiSendConfig | undefined => {
+    (text: string, runMode: AiAssistantMode, revise?: AiRevisedItem[], document?: AiSheetDocument): AiSendConfig | undefined => {
       if (revise) {
         return { examFormat: settings.examFormat, solutionStyle: settings.solutionStyle, instruction: text, items: revise }
       }
-      if (mode === 'ask') return document ? { document } : undefined
+      if (runMode === 'ask') return document ? { document } : undefined
       return {
         examFormat: settings.examFormat,
         questionCount: settings.questionCount === 'full' ? 'full' : settings.questionCount,
         bankRatio: settings.bankRatio,
         solutionStyle: settings.solutionStyle,
         instruction: text,
-        ...(mode === 'mock-exam' && settings.bankSourceId
+        ...(runMode === 'mock-exam' && settings.bankSourceId
           ? { bankSourceId: settings.bankSourceId }
           : {}),
       }
     },
-    [mode, settings]
+    [settings]
   )
 
   /**
@@ -1249,8 +1279,11 @@ export function useAiAssistant(bank: BankPaperList) {
           draft: null,
         }
         updateRun(initialRun)
-        // A new compose run replaces the draft; a revise run rewrites some of its questions in place.
-        if (runMode !== 'ask' && runMode !== 'revise' && draftRef.current) {
+        // A new compose run replaces the exam; a revise run rewrites some of its questions in place. The server keeps
+        // the exam it replaces (to give it back if the run is stopped), so the sheet is saved first.
+        const replacing = runMode !== 'ask' && runMode !== 'revise'
+        if (replacing && sheetRef.current) await atMost(sheetRef.current.save(), SHEET_WAIT_MS)
+        if (replacing && draftRef.current) {
           replaced = { before: draftRef.current, cleared: { ...draftRef.current, items: [] } }
           updateDraft(replaced.cleared)
         }
@@ -1261,7 +1294,7 @@ export function useAiAssistant(bank: BankPaperList) {
         const sent = await sendAiMessage(conversationId, {
           content: text,
           mode: runMode,
-          config: buildConfig(text, runMode === 'revise' ? revise : undefined, document),
+          config: buildConfig(text, runMode, runMode === 'revise' ? revise : undefined, document),
           ...(attachments?.length ? { attachments } : {}),
           ...(parentId ? { parentId } : {}),
         })
@@ -1269,6 +1302,7 @@ export function useAiAssistant(bank: BankPaperList) {
         if (running) {
           updateRun({ ...running, messageId: sent.messageId, jobId: sent.jobId })
         }
+        if (replacing && activeIdRef.current === conversationId) sheetRef.current?.clear()
         updateMessages(
           messagesRef.current.map((message) =>
             message.id === localUserId ? { ...message, id: sent.messageId } : message
@@ -1780,6 +1814,7 @@ export function useAiAssistant(bank: BankPaperList) {
     runStore,
     /** Grows by one each time an exam run the server took ends on the open exam (done, stopped, failed, given up). */
     examRunsEnded,
+    attachSheet,
     rewrites,
   }
 }

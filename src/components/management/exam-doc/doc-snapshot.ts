@@ -1,5 +1,5 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { END_LINE } from './exam-lines'
+import { END_LINE, QUESTION_LINE } from './exam-lines'
 
 /*
  * The exam as the sheet shows it, read as plain text for the AI assistant: what "câu 5" says now (the teacher may have
@@ -7,7 +7,6 @@ import { END_LINE } from './exam-lines'
  * model reads them as the teacher wrote them.
  */
 
-const QUESTION_LINE = /^\s*Câu\s+(\d{1,3})\s*[.:]/u
 const OPTION_LINE = /^\s*[A-H]\s*[.)]/u
 const LABELS = 'ABCDEFGH'
 /** The most of the passage above a question sent with it. */
