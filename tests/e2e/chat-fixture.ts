@@ -195,7 +195,7 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
       if (authorization !== `Bearer ${sentinelAccess}`) return answer(null, 401, 'Access token đã hết hạn.')
     }
     if (path === '/api/v1/users/profiles') return answer({ id: tokens[role as keyof typeof tokens]?.sub ?? 'student',
-      role, roles: [role], status: 'ACTIVE', firstName: 'QA', lastName: 'Local', displayName: 'QA', email: 'qa@example.invalid', emailVerified: true })
+      role, status: 'ACTIVE', firstName: 'QA', lastName: 'Local', displayName: 'QA', email: 'qa@example.invalid', emailVerified: true })
     if (state.unavailable && path.startsWith('/api/v1/chat')) return answer(null, 404, 'Not found')
     if (path === '/api/v1/chat/capabilities') return answer({ canCreate: state.canCreate, canSend: state.canSend,
       reason: state.canCreate ? (state.canSend ? undefined : state.canSendReason) : 'Khóa học đã hết hiệu lực.',

@@ -381,21 +381,7 @@ test('BE write 403 is displayed; the client does not retry it or report success'
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('switch active role through the menu: old editor cannot be reopened as Teacher', async ({ page }) => {
-  const state = await installQuizFixture(page, 'STAFF')
-  await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
-  await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: /Quiz QA.*Đang dùng:/ }).click()
-  await page.getByRole('menuitem', { name: 'Giáo viên', exact: true }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Chuyển vai trò', exact: true }).click()
-  await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
-  await page.goto(`/console/teacher/quizzes/${QUIZ_IDS.quiz}/edit`)
-  await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toBeVisible()
-  expect(writes(state)).toEqual([])
-  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
-})
-
-test('late save after role switch is discarded and sends no follow-up question writes', async ({ page }) => {
+test('a late save after the role changed is discarded and sends no follow-up question writes', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
   await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
   await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill('Đang lưu')
@@ -408,7 +394,7 @@ test('late save after role switch is discarded and sends no follow-up question w
     window.dispatchEvent(new Event('hocluc:tokens-changed'))
   }, quizToken('TEACHER'))
   // Profile invalidation now lets the outer management guard block the old role's URL.
-  await expect(page.getByRole('heading', { name: 'Chuyển vai trò để tiếp tục', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bạn không có quyền truy cập' })).toBeVisible()
   await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toHaveCount(0)
   const lateResponse = page.waitForResponse(response => response.request().method() === 'PUT'
     && new URL(response.url()).pathname === `/api/v1/teacher/quizzes/${QUIZ_IDS.quiz}`)

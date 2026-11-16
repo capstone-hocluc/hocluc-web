@@ -139,7 +139,6 @@ const userProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
   displayName: 'Giáo viên QA',
   phone: '0900000000',
   role: 'TEACHER',
-  roles: ['TEACHER'],
   status: 'ACTIVE',
   emailVerified: true,
   ...overrides,
@@ -388,7 +387,6 @@ export async function installCrudFixture(
         firstName: 'QA',
         lastName: 'Local',
         role,
-        roles: [role],
         status: 'ACTIVE',
         emailVerified: true,
       })
@@ -399,7 +397,6 @@ export async function installCrudFixture(
             ? {
                 id: IDS.student,
                 role: 'STUDENT',
-                roles: ['STUDENT'],
                 status: 'ACTIVE',
                 firstName: 'Học viên',
                 lastName: 'QA',
@@ -410,7 +407,6 @@ export async function installCrudFixture(
             : {
                 id: IDS.teacher,
                 role: 'TEACHER',
-                roles: ['TEACHER'],
                 status: 'ACTIVE',
                 firstName: 'Giáo viên',
                 lastName: 'QA',

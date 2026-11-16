@@ -10,7 +10,6 @@ const adminSummary = {
   displayName: 'Quản trị QA',
   status: 'ACTIVE',
   role: 'ADMINISTRATOR',
-  roles: ['ADMINISTRATOR'],
   emailVerified: true,
 }
 
