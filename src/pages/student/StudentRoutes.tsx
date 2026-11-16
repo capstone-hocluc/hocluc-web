@@ -1,10 +1,9 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
-import { studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
+import { parseStudentRoute, studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
 import type { QuizDetail } from '../../services/assessmentService'
 import StudentChatPage from './StudentChatPage'
-import StudentWalletPage from './StudentWalletPage'
 import StudentAiSolvePage from './StudentAiSolvePage'
 import ChatFeatureGate from '../../components/chat-feature-gate'
 import MascotState from '../../components/common/MascotState'
@@ -14,7 +13,7 @@ import CourseDetail from './CourseDetail'
 import LearningActivity from './LearningActivity'
 import VideoLearningPage from './VideoLearningPage'
 import LearningProfile from './LearningProfile'
-import AccountProfile from './AccountProfile'
+import AccountProfile, { type AccountSection } from './AccountProfile'
 import CourseStudyPage from '../course/CourseStudyPage'
 import LessonPage from '../course/LessonPage'
 import QuizDetailPage from '../assessments/QuizDetailPage'
@@ -30,6 +29,8 @@ const StudentSchedulePage = lazy(() => import('./StudentSchedulePage'))
 interface StudentNavigationState {
   quizReturnTo?: string
   lessonStudyCourseId?: string
+  placementReturnTo?: string
+  tutorReturnTo?: string
 }
 
 interface StudentRoutesProps {
@@ -60,11 +61,27 @@ function StudentRoutes({
   // Keep the study context with each navigation entry, including after a reload.
   const returnPath: unknown = window.history.state?.quizReturnTo
   const studyCourseId: unknown = window.history.state?.lessonStudyCourseId
-  const quizReturnTo = typeof returnPath === 'string' && returnPath.startsWith('/student/courses/')
+  const isProfileReturn = typeof returnPath === 'string' &&
+    (returnPath === studentRoutes.learningProfile() || returnPath.startsWith(`${studentRoutes.learningProfile()}?`))
+  const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn)
     ? returnPath : undefined
   const lessonStudyCourseId = typeof studyCourseId === 'string' ? studyCourseId : undefined
+  const placementOrigin: unknown = window.history.state?.placementReturnTo
+  const placementReturnTo = typeof placementOrigin === 'string' &&
+    (placementOrigin === studentRoutes.learningProfile() || placementOrigin.startsWith(`${studentRoutes.learningProfile()}?`))
+    ? placementOrigin : undefined
+  const navigatePlacement = (path: string) => navigate(path, { placementReturnTo })
   const navigateQuiz = (path: string, returnTo = quizReturnTo) =>
     navigate(path, { quizReturnTo: returnTo, lessonStudyCourseId })
+  const tutorOrigin: unknown = window.history.state?.tutorReturnTo
+  const tutorOriginRoute = typeof tutorOrigin === 'string' ? parseStudentRoute(tutorOrigin) : null
+  const tutorReturnTo = typeof tutorOrigin === 'string' &&
+    (tutorOriginRoute?.name === 'course-study' || tutorOriginRoute?.name === 'lesson')
+    ? tutorOrigin : studentRoutes.courses()
+  const openTutor = (studyId?: string) => navigate(studentRoutes.tutor(), {
+    tutorReturnTo: `${window.location.pathname}${window.location.search}`,
+    lessonStudyCourseId: studyId ?? lessonStudyCourseId,
+  })
 
   const page = (): ReactNode => {
     switch (route.name) {
@@ -85,10 +102,9 @@ function StudentRoutes({
         return <ChatFeatureGate><StudentChatPage conversationId={route.conversationId} onSelectConversation={(id) => navigate(studentRoutes.chat(id))} /></ChatFeatureGate>
       case 'schedule':
         return <StudentSchedulePage />
-      case 'wallet':
-        return <StudentWalletPage onOpenPayment={(orderId) => navigate(`/orders/${encodeURIComponent(orderId)}/payment`)} />
       case 'tutor':
-        return <StudentAiSolvePage onOpenWallet={() => navigate(studentRoutes.wallet())} />
+        return <StudentAiSolvePage onOpenWallet={() => navigate(studentRoutes.wallet())}
+          onBack={() => navigate(tutorReturnTo, { lessonStudyCourseId })} />
       // Listed in the sidebar, not built yet.
       case 'roadmap':
         return (
@@ -98,9 +114,21 @@ function StudentRoutes({
           />
         )
       case 'learning-profile':
-        return <LearningProfile onEditProfile={() => navigate(studentRoutes.profile())} />
+        return <LearningProfile onNavigate={(path, studyCourseId) => navigate(path, {
+          lessonStudyCourseId: studyCourseId,
+          placementReturnTo: `${window.location.pathname}${window.location.search}`,
+          quizReturnTo: `${window.location.pathname}${window.location.search}`,
+        })} />
       case 'profile':
-        return <AccountProfile />
+      case 'wallet': {
+        const requestedSection = route.name === 'wallet' ? 'wallet' : new URLSearchParams(window.location.search).get('section')
+        const section: AccountSection = requestedSection === 'wallet' || requestedSection === 'orders' || requestedSection === 'security' || requestedSection === 'student'
+          ? requestedSection : 'personal'
+        return <AccountProfile section={section} onChangeSection={(value) => navigate(studentRoutes.profile(value))}
+          onOpenPayment={(orderId) => navigate(`/orders/${encodeURIComponent(orderId)}/payment`)}
+          onOpenOrder={(orderId) => navigate(`/orders/${encodeURIComponent(orderId)}`)}
+          onBrowseCourses={() => navigate('/courses')} />
+      }
       case 'courses':
         return (
           <MyCourses
@@ -123,6 +151,7 @@ function StudentRoutes({
             onOpenQuiz={(quizId, tab) => navigateQuiz(studentRoutes.quiz(quizId), studentRoutes.courseStudy(route.courseId, tab))}
             onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
             onEditProfile={() => navigate(studentRoutes.profile('student'))}
+            onOpenTutor={() => openTutor(route.courseId)}
           />
         )
       case 'lesson':
@@ -136,6 +165,7 @@ function StudentRoutes({
               navigate(studentRoutes.lesson(route.courseId, lessonId), { lessonStudyCourseId })
             }
             onOpenQuiz={(quizId) => navigateQuiz(studentRoutes.quiz(quizId), studentRoutes.lesson(route.courseId, route.lessonId))}
+            onOpenTutor={() => openTutor()}
           />
         )
       case 'course-detail':
@@ -197,15 +227,16 @@ function StudentRoutes({
           <QuizReviewPage
             key={route.attemptId}
             attemptId={route.attemptId}
-            onBackToQuiz={(quizId) => navigateQuiz(studentRoutes.quiz(quizId))}
+            backLabel={isProfileReturn ? 'Quay lại hồ sơ năng lực' : undefined}
+            onBackToQuiz={(quizId) => isProfileReturn ? navigate(quizReturnTo!) : navigateQuiz(studentRoutes.quiz(quizId))}
           />
         )
       case 'placement':
         return (
           <PlacementIntroPage
-            onStartAttempt={(attemptId) => navigate(studentRoutes.placementAttempt(attemptId))}
-            onOpenReview={(attemptId) => navigate(studentRoutes.placementReview(attemptId))}
-            onBack={() => navigate(studentRoutes.dashboard())}
+            onStartAttempt={(attemptId) => navigatePlacement(studentRoutes.placementAttempt(attemptId))}
+            onOpenReview={(attemptId) => navigatePlacement(studentRoutes.placementReview(attemptId))}
+            onBack={() => navigate(placementReturnTo ?? studentRoutes.dashboard())}
           />
         )
       case 'placement-attempt':
@@ -213,14 +244,15 @@ function StudentRoutes({
           <PlacementAttemptPage
             key={route.attemptId}
             attemptId={route.attemptId}
-            onExit={() => navigate(studentRoutes.placement())}
-            onSubmitted={() => navigate(studentRoutes.placementResult())}
+            onExit={() => navigatePlacement(studentRoutes.placement())}
+            onSubmitted={() => navigatePlacement(studentRoutes.placementResult())}
           />
         )
       case 'placement-result':
         return (
           <PlacementResultPage
-            onOpenReview={(attemptId) => navigate(studentRoutes.placementReview(attemptId))}
+            onBack={placementReturnTo ? () => navigate(placementReturnTo) : undefined}
+            onOpenReview={(attemptId) => navigatePlacement(studentRoutes.placementReview(attemptId))}
             onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
           />
         )
@@ -229,7 +261,7 @@ function StudentRoutes({
           <PlacementReviewPage
             key={route.attemptId}
             attemptId={route.attemptId}
-            onBack={() => navigate(studentRoutes.placementResult())}
+            onBack={() => navigatePlacement(studentRoutes.placementResult())}
           />
         )
     }

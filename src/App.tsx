@@ -23,6 +23,7 @@ import TeacherDashboard from './components/teacher/TeacherDashboard'
 import { useCurrentUser } from './hooks/useCurrentUser'
 import { logout } from './services/authService.ts'
 import { getErrorMessage } from './lib/errors'
+import { accessTokenRole } from './lib/api'
 import { showErrorToast } from './lib/toastBus'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
@@ -558,7 +559,7 @@ function App() {
       <OrderDetailPage
         key={orderDetailId}
         orderId={orderDetailId}
-        onBackToOrders={() => navigateTo('/orders')}
+        onBackToOrders={() => navigateTo(accessTokenRole() === 'STUDENT' ? studentRoutes.profile('orders') : '/orders')}
         onGoToMyCourses={() => navigateTo(studentRoutes.courses())}
         onGoToWallet={() => navigateTo(studentRoutes.wallet())}
         onPaymentReady={(paymentData) =>

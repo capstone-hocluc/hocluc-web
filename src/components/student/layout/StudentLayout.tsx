@@ -69,7 +69,7 @@ function StudentLayout({
         profile={profile}
         streak={credits.streak?.current ?? 0}
         balance={credits.balance?.available ?? null}
-        onOpenWallet={() => onNavigate(studentRoutes.wallet())}
+        onOpenWallet={() => onNavigate(studentRoutes.profile('wallet'))}
         profileLoading={status === 'loading' || (status === 'idle' && Boolean(getAccessToken()))}
         onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
         sidebarCollapsed={sidebarCollapsed}

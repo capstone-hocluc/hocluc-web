@@ -3,11 +3,21 @@ import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/Purcha
 import OrderCard from '../../components/orders/OrderCard'
 import { getMyOrders, type Order } from '../../services/orderService'
 import { getErrorMessage } from '../../lib/errors'
+import MascotState from '../../components/common/MascotState'
+import Notice from '../../components/ui/Notice'
+import Button from '../../components/ui/Button'
+import Skeleton from '../../components/ui/Skeleton'
 interface Props {
   onOpenOrder: (id: string) => void
   onBrowseCourses: () => void
 }
 export default function MyOrdersPage({ onOpenOrder, onBrowseCourses }: Props) {
+  return <PurchaseLayout title="Đơn hàng của tôi" step="ĐƠN HÀNG">
+    <MyOrdersContent onOpenOrder={onOpenOrder} onBrowseCourses={onBrowseCourses} />
+  </PurchaseLayout>
+}
+
+export function MyOrdersContent({ onOpenOrder, onBrowseCourses, student = false }: Props & { student?: boolean }) {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -31,8 +41,15 @@ export default function MyOrdersPage({ onOpenOrder, onBrowseCourses }: Props) {
       active = false
     }
   }, [reload])
+  if (student) return <div className="space-y-4">
+    {loading ? <Skeleton className="h-48 rounded-2xl" /> : error ? <Notice role="alert" tone="danger">
+      {error}<Button appearance="outline" size="sm" onClick={() => { setLoading(true); setReload((value) => value + 1) }}>Thử lại</Button>
+    </Notice> : orders.length ? orders.map((order) => <OrderCard key={order.id} order={order} onOpen={onOpenOrder} student />)
+      : <MascotState title="Bạn chưa có đơn hàng nào" message="Đơn mua khóa học và gói Sao sẽ xuất hiện tại đây."
+        actionLabel="Khám phá khóa học" onAction={onBrowseCourses} />}
+  </div>
   return (
-    <PurchaseLayout title="Đơn hàng của tôi" step="ĐƠN HÀNG">
+    <>
       {error && (
         <PurchaseNotice>
           {error}{' '}
@@ -69,6 +86,6 @@ export default function MyOrdersPage({ onOpenOrder, onBrowseCourses }: Props) {
           </section>
         ))
       )}
-    </PurchaseLayout>
+    </>
   )
 }

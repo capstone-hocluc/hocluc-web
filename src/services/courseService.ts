@@ -283,6 +283,8 @@ export interface CourseStudy {
   continueLessonTitle: string | null
   continueSectionCourseId: string | null
   nextLiveClass: CourseStudyLiveClass | null
+  /** Included by the current BE; optional for older deployments. */
+  exams?: CourseExamSummary[]
   phases: CourseStudyPhase[]
 }
 
@@ -325,13 +327,10 @@ export interface CatchUpRecording {
 }
 
 export interface SectionOrderItem {
-  sectionCourseId: string
-  sectionCourseTitle: string
-  phaseName: string
+  contentSectionId: string
+  title: string
+  phaseName: string | null
   sequence: number
-  categoryId: string | null
-  categoryName: string | null
-  priority: boolean
 }
 
 export interface EnrollmentPlan {
@@ -339,7 +338,7 @@ export interface EnrollmentPlan {
   branch: string
   message: string | null
   // Course-timeline-elapsed, NOT student lesson/learning progress.
-  elapsedPercentage: number
+  elapsedPercentage: number | null
   // Same Course shape as /courses/main - reused as-is.
   recommendedCourse: Course | null
   catchUpRecordings: CatchUpRecording[]

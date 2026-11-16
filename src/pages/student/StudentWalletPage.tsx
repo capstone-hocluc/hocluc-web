@@ -29,12 +29,18 @@ function StudentWalletPage({ onOpenPayment }: StudentWalletPageProps) {
   return (
     <StudentPageContainer width="narrow" className="pb-10">
       <StudentPageHeader title={`Ví ${CREDIT_UNIT}`} />
-      <div className="flex flex-col gap-8">
-        <BalanceCard />
-        <Packs onOpenPayment={onOpenPayment} />
-        <History />
-      </div>
+      <StudentWalletContent onOpenPayment={onOpenPayment} />
     </StudentPageContainer>
+  )
+}
+
+export function StudentWalletContent({ onOpenPayment }: StudentWalletPageProps) {
+  return (
+    <div className="flex flex-col gap-8">
+      <BalanceCard />
+      <Packs onOpenPayment={onOpenPayment} />
+      <History />
+    </div>
   )
 }
 

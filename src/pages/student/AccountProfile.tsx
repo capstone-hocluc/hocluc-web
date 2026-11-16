@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { BarChart3, KeyRound, User } from '../../components/console/icons'
+import { BarChart3, KeyRound, ShoppingBag, User, Wallet } from '../../components/console/icons'
 import MascotState from '../../components/common/MascotState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
@@ -10,6 +9,9 @@ import { cn } from '../../lib/cn'
 import PersonalInfoTab from './account-profile/PersonalInfoTab'
 import StudentInfoTab from './account-profile/StudentInfoTab'
 import SecurityTab from './account-profile/SecurityTab'
+import { StudentWalletContent } from './StudentWalletPage'
+import { MyOrdersContent } from '../orders/MyOrdersPage'
+import SectionHeader from '../../components/student/common/SectionHeader'
 
 const navGroups = [
   {
@@ -17,6 +19,8 @@ const navGroups = [
     items: [
       { key: 'personal', label: 'Hồ sơ', icon: User },
       { key: 'security', label: 'Đổi mật khẩu', icon: KeyRound },
+      { key: 'wallet', label: 'Ví Sao', icon: Wallet },
+      { key: 'orders', label: 'Đơn hàng', icon: ShoppingBag },
     ],
   },
   {
@@ -27,12 +31,18 @@ const navGroups = [
 
 // Account settings for the signed-in student. The profile itself is loaded
 // once by StudentLayout (useHydrateCurrentUser) and read here from context.
-function AccountProfile() {
+export type AccountSection = 'personal' | 'student' | 'security' | 'wallet' | 'orders'
+
+interface AccountProfileProps {
+  section: AccountSection
+  onChangeSection: (section: AccountSection) => void
+  onOpenPayment: (orderId: string) => void
+  onOpenOrder: (orderId: string) => void
+  onBrowseCourses: () => void
+}
+
+function AccountProfile({ section: activeSection, onChangeSection, onOpenPayment, onOpenOrder, onBrowseCourses }: AccountProfileProps) {
   const { profile, status, loadCurrentUser } = useCurrentUser()
-  const [activeSection, setActiveSection] = useState(() => {
-    const requestedSection = new URLSearchParams(window.location.search).get('section')
-    return requestedSection === 'student' ? 'student' : 'personal'
-  })
 
   if (!profile) {
     return (
@@ -54,7 +64,7 @@ function AccountProfile() {
     <StudentPageContainer>
       <StudentPageHeader
         title="Tài khoản của tôi"
-        description="Quản lý thông tin cá nhân, mục tiêu học tập và bảo mật tài khoản."
+        description="Quản lý hồ sơ, bảo mật, Ví Sao và đơn hàng của bạn."
       />
       <div className="grid grid-cols-[240px_minmax(0,1fr)] items-start gap-6 max-[900px]:grid-cols-1">
         <Card
@@ -78,7 +88,7 @@ function AccountProfile() {
                     key={item.key}
                     type="button"
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => setActiveSection(item.key)}
+                    onClick={() => onChangeSection(item.key as AccountSection)}
                     className={cn(
                       'flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl border px-3 text-[15px] font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
                       active
@@ -99,6 +109,8 @@ function AccountProfile() {
           {activeSection === 'personal' && <PersonalInfoTab key={profile.id} />}
           {activeSection === 'student' && <StudentInfoTab key={profile.id} />}
           {activeSection === 'security' && <SecurityTab />}
+          {activeSection === 'wallet' && <div className="space-y-5"><SectionHeader title="Ví Sao" /><StudentWalletContent onOpenPayment={onOpenPayment} /></div>}
+          {activeSection === 'orders' && <div className="space-y-5"><SectionHeader title="Đơn hàng của tôi" /><MyOrdersContent student onOpenOrder={onOpenOrder} onBrowseCourses={onBrowseCourses} /></div>}
         </div>
       </div>
     </StudentPageContainer>

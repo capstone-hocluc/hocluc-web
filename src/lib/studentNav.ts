@@ -1,16 +1,10 @@
 import type { ComponentType } from 'react'
 import {
-  Bot,
   BookOpen,
-  CalendarDays,
   ClipboardCheck,
-  Home,
-  ListTree,
   MailQuestion,
-  Search,
-  ShoppingBag,
   UserRound,
-  Wallet,
+  User,
 } from '../components/console/icons'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from './studentRoutes'
 
@@ -26,6 +20,7 @@ export type StudentNavKey =
   | 'orders'
   | 'wallet'
   | 'catalog'
+  | 'profile'
 
 export interface StudentNavItem {
   key: StudentNavKey
@@ -40,21 +35,18 @@ export interface StudentNavGroup {
 }
 
 // Rendered by StudentSidebar; the only place the sidebar entries are declared.
-// "Lộ trình" opens its "Đang phát triển" page until it is built.
+// Overview, roadmap, schedule and AI tutor entries are temporarily hidden;
+// their routes remain available through existing links.
 export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Học tập',
     items: [
-      { key: 'dashboard', label: 'Tổng quan', icon: Home, path: studentRoutes.dashboard() },
-      { key: 'roadmap', label: 'Lộ trình của tôi', icon: ListTree, path: studentRoutes.roadmap() },
       { key: 'courses', label: 'Khóa học của tôi', icon: BookOpen, path: studentRoutes.courses() },
-      { key: 'schedule', label: 'Lịch học', icon: CalendarDays, path: studentRoutes.schedule() },
     ],
   },
   {
     label: 'Luyện tập',
     items: [
-      { key: 'tutor', label: 'Gia sư AI', icon: Bot, path: studentRoutes.tutor() },
       { key: 'chat', label: 'Hỏi Mentor', icon: MailQuestion, path: studentRoutes.chat() },
       { key: 'assessments', label: 'Bài kiểm tra / thi thử', icon: ClipboardCheck, path: studentRoutes.placement() },
       { key: 'learning-profile', label: 'Hồ sơ năng lực', icon: UserRound, path: studentRoutes.learningProfile() },
@@ -63,10 +55,7 @@ export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Khác',
     items: [
-      { key: 'wallet', label: 'Ví Sao', icon: Wallet, path: studentRoutes.wallet() },
-      // Both live outside the student area (public catalog, order history).
-      { key: 'orders', label: 'Đơn hàng', icon: ShoppingBag, path: '/orders' },
-      { key: 'catalog', label: 'Khám phá khóa học', icon: Search, path: '/courses' },
+      { key: 'profile', label: 'Tài khoản', icon: User, path: studentRoutes.profile() },
     ],
   },
 ]
@@ -81,9 +70,10 @@ export function getStudentNavKey(route: StudentRoute | null): StudentNavKey | nu
     case 'roadmap':
       return 'roadmap'
     case 'tutor':
-      return 'tutor'
+      return 'courses'
     case 'wallet':
-      return 'wallet'
+    case 'profile':
+      return 'profile'
     case 'chat':
       return 'chat'
     case 'schedule':

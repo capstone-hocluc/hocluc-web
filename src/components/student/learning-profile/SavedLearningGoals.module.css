@@ -1,0 +1,32 @@
+.panel {
+  border: 0;
+  background-color: #def6ff;
+  background-image:
+    linear-gradient(rgb(43 162 255 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(43 162 255 / 8%) 1px, transparent 1px),
+    linear-gradient(120deg, #ceebff, #e1faff);
+  background-size: 64px 64px, 64px 64px, 100% 100%;
+}
+
+:global(html[data-theme='dark']) .panel {
+  background-color: #142f50;
+  background-image:
+    linear-gradient(rgb(124 200 255 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(124 200 255 / 8%) 1px, transparent 1px),
+    linear-gradient(120deg, #142f50, #123b4b);
+}
+
+.editButton {
+  border-color: var(--color-primary-text);
+  color: var(--color-primary-text);
+}
+
+.editButton:enabled:hover {
+  background: color-mix(in srgb, var(--color-primary-text) 6%, var(--color-surface));
+}
+
+@media (max-width: 640px) {
+  .panel {
+    background-size: 44px 44px, 44px 44px, 100% 100%;
+  }
+}

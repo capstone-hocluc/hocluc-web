@@ -7,6 +7,8 @@ import LessonQuizzes from '../../components/lesson/LessonQuizzes'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
+import Button from '../../components/ui/Button'
+import { Bot } from '../../components/console/icons'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getLesson, updateLessonProgress, type LessonProgress } from '../../services/lessonService'
 import { refreshCredits } from '../../lib/credits'
@@ -19,9 +21,10 @@ interface LessonPageProps {
   onBackToStudy: () => void
   onNavigateLesson: (lessonId: string) => void
   onOpenQuiz: (quizId: string) => void
+  onOpenTutor: () => void
 }
 
-function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz }: LessonPageProps) {
+function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onOpenTutor }: LessonPageProps) {
   const [completing, setCompleting] = useState(false)
 
   const watchSecondsRef = useRef(0)
@@ -158,6 +161,10 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz }: L
             completing={completing}
             onMarkComplete={handleMarkComplete}
           />
+          {lesson.owned && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-card bg-surface-brand p-4">
+            <p className="text-sm text-text-body">Chưa hiểu bài tập? Gửi ảnh để Gia sư AI hỗ trợ giải thích.</p>
+            <Button appearance="outline" onClick={() => void leaveLesson(onOpenTutor)}><Bot size={18} />Gia sư AI</Button>
+          </div>}
           <LessonQuizzes quizzes={lesson.quizzes} onOpenQuiz={onOpenQuiz} />
           <LessonNavFooter
             previousLessonId={lesson.previousLessonId}

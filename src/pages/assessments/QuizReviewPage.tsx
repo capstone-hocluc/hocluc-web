@@ -14,9 +14,10 @@ import { bySequence } from '../../lib/sequence'
 interface QuizReviewPageProps {
   attemptId: string
   onBackToQuiz: (quizId: string) => void
+  backLabel?: string
 }
 
-function QuizReviewPage({ attemptId, onBackToQuiz }: QuizReviewPageProps) {
+function QuizReviewPage({ attemptId, onBackToQuiz, backLabel = 'Quay lại bài kiểm tra' }: QuizReviewPageProps) {
   const {
     data,
     status,
@@ -64,7 +65,7 @@ function QuizReviewPage({ attemptId, onBackToQuiz }: QuizReviewPageProps) {
 
       {status === 'ready' && data && (
         <>
-          <BackLink onClick={() => onBackToQuiz(data.quiz.id)}>Quay lại bài kiểm tra</BackLink>
+          <BackLink onClick={() => onBackToQuiz(data.quiz.id)}>{backLabel}</BackLink>
 
           <QuizResultSummary title={data.quiz.title} result={data.result} review={data.review} />
 

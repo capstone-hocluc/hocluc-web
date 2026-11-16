@@ -8,6 +8,8 @@ import CourseExamsTab from '../../components/student/course/CourseExamsTab'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
+import Button from '../../components/ui/Button'
+import { Bot } from '../../components/console/icons'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getCourseStudy, type Course } from '../../services/courseService'
@@ -21,6 +23,7 @@ interface CourseStudyPageProps {
   onOpenQuiz: (quizId: string, tab?: 'exams') => void
   onOpenCourse: (course: Course) => void
   onEditProfile: () => void
+  onOpenTutor: () => void
 }
 
 type StudyTab = 'content' | 'exams' | 'live' | 'plan'
@@ -49,6 +52,7 @@ function CourseStudyPage({
   onOpenQuiz,
   onOpenCourse,
   onEditProfile,
+  onOpenTutor,
 }: CourseStudyPageProps) {
   const {
     data: study,
@@ -117,6 +121,11 @@ function CourseStudyPage({
           className="flex flex-col gap-6"
         >
           <CourseOverview study={study} onBack={onBackToMyCourses} onOpenLesson={onOpenLesson} />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-card bg-surface-brand p-4">
+            <p className="text-sm text-text-body">Cần hỗ trợ giải bài? Gửi ảnh bài tập cho Gia sư AI.</p>
+            <Button appearance="outline" onClick={onOpenTutor}><Bot size={18} />Gia sư AI</Button>
+          </div>
 
           <TabsList>
             {visibleTabs.map((tab) => (

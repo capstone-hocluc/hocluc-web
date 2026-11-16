@@ -4,6 +4,8 @@ import MyCourseCard from '../../components/student/course/MyCourseCard'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
 import SearchInput from '../../components/ui/SearchInput'
+import Button from '../../components/ui/Button'
+import { Search } from '../../components/console/icons'
 import Skeleton from '../../components/ui/Skeleton'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
@@ -54,6 +56,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
       <StudentPageHeader
         title="Khóa học của tôi"
         description="Quản lý và tiếp tục học các khóa học ĐGNL bạn đã đăng ký."
+        actions={<Button appearance="outline" onClick={onBrowseCourses}><Search size={18} />Khám phá khóa học</Button>}
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-4 max-[640px]:flex-col max-[640px]:items-stretch">

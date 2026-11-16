@@ -24,11 +24,25 @@ html[data-learner]:not([data-theme='dark']) {
   --color-sky: #1e88ff;
   --color-lock: #60758f;
   --color-lock-soft: #f0f4fa;
-  --color-streak: #965600;
-  --color-streak-soft: #fff6e8;
+  --color-streak: #fd8945;
+  --color-streak-soft: #fff2e9;
   --color-skeleton-highlight: #f8faff;
   --color-scrollbar-track: #f6f9ff;
   --color-scrollbar-thumb: #c4d6ec;
+}
+
+/* Student actions use the logo's .com blue. Scope on html for portals too,
+   without changing the public learner pages or the management console. */
+html[data-learner]:has(.student-layout):not([data-theme='dark']),
+html[data-learner][data-theme='dark']:has(.student-layout) {
+  --color-primary: var(--hocluc-blue);
+  --color-primary-dark: #0875e8;
+}
+
+html[data-learner]:has(.student-layout):not([data-theme='dark']) {
+  --color-primary-text: var(--hocluc-blue);
+  --color-link: var(--hocluc-blue);
+  --color-accent-dark: #0875e8;
 }
 
 html[data-learner][data-theme='dark'] {
