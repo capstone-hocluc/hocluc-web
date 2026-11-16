@@ -116,6 +116,8 @@ export interface AiRun {
   draft: LiveWriting | null
   /** The words of an ask answer being written, until the answer itself arrives. */
   answer?: string
+  /** The assistant changes the exam there is (it may still write new questions through the compose stages). */
+  agent?: boolean
 }
 
 /**
@@ -157,6 +159,7 @@ const STAGE_TITLES: Record<string, string> = {
   lookup: 'Tra cứu',
   revise: 'Sửa câu hỏi',
   queue: 'Đang chờ đến lượt',
+  agent: 'Đọc đề và làm theo yêu cầu',
 }
 
 function errorMessage(error: unknown) {
@@ -219,7 +222,8 @@ function titleFromText(text: string) {
   return line.length > 60 ? `${line.slice(0, 59)}…` : line
 }
 
-function initialStages(mode: AiAssistantMode): AiTraceStage[] {
+function initialStages(mode: AiAssistantMode, agent = false): AiTraceStage[] {
+  if (agent) return [{ id: 'agent', title: STAGE_TITLES.agent, items: [], state: 'running' }]
   if (mode === 'ask') return [{ id: 'lookup', title: STAGE_TITLES.lookup, items: [], state: 'running' }]
   // A revise run reports its steps under the write stage, retitled.
   if (mode === 'revise') return [{ id: 'write', title: STAGE_TITLES.revise, items: [], state: 'running' }]
@@ -243,7 +247,7 @@ function withStage(
 
 /** A later stage starting means the ones before it finished. */
 function finishBefore(stages: AiTraceStage[], id: string): AiTraceStage[] {
-  const order = ['queue', 'explore', 'plan', 'write']
+  const order = ['queue', 'agent', 'explore', 'plan', 'write']
   const index = order.indexOf(id)
   if (index < 0) return stages
   return stages.map((stage) =>
@@ -279,6 +283,13 @@ const TOOL_LABELS: Record<string, string> = {
   get_document_question: 'Đọc câu trong đề',
   revise_question: 'Viết lại câu',
   check_question: 'Kiểm tra lại câu',
+  read_exam: 'Đọc đề',
+  read_questions: 'Đọc câu trong đề',
+  remove_questions: 'Bỏ câu',
+  move_questions: 'Đổi thứ tự câu',
+  rewrite_questions: 'Viết lại câu',
+  add_questions: 'Thêm câu',
+  compose_exam: 'Hỏi trước khi thay đề',
 }
 
 /** A tool call as one plain line: what it did, and at most a short readable hint (a difficulty, a query). */
@@ -287,7 +298,15 @@ function toolLine(data: { tool: string; arguments?: unknown }) {
   const label = TOOL_LABELS[data.tool] ?? (data.tool ? 'Tra cứu dữ liệu' : 'Công cụ')
   const difficulty = typeof args.difficulty === 'string' ? DIFFICULTY_LABELS[args.difficulty as AiDifficulty] : undefined
   const query = typeof args.query === 'string' ? args.query.trim() : ''
-  const number = typeof args.number === 'number' ? `câu ${args.number}` : undefined
+  const numbers = Array.isArray(args.numbers) ? args.numbers.filter((value): value is number => typeof value === 'number') : []
+  const number =
+    typeof args.number === 'number'
+      ? `câu ${args.number}`
+      : numbers.length > 0
+        ? `câu ${numbers.join(', ')}`
+        : typeof args.count === 'number'
+          ? `${args.count} câu`
+          : undefined
   const detail =
     number ?? (difficulty ? `mức ${difficulty.toLowerCase()}` : query ? (query.length > 60 ? `${query.slice(0, 59)}…` : query) : undefined)
   return { label, detail }
@@ -1034,11 +1053,14 @@ export function useAiAssistant(bank: BankPaperList) {
         // so its stages, tool calls and new questions keep showing and it can be stopped.
         const active = draftResponse.run
         if (active && !runRef.current) {
+          const agent = active.mode === 'agent'
+          const runMode: AiAssistantMode = active.mode === 'agent' ? 'compose' : active.mode
           updateRun({
-            mode: active.mode,
+            mode: runMode,
+            ...(agent ? { agent } : {}),
             messageId: null,
             jobId: null,
-            stages: initialStages(active.mode),
+            stages: initialStages(runMode, agent),
             trace: [],
             itemIds: [],
             knownAssistantIds: messagesRef.current
@@ -1047,7 +1069,7 @@ export function useAiAssistant(bank: BankPaperList) {
             draft: null,
           })
           void beginStream(conversationId, active.afterEventId)
-          armRunTimer(conversationId, active.mode)
+          armRunTimer(conversationId, runMode)
         }
       } catch (error) {
         if (activeIdRef.current === conversationId) setNotice(errorMessage(error))
@@ -1306,24 +1328,25 @@ export function useAiAssistant(bank: BankPaperList) {
             ...(attachments?.length ? { attachments } : {}),
           },
         ])
+        // A new compose run replaces the exam; a revise run rewrites some of its questions in place, and the assistant
+        // changes the exam there is (a request on an exam with questions, unless the teacher agreed to replace it). The
+        // server keeps the exam as it was (to give it back if the run is stopped), so the sheet is saved first.
+        const examRun = runMode !== 'ask' && runMode !== 'revise'
+        const holdsQuestions = (compose?.sheet?.questions.length ?? 0) > 0 || (draftRef.current?.items.length ?? 0) > 0
+        const toAssistant = runMode === 'compose' && Boolean(draftRef.current?.composeAgent) && !compose?.confirmed && holdsQuestions
+        const replacing = examRun && !toAssistant
         const initialRun: AiRun = {
           mode: runMode,
+          ...(toAssistant ? { agent: true } : {}),
           messageId: null,
           jobId: null,
-          stages: initialStages(runMode),
+          stages: initialStages(runMode, toAssistant),
           trace: [],
           itemIds: [],
           knownAssistantIds,
           draft: null,
         }
         updateRun(initialRun)
-        // A new compose run replaces the exam; a revise run rewrites some of its questions in place, and the assistant
-        // changes the exam there is (a request on an exam with questions, unless the teacher agreed to replace it). The
-        // server keeps the exam as it was (to give it back if the run is stopped), so the sheet is saved first.
-        const examRun = runMode !== 'ask' && runMode !== 'revise'
-        const toAssistant =
-          runMode === 'compose' && Boolean(draftRef.current?.composeAgent) && !compose?.confirmed && (compose?.sheet?.questions.length ?? 0) > 0
-        const replacing = examRun && !toAssistant
         if (examRun && sheetRef.current) await atMost(sheetRef.current.save(), SHEET_WAIT_MS)
         if (replacing && draftRef.current) {
           replaced = { before: draftRef.current, cleared: { ...draftRef.current, items: [] } }

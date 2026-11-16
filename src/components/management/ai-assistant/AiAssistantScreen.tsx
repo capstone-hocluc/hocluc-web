@@ -1095,7 +1095,7 @@ export default function AiAssistantScreen({
         {ai.confirmRequest?.action === 'compose' && (
           <ConfirmDialog
             title="Soạn đề mới thay đề hiện tại?"
-            description={`${ai.confirmRequest.total} câu hiện có sẽ bị thay, kể cả ${ai.confirmRequest.kept} câu đã giữ.`}
+            description={`${ai.confirmRequest.total} câu hiện có sẽ bị thay, kể cả ${ai.paper.questions.filter((question) => question.kept).length} câu đã giữ.`}
             cancelLabel="Giữ đề"
             confirmLabel="Thay đề"
             variant="danger"

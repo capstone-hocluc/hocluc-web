@@ -203,7 +203,8 @@ export interface AiExamDraftRecord {
 
 /** A compose run still queued or going when the draft was read. */
 export interface AiActiveRun {
-  mode: 'compose' | 'mock-exam'
+  /** 'agent': the assistant changing the exam there is (a compose request on an exam with questions). */
+  mode: 'compose' | 'mock-exam' | 'revise' | 'agent'
   status: 'PENDING' | 'RUNNING'
   progress: string | null
   /** The conversation's last event before the run began: following the stream from it replays this run only. */
