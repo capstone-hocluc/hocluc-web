@@ -8,6 +8,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Notice from '../../components/ui/Notice'
 import Skeleton from '../../components/ui/Skeleton'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { CreditAmount, CreditIcon } from '../../components/credits/CreditIcon'
 import { usePageResource } from '../../hooks/usePageResource'
 import { ApiError } from '../../lib/api'
@@ -40,28 +41,52 @@ function StudentWalletPage({ onOpenPayment }: StudentWalletPageProps) {
 
 function BalanceCard() {
   const { balance } = useCredits()
-  if (!balance) return <Skeleton className="h-[132px] rounded-2xl" />
+  if (!balance) return <Skeleton className="h-[148px] rounded-2xl" />
   return (
-    <Card variant="panel" radius="lg" padding="lg" className="flex flex-wrap items-center gap-5">
-      <CreditIcon size={64} />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="text-[34px] leading-none font-bold text-text-heading tabular-nums">
+    <Card
+      radius="lg"
+      padding="lg"
+      className="relative flex flex-wrap items-center gap-5 overflow-hidden border-live-line bg-linear-to-br from-live-tint via-surface to-surface"
+    >
+      {/* A large star behind the balance, faint, so the card reads as the wallet without more words. */}
+      <CreditIcon size={180} className="pointer-events-none absolute -top-10 -right-8 opacity-15" />
+      <span className="grid size-[72px] shrink-0 place-items-center rounded-2xl bg-live-soft">
+        <CreditIcon size={48} />
+      </span>
+      <div className="relative flex min-w-0 flex-1 flex-col gap-2.5">
+        <p className="text-[40px] leading-none font-bold text-text-heading tabular-nums">
           {balance.available.toLocaleString('vi-VN')}
           <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
         </p>
-        <p className="text-sm text-text-body">
-          {balance.bonus.toLocaleString('vi-VN')} {CREDIT_UNIT} thưởng · {balance.paid.toLocaleString('vi-VN')}{' '}
-          {CREDIT_UNIT} đã mua
-        </p>
-        {balance.held > 0 && (
-          <p className="text-sm text-text-muted">
-            {balance.held.toLocaleString('vi-VN')} {CREDIT_UNIT} đang tạm giữ cho câu hỏi chưa có lời giải.
-          </p>
-        )}
+        <ul className="flex flex-wrap gap-2 text-[13px]">
+          <BalancePart value={balance.bonus} label="thưởng" />
+          <BalancePart value={balance.paid} label="đã mua" />
+          {balance.held > 0 && <BalancePart value={balance.held} label="đang tạm giữ" muted />}
+        </ul>
       </div>
     </Card>
   )
 }
+
+function BalancePart({ value, label, muted = false }: { value: number; label: string; muted?: boolean }) {
+  return (
+    <li
+      className={cn(
+        'rounded-full border px-3 py-1',
+        muted ? 'border-line bg-surface text-text-muted' : 'border-live-line bg-surface text-text-body'
+      )}
+    >
+      <span className="font-semibold text-text-heading tabular-nums">{value.toLocaleString('vi-VN')}</span> {CREDIT_UNIT}{' '}
+      {label}
+    </li>
+  )
+}
+
+/** What one star costs in a pack, rounded to the đồng. */
+const perStar = (pack: CreditPack) => Math.round(pack.price / pack.credits)
+
+/** A pack's name when it says more than its size ("Gói 50" for 50 Sao says nothing new). */
+const packName = (pack: CreditPack) => (/^gói\s*\d+$/i.test(pack.name.trim()) ? null : pack.name)
 
 function Packs({ onOpenPayment }: StudentWalletPageProps) {
   const { data: packs, status, errorMessage, reload } = usePageResource(() => creditService.packs(), [], {
@@ -86,6 +111,10 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
     }
   }
 
+  // Savings are measured against the dearest star on sale; the pack with the cheapest star is the best value.
+  const dearest = packs?.length ? Math.max(...packs.map(perStar)) : 0
+  const best = packs && packs.length > 1 ? packs.reduce((a, b) => (perStar(b) < perStar(a) ? b : a)) : null
+
   return (
     <section>
       <SectionHeader title={`Mua ${CREDIT_UNIT}`} />
@@ -107,36 +136,103 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
           loading={
             <div className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
               {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-[168px] rounded-2xl" />
+                <Skeleton key={i} className="h-[236px] rounded-2xl max-[760px]:h-[92px]" />
               ))}
             </div>
           }
           error={{ title: 'Không tải được các gói' }}
         />
-        {status === 'ready' && packs && packs.length === 0 && (
-          <MascotState title="Chưa có gói nào đang bán" />
-        )}
+        {status === 'ready' && packs && packs.length === 0 && <MascotState title="Chưa có gói nào đang bán" />}
         {status === 'ready' && packs && packs.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
-            {packs.map((pack) => (
-              <Card key={pack.id} variant="elevated" radius="lg" padding="lg" className="flex flex-col items-center gap-3 text-center">
-                <CreditIcon size={44} />
-                <p className="text-2xl font-bold text-text-heading tabular-nums">
-                  {pack.credits.toLocaleString('vi-VN')} <span className="text-base font-semibold text-text-muted">{CREDIT_UNIT}</span>
-                </p>
-                <p className="text-sm text-text-muted">{pack.name}</p>
-                <Button className="w-full" disabled={buying !== null} onClick={() => void buy(pack)}>
-                  {buying === pack.id ? 'Đang tạo đơn...' : vnd(pack.price)}
-                </Button>
-              </Card>
+          <ul className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
+            {packs.map((pack, index) => (
+              <PackCard
+                key={pack.id}
+                pack={pack}
+                tier={Math.min(index, 2) + 1}
+                saving={dearest > 0 ? Math.round((1 - perStar(pack) / dearest) * 100) : 0}
+                best={best?.id === pack.id}
+                buying={buying}
+                onBuy={() => void buy(pack)}
+              />
             ))}
-          </div>
+          </ul>
         )}
         <p className="text-xs text-text-muted">
           {CREDIT_UNIT} đã mua không hết hạn, không đổi lại thành tiền và không chuyển cho tài khoản khác.
         </p>
       </div>
     </section>
+  )
+}
+
+/** One star per tier of the pack, a little apart: its size at a glance. */
+function StarStack({ count }: { count: number }) {
+  return (
+    <span className="flex shrink-0 items-center gap-0.5 [&_svg]:size-10 max-[760px]:[&_svg]:size-7" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <CreditIcon key={i} size={40} />
+      ))}
+    </span>
+  )
+}
+
+function PackCard({
+  pack,
+  tier,
+  saving,
+  best,
+  buying,
+  onBuy,
+}: {
+  pack: CreditPack
+  tier: number
+  saving: number
+  best: boolean
+  buying: string | null
+  onBuy: () => void
+}) {
+  const name = packName(pack)
+  return (
+    <li
+      className={cn(
+        'relative flex flex-col items-center gap-4 rounded-2xl border bg-surface p-5 pt-7 text-center transition-shadow hover:shadow-card',
+        'max-[760px]:flex-row max-[760px]:gap-3.5 max-[760px]:p-4 max-[760px]:text-left',
+        best ? 'border-live bg-linear-to-b from-live-tint to-surface shadow-card-soft' : 'border-line-card'
+      )}
+    >
+      {best && (
+        <StatusBadge
+          tone="live"
+          size="sm"
+          className="absolute -top-2.5 left-1/2 -translate-x-1/2 font-semibold whitespace-nowrap max-[760px]:right-3 max-[760px]:left-auto max-[760px]:translate-x-0"
+        >
+          Lợi nhất
+        </StatusBadge>
+      )}
+      <span className="grid h-14 place-items-center max-[760px]:h-auto max-[760px]:w-[88px] max-[760px]:justify-items-start">
+        <StarStack count={tier} />
+      </span>
+      <div className="flex min-w-0 flex-col items-center gap-1 max-[760px]:flex-1 max-[760px]:items-start">
+        <p className="text-[28px] leading-none font-bold text-text-heading tabular-nums max-[760px]:text-2xl">
+          {pack.credits.toLocaleString('vi-VN')}
+          <span className="ml-1.5 text-base font-semibold text-text-muted">{CREDIT_UNIT}</span>
+        </p>
+        {name && <p className="text-sm text-text-body">{name}</p>}
+        <p className="text-xs whitespace-nowrap text-text-muted">
+          {perStar(pack).toLocaleString('vi-VN')}đ / {CREDIT_UNIT}
+          {saving > 0 && <span className="ml-1.5 font-semibold text-success">−{saving}%</span>}
+        </p>
+      </div>
+      <Button
+        className="w-full max-[760px]:w-auto max-[760px]:shrink-0"
+        appearance={best ? 'fill' : 'outline'}
+        disabled={buying !== null}
+        onClick={onBuy}
+      >
+        {buying === pack.id ? 'Đang tạo đơn...' : vnd(pack.price)}
+      </Button>
+    </li>
   )
 }
 
