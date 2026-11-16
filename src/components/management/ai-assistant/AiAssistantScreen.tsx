@@ -40,7 +40,8 @@ import { refreshChartImages } from '../exam-doc/chart-refresh'
 import { downloadExamOnlyDocx, replaceAnswerKey } from '../exam-doc/answer-key'
 import { restoreSoloPassages } from '../exam-doc/solo-passages'
 import { replaceQuestionBlocks, replaceSheetRange } from '../exam-doc/replace-question'
-import { sheetDocument, sheetQuestion, sheetQuestions } from '../exam-doc/doc-snapshot'
+import { examSheet, sheetDocument, sheetQuestion, sheetQuestions, type DraftPlace } from '../exam-doc/doc-snapshot'
+import { applySheetEdit } from '../exam-doc/sheet-edits'
 import AiSelectionMenu from '../exam-doc/ai-selection-menu'
 import AiSuggestionBar from '../exam-doc/ai-suggestion-bar'
 import { useProofread } from '../exam-doc/use-proofread'
@@ -314,6 +315,38 @@ export default function AiAssistantScreen({
     if (shown !== null) scrollToPos(editor, shown)
   }, [ai.rewrites, examDoc.loading, examDoc.mode, editor])
 
+  // Where the draft put each AI question: the sheet reads a question's part and passage from it.
+  const draftPlaces = useMemo(
+    () => new Map<string, DraftPlace>(ai.paper.questions.map((question) => [question.id, { part: question.partId, group: question.groupId ?? null }])),
+    [ai.paper]
+  )
+
+  // The assistant took questions off the exam or moved them: the sheet changes the same way (once each), and an exam
+  // with an answer key gets it written again for the new numbers.
+  const madeEdits = useRef(new Set<string>())
+  const { sheetEdits, activeId } = ai
+  useEffect(() => {
+    if (!editor || examDoc.loading || examDoc.mode !== 'FREE') return
+    const pending = sheetEdits.filter((edit) => edit.conversationId === activeId && !madeEdits.current.has(edit.editId))
+    if (pending.length === 0) return
+    let changed = false
+    for (const edit of pending) {
+      madeEdits.current.add(edit.editId)
+      changed = applySheetEdit(editor, edit, draftPlaces) || changed
+    }
+    if (changed) rewriteKey()
+  }, [sheetEdits, activeId, draftPlaces, examDoc.loading, examDoc.mode, editor]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** An exam that has an answer key gets it written again from the sheet as it is now. */
+  function rewriteKey() {
+    if (!editor) return
+    let hasKey = false
+    editor.state.doc.forEach((node) => {
+      if (node.attrs.examKey) hasKey = true
+    })
+    if (hasKey && replaceAnswerKey(editor, ai.paper, solutionStyle)) addRunStep('Cập nhật đáp án')
+  }
+
   // Charts are drawn again from their data when an exam opens, so one saved with an older drawing looks current.
   useEffect(() => {
     // A refreshed drawing is saved like an edit, once; later opens find it current and change nothing.
@@ -446,13 +479,19 @@ export default function AiAssistantScreen({
     const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
     const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(text) : null
     if (!numbers) {
-      // A new run replaces the exam, the questions kept and those typed on the sheet included: ask first.
       const total = Math.max(ai.paper.questions.length, onSheet ? sheetQuestions(onSheet.state.doc).length : 0)
+      const sheet = onSheet ? examSheet(onSheet.state.doc, draftPlaces) : undefined
+      // The assistant reads the exam and decides what the words ask for (add, remove, move, rewrite, or a new exam,
+      // which it leaves for the teacher to agree to).
+      if (ai.mode === 'compose' && ai.composeAgent && total > 0) {
+        return ai.send(text, { compose: { ...(sheet ? { sheet } : {}), ...(replacing ? { confirmed: true } : {}) } })
+      }
+      // A new run replaces the exam, the questions kept and those typed on the sheet included: ask first.
       if (!replacing && total > 0) {
         setPendingReplace({ total, kept: ai.paper.questions.filter((question) => question.kept).length })
         return Promise.resolve(false)
       }
-      return ai.send(text)
+      return ai.send(text, replacing ? { compose: { confirmed: true } } : undefined)
     }
     const targets: AiRevisedItem[] = []
     const missing: number[] = []
@@ -1050,6 +1089,38 @@ export default function AiAssistantScreen({
             variant="danger"
             onCancel={() => setPendingReplace(null)}
             onConfirm={replaceExam}
+          />
+        )}
+
+        {ai.confirmRequest?.action === 'compose' && (
+          <ConfirmDialog
+            title="Soạn đề mới thay đề hiện tại?"
+            description={`${ai.confirmRequest.total} câu hiện có sẽ bị thay, kể cả ${ai.confirmRequest.kept} câu đã giữ.`}
+            cancelLabel="Giữ đề"
+            confirmLabel="Thay đề"
+            variant="danger"
+            onCancel={ai.dismissConfirm}
+            onConfirm={() => {
+              const content = ai.confirmRequest?.action === 'compose' ? ai.confirmRequest.content : ''
+              ai.dismissConfirm()
+              if (content) void sendMessage(content, true)
+            }}
+          />
+        )}
+
+        {ai.confirmRequest?.action === 'remove' && (
+          <ConfirmDialog
+            title={`Bỏ ${ai.confirmRequest.numbers.length} câu khỏi đề?`}
+            description={`Câu ${ai.confirmRequest.numbers.join(', ')} sẽ bị bỏ, các câu sau được đánh số lại.`}
+            cancelLabel="Giữ nguyên"
+            confirmLabel="Bỏ câu"
+            variant="danger"
+            onCancel={ai.dismissConfirm}
+            onConfirm={() => {
+              const request = ai.confirmRequest
+              ai.dismissConfirm()
+              if (request?.action === 'remove' && editor && examDoc.mode === 'FREE' && applySheetEdit(editor, request, draftPlaces)) rewriteKey()
+            }}
           />
         )}
 

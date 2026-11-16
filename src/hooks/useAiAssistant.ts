@@ -28,8 +28,11 @@ import {
   type AiMessage,
   type AiPublishedAs,
   type AiRevisedItem,
+  type AiConfirmRequest,
+  type AiExamSheet,
   type AiSendConfig,
   type AiSheetDocument,
+  type AiSheetEdit,
   type AiSolutionStyle,
   type AiStreamEvent,
 } from '../services/aiAssistantService'
@@ -87,6 +90,15 @@ export interface SheetRewrite {
   seq: number
   number: number
   question: AiDraftQuestion
+}
+
+/**
+ * What a compose request carries besides its words: the exam on the sheet (for the assistant that changes it) and
+ * whether the teacher agreed to replace that exam with a new one.
+ */
+export interface ComposeExtra {
+  sheet?: AiExamSheet
+  confirmed?: boolean
 }
 
 /** The unit the AI is writing, with its words read once into questions and options (the sheet and the chat show them). */
@@ -478,6 +490,10 @@ export function useAiAssistant(bank: BankPaperList) {
   const revisionRef = useRef(0)
   /** Questions only the sheet holds that the AI rewrote, in order; the page writes each once (by `seq`). */
   const [rewrites, setRewrites] = useState<SheetRewrite[]>([])
+  /** The assistant's changes to the exam's order, in order; the page makes each once on the sheet (by `editId`). */
+  const [sheetEdits, setSheetEdits] = useState<Array<AiSheetEdit & { conversationId: string }>>([])
+  /** A change the assistant left for the teacher to agree to, on the exam it is for. */
+  const [confirmRequest, setConfirmRequest] = useState<{ conversationId: string; request: AiConfirmRequest } | null>(null)
 
   /** The mode the teacher picks; an exam opened before the list arrived then keeps it. */
   const chooseMode = useCallback((next: AiAssistantMode) => {
@@ -825,6 +841,14 @@ export function useAiAssistant(bank: BankPaperList) {
           updateRun({ ...current, itemIds: [...current.itemIds, `sheet-${event.data.number}`] })
           return
         }
+        case 'edit': {
+          const conversationId = activeIdRef.current
+          if (!conversationId) return
+          setSheetEdits((previous) =>
+            previous.some((edit) => edit.editId === event.data.editId) ? previous : [...previous, { ...event.data, conversationId }]
+          )
+          return
+        }
         case 'answer': {
           if (!messagesRef.current.some((message) => message.id === event.data.messageId)) {
             updateMessages([
@@ -845,6 +869,8 @@ export function useAiAssistant(bank: BankPaperList) {
         }
         case 'end': {
           updateRun({ ...current, stages: markAllDone(current.stages) })
+          const conversationId = activeIdRef.current
+          if (event.data.confirm && conversationId) setConfirmRequest({ conversationId, request: event.data.confirm })
           void finishRun(event, activeIdRef.current ?? '')
           return
         }
@@ -1113,8 +1139,16 @@ export function useAiAssistant(bank: BankPaperList) {
 
   const numberOf = useMemo(() => questionNumbers(paper), [paper])
 
+  const dismissConfirm = useCallback(() => setConfirmRequest(null), [])
+
   const buildConfig = useCallback(
-    (text: string, runMode: AiAssistantMode, revise?: AiRevisedItem[], document?: AiSheetDocument): AiSendConfig | undefined => {
+    (
+      text: string,
+      runMode: AiAssistantMode,
+      revise?: AiRevisedItem[],
+      document?: AiSheetDocument,
+      compose?: ComposeExtra
+    ): AiSendConfig | undefined => {
       if (revise) {
         return { examFormat: settings.examFormat, solutionStyle: settings.solutionStyle, instruction: text, items: revise }
       }
@@ -1128,6 +1162,8 @@ export function useAiAssistant(bank: BankPaperList) {
         ...(runMode === 'mock-exam' && settings.bankSourceId
           ? { bankSourceId: settings.bankSourceId }
           : {}),
+        ...(compose?.sheet ? { sheet: compose.sheet } : {}),
+        ...(compose?.confirmed ? { confirmed: true } : {}),
       }
     },
     [settings]
@@ -1200,13 +1236,15 @@ export function useAiAssistant(bank: BankPaperList) {
       revise?: AiRevisedItem[],
       document?: AiSheetDocument,
       attachments?: AiAttachment[],
-      after?: string | null
+      after?: string | null,
+      compose?: ComposeExtra
     ): Promise<boolean> => {
       if (sendingRef.current || runRef.current) return false
       sendingRef.current = true
       cancelRequestedRef.current = false
       setSending(true)
       setNotice(null)
+      setConfirmRequest(null)
       const knownAssistantIds = messagesRef.current
         .filter((message) => message.role === 'assistant')
         .map((message) => message.id)
@@ -1279,10 +1317,14 @@ export function useAiAssistant(bank: BankPaperList) {
           draft: null,
         }
         updateRun(initialRun)
-        // A new compose run replaces the exam; a revise run rewrites some of its questions in place. The server keeps
-        // the exam it replaces (to give it back if the run is stopped), so the sheet is saved first.
-        const replacing = runMode !== 'ask' && runMode !== 'revise'
-        if (replacing && sheetRef.current) await atMost(sheetRef.current.save(), SHEET_WAIT_MS)
+        // A new compose run replaces the exam; a revise run rewrites some of its questions in place, and the assistant
+        // changes the exam there is (a request on an exam with questions, unless the teacher agreed to replace it). The
+        // server keeps the exam as it was (to give it back if the run is stopped), so the sheet is saved first.
+        const examRun = runMode !== 'ask' && runMode !== 'revise'
+        const toAssistant =
+          runMode === 'compose' && Boolean(draftRef.current?.composeAgent) && !compose?.confirmed && (compose?.sheet?.questions.length ?? 0) > 0
+        const replacing = examRun && !toAssistant
+        if (examRun && sheetRef.current) await atMost(sheetRef.current.save(), SHEET_WAIT_MS)
         if (replacing && draftRef.current) {
           replaced = { before: draftRef.current, cleared: { ...draftRef.current, items: [] } }
           updateDraft(replaced.cleared)
@@ -1294,7 +1336,7 @@ export function useAiAssistant(bank: BankPaperList) {
         const sent = await sendAiMessage(conversationId, {
           content: text,
           mode: runMode,
-          config: buildConfig(text, runMode, runMode === 'revise' ? revise : undefined, document),
+          config: buildConfig(text, runMode, runMode === 'revise' ? revise : undefined, document, compose),
           ...(attachments?.length ? { attachments } : {}),
           ...(parentId ? { parentId } : {}),
         })
@@ -1302,7 +1344,9 @@ export function useAiAssistant(bank: BankPaperList) {
         if (running) {
           updateRun({ ...running, messageId: sent.messageId, jobId: sent.jobId })
         }
-        if (replacing && activeIdRef.current === conversationId) sheetRef.current?.clear()
+        // The server says whether the run replaces the exam; one that does not leaves the sheet as it is.
+        if ((sent.replaced ?? replacing) && activeIdRef.current === conversationId) sheetRef.current?.clear()
+        else if (replaced && sent.replaced === false && draftRef.current === replaced.cleared) updateDraft(replaced.before)
         updateMessages(
           messagesRef.current.map((message) =>
             message.id === localUserId ? { ...message, id: sent.messageId } : message
@@ -1388,12 +1432,18 @@ export function useAiAssistant(bank: BankPaperList) {
   const send = useCallback(
     (
       words: string,
-      extra?: { revise?: AiRevisedItem[]; document?: AiSheetDocument; attachments?: AiAttachment[]; after?: string | null }
+      extra?: {
+        revise?: AiRevisedItem[]
+        document?: AiSheetDocument
+        attachments?: AiAttachment[]
+        after?: string | null
+        compose?: ComposeExtra
+      }
     ) => {
       const text = words.trim()
       if (!text) return Promise.resolve(false)
       const revise = extra?.revise
-      return startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document, extra?.attachments, extra?.after)
+      return startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document, extra?.attachments, extra?.after, extra?.compose)
     },
     [mode, startRun]
   )
@@ -1816,5 +1866,11 @@ export function useAiAssistant(bank: BankPaperList) {
     examRunsEnded,
     attachSheet,
     rewrites,
+    sheetEdits,
+    /** The change the assistant asks the teacher to agree to on the open exam, or null. */
+    confirmRequest: confirmRequest && confirmRequest.conversationId === activeId ? confirmRequest.request : null,
+    dismissConfirm,
+    /** A request on this exam goes to the assistant that reads and changes it once the exam has questions. */
+    composeAgent: Boolean(draft?.composeAgent),
   }
 }

@@ -67,6 +67,8 @@ export interface AiMessage {
 export interface AiSent {
   messageId: string
   jobId: string | null
+  /** The run replaces the exam (a new one); false when it changes the exam there is (the assistant, a revise). */
+  replaced?: boolean
 }
 
 export interface AiQuestionOption {
@@ -212,6 +214,8 @@ export interface AiDraftResponse {
   draft: AiExamDraftRecord
   items: AiDraftItem[]
   run?: AiActiveRun | null
+  /** A request on an exam that has questions goes to the assistant that reads and changes it, not to a new exam. */
+  composeAgent?: boolean
 }
 
 export interface AiSendConfig {
@@ -228,7 +232,37 @@ export interface AiSendConfig {
   items?: AiRevisedItem[]
   /** Ask mode: the exam on the sheet. */
   document?: AiSheetDocument
+  /** Compose mode: the exam on the sheet, for the assistant that changes it. */
+  sheet?: AiExamSheet
+  /** The teacher agreed to replace the exam on the sheet with a new one. */
+  confirmed?: boolean
 }
+
+/** The questions on the sheet as the assistant that changes the exam reads them, by the numbers the sheet prints. */
+export interface AiExamSheet {
+  outline: string
+  questions: Array<{ number: number; text: string; itemId?: string; part?: string; group?: string; context?: string }>
+}
+
+/**
+ * A change to the order of the exam the assistant made, for the page to make on the sheet: the questions by their draft
+ * item (or, for one the teacher typed, the number the sheet printed before the change).
+ */
+export interface AiSheetEdit {
+  editId: string
+  op: 'remove' | 'move'
+  numbers: number[]
+  items: Array<string | null>
+  /** move: the question the moved ones go after (its number before the change, and its item), or 0 for first in `part`. */
+  after?: number
+  afterItem?: string
+  part?: string
+}
+
+/** What the assistant left for the teacher to agree to before it changes the exam. */
+export type AiConfirmRequest =
+  | { action: 'compose'; total: number; kept: number; content: string }
+  | ({ action: 'remove' } & AiSheetEdit)
 
 /**
  * A question to rewrite, by the number the sheet prints: its draft item when the AI wrote it, and its words as the
@@ -335,13 +369,17 @@ export type AiStreamEvent =
         needsReview?: number | null
         /** The run was stopped and the server put back the exam it replaced (questions and sheet). */
         restored?: boolean
+        /** The assistant's turn ended on a change the teacher must agree to first. */
+        confirm?: AiConfirmRequest | null
       }
     }
+  /** The assistant changed the order of the exam: the page makes the same change on the sheet. */
+  | { type: 'edit'; data: AiSheetEdit }
   /** `restored`: the run wrote nothing and the server put back the exam it replaced. */
   | { type: 'error'; data: { message: string; restored?: boolean } }
 
 const BASE = '/api/v1/ai-assistant'
-const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'text', 'item', 'rewrite', 'answer', 'end', 'error'])
+const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'text', 'item', 'rewrite', 'edit', 'answer', 'end', 'error'])
 const MAX_RETRIES = 5
 const RETRY_MS = 2000
 

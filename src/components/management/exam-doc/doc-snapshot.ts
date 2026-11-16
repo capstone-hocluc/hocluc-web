@@ -1,4 +1,5 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import type { AiExamSheet } from '../../../services/aiAssistantService'
 import { END_LINE, QUESTION_LINE } from './exam-lines'
 
 /*
@@ -80,6 +81,11 @@ export interface SheetQuestion {
   text: string
   /** The passage or lead above it (shared by the questions under it), or null. */
   context: string | null
+  /** The draft part whose heading it stands under, or null. */
+  part: string | null
+  /** The AI passage it stands under (`examGroup`), and where that passage's lead starts; null without one. */
+  group: string | null
+  groupFrom: number | null
 }
 
 /** A block that starts something other than the question before it: a part, a passage lead, the end, the key. */
@@ -99,12 +105,14 @@ const questionNumber = (node: ProseMirrorNode) =>
  * next question). Each carries the passage above it: the blocks after the last part heading or after the questions
  * of the previous passage.
  */
-export function sheetQuestions(doc: ProseMirrorNode): SheetQuestion[] {
+export function sheetQuestions(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): SheetQuestion[] {
   const blocks: Array<{ node: ProseMirrorNode; pos: number }> = []
   doc.forEach((node, pos) => blocks.push({ node, pos }))
   const questions: SheetQuestion[] = []
   let context: string[] = []
   let afterQuestion = false
+  let part: string | null = null
+  let group: { id: string; from: number } | null = null
   let index = 0
   while (index < blocks.length) {
     const { node, pos } = blocks[index]
@@ -114,6 +122,8 @@ export function sheetQuestions(doc: ProseMirrorNode): SheetQuestion[] {
       if (isBoundary(node)) {
         context = node.attrs.examGroup ? [blockText(node)] : []
         afterQuestion = false
+        if (node.attrs.examPart) part = String(node.attrs.examPart)
+        group = node.attrs.examGroup ? { id: String(node.attrs.examGroup), from: pos } : null
       } else {
         if (afterQuestion) context = []
         afterQuestion = false
@@ -143,11 +153,34 @@ export function sheetQuestions(doc: ProseMirrorNode): SheetQuestion[] {
       itemId: node.attrs.examItem ? String(node.attrs.examItem) : null,
       text: lines.filter((line) => line.trim()).join('\n'),
       context: passage ? passage.slice(0, MAX_CONTEXT) : null,
+      ...placeOf(node.attrs.examItem ? String(node.attrs.examItem) : null, part, group, items),
     })
     afterQuestion = true
     index = end
   }
   return questions
+}
+
+/** Where the draft put a question: its part and the passage group it belongs to (null for none). */
+export interface DraftPlace {
+  part: string
+  group: string | null
+}
+
+/**
+ * The part and passage of a question: the draft's for one the AI wrote (a question written after a passage's questions
+ * stands under no heading of its own, yet is not part of that passage), else the headings above it on the sheet.
+ */
+function placeOf(
+  itemId: string | null,
+  part: string | null,
+  group: { id: string; from: number } | null,
+  items: ReadonlyMap<string, DraftPlace> | undefined
+): Pick<SheetQuestion, 'part' | 'group' | 'groupFrom'> {
+  const placed = itemId ? items?.get(itemId) : undefined
+  if (!placed) return { part, group: group?.id ?? null, groupFrom: group?.from ?? null }
+  const sameGroup = placed.group !== null && group?.id === placed.group
+  return { part: placed.part, group: placed.group, groupFrom: sameGroup ? (group?.from ?? null) : null }
 }
 
 /**
@@ -166,6 +199,24 @@ export function sheetDocument(doc: ProseMirrorNode): { outline: string; question
     questions: sheetQuestions(doc).map((question) => ({
       number: question.number,
       text: question.context ? `${question.context}\n\n${question.text}` : question.text,
+    })),
+  }
+}
+
+/**
+ * The exam on the sheet for the assistant that changes it: each question by the number it prints, with its draft item,
+ * part and passage, so the assistant's changes name the questions the teacher sees.
+ */
+export function examSheet(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): AiExamSheet {
+  return {
+    outline: sheetOutline(doc),
+    questions: sheetQuestions(doc).map((question) => ({
+      number: question.number,
+      text: question.text,
+      ...(question.itemId ? { itemId: question.itemId } : {}),
+      ...(question.part ? { part: question.part } : {}),
+      ...(question.group ? { group: question.group } : {}),
+      ...(question.context ? { context: question.context } : {}),
     })),
   }
 }

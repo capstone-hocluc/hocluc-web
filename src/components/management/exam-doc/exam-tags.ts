@@ -70,6 +70,8 @@ export const ExamTags = Extension.create({
         attributes: {
           // Never rendered: it only travels in the saved JSON.
           deliveredItems: { default: null, rendered: false },
+          // The assistant's changes to the exam's order already made on this sheet, so a replayed one is not made twice.
+          appliedEdits: { default: null, rendered: false },
         },
       },
     ]
