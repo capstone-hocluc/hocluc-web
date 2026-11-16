@@ -17,6 +17,8 @@ async function install(page: Page, role = 'STUDENT') {
     solvePolls: 0,
     freezeBought: 0,
     freezes: 1,
+    /** The pack order is paid (the bank transfer arrived). */
+    paid: false,
     checkout: [] as string[],
     unmatched: [] as string[],
     pageErrors: [] as string[],
@@ -68,8 +70,8 @@ async function install(page: Page, role = 'STUDENT') {
         { id: 'p2', code: 'STANDARD', name: 'Gói 120', credits: 120, price: 99000, active: true, displayOrder: 2 },
         { id: 'p3', code: 'PLUS', name: 'Gói 300', credits: 300, price: 229000, active: true, displayOrder: 3 },
       ])
-    const order = { id: ORDER, orderCode: 'HL20261105100000', paymentCode: 'HLABCD1234', status: 'PENDING', totalAmount: 99000,
-      createdAt: stamp, expiresAt: '2099-01-01T00:00:00Z', paidAt: null, paymentAttempts: 1,
+    const order = { id: ORDER, orderCode: 'HL20261105100000', paymentCode: 'HLABCD1234', status: state.paid ? 'PAID' : 'PENDING',
+      totalAmount: 99000, createdAt: stamp, expiresAt: '2099-01-01T00:00:00Z', paidAt: state.paid ? stamp : null, paymentAttempts: 1,
       items: [{ courseId: null, courseTitle: 'Gói 120', unitPrice: 99000, creditPackId: 'p2', credits: 120 }] }
     const payment = { order, paymentCode: 'HLABCD1234', bankCode: 'MB', accountNumber: '0123456789', accountName: 'HOCLUC',
       amount: 99000, qrUrl: 'data:image/png;base64,' + PNG.toString('base64') }
@@ -141,6 +143,47 @@ test('wallet shows the balance, the packs and the history, and a pack opens its 
   await expect(page).toHaveURL(new RegExp(`/orders/${ORDER}/payment$`))
   await expect(page.getByText('Thanh toán gói Sao')).toBeVisible()
   expect(state.checkout).toHaveLength(1)
+  expect(state.pageErrors).toEqual([])
+})
+
+test('a pack paid while the student waits lands in the wallet and the top bar counts it in', async ({ page }) => {
+  const state = await install(page)
+  await page.goto('/student/wallet')
+  await expect(page.getByRole('button', { name: '42 Sao' })).toBeVisible()
+  await page.getByRole('button', { name: '99.000đ' }).click()
+  await expect(page.getByText('Thanh toán gói Sao')).toBeVisible()
+
+  // The transfer arrives; the payment page checks again when the window regains focus.
+  state.paid = true
+  state.balance = { available: 162, bonus: 12, paid: 150, held: 0 }
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+
+  await expect(page).toHaveURL(/\/student\/wallet$/)
+  const card = page.getByRole('status').filter({ hasText: 'Thanh toán thành công' })
+  await expect(card).toBeVisible()
+  await expect(card).toContainText('+120 Sao')
+  // While the card is up the top bar still shows the old number; the label already tells the truth.
+  await expect(page.locator('[data-credit-pill] strong')).toHaveText('42')
+  await expect(page.getByRole('button', { name: '162 Sao' })).toBeVisible()
+  await page.waitForTimeout(700)
+  await page.screenshot({ path: 'test-results/credits-arrival-card.png' })
+  await page.waitForTimeout(1250)
+  await page.screenshot({ path: 'test-results/credits-arrival-landing.png' })
+
+  await expect(page.locator('[data-credit-pill] strong')).toHaveText('162')
+  await expect(card).toHaveCount(0)
+  expect(state.pageErrors).toEqual([])
+})
+
+test('reopening an order that is already paid does not play the arrival again', async ({ page }) => {
+  const state = await install(page)
+  state.paid = true
+  await page.goto(`/orders/${ORDER}/payment`)
+  await expect(page.getByRole('heading', { name: 'Thanh toán thành công' })).toBeVisible()
+  await page.getByRole('button', { name: 'Về ví Sao' }).click()
+  await expect(page).toHaveURL(/\/student\/wallet$/)
+  await expect(page.getByRole('button', { name: '42 Sao' })).toBeVisible()
+  await expect(page.getByText('+120 Sao')).toHaveCount(0)
   expect(state.pageErrors).toEqual([])
 })
 
