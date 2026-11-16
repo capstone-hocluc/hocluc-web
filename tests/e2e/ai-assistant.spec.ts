@@ -2185,6 +2185,7 @@ const assistantOnExam = (events: [string, unknown][], end: Record<string, unknow
 test('the assistant takes a question off the open exam without asking first, and the sheet numbers the rest again', async ({ page }) => {
   const { state } = await installAiFixture(page, 'MANAGER', assistantOnExam(
     [
+      ['stage', { stage: 'agent', status: 'running', summary: 'Sẽ bỏ câu 2.' }],
       ['tool', { tool: 'remove_questions', arguments: { numbers: [2] } }],
       ['edit', { editId: 'edit-1', op: 'remove', numbers: [2], items: [null] }],
     ],
@@ -2197,6 +2198,9 @@ test('the assistant takes a question off the open exam without asking first, and
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
 
   await expect(page.getByText('Mình đã bỏ câu 2.')).toBeVisible({ timeout: 15_000 })
+  // The assistant's plan is its step's line, under the step's own title (a finished run's steps fold away).
+  await page.getByRole('button', { name: 'Đọc đề và làm theo yêu cầu' }).click()
+  await expect(page.getByText('Sẽ bỏ câu 2.')).toBeVisible()
   await expect(questionLines(sheet)).toHaveText([
     `Câu 1. ${EXAM_STEMS[0]}`,
     `Câu 2. ${EXAM_STEMS[2]}`,
