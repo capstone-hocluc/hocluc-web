@@ -750,7 +750,8 @@ export function useAiAssistant(bank: BankPaperList) {
           }
           let detail: string | undefined
           let notes: string[] | undefined
-          if (stageId === 'explore') detail = event.data.summary ?? undefined
+          // The assistant's plan for the request ("Sẽ bỏ câu 3 rồi thêm 2 câu hình học") shows as its step's line.
+          if (stageId === 'explore' || stageId === 'agent') detail = event.data.summary ?? undefined
           if (stageId === 'plan' && event.data.status === 'done') {
             const cells = event.data.cells ?? 0
             detail = `${cells} câu${event.data.degraded ? ' · rút gọn' : ''}${event.data.mimic ? ' · theo đề mẫu' : ''}`
