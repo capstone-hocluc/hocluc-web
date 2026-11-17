@@ -1,5 +1,6 @@
 // What a reply carries besides its words, as data parts of assistant-ui's thread: the subjects to choose from, the
-// chip of a stopped run, and the exam's files. Each is registered under its name and reads the reply it belongs to.
+// chip of a stopped run, the exam's files, and each file the teacher asked the assistant for. Each is registered under
+// its name and reads the reply it belongs to.
 import { createContext, useContext, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { makeAssistantDataUI, useAuiState, type DataMessagePartProps } from '@assistant-ui/react'
 import { FileFormatPdf } from '@tailgrids/icons'
@@ -8,6 +9,8 @@ import { ArtifactCard } from '../../../assistant-ui/elements/artifact-card'
 import { field, fieldInteractive, paper, pressable } from '../../../assistant-ui/elements/console-surfaces'
 import { FileText, ListChecks, Square } from '../../../console/icons'
 import { usePdfBusy, usePdfJob } from '../../exam-doc/export'
+import { examFileName } from '../../../../hooks/useAiAssistant'
+import type { AiExamFile } from '../../../../services/aiAssistantService'
 import type { AiChatMessage } from '../exam-format'
 import { sourceOf } from './assistant-runtime'
 
@@ -88,9 +91,10 @@ function StoppedChip({ children }: { children: ReactNode }) {
 }
 
 function Stopped(_: DataMessagePartProps) {
+  const kept = useReply()?.addedItemIds?.length ?? 0
   return (
     <div className="mt-3">
-      <StoppedChip>Đã dừng</StoppedChip>
+      <StoppedChip>{kept > 0 ? `Đã dừng · giữ ${kept} câu đã soạn` : 'Đã dừng'}</StoppedChip>
     </div>
   )
 }
@@ -167,9 +171,28 @@ function ExamCard(_: DataMessagePartProps) {
   )
 }
 
+/** A file of the exam the teacher asked the assistant for: made from the sheet as it is when downloaded. */
+function FileCard({ data }: DataMessagePartProps<AiExamFile>) {
+  const { onDownload } = useChatActions()
+  const pdfBusy = usePdfBusy()
+  const pdfJob = usePdfJob()
+  const pdf = data.format === 'pdf'
+  const download: ExamDownload = `${pdf ? 'pdf' : 'docx'}${data.answers ? '' : '-exam'}` as ExamDownload
+  const making = pdf && pdfJob === (data.answers ? 'full' : 'examOnly')
+  return (
+    <ArtifactCard className="mt-3" icon={pdf ? <FileFormatPdf /> : <FileText size={16} />} title={`Đề thi · ${examFileName(data)}`}>
+      <CardAction className="self-start" disabled={pdf && pdfBusy} onClick={() => onDownload(download)}>
+        {pdf ? <FileFormatPdf aria-hidden /> : <FileText aria-hidden />}
+        <span className="truncate">{making ? 'Đang tạo PDF…' : pdf ? 'Tải PDF' : 'Tải Word'}</span>
+      </CardAction>
+    </ArtifactCard>
+  )
+}
+
 const SubjectsUI = makeAssistantDataUI({ name: 'subjects', render: SubjectChoices })
 const StoppedUI = makeAssistantDataUI({ name: 'stopped', render: Stopped })
 const ExamUI = makeAssistantDataUI({ name: 'exam', render: ExamCard })
+const FileUI = makeAssistantDataUI({ name: 'file', render: FileCard })
 
 /** Registers the reply's data parts with the thread; rendered once inside the chat's runtime. */
 export function ReplyDataUIs() {
@@ -178,6 +201,7 @@ export function ReplyDataUIs() {
       <SubjectsUI />
       <StoppedUI />
       <ExamUI />
+      <FileUI />
     </>
   )
 }

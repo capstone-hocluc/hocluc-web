@@ -16,6 +16,16 @@ interface AiMarkdownProps {
 // values, so a parent re-render (e.g. while a panel divider is dragged) skips it.
 export default memo(AiMarkdown)
 
+/**
+ * remark-math reads formulas between $...$ and $$...$$ only; a model may still write \(...\) or \[...\], which would show
+ * as plain text.
+ */
+function withDollarMath(text: string) {
+  return text
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, formula: string) => `$$${formula.trim()}$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, formula: string) => `$${formula.trim()}$`)
+}
+
 function AiMarkdown({
   content,
   variant = 'body',
@@ -96,7 +106,7 @@ function AiMarkdown({
           hr: () => <hr className="my-4 border-card-border" />,
         }}
       >
-        {content}
+        {withDollarMath(content)}
       </ReactMarkdown>
     </div>
   )

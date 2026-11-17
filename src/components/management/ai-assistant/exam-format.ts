@@ -8,6 +8,7 @@ import type {
   AiDraftItem,
   AiDraftQuestion,
   AiExamDraftRecord,
+  AiExamFile,
   AiExamFormat,
 } from '../../../services/aiAssistantService'
 
@@ -50,6 +51,8 @@ export interface AiChatMessage {
   stages?: AiTraceStage[]
   /** Questions this turn put on the paper; the chat links to them instead of printing them. */
   addedItemIds?: string[]
+  /** The files of the exam the teacher asked the assistant for in this turn. */
+  files?: AiExamFile[]
   error?: boolean
   /** The run was stopped by the teacher; the questions written until then stay. */
   stopped?: boolean

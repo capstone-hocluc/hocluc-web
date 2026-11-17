@@ -104,7 +104,8 @@ const menuAt = (compact: boolean) => cn(MENU, compact ? 'mr-auto' : 'ml-auto')
 
 interface ComposerProps {
   mode: AiAssistantMode
-  onModeChange: (mode: AiAssistantMode) => void
+  /** Picks another mode; left out where the assistant answers every message, so there is no mode to pick. */
+  onModeChange?: (mode: AiAssistantMode) => void
   busy: boolean
   /** Stops the run going on (the send button turns into it). */
   onStop: () => void
@@ -236,7 +237,7 @@ export default function Composer({
           {bar ? (
             <div className="flex min-w-0 items-end gap-0.5 py-1.5 pr-1.5 pl-2">
               <div className="flex shrink-0 items-center gap-0.5">
-                <ModeMenu mode={mode} onModeChange={onModeChange} compact />
+                {onModeChange && <ModeMenu mode={mode} onModeChange={onModeChange} compact />}
                 {settingsMenu}
               </div>
               <div className="min-w-0 flex-1 px-2 py-1">{textarea}</div>
@@ -268,7 +269,7 @@ export default function Composer({
                   </button>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
-                  <ModeMenu mode={mode} onModeChange={onModeChange} />
+                  {onModeChange && <ModeMenu mode={mode} onModeChange={onModeChange} />}
                   {settingsMenu}
                 </div>
                 {sendButton}
@@ -297,7 +298,7 @@ export function ComposerChips({
   useAuiEvent('composer.send', () => setSends((count) => count + 1))
   return (
     <div className="flex min-w-0 items-center gap-0.5">
-      <ModeMenu mode={mode} onModeChange={onModeChange} />
+      {onModeChange && <ModeMenu mode={mode} onModeChange={onModeChange} />}
       {mode !== 'ask' && (
         <SettingsMenu
           key={sends}

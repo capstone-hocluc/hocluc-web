@@ -20,10 +20,12 @@ export const PROGRESS_ID = 'run-progress'
 /**
  * A run that put questions on the paper (compose, mock exam, a revision) offers the exam's files under its reply; an
  * error, a question, or a run that added none does not. A reply read back from the server does not say what its run
- * added, so it keeps offering them.
+ * added, so it keeps offering them. Where the assistant changes the exam (`examCard` off), a compose or revise reply
+ * offers only the files the teacher asked it for.
  */
-export function offersExam(message: AiChatMessage) {
+export function offersExam(message: AiChatMessage, examCard = true) {
   return (
+    (examCard || message.mode === 'mock-exam') &&
     !message.error &&
     !message.subjectChoices &&
     (message.mode === 'compose' || message.mode === 'mock-exam' || message.mode === 'revise') &&
@@ -48,7 +50,7 @@ function stepParts(message: AiChatMessage) {
  * what it adds besides them, as data parts: the subjects to choose from, a stopped run's chip, the exam's files. An
  * error is a reply that did not finish: the thread shows its words as the error, with its "Thử lại".
  */
-function convertMessage(message: AiChatMessage): ThreadMessageLike {
+function convertMessage(message: AiChatMessage, examCard: boolean): ThreadMessageLike {
   if (message.id === PROGRESS_ID) {
     return {
       id: PROGRESS_ID,
@@ -78,8 +80,9 @@ function convertMessage(message: AiChatMessage): ThreadMessageLike {
       content: stepParts(message),
     }
   }
-  // Stopped before any question was written: it says so, and has no exam to offer.
-  const stoppedEmpty = Boolean(message.stopped) && (message.addedItemIds?.length ?? 0) === 0
+  // Stopped before any question was written, or with no exam card to say it: the chip says so.
+  const exam = offersExam(message, examCard)
+  const stoppedChip = Boolean(message.stopped) && (!exam || (message.addedItemIds?.length ?? 0) === 0)
   return {
     id: message.id,
     role: 'assistant',
@@ -90,8 +93,9 @@ function convertMessage(message: AiChatMessage): ThreadMessageLike {
       ...stepParts(message),
       ...(message.body ? [{ type: 'text' as const, text: message.body }] : []),
       ...(message.subjectChoices && !message.subjectChoices.answered ? [{ type: 'data-subjects' as const, data: null }] : []),
-      ...(stoppedEmpty ? [{ type: 'data-stopped' as const, data: null }] : []),
-      ...(offersExam(message) ? [{ type: 'data-exam' as const, data: null }] : []),
+      ...(stoppedChip ? [{ type: 'data-stopped' as const, data: null }] : []),
+      ...(exam ? [{ type: 'data-exam' as const, data: null }] : []),
+      ...(message.files ?? []).map((file) => ({ type: 'data-file' as const, data: file })),
     ],
   }
 }
@@ -125,6 +129,11 @@ export interface AssistantChatOptions {
    * version followed (null: the conversation's start). Resolves false when it was not sent.
    */
   onEdit: (text: string, after: string | null) => Promise<boolean>
+  /**
+   * A finished exam run offers the exam's files under its reply. Off where the assistant changes the exam: it prepares
+   * a file when the teacher asks for one.
+   */
+  examCard: boolean
 }
 
 /**
@@ -146,6 +155,7 @@ export function useAssistantChatRuntime({
   allMessages,
   onShowBranch,
   onEdit,
+  examCard,
   stages,
   answer,
 }: AssistantChatOptions & { stages: readonly AiTraceStage[]; answer: string }) {
@@ -154,9 +164,10 @@ export function useAssistantChatRuntime({
     const progress: AiChatMessage = { id: PROGRESS_ID, role: 'assistant', body: answer, createdAt: '', stages: [...stages] }
     return [...messages, progress]
   }, [messages, running, stages, answer])
-  const repository = useMemo(() => branchesOf(shown, allMessages), [shown, allMessages])
+  const repository = useMemo(() => branchesOf(shown, allMessages, examCard), [shown, allMessages, examCard])
 
-  const suggestions = useFollowUps(conversationId, messages, running)
+  // Where the assistant changes the exam (no exam card) it also answers every message.
+  const suggestions = useFollowUps(conversationId, messages, running, !examCard)
   // The files stored for the composer's attachments, by the id the composer knows each by.
   const stored = useRef(new Map<string, AiAttachment>())
   const attach = useRef(onAttach)
@@ -231,32 +242,41 @@ export function useAssistantChatRuntime({
  * parent. They are listed in the order they were written, so the versions of a turn count up from the first, and the
  * messages only the page holds (the question being sent, the run going on) come last. The head is the last shown.
  */
-function branchesOf(shown: readonly AiChatMessage[], all: readonly AiChatMessage[]): ExportedMessageRepository {
+function branchesOf(shown: readonly AiChatMessage[], all: readonly AiChatMessage[], examCard: boolean): ExportedMessageRepository {
   const before = new Map(shown.map((message, index) => [message.id, index === 0 ? null : shown[index - 1].id]))
   const parents = parentsOf(all)
   const kept = new Set(all.map((message) => message.id))
   const shownById = new Map(shown.map((message) => [message.id, message]))
   const ordered = [...all.map((message) => shownById.get(message.id) ?? message), ...shown.filter((message) => !kept.has(message.id))]
   const items = ordered.map((message) => ({
-    message: convertMessage(message),
+    message: convertMessage(message, examCard),
     parentId: before.has(message.id) ? (before.get(message.id) ?? null) : (parents.get(message.id) ?? null),
   }))
   return { ...ExportedMessageRepository.fromBranchableArray(items), headId: shown.at(-1)?.id ?? null }
 }
 
-/** An ask answer the server keeps: what the teacher might ask after it can be proposed. */
-function asksFollowUps(message: AiChatMessage | undefined): message is AiChatMessage {
-  return Boolean(message && message.role === 'assistant' && message.mode === 'ask' && !message.error && !/^(local|subject|error|summary)-/.test(message.id))
+/**
+ * An answer the server keeps that the teacher may follow up: an ask answer, or (where the assistant answers every
+ * message, `assistant`) its reply to a compose request.
+ */
+function asksFollowUps(message: AiChatMessage | undefined, assistant: boolean): message is AiChatMessage {
+  return Boolean(
+    message &&
+      message.role === 'assistant' &&
+      (message.mode === 'ask' || (assistant && message.mode === 'compose')) &&
+      !message.error &&
+      !/^(local|subject|error|summary)-/.test(message.id)
+  )
 }
 
 /**
  * What the teacher might ask after the last answer, for the thread's follow-up suggestions: those the server kept
  * with it, or else asked for once. A send or a new run hides them; a failed request shows none.
  */
-function useFollowUps(conversationId: string | null, messages: readonly AiChatMessage[], running: boolean) {
+function useFollowUps(conversationId: string | null, messages: readonly AiChatMessage[], running: boolean, assistant: boolean) {
   const last = messages.at(-1)
   const [proposed, setProposed] = useState<{ id: string; prompts: string[] } | null>(null)
-  const pending = asksFollowUps(last) && !last.suggestions && proposed?.id !== last.id ? last.id : null
+  const pending = asksFollowUps(last, assistant) && !last.suggestions && proposed?.id !== last.id ? last.id : null
 
   useEffect(() => {
     if (!pending || !conversationId || running) return
@@ -272,10 +292,10 @@ function useFollowUps(conversationId: string | null, messages: readonly AiChatMe
   }, [conversationId, pending, running])
 
   return useMemo(() => {
-    if (running || !asksFollowUps(last)) return []
+    if (running || !asksFollowUps(last, assistant)) return []
     const prompts = last.suggestions ?? (proposed?.id === last.id ? proposed.prompts : [])
     return prompts.map((prompt) => ({ prompt }))
-  }, [last, proposed, running])
+  }, [assistant, last, proposed, running])
 }
 
 /** A file a sent question carries, as its turn shows it: its name and kind (the server keeps no preview). */
