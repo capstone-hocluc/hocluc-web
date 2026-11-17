@@ -2499,6 +2499,43 @@ test('with the assistant on there is one chat: a question is answered from the s
   expect(revised.config.items).toBeUndefined()
 })
 
+test('a question sent in a long chat brings its answer into view', async ({ page }) => {
+  const earlier = Array.from({ length: 8 }, (_, turn) => [
+    { id: `u${turn}`, conversationId: savedExam.id, role: 'USER', mode: 'compose', content: `Câu hỏi trước số ${turn + 1}`, createdAt: stamp },
+    {
+      id: `a${turn}`,
+      conversationId: savedExam.id,
+      role: 'ASSISTANT',
+      mode: 'compose',
+      content: `Trả lời số ${turn + 1}. ${'Mình đã xem lại đề và giải thích từng bước cho thầy cô. '.repeat(4)}`,
+      createdAt: stamp,
+    },
+  ]).flat()
+  const reply = `Mình đã đổi thời gian làm bài thành 90 phút. ${'Các câu hỏi và đáp án giữ nguyên như cũ. '.repeat(3)}`
+  await installAiFixture(page, 'MANAGER', {
+    ...assistantOnExam([], { status: 'DONE', reply }),
+    messages: { [savedExam.id]: earlier },
+  })
+  await openSavedExam(page)
+  const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
+  const composer = chat.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' })
+  await expect(chat.getByText('Trả lời số 8.')).toBeInViewport()
+
+  await composer.fill('đổi thời gian làm bài thành 90 phút')
+  await chat.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  const answer = chat.getByText('Mình đã đổi thời gian làm bài thành 90 phút.')
+  await expect(answer).toBeVisible({ timeout: 15_000 })
+
+  // The whole answer ends above the composer, which stays over the bottom of the thread.
+  const above = async () => {
+    const [box, input] = await Promise.all([answer.boundingBox(), composer.boundingBox()])
+    return box !== null && input !== null && box.y >= 0 && box.y + box.height <= input.y
+  }
+  await expect.poll(above, { timeout: 5_000 }).toBe(true)
+  await page.waitForTimeout(600)
+  expect(await above()).toBe(true)
+})
+
 test('"Tạo lại" asks the assistant again with the sheet, so the exam does not read as empty', async ({ page }) => {
   const { state } = await installAiFixture(page, 'MANAGER', assistantOnExam([], { status: 'DONE', reply: 'Câu 3 khá dễ.' }))
   await openSavedExam(page)

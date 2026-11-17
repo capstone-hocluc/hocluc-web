@@ -643,7 +643,11 @@ export function useAiAssistant(bank: BankPaperList) {
     handle.controller.abort()
   }, [])
 
-  const refreshMessages = useCallback(async (conversationId: string) => {
+  /**
+   * Reads the conversation's messages again. `then` runs in the same update that shows them (or once they cannot be
+   * read): an ended run's progress gives way to its reply there, so the thread never shows the turn without either.
+   */
+  const refreshMessages = useCallback(async (conversationId: string, then?: () => void) => {
     try {
       const server = (await getAiMessages(conversationId)).map(mapMessage)
       if (activeIdRef.current !== conversationId) return false
@@ -652,6 +656,8 @@ export function useAiAssistant(bank: BankPaperList) {
       return true
     } catch {
       return false
+    } finally {
+      then?.()
     }
   }, [updateMessages])
 
@@ -704,16 +710,20 @@ export function useAiAssistant(bank: BankPaperList) {
 
       const endEvent = event
       const stopped = endEvent.data.status === 'CANCELLED'
-      updateRun(null)
-      if (!finished) return
+      if (!finished) {
+        updateRun(null)
+        return
+      }
+      // The run's progress stays in the thread until its reply is read, and leaves with it in one update.
+      const endRun = () => updateRun(null)
 
       if (finished.mode === 'ask') {
-        await refreshMessages(conversationId)
+        await refreshMessages(conversationId, endRun)
         return
       }
 
       const [messagesLoaded] = await Promise.all([
-        refreshMessages(conversationId),
+        refreshMessages(conversationId, endRun),
         refreshDraft(conversationId),
       ])
       examRunEnded(conversationId, finished.mode, finished.agent)
