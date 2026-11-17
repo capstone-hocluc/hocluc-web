@@ -6,6 +6,7 @@ import Button from '../../ui/Button'
 import Progress from '../../ui/Progress'
 import StatusBadge from '../../ui/StatusBadge'
 import { findFirstLesson, formatStudyPercent } from './studyUtils'
+import styles from './CourseStudyAppearance.module.css'
 
 interface CourseOverviewProps {
   study: CourseStudy
@@ -40,7 +41,7 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
   const targetLessonId = study.continueLessonId || fallbackLesson?.id
 
   return (
-    <header className="rounded-2xl border border-line-card bg-surface-brand p-6 shadow-card max-[640px]:p-4">
+    <header className={styles.banner}>
       <Button
         appearance="ghost"
         size="sm"
@@ -51,7 +52,7 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
         Khóa học của tôi
       </Button>
 
-      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_320px] items-center gap-6 max-[820px]:grid-cols-1">
+      <div className={styles.overviewGrid}>
         <div className="min-w-0">
           {trackLabel && (
             <StatusBadge
@@ -62,10 +63,10 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
               {trackLabel}
             </StatusBadge>
           )}
-          <h1 className="mt-3 mb-2 max-w-[820px] text-[clamp(24px,2.6vw,32px)] leading-[1.16] font-bold tracking-[-0.5px] text-text-heading">
+          <h1 className="mt-2 mb-2 max-w-[820px] text-[clamp(20px,2vw,26px)] leading-snug font-bold tracking-[-0.5px] text-text-heading">
             {study.title}
           </h1>
-          <div className="mt-4 flex flex-wrap gap-2.5">
+          <div className="mt-3 flex flex-wrap gap-2">
             {(startLabel || endLabel) && (
               <MetaChip icon={<CalendarDays size={16} />}>
                 {startLabel}
@@ -76,19 +77,20 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-line-card bg-surface p-5 shadow-card-soft">
+        <div className={styles.progressCard}>
+          <img src="/mascot/05.png" alt="" width={108} height={72} className={styles.mascot} />
           <span className="text-sm font-semibold text-text-heading">Tiến độ khóa học</span>
           <div className="flex items-center justify-between gap-3">
             <small className="text-sm font-semibold text-text-secondary">
               {completed}/{total} bài học
             </small>
-            <strong className="text-4xl leading-none font-bold text-primary-text">
+            <strong className="text-3xl leading-none font-bold text-primary-text">
               {formatStudyPercent(progress)}
             </strong>
           </div>
-          <Progress value={progress} aria-label="Tiến độ khóa học" />
+          <Progress value={progress} size="sm" aria-label="Tiến độ khóa học" />
           {targetLessonId && (
-            <Button size="lg" onClick={() => onOpenLesson(targetLessonId, hasContinueTarget ? study.continueSectionCourseId ?? undefined : undefined)}>
+            <Button size="sm" onClick={() => onOpenLesson(targetLessonId, hasContinueTarget ? study.continueSectionCourseId ?? undefined : undefined)}>
               {hasContinueTarget ? 'Tiếp tục học' : 'Bắt đầu học'}
               <Play size={18} />
             </Button>

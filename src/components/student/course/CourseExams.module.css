@@ -1,0 +1,232 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 16px;
+}
+
+.card {
+  --exam-accent: var(--color-primary);
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-line-card);
+  border-radius: 20px;
+  background: var(--color-surface);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.card:hover,
+.card:focus-within,
+.card[data-active] {
+  border-color: var(--exam-accent);
+  box-shadow: 0 3px 14px rgb(30 136 255 / 7%);
+}
+
+.card[data-completed] {
+  --exam-accent: var(--color-success);
+  border-color: color-mix(in srgb, var(--exam-accent) 35%, var(--color-surface));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--exam-accent) 4%, var(--color-surface)), var(--color-surface) 70%);
+}
+
+.card[data-completed]:hover,
+.card[data-completed]:focus-within {
+  border-color: var(--exam-accent);
+}
+
+.card[data-completed] .icon {
+  color: var(--color-badge-success-text);
+  background: var(--color-badge-success-bg);
+}
+
+.card[data-completed] .footer button[data-appearance='fill'] {
+  background: var(--color-badge-success-text);
+}
+
+.card[data-completed] .footer button[data-appearance='fill']:hover {
+  background: color-mix(in srgb, var(--color-badge-success-text) 85%, #000);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filters {
+  gap: 4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-surface-brand);
+}
+
+.filters [role='tab'] {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.filters [role='tab'][data-state='active'] {
+  background: var(--color-surface);
+  color: var(--color-primary-text);
+  box-shadow: 0 2px 6px rgb(30 136 255 / 8%);
+}
+
+.filters [role='tab'] span {
+  min-width: 20px;
+  border-radius: 6px;
+  background: var(--color-surface-brand);
+  padding: 1px 4px;
+  text-align: center;
+  font-size: 11px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line-soft);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.pagination > span {
+  margin-right: 4px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--color-primary-text);
+  background: var(--color-surface-brand);
+}
+
+.title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--color-text-heading);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line-soft);
+  font-size: 12px;
+}
+
+.stats dt {
+  color: var(--color-text-secondary);
+}
+
+.stats dd {
+  margin: 3px 0 0;
+  font-weight: 600;
+  color: var(--color-text-heading);
+}
+
+.availability,
+.lockMessage {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.availability p,
+.lockMessage {
+  margin: 0;
+}
+
+.lockMessage {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.lockMessage svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar > div {
+    width: 100%;
+  }
+
+  .filters {
+    width: 100%;
+  }
+
+  .filters [role='tab'] {
+    flex: 1;
+    padding-inline: 8px;
+  }
+
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+}

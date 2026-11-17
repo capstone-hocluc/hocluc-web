@@ -1,0 +1,123 @@
+.launcher {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  width: 96px;
+  height: 96px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  padding: 0;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.launcher:active {
+  cursor: grabbing;
+}
+
+.launcher img {
+  width: 80px;
+  height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgb(30 136 255 / 16%));
+  pointer-events: none;
+}
+
+.launcher span {
+  border: 1px solid var(--color-line-card);
+  border-radius: 999px;
+  background: var(--color-surface);
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary-text);
+}
+
+.launcher:hover span {
+  background: var(--color-surface-brand);
+}
+
+.launcher:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+.guideNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-surface-brand);
+  color: var(--color-primary-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.guideNotice svg {
+  flex-shrink: 0;
+}
+
+.guideNotice p,
+.guideSteps p {
+  margin: 0;
+}
+
+.guideSteps {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guideSteps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guideSteps li > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--color-surface-brand);
+  color: var(--color-primary-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.guideSteps strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--color-text-heading);
+  font-size: 14px;
+}
+
+.guideSteps p {
+  color: var(--color-text-body);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.guideActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-line-soft);
+}
+
+@media (max-width: 480px) {
+  .guideActions > button {
+    flex: 1;
+  }
+}

@@ -147,10 +147,8 @@ function StudentRoutes({
               studentRoutes.lesson(lessonCourseId ?? route.courseId, lessonId),
               { lessonStudyCourseId: route.courseId }
             )}
-            onOpenGiftStudy={(giftId) => navigate(studentRoutes.courseStudy(giftId))}
-            onOpenQuiz={(quizId, tab) => navigateQuiz(studentRoutes.quiz(quizId), studentRoutes.courseStudy(route.courseId, tab))}
-            onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
-            onEditProfile={() => navigate(studentRoutes.profile('student'))}
+            onOpenQuiz={(quizId, tab) => navigateQuiz(studentRoutes.quiz(quizId), tab === 'exams'
+              ? `${window.location.pathname}${window.location.search}` : studentRoutes.courseStudy(route.courseId, tab))}
             onOpenTutor={() => openTutor(route.courseId)}
           />
         )

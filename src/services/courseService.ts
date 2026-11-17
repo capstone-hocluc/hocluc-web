@@ -263,8 +263,15 @@ export interface CourseStudyLiveClass {
   status: string
   provider?: string | null
   instructorName?: string | null
+  teacherName?: string | null
+  type?: 'COURSE' | 'OVERALL_PRACTICE' | string | null
+  seriesName?: string | null
+  dayNumber?: number | null
+  lessonId?: string | null
+  lessonTitle?: string | null
   meetingUrl?: string | null
   recordingUrl?: string | null
+  recordings?: { id: string; recordingUrl: string; recordingType?: string | null; fileType?: string | null }[]
   joinable: boolean
 }
 

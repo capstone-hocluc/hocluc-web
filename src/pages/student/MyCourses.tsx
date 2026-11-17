@@ -5,13 +5,14 @@ import StudentPageContainer from '../../components/student/layout/StudentPageCon
 import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Button from '../../components/ui/Button'
-import { Search } from '../../components/console/icons'
+import { BookOpen, BookOpenCheck, FileText, Search } from '../../components/console/icons'
 import Skeleton from '../../components/ui/Skeleton'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getMyCourses } from '../../services/courseService'
 import type { MyCourseEnrollment } from '../../services/courseService'
 import { matchesSearch } from '../../lib/search'
+import styles from './MyCourses.module.css'
 
 interface MyCoursesProps {
   onOpenCourse: (course: MyCourseEnrollment['course']) => void
@@ -20,8 +21,7 @@ interface MyCoursesProps {
 
 type CourseTab = 'main' | 'support'
 
-const courseGrid =
-  'grid grid-cols-3 items-stretch gap-5 max-[1100px]:grid-cols-2 max-[640px]:grid-cols-1'
+const courseGrid = styles.courseGrid
 
 function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
   const [query, setQuery] = useState('')
@@ -52,45 +52,45 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
   }, [tabEnrollments, query])
 
   return (
-    <StudentPageContainer>
-      <StudentPageHeader
-        title="Khóa học của tôi"
-        description="Quản lý và tiếp tục học các khóa học ĐGNL bạn đã đăng ký."
-        actions={<Button appearance="outline" onClick={onBrowseCourses}><Search size={18} />Khám phá khóa học</Button>}
-      />
-
-      <div className="mb-6 flex flex-wrap items-center gap-4 max-[640px]:flex-col max-[640px]:items-stretch">
-        <Tabs value={tab} onValueChange={(value) => setTab(value as CourseTab)}>
-          <TabsList aria-label="Loại khóa học">
-            <TabsTrigger value="main">Khóa học chính</TabsTrigger>
-            <TabsTrigger value="support">Khóa học bổ trợ</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <SearchInput
-          className="ml-auto max-[640px]:ml-0 max-[640px]:w-full max-[640px]:flex-none"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Tìm kiếm khóa học"
+    <StudentPageContainer width="fluid">
+      <div className={styles.banner}>
+        <div className={styles.decoration} aria-hidden="true">
+          <BookOpen size={58} />
+          <FileText size={50} />
+          <BookOpenCheck size={60} />
+        </div>
+        <StudentPageHeader
+          className={styles.heading}
+          title="Khóa học của tôi"
+          description="Quản lý và tiếp tục học các khóa học ĐGNL bạn đã đăng ký."
         />
+
+        <div className={styles.toolbar}>
+          <Tabs className={styles.tabGroup} value={tab} onValueChange={(value) => setTab(value as CourseTab)}>
+            <TabsList aria-label="Loại khóa học" className={styles.tabs}>
+              <TabsTrigger value="main"><BookOpen size={20} />Khóa học chính</TabsTrigger>
+              <TabsTrigger value="support"><BookOpenCheck size={20} />Khóa học bổ trợ</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className={styles.actions}>
+            <SearchInput
+              className="max-[640px]:w-full max-[640px]:flex-none"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Tìm kiếm khóa học"
+            />
+            <Button appearance="outline" className={styles.browseButton} onClick={onBrowseCourses}>
+              <Search size={18} />Khám phá khóa học
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <section>
-        <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-2xl font-bold tracking-[-0.3px] text-text-heading">
-            {isMain ? 'Khóa học chính' : 'Khóa học bổ trợ'}
-          </h2>
-          {status === 'ready' && (
-            <span className="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-semibold text-primary-text">
-              {visibleEnrollments.length} khóa học
-            </span>
-          )}
-        </div>
-
+      <section className={styles.content} aria-label={isMain ? 'Khóa học chính' : 'Khóa học bổ trợ'}>
         {status === 'loading' && (
           <div className={courseGrid}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-80 rounded-2xl" />
+              <Skeleton key={index} className="h-full rounded-2xl" />
             ))}
           </div>
         )}
@@ -106,28 +106,36 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
 
         {status === 'ready' && tabEnrollments.length === 0 && (
           <MascotState
+            imageSrc="/mascot/03.png"
+            className="rounded-none border-0 bg-transparent"
             title={isMain ? 'Bạn chưa có khóa học nào' : 'Bạn chưa có khóa học bổ trợ nào'}
             message={
               isMain
                 ? 'Khám phá các khóa học phù hợp để bắt đầu hành trình học tập của bạn.'
                 : 'Khóa học lẻ bạn đã mua sẽ xuất hiện ở đây để học riêng phần đó.'
             }
-            actionLabel={isMain ? 'Khám phá khóa học' : undefined}
-            onAction={isMain ? onBrowseCourses : undefined}
           />
         )}
 
         {status === 'ready' && tabEnrollments.length > 0 && visibleEnrollments.length === 0 && (
           <MascotState
+            imageSrc="/mascot/03.png"
+            className="rounded-none border-0 bg-transparent"
             title="Không tìm thấy khóa học"
             message="Thử thay đổi từ khóa tìm kiếm của bạn."
           />
         )}
 
         {status === 'ready' && visibleEnrollments.length > 0 && (
-          <div className={courseGrid}>
+          <div
+            className={`${courseGrid}${visibleEnrollments.length > 6 ? ` ${styles.scrollable}` : ''}`}
+            role="region"
+            aria-label="Danh sách khóa học"
+            tabIndex={visibleEnrollments.length > 6 ? 0 : undefined}
+          >
             {visibleEnrollments.map((enrollment) => (
               <MyCourseCard
+                compact
                 key={enrollment.course.id}
                 enrollment={enrollment}
                 onOpen={onOpenCourse}

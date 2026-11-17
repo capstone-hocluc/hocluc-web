@@ -40,6 +40,7 @@ html[data-learner][data-theme='dark']:has(.student-layout) {
 }
 
 html[data-learner]:has(.student-layout):not([data-theme='dark']) {
+  --color-app-bg: #f6fbff;
   --color-primary-text: var(--hocluc-blue);
   --color-link: var(--hocluc-blue);
   --color-accent-dark: #0875e8;
@@ -86,6 +87,10 @@ html[data-learner][data-theme='dark'] {
 
 html[data-learner] body {
   background: var(--color-app-bg);
+}
+
+html[data-learner]:not([data-theme='dark']) .student-layout #student-content {
+  background-color: #f6fbff;
 }
 html[data-learner] :where(h1, h2, h3) {
   text-wrap: balance;

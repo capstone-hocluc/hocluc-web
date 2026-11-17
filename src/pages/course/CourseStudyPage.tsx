@@ -1,42 +1,38 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import CourseOverview from '../../components/student/course/CourseOverview'
 import NextLiveClassCard from '../../components/student/course/NextLiveClassCard'
 import StudyCurriculum from '../../components/student/course/StudyCurriculum'
 import CourseLiveClassesTab from '../../components/student/course/CourseLiveClassesTab'
-import CourseEnrollmentPlanTab from '../../components/student/course/CourseEnrollmentPlanTab'
+import CourseTutorMascot from '../../components/student/course/CourseTutorMascot'
 import CourseExamsTab from '../../components/student/course/CourseExamsTab'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
-import Button from '../../components/ui/Button'
-import { Bot } from '../../components/console/icons'
+import { BookOpen, CalendarDays, FileQuestion } from '../../components/console/icons'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getCourseStudy, type Course } from '../../services/courseService'
+import { getCourseStudy } from '../../services/courseService'
+import styles from '../../components/student/course/CourseStudyAppearance.module.css'
 
 interface CourseStudyPageProps {
   courseId: string
   onBackToMyCourses: () => void
   onViewCourseInfo: () => void
   onOpenLesson: (lessonId: string, courseId?: string) => void
-  onOpenGiftStudy: (courseId: string) => void
   onOpenQuiz: (quizId: string, tab?: 'exams') => void
-  onOpenCourse: (course: Course) => void
-  onEditProfile: () => void
   onOpenTutor: () => void
 }
 
-type StudyTab = 'content' | 'exams' | 'live' | 'plan'
+type StudyTab = 'content' | 'exams' | 'live'
 
 const TABS: { key: StudyTab; label: string }[] = [
   { key: 'content', label: 'Nội dung học' },
   { key: 'exams', label: 'Bài thi' },
   { key: 'live', label: 'Lớp học trực tuyến' },
-  { key: 'plan', label: 'Lộ trình học' },
 ]
 
 // A SECTION bought on its own has no roadmap, live-class series or mock exam of its own.
-const MAIN_ONLY_TABS: StudyTab[] = ['exams', 'live', 'plan']
+const MAIN_ONLY_TABS: StudyTab[] = ['exams', 'live']
 
 function isStudyTab(value: string | null): value is StudyTab {
   return TABS.some((tab) => tab.key === value)
@@ -48,10 +44,7 @@ function CourseStudyPage({
   onBackToMyCourses,
   onViewCourseInfo,
   onOpenLesson,
-  onOpenGiftStudy,
   onOpenQuiz,
-  onOpenCourse,
-  onEditProfile,
   onOpenTutor,
 }: CourseStudyPageProps) {
   const {
@@ -64,6 +57,13 @@ function CourseStudyPage({
     const tab = new URLSearchParams(window.location.search).get('tab')
     return isStudyTab(tab) ? tab : 'content'
   })
+  useEffect(() => {
+    const search = new URLSearchParams(window.location.search)
+    if (search.get('tab') !== 'plan') return
+    search.delete('tab')
+    window.history.replaceState(window.history.state, '',
+      `${window.location.pathname}${search.size ? `?${search}` : ''}${window.location.hash}`)
+  }, [])
 
   // A course bought as a single SECTION has no roadmap, live-class series or mock exam tabs.
   const isSection = study?.courseType === 'SECTION'
@@ -89,6 +89,7 @@ function CourseStudyPage({
   return (
     <StudentPageContainer className="pb-8">
       <ResourceState
+        imageSrc="/mascot/03.png"
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
@@ -122,46 +123,43 @@ function CourseStudyPage({
         >
           <CourseOverview study={study} onBack={onBackToMyCourses} onOpenLesson={onOpenLesson} />
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-card bg-surface-brand p-4">
-            <p className="text-sm text-text-body">Cần hỗ trợ giải bài? Gửi ảnh bài tập cho Gia sư AI.</p>
-            <Button appearance="outline" onClick={onOpenTutor}><Bot size={18} />Gia sư AI</Button>
+          <div>
+            <TabsList className={styles.studyTabs} aria-label="Nội dung khóa học">
+              {visibleTabs.map((tab) => (
+                <TabsTrigger key={tab.key} value={tab.key}>
+                  {tab.key === 'content' ? <BookOpen size={18} /> : tab.key === 'exams' ? <FileQuestion size={18} /> : <CalendarDays size={18} />}
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            <div className={styles.tabPanel}>
+              <TabsContent value="content" className="flex flex-col gap-5">
+                {study.nextLiveClass && (
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-5">
+                    <NextLiveClassCard liveClass={study.nextLiveClass} />
+                  </div>
+                )}
+                <StudyCurriculum
+                  phases={study.phases}
+                  currentLessonId={study.continueLessonId}
+                  currentCourseId={study.continueSectionCourseId}
+                  onOpenLesson={onOpenLesson}
+                  onOpenQuiz={onOpenQuiz}
+                />
+              </TabsContent>
+
+              <TabsContent value="live">
+                <CourseLiveClassesTab courseId={courseId} />
+              </TabsContent>
+
+              <TabsContent value="exams">
+                <CourseExamsTab courseId={courseId} onOpenQuiz={(quizId) => onOpenQuiz(quizId, 'exams')} />
+              </TabsContent>
+
           </div>
-
-          <TabsList>
-            {visibleTabs.map((tab) => (
-              <TabsTrigger key={tab.key} value={tab.key}>
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="content" className="flex flex-col gap-5">
-            {study.nextLiveClass && (
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-5">
-                <NextLiveClassCard liveClass={study.nextLiveClass} />
-              </div>
-            )}
-            <StudyCurriculum
-              phases={study.phases}
-              currentLessonId={study.continueLessonId}
-              currentCourseId={study.continueSectionCourseId}
-              onOpenGiftStudy={onOpenGiftStudy}
-              onOpenLesson={onOpenLesson}
-              onOpenQuiz={onOpenQuiz}
-            />
-          </TabsContent>
-
-          <TabsContent value="live">
-            <CourseLiveClassesTab courseId={courseId} />
-          </TabsContent>
-
-          <TabsContent value="exams">
-            <CourseExamsTab courseId={courseId} onOpenQuiz={(quizId) => onOpenQuiz(quizId, 'exams')} />
-          </TabsContent>
-
-          <TabsContent value="plan">
-            <CourseEnrollmentPlanTab courseId={courseId} onOpenCourse={onOpenCourse} />
-          </TabsContent>
+          </div>
+          <CourseTutorMascot onOpenTutor={onOpenTutor} />
         </Tabs>
       )}
     </StudentPageContainer>

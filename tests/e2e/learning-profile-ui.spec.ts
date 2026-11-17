@@ -1,8 +1,313 @@
 import { expect, test, type Page } from '@playwright/test'
 import { installQuizFixture, QUIZ_IDS } from './quiz-permissions-fixture'
 import type { StudentProfile } from '../../src/services/userService'
+import type { CourseExamSummary, CourseStudyLiveClass } from '../../src/services/courseService'
 
 const profilePath = '/student/learning-profile'
+
+test('Course curriculum keeps only overall progress and colors completed and active lessons from backend state', async ({ page }, testInfo) => {
+  await installProfile(page)
+  const giftBase = { phaseId: 'color-phase', lessonCount: 3, completedLessonCount: 0, progressPercentage: 0, chapterCount: 1 }
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/study`, route => route.fulfill({ json: { success: true, data: {
+    courseId: QUIZ_IDS.course, courseType: 'MAIN', title: 'Khóa học có trạng thái', totalLessons: 9, completedLessons: 3, progressPercentage: 33,
+    continueLessonId: QUIZ_IDS.nextLesson, continueSectionCourseId: QUIZ_IDS.otherCourse,
+    phases: [{ id: 'color-phase', name: 'Giai đoạn nền tảng', sequence: 1, progressPercentage: 33, sections: [], gifts: [
+      { ...giftBase, courseId: 'completed-gift', title: 'Khóa nhỏ đã hoàn thành', completedLessonCount: 3, progressPercentage: 100 },
+      { ...giftBase, courseId: QUIZ_IDS.otherCourse, title: 'Khóa nhỏ đang học' },
+      { ...giftBase, courseId: 'not-started-gift', title: 'Khóa nhỏ chưa học' },
+    ] }],
+  } } }))
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.otherCourse}/study`, route => route.fulfill({ json: { success: true, data: {
+    courseId: QUIZ_IDS.otherCourse, title: 'Khóa nhỏ đang học', totalLessons: 3, completedLessons: 0, progressPercentage: 0,
+    phases: [{ id: null, gifts: [], sections: [{ sectionCourseId: QUIZ_IDS.otherCourse, title: 'Khóa nhỏ đang học', chapters: [{
+      id: QUIZ_IDS.chapter, title: 'Chương đang học', lessonCount: 3, completedLessonCount: 1, completed: false, quizzes: [],
+      lessons: [
+        { id: QUIZ_IDS.lesson, title: 'Bài đã hoàn thành', status: 'COMPLETED', contentType: 'TEXT', sequence: 1, quizzes: [] },
+        { id: QUIZ_IDS.nextLesson, title: 'Bài đang học dở', status: 'IN_PROGRESS', contentType: 'TEXT', sequence: 2, quizzes: [] },
+        { id: 'not-started-lesson', title: 'Bài chưa bắt đầu', status: 'NOT_STARTED', contentType: 'TEXT', sequence: 3, quizzes: [] },
+      ],
+    }] }] }],
+  } } }))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto(`/student/courses/${QUIZ_IDS.course}/study`, { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('progressbar')).toHaveCount(1)
+  for (const [name, state] of [['Khóa nhỏ đã hoàn thành', 'completed'], ['Khóa nhỏ đang học', 'in-progress'], ['Khóa nhỏ chưa học', 'not-started']]) {
+    await expect(page.getByRole('button', { name: new RegExp(name) }).locator('xpath=../..')).toHaveAttribute('data-learning-state', state)
+  }
+  const completed = page.getByRole('button', { name: /Bài đã hoàn thành/ })
+  const active = page.getByRole('button', { name: /Bài đang học dở/ })
+  const pending = page.getByRole('button', { name: /Bài chưa bắt đầu/ })
+  await expect(completed).toHaveAttribute('data-learning-state', 'completed')
+  await expect(active).toHaveAttribute('data-learning-state', 'in-progress')
+  await expect(pending).toHaveAttribute('data-learning-state', 'not-started')
+  const colors = await Promise.all([completed, active, pending].map(row => row.evaluate(element => getComputedStyle(element).backgroundColor)))
+  expect(colors[0]).not.toBe(colors[1])
+  expect(colors[1]).toBe(colors[2])
+  await page.screenshot({ path: testInfo.outputPath('curriculum-states-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: testInfo.outputPath('curriculum-states-mobile.png'), fullPage: true })
+})
+
+test('Course live cards respect joinability, timezone, recordings, filters and pagination', async ({ page }, testInfo) => {
+  await installProfile(page)
+  const base: CourseStudyLiveClass = { id: 'session-next', title: 'Buổi học gần nhất', startTime: '2026-11-17T03:00:00Z',
+    endTime: '2026-11-17T04:00:00Z', timezone: 'Asia/Ho_Chi_Minh', status: 'SCHEDULED',
+    provider: 'ZOOM', instructorName: 'Giảng viên QA', joinable: false, meetingUrl: 'https://example.invalid/next',
+    type: 'COURSE', seriesName: 'Luyện đề tổng hợp', dayNumber: 1 }
+  let joinNext = false
+  let status = 200
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/live-classes`, route => route.fulfill({
+    status, json: status === 200 ? { success: true, data: { courseId: QUIZ_IDS.course, courseTitle: 'Khóa QA',
+      next: { ...base, joinable: joinNext }, upcoming: [
+        { ...base, joinable: joinNext },
+        { ...base, id: 'session-live', title: 'Buổi đang diễn ra', status: 'LIVE', joinable: true, meetingUrl: 'https://example.invalid/join' },
+        { ...base, id: 'session-later', title: 'Buổi chưa được tham gia', meetingUrl: 'https://example.invalid/locked' },
+        { ...base, id: 'session-no-url', title: 'Buổi chưa có liên kết', joinable: true, meetingUrl: null },
+        { ...base, id: 'session-invalid-url', title: 'Buổi có liên kết không hợp lệ', joinable: true, meetingUrl: 'javascript:alert(1)' },
+      ], past: [
+        { ...base, id: 'past-with-recording', title: 'Buổi có bản ghi', status: 'COMPLETED', recordingUrl: 'https://example.invalid/recording', meetingUrl: null },
+        { ...base, id: 'past-no-recording', title: 'Buổi chưa có bản ghi', status: 'COMPLETED', meetingUrl: null },
+        { ...base, id: 'past-multiple', title: 'Buổi có nhiều bản ghi', status: 'COMPLETED', meetingUrl: null,
+          recordingUrl: 'https://example.invalid/recording-one', recordings: [
+            { id: 'rec-a', recordingUrl: 'https://example.invalid/recording-one' },
+            { id: 'rec-b', recordingUrl: 'https://example.invalid/recording-two' },
+          ] },
+      ] } } : { success: false, message: 'Không lấy được lịch kiểm thử' },
+  }))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const url = `/student/courses/${QUIZ_IDS.course}/study?tab=live`
+  await page.goto(url, { waitUntil: 'domcontentloaded' })
+  const list = page.getByRole('list', { name: 'Danh sách lớp học trực tuyến', exact: true })
+  const cards = list.getByRole('listitem')
+  await expect(cards).toHaveCount(6)
+  await expect(page.getByRole('tab', { name: /^Tất cả 8$/ })).toBeVisible()
+  await expect(cards.nth(0).getByText('10:00 – 11:00', { exact: true })).toBeVisible()
+  await expect(cards.nth(0).getByText('Giờ học · GMT+7', { exact: true })).toBeVisible()
+  await expect(cards.nth(0).getByText('Giảng viên QA', { exact: true })).toBeVisible()
+  await expect(cards.nth(0).getByRole('link')).toHaveCount(0)
+  await expect(cards.nth(1).getByRole('link', { name: 'Tham gia Buổi đang diễn ra', exact: true })).toHaveAttribute('href', 'https://example.invalid/join')
+  await expect(cards.nth(2).getByRole('link')).toHaveCount(0)
+  await expect(cards.nth(3).getByRole('button', { name: 'Chưa có liên kết' })).toBeDisabled()
+  await expect(cards.nth(4).getByRole('link')).toHaveCount(0)
+  await expect(cards.nth(5).getByRole('link', { name: 'Xem bản ghi Buổi có bản ghi', exact: true })).toHaveAttribute('href', 'https://example.invalid/recording')
+  await page.screenshot({ path: testInfo.outputPath('course-live-cards-desktop.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Trang lớp học sau', exact: true }).click()
+  await expect(cards).toHaveCount(2)
+  await expect(page.getByRole('button', { name: 'Trang lớp học sau', exact: true })).toBeDisabled()
+  await page.getByRole('tab', { name: /^Đã qua/ }).click()
+  await expect(cards).toHaveCount(3)
+  await expect(cards.nth(1).getByText('Chưa có bản ghi cho buổi học này.', { exact: true })).toBeVisible()
+  await cards.nth(2).getByText('Xem bản ghi (2)', { exact: true }).click()
+  await expect(cards.nth(2).getByRole('link')).toHaveCount(2)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('tab', { name: /^Đã qua/ })).toHaveAttribute('aria-selected', 'true')
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: testInfo.outputPath('course-live-cards-mobile.png'), fullPage: true })
+  await page.getByRole('tab', { name: /^Sắp tới/ }).click()
+  joinNext = true
+  await page.getByRole('button', { name: 'Tải lại lịch học trực tuyến', exact: true }).click()
+  await expect(cards.nth(0).getByRole('link', { name: 'Tham gia Buổi học gần nhất', exact: true })).toHaveAttribute('href', 'https://example.invalid/next')
+  status = 403
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Bạn chưa có quyền tham gia lớp học của khóa này', { exact: true })).toBeVisible()
+  await expect(list).toHaveCount(0)
+  status = 500
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Không thể tải lịch học trực tuyến', { exact: true })).toBeVisible()
+  status = 200
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click()
+  await expect(cards).toHaveCount(5)
+})
+
+test('Course exam cards preserve backend states, zero scores and the return to exams on desktop and mobile', async ({ page }, testInfo) => {
+  await installProfile(page)
+  const base: CourseExamSummary = { id: 'exam-new', type: 'EXAM', title: 'Đề thi thử số 1', questionCount: 120,
+    durationMinutes: 150, maxAttempts: 3, passingPercentage: 60, showAnswers: false,
+    availableFrom: null, availableUntil: null, practiceAllowed: false, attemptsUsed: 0,
+    bestPercentage: null, passed: false, locked: false, lockReason: null, inProgressAttemptId: null }
+  const exams: CourseExamSummary[] = [base,
+    { ...base, id: 'exam-progress', title: 'Đề đang làm', attemptsUsed: 1, inProgressAttemptId: 'active-attempt' },
+    { ...base, id: 'exam-zero', title: 'Đề đã làm điểm không', attemptsUsed: 1, bestPercentage: 0 },
+    { ...base, id: 'exam-passed', title: 'Đề đã đạt', attemptsUsed: 2, bestPercentage: 80, passed: true, showAnswers: true },
+    { ...base, id: 'exam-closed', title: 'Đề đã hết hạn', locked: true, lockReason: 'CLOSED', availableUntil: '2026-01-01T00:00:00Z' },
+    { ...base, id: 'exam-full', title: 'Đề hết lượt', locked: true, lockReason: 'NO_ATTEMPTS_LEFT', attemptsUsed: 3, bestPercentage: 20 },
+    { ...base, id: 'exam-future', title: 'Đề chưa mở', locked: true, lockReason: 'NOT_OPEN_YET', availableFrom: '2030-01-01T00:00:00Z' },
+  ]
+  let responseStatus = 200
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/exams`, route => route.fulfill({
+    status: responseStatus, json: responseStatus === 200 ? { success: true, data: exams } : { success: false, message: 'Không thể lấy đề kiểm thử' },
+  }))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  const studyPath = `/student/courses/${QUIZ_IDS.course}/study?tab=exams`
+  await page.goto(studyPath, { waitUntil: 'domcontentloaded' })
+  const list = page.getByRole('list', { name: 'Danh sách bài thi', exact: true })
+  const cards = list.getByRole('listitem')
+  await expect(cards).toHaveCount(6)
+  await expect(cards.nth(0).getByText('120 câu hỏi')).toBeVisible()
+  await expect(cards.nth(0).getByText('150 phút')).toBeVisible()
+  await expect(cards.nth(0).getByText('Chưa có điểm')).toBeVisible()
+  await expect(cards.nth(2).getByText('0%', { exact: true })).toBeVisible()
+  await expect(cards.nth(3).getByText('80%', { exact: true })).toBeVisible()
+  await expect(cards.nth(4).getByText('Đã đóng', { exact: true })).toBeVisible()
+  await expect(cards.nth(5).getByText('Hết lượt chính thức', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Trang bài thi trước', exact: true })).toBeDisabled()
+  const firstRow = await Promise.all([0, 1, 2].map(index => cards.nth(index).boundingBox()))
+  expect(Math.abs(firstRow[0]!.y - firstRow[2]!.y)).toBeLessThan(2)
+  await list.screenshot({ path: testInfo.outputPath('course-exam-cards-desktop.png') })
+  await page.getByRole('button', { name: 'Trang bài thi sau', exact: true }).click()
+  await expect(cards).toHaveCount(1)
+  await expect(cards.nth(0).getByText('Chưa mở', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Trang bài thi sau', exact: true })).toBeDisabled()
+  await cards.nth(0).getByRole('button', { name: 'Xem bài thi Đề chưa mở', exact: true }).click()
+  await expect(page).toHaveURL('/student/assessments/quizzes/exam-future')
+  await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
+  await expect(page).toHaveURL(`${studyPath}&examPage=2`)
+  await expect(cards).toHaveCount(1)
+  await page.getByRole('button', { name: 'Trang bài thi trước', exact: true }).click()
+  await page.getByRole('tab', { name: /^Đã làm/ }).click()
+  await expect(cards).toHaveCount(3)
+  await expect(cards.nth(0).getByText('0%', { exact: true })).toBeVisible()
+  await expect(cards.nth(0)).toHaveAttribute('data-completed', 'true')
+  await expect(page.getByRole('navigation', { name: 'Phân trang bài thi', exact: true })).toHaveCount(0)
+  await list.screenshot({ path: testInfo.outputPath('course-exam-cards-completed.png') })
+  await page.getByRole('tab', { name: /^Chưa làm/ }).click()
+  await expect(cards).toHaveCount(4)
+  await expect(cards.nth(1).getByText('Đang làm', { exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: /^Tất cả/ }).click()
+  await cards.nth(1).getByRole('button', { name: 'Tiếp tục bài thi Đề đang làm', exact: true }).click()
+  await expect(page).toHaveURL('/student/assessments/quizzes/exam-progress')
+  await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
+  await expect(page).toHaveURL(studyPath)
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await list.screenshot({ path: testInfo.outputPath('course-exam-cards-mobile.png') })
+  responseStatus = 403
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Bạn chưa có quyền xem bài thi', { exact: true })).toBeVisible()
+  await expect(list).toHaveCount(0)
+  responseStatus = 500
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Không thể tải bài thi', { exact: true })).toBeVisible()
+  responseStatus = 200
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click()
+  await expect(cards).toHaveCount(6)
+})
+
+test('Course study tabs show empty mascots and the draggable tutor shows guidance on every click', async ({ page }, testInfo) => {
+  await installProfile(page)
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/exams`, route => route.fulfill({ json: { success: true, data: [] } }))
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/live-classes`, route => route.fulfill({ json: { success: true, data: { next: null, upcoming: [], past: [] } } }))
+  await page.route(url => url.pathname === '/api/v1/student/ai/requests', route => route.fulfill({ json: { success: true, data: { content: [], last: true } } }))
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const studyPath = `/student/courses/${QUIZ_IDS.course}/study`
+  await page.goto(`${studyPath}?tab=plan`, { waitUntil: 'domcontentloaded' })
+  await expect(page).toHaveURL(studyPath)
+  await expect(page.getByRole('tab', { name: 'Lộ trình học', exact: true })).toHaveCount(0)
+  await page.getByRole('tab', { name: 'Bài thi', exact: true }).click()
+  await expect(page.getByText('Khóa học chưa có bài thi', { exact: true })).toBeVisible()
+  await expect(page.getByRole('tabpanel').locator('img[src="/mascot/03.png"]')).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('course-tabs-empty-desktop.png') })
+  await page.getByRole('tab', { name: 'Lớp học trực tuyến', exact: true }).click()
+  await expect(page.getByText('Chưa có lịch học trực tuyến', { exact: true })).toBeVisible()
+  await expect(page.getByRole('tabpanel').locator('img[src="/mascot/03.png"]')).toBeVisible()
+  const launcher = page.getByRole('button', { name: 'Mở Gia sư AI', exact: true })
+  const before = (await launcher.boundingBox())!
+  await page.mouse.move(before.x + 48, before.y + 40)
+  await page.mouse.down()
+  await page.mouse.move(before.x - 150, before.y - 100, { steps: 10 })
+  await page.mouse.up()
+  const after = (await launcher.boundingBox())!
+  expect(after.x).toBeLessThan(before.x - 100)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page).toHaveURL(`${studyPath}?tab=live`)
+  await launcher.click()
+  const guide = page.getByRole('dialog', { name: 'Học cùng Gia sư AI' })
+  await expect(guide).toBeVisible()
+  await expect(guide.locator('img')).toHaveCount(0)
+  await expect(guide.getByText(/Kéo mascot/)).toHaveCount(0)
+  await guide.screenshot({ path: testInfo.outputPath('tutor-guide-desktop.png') })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await guide.screenshot({ path: testInfo.outputPath('tutor-guide-mobile.png') })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await guide.getByRole('button', { name: 'Để sau', exact: true }).click()
+  await expect(page).toHaveURL(`${studyPath}?tab=live`)
+  await launcher.click()
+  await guide.getByRole('button', { name: 'Bắt đầu dùng', exact: true }).click()
+  await expect(page).toHaveURL('/student/tutor')
+  await page.getByRole('button', { name: 'Quay lại học tập', exact: true }).click()
+  await expect(page).toHaveURL(`${studyPath}?tab=live`)
+  await launcher.click()
+  await expect(guide).toBeVisible()
+  await guide.getByRole('button', { name: 'Bắt đầu dùng', exact: true }).click()
+  await expect(page).toHaveURL('/student/tutor')
+  await page.getByRole('button', { name: 'Quay lại học tập', exact: true }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(async () => (await launcher.boundingBox())!.x + SIZE_FOR_TEST).toBeLessThanOrEqual(390)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: testInfo.outputPath('course-tabs-empty-mobile.png'), fullPage: true })
+})
+
+const SIZE_FOR_TEST = 96
+
+test('Course gifts expand lessons inline, retain course context and keep mascot inside the banner', async ({ page }, testInfo) => {
+  await installProfile(page)
+  let giftReads = 0
+  const chapter = {
+    id: QUIZ_IDS.chapter, title: 'Chương học trực tiếp', sequence: 1, lessonCount: 1,
+    completedLessonCount: 0, completed: false, quizzes: [], lessons: [{
+      id: QUIZ_IDS.lesson, title: 'Bài học trong khóa nhỏ', sequence: 1, contentType: 'VIDEO',
+      durationSeconds: 60, status: 'NOT_STARTED', quizzes: [],
+    }],
+  }
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/study`, route => route.fulfill({ json: { success: true, data: {
+    courseId: QUIZ_IDS.course, title: 'Khóa chính kiểm thử', courseType: 'MAIN', totalLessons: 1,
+    completedLessons: 0, progressPercentage: 0, continueLessonId: null, continueSectionCourseId: null,
+    phases: [{ id: 'inline-phase', name: 'Giai đoạn kiểm thử', sequence: 1, progressPercentage: 0,
+      sections: [], gifts: [{ courseId: QUIZ_IDS.otherCourse, title: 'Khóa nhỏ xổ xuống', lessonCount: 1,
+        completedLessonCount: 0, progressPercentage: 0 }] }],
+  } } }))
+  await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.otherCourse}/study`, route => {
+    giftReads++
+    return route.fulfill({ json: { success: true, data: {
+      courseId: QUIZ_IDS.otherCourse, title: 'Khóa nhỏ xổ xuống', courseType: 'SECTION',
+      phases: [{ id: null, gifts: [], sections: [{ sectionCourseId: QUIZ_IDS.otherCourse,
+        title: 'Khóa nhỏ xổ xuống', progressPercentage: 0, lessonCount: 1, completedLessonCount: 0,
+        chapters: [chapter] }] }],
+    } } })
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const studyPath = `/student/courses/${QUIZ_IDS.course}/study`
+  await page.goto(studyPath, { waitUntil: 'domcontentloaded' })
+  const gift = page.getByRole('button', { name: 'Khóa nhỏ xổ xuống' })
+  await expect(gift).toBeVisible()
+  expect(giftReads).toBe(0)
+  await gift.click()
+  const chapterButton = page.getByRole('button', { name: 'Chương học trực tiếp' })
+  await expect(chapterButton).toBeVisible()
+  await expect(chapterButton).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByText('Khóa nhỏ xổ xuống', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('progressbar', { name: 'Khóa nhỏ xổ xuống', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('progressbar', { name: 'Tiến độ khóa học', exact: true })).toHaveCount(1)
+  await chapterButton.click()
+  await expect(page.getByText('Bài học trong khóa nhỏ', { exact: true })).toBeVisible()
+  await expect(page).toHaveURL(studyPath)
+  await expect(page.getByRole('link', { name: 'Vào học', exact: true })).toHaveCount(0)
+  const mascot = page.locator('img[src="/mascot/05.png"]')
+  const image = await mascot.boundingBox()
+  const banner = await mascot.locator('xpath=ancestor::header').boundingBox()
+  expect(image!.y).toBeGreaterThanOrEqual(banner!.y)
+  expect(image!.x + image!.width).toBeLessThanOrEqual(banner!.x + banner!.width)
+  await page.screenshot({ path: testInfo.outputPath('course-flat-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: testInfo.outputPath('course-flat-mobile.png'), fullPage: true })
+  await page.getByText('Bài học trong khóa nhỏ', { exact: true }).click()
+  await expect(page).toHaveURL(`/student/courses/${QUIZ_IDS.otherCourse}/study/lessons/${QUIZ_IDS.lesson}`)
+  expect(await page.evaluate(() => window.history.state.lessonStudyCourseId)).toBe(QUIZ_IDS.course)
+})
 
 test('Course analytics compares all chapter tests, keeps partial data and shows the empty mascot', async ({ page }, testInfo) => {
   await installCourseAnalytics(page)
@@ -339,7 +644,9 @@ test('My courses links to the catalog and AI returns to its course or lesson aft
   await page.goto('/student/courses', { waitUntil: 'domcontentloaded' })
   await page.getByRole('button', { name: /Khóa học Student/ }).click()
   await expect(page).toHaveURL(`/student/courses/${QUIZ_IDS.course}/study`)
-  await page.getByRole('button', { name: 'Gia sư AI', exact: true }).click()
+  await page.getByRole('button', { name: 'Mở Gia sư AI', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Học cùng Gia sư AI' })).toBeVisible()
+  await page.getByRole('button', { name: 'Bắt đầu dùng', exact: true }).click()
   await expect(page).toHaveURL('/student/tutor')
   await expect(sidebar.getByRole('button', { name: 'Khóa học của tôi', exact: true })).toHaveAttribute('aria-current', 'page')
   await page.reload({ waitUntil: 'domcontentloaded' })
@@ -354,7 +661,7 @@ test('My courses links to the catalog and AI returns to its course or lesson aft
   await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'Khóa học', exact: true }).click()
   await expect(page).toHaveURL(`/student/courses/${QUIZ_IDS.course}/study`)
   await page.setViewportSize({ width: 390, height: 844 })
-  await expect(page.getByRole('button', { name: 'Gia sư AI', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mở Gia sư AI', exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   await page.screenshot({ path: testInfo.outputPath('course-ai-mobile.png'), fullPage: true })
   await page.goto('/student/tutor', { waitUntil: 'domcontentloaded' })
