@@ -24,7 +24,7 @@ export function StageGroup({ group, children }: PropsWithChildren<{ group: Threa
   })
   const running = group.status.type === 'running'
   return (
-    <ReasoningRoot streaming={running}>
+    <ReasoningRoot variant="ghost" streaming={running}>
       <ReasoningTrigger active={running} label={label} className="max-w-full" />
       <ReasoningContent aria-busy={running}>
         <ReasoningText>{children}</ReasoningText>
