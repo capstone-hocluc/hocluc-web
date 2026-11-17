@@ -525,6 +525,9 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
       return reply(queued, 202)
     }
 
+    // What the teacher might ask after an answer: none here.
+    if (/^messages\/[^/]+\/suggestions$/.test(action) && method === 'POST') return reply([])
+
     if (action === 'messages') {
       if (method === 'GET') return reply(state.messages.get(conversationId) ?? [])
       if (options.subjectRequired && body.mode === 'compose' && !/môn|cả đề/i.test(String(body.content))) {
@@ -537,13 +540,10 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
           body: JSON.stringify({ success: false, status: 409, message: 'Bạn đang có một đề khác đang soạn. Đợi đề đó xong hoặc dừng nó rồi soạn tiếp.' }),
         })
       }
-      // With the assistant on, a compose request on an exam with questions changes that exam, unless the teacher agreed
-      // to replace it: the draft and the sheet stay, and the run's reply is the assistant's message.
-      const config = (body.config ?? {}) as { confirmed?: boolean; sheet?: { questions?: unknown[] } }
-      // So does one with files attached, on any exam.
-      const attached = Array.isArray(body.attachments) && body.attachments.length > 0
-      if (options.composeAgent && body.mode === 'compose' && !config.confirmed
-        && ((config.sheet?.questions?.length ?? 0) > 0 || attached)) {
+      // With the assistant on, every compose request goes to it, on an empty exam too, unless the teacher agreed to
+      // replace the exam: the draft and the sheet stay, and the run's reply is the assistant's message.
+      const config = (body.config ?? {}) as { confirmed?: boolean }
+      if (options.composeAgent && body.mode === 'compose' && !config.confirmed) {
         state.posted = true
         state.mode = 'agent'
         if (options.agentItems?.length) {
@@ -2405,6 +2405,97 @@ test('agreeing to the new exam the assistant proposed sends the words again as a
 
   await expect.poll(() => messagePosts(state).length).toBe(2)
   expect(messagePosts(state).at(-1)?.body).toMatchObject({ mode: 'compose', content: words, config: { confirmed: true } })
+})
+
+test('with the assistant on there is one chat: a question is answered from the sheet, which stays as it was', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', assistantOnExam(
+    [['text', { turn: 1, text: 'Câu 3 khá dễ: chỉ cần $x^2 = 4$.' }]],
+    { status: 'DONE', reply: 'Câu 3 khá dễ: chỉ cần $x^2 = 4$.' }
+  ))
+  await openSavedExam(page)
+  await expect(page.getByRole('button', { name: 'Chế độ trả lời' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Đính kèm tệp' })).toBeVisible()
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('câu 3 có khó không?')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Câu 3 khá dễ: chỉ cần')).toBeVisible({ timeout: 15_000 })
+  await expect(page.locator('.katex').filter({ hasText: 'x2=4' })).not.toHaveCount(0)
+  await expect(questionLines(docEditor(page))).toHaveCount(EXAM_STEMS.length)
+  const sent = messagePosts(state).at(-1)?.body as { mode: string; config: { sheet: { questions: unknown[] } } }
+  expect(sent.mode).toBe('compose')
+  expect(sent.config.sheet.questions).toHaveLength(EXAM_STEMS.length)
+
+  // "Sửa câu 2" is the assistant's too: it reads the sheet, nothing is looked up or revised on the page.
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Sửa câu 2 cho rõ hơn')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  await expect.poll(() => messagePosts(state).length).toBe(2)
+  const revised = messagePosts(state).at(-1)?.body as { mode: string; config: { items?: unknown } }
+  expect(revised.mode).toBe('compose')
+  expect(revised.config.items).toBeUndefined()
+})
+
+test('"Tạo lại" asks the assistant again with the sheet, so the exam does not read as empty', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', assistantOnExam([], { status: 'DONE', reply: 'Câu 3 khá dễ.' }))
+  await openSavedExam(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('câu 3 có khó không?')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+  const reply = page.getByText('Câu 3 khá dễ.')
+  await expect(reply).toBeVisible({ timeout: 15_000 })
+
+  await reply.hover()
+  await page.getByRole('button', { name: 'Tạo lại' }).last().click()
+  await expect.poll(() => messagePosts(state).length).toBe(2)
+  const again = messagePosts(state).at(-1)?.body as { mode: string; config: { sheet?: { questions: unknown[] }; confirmed?: boolean } }
+  expect(again.mode).toBe('compose')
+  expect(again.config.sheet?.questions).toHaveLength(EXAM_STEMS.length)
+  expect(again.config.confirmed).toBeUndefined()
+})
+
+test('a new exam the assistant starts on an empty exam goes at once, with the request it wrote', async ({ page }) => {
+  const request = 'Soạn 3 câu Toán, mức dễ'
+  const { state } = await installAiFixture(page, 'MANAGER', {
+    composeAgent: true,
+    agentEvents: [['tool', { tool: 'compose_exam', arguments: { request } }]],
+    agentEnd: { status: 'DONE', reply: `Mình bắt đầu soạn đề: ${request}`, confirm: { action: 'compose', total: 0, kept: 0, content: request } },
+  })
+  await openAssistant(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('soạn cho tôi 3 câu toán dễ')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect.poll(() => messagePosts(state).length, { timeout: 15_000 }).toBe(2)
+  expect(messagePosts(state)[0]?.body).toMatchObject({ mode: 'compose', content: 'soạn cho tôi 3 câu toán dễ' })
+  expect(messagePosts(state)[1]?.body).toMatchObject({ mode: 'compose', content: request, config: { confirmed: true } })
+  await expect(page.getByRole('dialog', { name: 'Soạn đề mới thay đề hiện tại?' })).toHaveCount(0)
+})
+
+test('a mock exam the assistant proposes starts from the paper it named once the teacher agrees', async ({ page }) => {
+  const content = 'Soạn đề mô phỏng theo đề Đề VACT 2025'
+  const { state } = await installAiFixture(page, 'MANAGER', assistantOnExam(
+    [['tool', { tool: 'compose_mock_exam', arguments: { paper: 'Đề VACT 2025' } }]],
+    {
+      status: 'DONE',
+      reply: 'Mình sẽ soạn đề mô phỏng theo đề Đề VACT 2025, thay cho 4 câu đang có; mình chờ thầy cô đồng ý.',
+      confirm: { action: 'mock', sourceId: 'source-vact', name: 'Đề VACT 2025', total: 4, content },
+    }
+  ))
+  await openSavedExam(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('soạn đề giống đề VACT 2025')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Soạn đề mô phỏng theo Đề VACT 2025?' })
+  await expect(dialog).toContainText('4 câu hiện có sẽ bị thay', { timeout: 15_000 })
+  await dialog.getByRole('button', { name: 'Soạn đề' }).click()
+
+  await expect.poll(() => messagePosts(state).length).toBe(2)
+  expect(messagePosts(state).at(-1)?.body).toMatchObject({
+    mode: 'mock-exam',
+    content,
+    config: { confirmed: true, bankSourceId: 'source-vact' },
+  })
 })
 
 test('a send that fails shows its error once and gives the typed message back', async ({ page }) => {

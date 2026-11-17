@@ -166,7 +166,8 @@ export function useAssistantChatRuntime({
   }, [messages, running, stages, answer])
   const repository = useMemo(() => branchesOf(shown, allMessages, examCard), [shown, allMessages, examCard])
 
-  const suggestions = useFollowUps(conversationId, messages, running)
+  // Where the assistant changes the exam (no exam card) it also answers every message.
+  const suggestions = useFollowUps(conversationId, messages, running, !examCard)
   // The files stored for the composer's attachments, by the id the composer knows each by.
   const stored = useRef(new Map<string, AiAttachment>())
   const attach = useRef(onAttach)
@@ -254,19 +255,28 @@ function branchesOf(shown: readonly AiChatMessage[], all: readonly AiChatMessage
   return { ...ExportedMessageRepository.fromBranchableArray(items), headId: shown.at(-1)?.id ?? null }
 }
 
-/** An ask answer the server keeps: what the teacher might ask after it can be proposed. */
-function asksFollowUps(message: AiChatMessage | undefined): message is AiChatMessage {
-  return Boolean(message && message.role === 'assistant' && message.mode === 'ask' && !message.error && !/^(local|subject|error|summary)-/.test(message.id))
+/**
+ * An answer the server keeps that the teacher may follow up: an ask answer, or (where the assistant answers every
+ * message, `assistant`) its reply to a compose request.
+ */
+function asksFollowUps(message: AiChatMessage | undefined, assistant: boolean): message is AiChatMessage {
+  return Boolean(
+    message &&
+      message.role === 'assistant' &&
+      (message.mode === 'ask' || (assistant && message.mode === 'compose')) &&
+      !message.error &&
+      !/^(local|subject|error|summary)-/.test(message.id)
+  )
 }
 
 /**
  * What the teacher might ask after the last answer, for the thread's follow-up suggestions: those the server kept
  * with it, or else asked for once. A send or a new run hides them; a failed request shows none.
  */
-function useFollowUps(conversationId: string | null, messages: readonly AiChatMessage[], running: boolean) {
+function useFollowUps(conversationId: string | null, messages: readonly AiChatMessage[], running: boolean, assistant: boolean) {
   const last = messages.at(-1)
   const [proposed, setProposed] = useState<{ id: string; prompts: string[] } | null>(null)
-  const pending = asksFollowUps(last) && !last.suggestions && proposed?.id !== last.id ? last.id : null
+  const pending = asksFollowUps(last, assistant) && !last.suggestions && proposed?.id !== last.id ? last.id : null
 
   useEffect(() => {
     if (!pending || !conversationId || running) return
@@ -282,10 +292,10 @@ function useFollowUps(conversationId: string | null, messages: readonly AiChatMe
   }, [conversationId, pending, running])
 
   return useMemo(() => {
-    if (running || !asksFollowUps(last)) return []
+    if (running || !asksFollowUps(last, assistant)) return []
     const prompts = last.suggestions ?? (proposed?.id === last.id ? proposed.prompts : [])
     return prompts.map((prompt) => ({ prompt }))
-  }, [last, proposed, running])
+  }, [assistant, last, proposed, running])
 }
 
 /** A file a sent question carries, as its turn shows it: its name and kind (the server keeps no preview). */

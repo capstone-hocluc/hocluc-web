@@ -1,8 +1,8 @@
 // The AI exam composer, laid out like a document editor: header with menus, formatting toolbar, the document
 // panel (the exams, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { AssistantRuntime } from '@assistant-ui/react'
-import { importAiPaper, rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem, type AiAttachment, type AiPaperImport, type AiSolutionStyle } from '../../../services/aiAssistantService'
+import { importAiPaper, rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem, type AiAttachment, type AiConfirmRequest, type AiPaperImport, type AiSolutionStyle } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getErrorMessage } from '../../../lib/errors'
@@ -220,9 +220,10 @@ export default function AiAssistantScreen({
         void saveNow()
       },
       reload: reloadFromServer,
+      read: () => (freeEditor && !freeEditor.isDestroyed ? examSheet(freeEditor.state.doc, draftPlaces) : null),
     })
     return () => attachSheet(null)
-  }, [attachSheet, saveNow, reloadFromServer, freeEditor])
+  }, [attachSheet, saveNow, reloadFromServer, freeEditor, draftPlaces])
 
   // Draft questions the document has not received yet (the AI is writing, or the document was closed during a run)
   // are written under their own part. The teacher's caret stays where it is and Ctrl+Z does not take them back out;
@@ -453,6 +454,24 @@ export default function AiAssistantScreen({
   // Looked up once the draft is in, so opening an exam asks once (not for the empty draft, then again for its questions).
   const bank = useDraftBank(ai.draftLoading ? null : (ai.activeId ?? null), bankKey, bankAllowed)
   const [pendingReplace, setPendingReplace] = useState<{ total: number; kept: number } | null>(null)
+  // A new exam the assistant starts on an empty sheet replaces nothing: it goes once the assistant's turn is over. The
+  // exam is counted again then; one that holds questions after all is replaced only when the teacher agrees.
+  const composeAsk = ai.confirmRequest?.action === 'compose' ? ai.confirmRequest : null
+  const replaceTotal = composeAsk
+    ? Math.max(
+        composeAsk.total,
+        ai.paper.questions.length,
+        examDoc.mode === 'FREE' && editor ? sheetQuestions(editor.state.doc).length : 0
+      )
+    : 0
+  const startNow = composeAsk && replaceTotal === 0 && composeAsk.content ? composeAsk : null
+  const startExam = useEffectEvent((request: Extract<AiConfirmRequest, { action: 'compose' }>) => {
+    ai.dismissConfirm()
+    void sendMessage(request.content, true)
+  })
+  useEffect(() => {
+    if (startNow && !ai.running) startExam(startNow)
+  }, [startNow, ai.running])
   // The chat on assistant-ui: its thread and composer read the conversation the hook keeps, and its sends come here.
   // The runtime is made by AssistantChatProvider (it follows the run on its own); the page reaches its composer here.
   const chatRuntime = useRef<AssistantRuntime | null>(null)
@@ -503,6 +522,16 @@ export default function AiAssistantScreen({
     after?: string | null
   ): Promise<boolean> {
     const onSheet = examDoc.mode === 'FREE' && editor ? editor : null
+    // The assistant takes every message: it reads the sheet as the teacher sees it and answers, changes the exam, or
+    // starts a new one (`replacing`: the teacher agreed to replace the exam there is).
+    if (ai.composeAgent) {
+      const sheet = onSheet ? examSheet(onSheet.state.doc, draftPlaces) : undefined
+      return ai.send(text, {
+        attachments,
+        compose: { ...(sheet ? { sheet } : {}), ...(replacing ? { confirmed: true } : {}) },
+        ...(after !== undefined ? { after } : {}),
+      })
+    }
     // A question about the exam reads the sheet the teacher sees.
     if (ai.mode === 'ask') {
       return ai.send(text, {
@@ -511,23 +540,11 @@ export default function AiAssistantScreen({
         ...(after !== undefined ? { after } : {}),
       })
     }
-    // Files attached in compose mode are for the assistant, on any exam: it proposes loading a paper into the bank.
-    if (ai.mode === 'compose' && ai.composeAgent && attachments.length > 0) {
-      const sheet = onSheet ? examSheet(onSheet.state.doc, draftPlaces) : undefined
-      return ai.send(text, { attachments, compose: sheet ? { sheet } : {} })
-    }
     // "Sửa câu 2 …" revises in compose and mock-exam alike, once there is an exam to revise.
     const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
     const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(text) : null
     if (!numbers) {
       const total = Math.max(ai.paper.questions.length, onSheet ? sheetQuestions(onSheet.state.doc).length : 0)
-      const sheet = onSheet ? examSheet(onSheet.state.doc, draftPlaces) : undefined
-      // The assistant reads the exam and decides what the words ask for (add, remove, move, rewrite, or a new exam,
-      // which it leaves for the teacher to agree to).
-      // The sheet says whether the exam has questions; the draft keeps the ones the teacher took off the sheet.
-      if (ai.mode === 'compose' && ai.composeAgent && (sheet ? sheet.questions.length : ai.paper.questions.length) > 0) {
-        return ai.send(text, { compose: { ...(sheet ? { sheet } : {}), ...(replacing ? { confirmed: true } : {}) } })
-      }
       // A new run replaces the exam, the questions kept and those typed on the sheet included: ask first.
       if (!replacing && total > 0) {
         setPendingReplace({ total, kept: ai.paper.questions.filter((question) => question.kept).length })
@@ -699,7 +716,8 @@ export default function AiAssistantScreen({
     papersLoading: ai.papersLoading,
     papersError: ai.papersError,
     onReloadPapers: ai.reloadPapers,
-    onModeChange: ai.setMode,
+    // The assistant takes every message: there is no mode to pick.
+    onModeChange: ai.composeAgent ? undefined : ai.setMode,
     onStop: ai.cancel,
     onStartNew: startNew,
     conversationsOpen: outlineOpen || outlineSheet,
@@ -821,7 +839,7 @@ export default function AiAssistantScreen({
         sendBlocked={ai.mode === 'mock-exam' && !ai.settings.bankSourceId}
         onSend={(text, attachments) => sendMessage(text, false, attachments)}
         // A question takes images and PDFs; where the assistant changes the exam, staff attach a paper for it to load.
-        onAttach={ai.mode === 'ask' || (ai.mode === 'compose' && ai.composeAgent && canImport) ? ai.uploadAttachment : undefined}
+        onAttach={ai.mode === 'ask' || ai.composeAgent ? ai.uploadAttachment : undefined}
         onCancel={ai.cancel}
         onRegenerate={regenerate}
         examCard={!ai.composeAgent}
@@ -1139,10 +1157,32 @@ export default function AiAssistantScreen({
           />
         )}
 
-        {ai.confirmRequest?.action === 'compose' && (
+        {ai.confirmRequest?.action === 'mock' && (
+          <ConfirmDialog
+            title={`Soạn đề mô phỏng theo ${ai.confirmRequest.name}?`}
+            description={
+              ai.confirmRequest.total > 0
+                ? `${ai.confirmRequest.total} câu hiện có sẽ bị thay, kể cả ${ai.paper.questions.filter((question) => question.kept).length} câu đã giữ.`
+                : 'Đề mới theo cấu trúc và mức độ của đề này.'
+            }
+            cancelLabel="Chưa soạn"
+            confirmLabel="Soạn đề"
+            variant={ai.confirmRequest.total > 0 ? 'danger' : undefined}
+            onCancel={ai.dismissConfirm}
+            onConfirm={() => {
+              const request = ai.confirmRequest
+              ai.dismissConfirm()
+              if (request?.action === 'mock') {
+                void ai.send(request.content, { mode: 'mock-exam', compose: { confirmed: true, bankSourceId: request.sourceId } })
+              }
+            }}
+          />
+        )}
+
+        {ai.confirmRequest?.action === 'compose' && replaceTotal > 0 && (
           <ConfirmDialog
             title="Soạn đề mới thay đề hiện tại?"
-            description={`${ai.confirmRequest.total} câu hiện có sẽ bị thay, kể cả ${ai.paper.questions.filter((question) => question.kept).length} câu đã giữ.`}
+            description={`${replaceTotal} câu hiện có sẽ bị thay, kể cả ${ai.paper.questions.filter((question) => question.kept).length} câu đã giữ.`}
             cancelLabel="Giữ đề"
             confirmLabel="Thay đề"
             variant="danger"

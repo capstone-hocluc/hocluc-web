@@ -114,7 +114,8 @@ export interface ChatPanelProps {
   papersLoading: boolean
   papersError: string | null
   onReloadPapers: () => void
-  onModeChange: (mode: AiAssistantMode) => void
+  /** Left out where the assistant answers every message: there is no mode to pick. */
+  onModeChange?: (mode: AiAssistantMode) => void
   onStop: () => void
   onStartNew: () => void
   conversationsOpen: boolean

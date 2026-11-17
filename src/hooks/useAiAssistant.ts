@@ -100,6 +100,8 @@ export interface SheetRewrite {
 export interface ComposeExtra {
   sheet?: AiExamSheet
   confirmed?: boolean
+  /** The paper a mock exam follows, as the assistant proposed it; the settings' paper otherwise. */
+  bankSourceId?: string
 }
 
 /** The unit the AI is writing, with its words read once into questions and options (the sheet and the chat show them). */
@@ -290,7 +292,8 @@ const TOOL_LABELS: Record<string, string> = {
   move_questions: 'Đổi thứ tự câu',
   rewrite_questions: 'Viết lại câu',
   add_questions: 'Thêm câu',
-  compose_exam: 'Hỏi trước khi thay đề',
+  compose_exam: 'Chuẩn bị soạn đề mới',
+  compose_mock_exam: 'Chuẩn bị soạn đề mô phỏng',
   export_exam: 'Chuẩn bị file',
   update_answer_key: 'Cập nhật đáp án',
   remove_answer_key: 'Bỏ đáp án',
@@ -442,6 +445,8 @@ export interface ExamSheet {
   clear: () => void
   /** Reads the sheet again: the server put back the exam a stopped run replaced. */
   reload: () => Promise<void>
+  /** The exam as the sheet prints it now, for the assistant to read; null while there is no sheet to read. */
+  read: () => AiExamSheet | null
 }
 
 /** How long a run's send waits for the sheet to be saved, or a stopped run for the sheet put back. */
@@ -469,6 +474,10 @@ export function useAiAssistant(bank: BankPaperList) {
   const [draft, setDraft] = useState<AiDraftResponse | null>(null)
   const [draftLoading, setDraftLoading] = useState(false)
   const [mode, setMode] = useState<AiAssistantMode>('compose')
+  // Whether the assistant takes every message, as the server says with an exam's draft. It is the same for every exam,
+  // so once known it holds for a new exam too.
+  const [assistantOn, setAssistantOn] = useState(false)
+  const assistantOnRef = useRef(false)
   const [runStore] = useState<AiRunStore>(() => createValueStore<AiRun | null>(null))
   const [sending, setSending] = useState(false)
   const [cancelling, setCancelling] = useState(false)
@@ -571,6 +580,10 @@ export function useAiAssistant(bank: BankPaperList) {
   const updateDraft = useCallback((next: AiDraftResponse | null) => {
     draftRef.current = next
     setDraft(next)
+    if (next?.composeAgent && !assistantOnRef.current) {
+      assistantOnRef.current = true
+      setAssistantOn(true)
+    }
   }, [])
 
   const updateRun = useCallback((next: AiRun | null) => {
@@ -1208,8 +1221,8 @@ export function useAiAssistant(bank: BankPaperList) {
         bankRatio: settings.bankRatio,
         solutionStyle: settings.solutionStyle,
         instruction: text,
-        ...(runMode === 'mock-exam' && settings.bankSourceId
-          ? { bankSourceId: settings.bankSourceId }
+        ...(runMode === 'mock-exam' && (compose?.bankSourceId || settings.bankSourceId)
+          ? { bankSourceId: compose?.bankSourceId || settings.bankSourceId }
           : {}),
         ...(compose?.sheet ? { sheet: compose.sheet } : {}),
         ...(compose?.confirmed ? { confirmed: true } : {}),
@@ -1281,7 +1294,7 @@ export function useAiAssistant(bank: BankPaperList) {
   const startRun = useCallback(
     async (
       text: string,
-      runMode: AiAssistantMode = mode,
+      requestedMode: AiAssistantMode = mode,
       revise?: AiRevisedItem[],
       document?: AiSheetDocument,
       attachments?: AiAttachment[],
@@ -1289,6 +1302,8 @@ export function useAiAssistant(bank: BankPaperList) {
       compose?: ComposeExtra
     ): Promise<boolean> => {
       if (sendingRef.current || runRef.current) return false
+      // Known for a new exam once its conversation is made (see below).
+      let runMode = requestedMode
       sendingRef.current = true
       cancelRequestedRef.current = false
       setSending(true)
@@ -1343,6 +1358,9 @@ export function useAiAssistant(bank: BankPaperList) {
           }
           createdHere = !shared
         }
+        // Where the assistant takes every message, a question and a request alike go to it; only a revision, and a new
+        // or mock exam the teacher agreed to, keep their own mode.
+        if (assistantOnRef.current && runMode !== 'revise' && !compose?.confirmed) runMode = 'compose'
 
         updateMessages([
           ...messagesRef.current,
@@ -1359,11 +1377,15 @@ export function useAiAssistant(bank: BankPaperList) {
         // changes the exam there is (a request on an exam with questions, unless the teacher agreed to replace it). The
         // server keeps the exam as it was (to give it back if the run is stopped), so the sheet is saved first.
         const examRun = runMode !== 'ask' && runMode !== 'revise'
-        // The sheet says whether the exam has questions; the draft keeps the ones the teacher took off the sheet.
-        const holdsQuestions = compose?.sheet ? compose.sheet.questions.length > 0 : (draftRef.current?.items.length ?? 0) > 0
-        // Files attached to a compose request are for the assistant too, on any exam (a paper to load into the bank).
-        const toAssistant = runMode === 'compose' && Boolean(draftRef.current?.composeAgent) && !compose?.confirmed
-          && (holdsQuestions || Boolean(attachments?.length))
+        // The assistant reads the exam, empty or not, and decides what the words ask for; a new exam it starts or
+        // proposes comes back as a request the teacher agreed to.
+        const toAssistant = runMode === 'compose' && assistantOnRef.current && !compose?.confirmed
+        // The assistant reads the sheet with every message, also one sent again ("Tạo lại", "Thử lại"): without it an
+        // exam with questions would read as empty, and a new exam would start over it unasked.
+        if (toAssistant && !compose?.sheet) {
+          const sheet = sheetRef.current?.read()
+          if (sheet) compose = { ...compose, sheet }
+        }
         const replacing = examRun && !toAssistant
         const initialRun: AiRun = {
           mode: runMode,
@@ -1491,12 +1513,14 @@ export function useAiAssistant(bank: BankPaperList) {
         attachments?: AiAttachment[]
         after?: string | null
         compose?: ComposeExtra
+        /** A mode of the page's own choosing (a mock exam the teacher agreed to); the picked one otherwise. */
+        mode?: AiAssistantMode
       }
     ) => {
       const text = words.trim()
       if (!text) return Promise.resolve(false)
       const revise = extra?.revise
-      return startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document, extra?.attachments, extra?.after, extra?.compose)
+      return startRun(text, revise?.length ? 'revise' : (extra?.mode ?? mode), revise, extra?.document, extra?.attachments, extra?.after, extra?.compose)
     },
     [mode, startRun]
   )
@@ -1532,7 +1556,7 @@ export function useAiAssistant(bank: BankPaperList) {
     const lastMode = normalizeMode(lastAssistant?.mode) ?? mode
     // A request to rewrite numbered questions needs those questions looked up again; composing it anew would
     // replace the whole exam.
-    if (lastMode === 'revise' || revisedNumbers(lastUser.body)) {
+    if (lastMode === 'revise' || (!assistantOnRef.current && revisedNumbers(lastUser.body))) {
       setNotice('Hãy nhắn lại yêu cầu sửa câu để trợ lý sửa lại.')
       return
     }
@@ -1877,7 +1901,8 @@ export function useAiAssistant(bank: BankPaperList) {
     paper,
     numberOf,
     draftLoading,
-    mode,
+    // With the assistant taking every message there is one way to send, the compose settings beside it.
+    mode: assistantOn ? ('compose' as const) : mode,
     running,
     sending,
     creatingConversation,
@@ -1924,8 +1949,8 @@ export function useAiAssistant(bank: BankPaperList) {
     /** The change the assistant asks the teacher to agree to on the open exam, or null. */
     confirmRequest: confirmRequest && confirmRequest.conversationId === activeId ? confirmRequest.request : null,
     dismissConfirm,
-    /** A request on this exam goes to the assistant that reads and changes it once the exam has questions. */
-    composeAgent: Boolean(draft?.composeAgent),
+    /** Every message goes to the assistant, which reads the exam and answers or changes it; there is no mode to pick. */
+    composeAgent: assistantOn,
     /** The answer key the teacher asked the assistant to write again on the open exam, or null. */
     answerKeyRequest: answerKeyRequest && answerKeyRequest.conversationId === activeId ? answerKeyRequest : null,
   }

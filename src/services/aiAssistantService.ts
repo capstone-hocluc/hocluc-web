@@ -281,6 +281,8 @@ export interface AiSheetEdit {
 /** What the assistant left for the teacher to agree to before it changes the exam. */
 export type AiConfirmRequest =
   | { action: 'compose'; total: number; kept: number; content: string }
+  /** A mock of a paper the bank has read: `sourceId` is that paper, `content` the teacher's request for it. */
+  | { action: 'mock'; sourceId: string; name: string; total: number; content: string }
   | ({ action: 'remove' } & AiSheetEdit)
   | ({ action: 'import' } & AiPaperImport)
 
