@@ -1,8 +1,8 @@
 // The AI exam composer, laid out like a document editor: header with menus, formatting toolbar, the document
 // panel (the exams, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { AssistantRuntimeProvider } from '@assistant-ui/react'
-import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem } from '../../../services/aiAssistantService'
+import type { AssistantRuntime } from '@assistant-ui/react'
+import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem, type AiAttachment } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getErrorMessage } from '../../../lib/errors'
@@ -46,8 +46,8 @@ import AiSuggestionBar from '../exam-doc/ai-suggestion-bar'
 import { useProofread } from '../exam-doc/use-proofread'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
 import { revisedNumbers } from './revise-request'
-import { useAssistantChatRuntime } from './chat/assistant-runtime'
-import { ChatActionsProvider, type ChatActions, type ExamDownload } from './chat/ChatThread'
+import { AssistantChatProvider } from './chat/AssistantChatProvider'
+import { ChatActionsProvider, type ChatActions, type ExamDownload } from './chat/reply-parts'
 import { showErrorToast, showSuccessToast } from '../../../lib/toastBus'
 import { downloadDocument, downloadPdf } from '../exam-doc/export'
 import { useDocEditor } from '../exam-doc/use-doc-editor'
@@ -363,15 +363,9 @@ export default function AiAssistantScreen({
   const bank = useDraftBank(ai.draftLoading ? null : (ai.activeId ?? null), bankKey, bankAllowed)
   const [pendingReplace, setPendingReplace] = useState<{ total: number; kept: number } | null>(null)
   // The chat on assistant-ui: its thread and composer read the conversation the hook keeps, and its sends come here.
-  const chatRuntime = useAssistantChatRuntime({
-    messages: ai.messages,
-    running: ai.running,
-    loading: ai.draftLoading,
-    sendBlocked: ai.mode === 'mock-exam' && !ai.settings.bankSourceId,
-    onSend: (text) => sendMessage(text),
-    onCancel: ai.cancel,
-    onRegenerate: ai.regenerate,
-  })
+  // The runtime is made by AssistantChatProvider (it follows the run on its own); the page reaches its composer here.
+  const chatRuntime = useRef<AssistantRuntime | null>(null)
+  const composerOf = () => chatRuntime.current?.thread.composer ?? null
   const [bankDialog, setBankDialog] = useState(false)
   const [quizDialog, setQuizDialog] = useState(false)
   const canSaveToBank = bank.ready && writtenQuestions.some((question) => bank.authorable(question.id))
@@ -411,11 +405,20 @@ export default function AiAssistantScreen({
    * compose mode rewrites those questions: each number is the one the sheet prints (or the question cards show), looked
    * up to its draft question before anything is sent. `replacing`: the teacher already agreed to replace the exam.
    */
-  function sendMessage(text: string, replacing = false): Promise<boolean> {
+  function sendMessage(
+    text: string,
+    replacing = false,
+    attachments: AiAttachment[] = [],
+    after?: string | null
+  ): Promise<boolean> {
     const onSheet = examDoc.mode === 'FREE' && editor ? editor : null
     // A question about the exam reads the sheet the teacher sees.
     if (ai.mode === 'ask') {
-      return ai.send(text, onSheet ? { document: sheetDocument(onSheet.state.doc) } : undefined)
+      return ai.send(text, {
+        ...(onSheet ? { document: sheetDocument(onSheet.state.doc) } : {}),
+        attachments,
+        ...(after !== undefined ? { after } : {}),
+      })
     }
     // "Sửa câu 2 …" revises in compose and mock-exam alike, once there is an exam to revise.
     const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
@@ -459,16 +462,16 @@ export default function AiAssistantScreen({
 
   /** Words a send of the page's own (a retry, a subject chosen) did not get through go back to an empty composer. */
   function giveBack(text: string | null) {
-    const composer = chatRuntime.thread.composer
-    if (text && !composer.getState().text) composer.setText(text)
+    const composer = composerOf()
+    if (composer && text && !composer.getState().text) composer.setText(text)
   }
 
   /** "Thay đề" in the question before a new run: the composer's words go, past the question. */
   function replaceExam() {
     setPendingReplace(null)
-    const composer = chatRuntime.thread.composer
-    const text = composer.getState().text
-    composer.setText('')
+    const composer = composerOf()
+    const text = composer?.getState().text ?? ''
+    composer?.setText('')
     void sendMessage(text, true).then((sent) => giveBack(sent ? null : text))
   }
 
@@ -517,7 +520,7 @@ export default function AiAssistantScreen({
   function startNew() {
     setViewingId(null)
     ai.startNew()
-    chatRuntime.thread.composer.setText('')
+    composerOf()?.setText('')
     setOutlineSheet(false)
     setEditingId(null)
     setFocusedId(null)
@@ -532,7 +535,7 @@ export default function AiAssistantScreen({
 
   function pickPrompt(mode: AiAssistantMode, prompt: string) {
     ai.setMode(mode)
-    chatRuntime.thread.composer.setText(prompt)
+    composerOf()?.setText(prompt)
   }
 
   function toggleChat() {
@@ -591,8 +594,13 @@ export default function AiAssistantScreen({
     onPickPrompt: pickPrompt,
   }
   // What the turns of the thread do: the reply's own buttons, and the run its progress follows.
+  function regenerate() {
+    const last = ai.messages.at(-1)
+    if (last?.role === 'assistant' && last.error && last.retryText) void ai.retry(last.id).then(giveBack)
+    else ai.regenerate()
+  }
+
   const chatActions: ChatActions = {
-    run: ai.runStore,
     onDownload: downloadExam,
     onAnswerKey: writeAnswerKey,
     onRetry: (messageId) => void ai.retry(messageId).then(giveBack),
@@ -690,7 +698,29 @@ export default function AiAssistantScreen({
 
   return (
     <ThemeProvider>
-      <AssistantRuntimeProvider runtime={chatRuntime}>
+      <AssistantChatProvider
+        run={ai.runStore}
+        runtimeRef={chatRuntime}
+        conversationId={ai.activeId ?? null}
+        messages={ai.messages}
+        running={ai.running}
+        loading={ai.draftLoading}
+        sendBlocked={ai.mode === 'mock-exam' && !ai.settings.bankSourceId}
+        onSend={(text, attachments) => sendMessage(text, false, attachments)}
+        onAttach={ai.mode === 'ask' ? ai.uploadAttachment : undefined}
+        onCancel={ai.cancel}
+        onRegenerate={regenerate}
+        allMessages={ai.allMessages}
+        onShowBranch={ai.showBranch}
+        onEdit={(text, after) => {
+          // A question asked again in compose would replace the exam; only an ask question has versions.
+          if (ai.mode !== 'ask') {
+            ai.setNotice('Chỉ sửa được câu hỏi ở chế độ Hỏi đáp.')
+            return Promise.resolve(false)
+          }
+          return sendMessage(text, false, [], after)
+        }}
+      >
       <ChatActionsProvider value={chatActions}>
       <ExamDocContext.Provider value={docContext}>
       <div className="flex h-dvh w-full flex-col overflow-hidden bg-background-gray-secondary_alt_2 font-sans text-text-primary">
@@ -1020,7 +1050,7 @@ export default function AiAssistantScreen({
       </div>
       </ExamDocContext.Provider>
       </ChatActionsProvider>
-      </AssistantRuntimeProvider>
+      </AssistantChatProvider>
     </ThemeProvider>
   )
 }

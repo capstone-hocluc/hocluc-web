@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  type AiAttachment,
   AiStreamUnavailable,
   addAiDraftItem,
   cancelAiRun,
@@ -14,6 +15,7 @@ import {
   renameAiConversation,
   reorderAiDraftItems,
   sendAiMessage,
+  uploadAiAttachment,
   setAiDraftItemKept,
   updateAiDraftQuestion,
   type AiAssistantMode,
@@ -47,7 +49,6 @@ import {
   type AiTraceStage,
 } from '../components/management/ai-assistant/exam-format'
 import {
-  liveDraftTail,
   liveDraftView,
   type LiveDraft,
   type LiveDraftView,
@@ -101,6 +102,8 @@ export interface AiRun {
   knownAssistantIds: string[]
   /** The unit the AI is writing right now, as far as its words have come. */
   draft: LiveWriting | null
+  /** The words of an ask answer being written, until the answer itself arrives. */
+  answer?: string
 }
 
 /**
@@ -114,6 +117,7 @@ const NO_TRACE: string[] = []
 export const runStagesOf = (run: AiRun | null) => run?.stages ?? NO_STAGES
 export const runTraceOf = (run: AiRun | null) => run?.trace ?? NO_TRACE
 export const runWritingOf = (run: AiRun | null) => run?.draft ?? null
+export const runAnswerOf = (run: AiRun | null) => run?.answer ?? ''
 /** The question the run added last, for following the writing on the sheet. */
 export const runLastItemOf = (run: AiRun | null) => run?.itemIds.at(-1) ?? null
 const runGoingOn = (run: AiRun | null) => run !== null
@@ -280,11 +284,14 @@ function toolLine(data: { tool: string; arguments?: unknown }) {
 function mapMessage(message: AiMessage): AiChatMessage {
   return {
     id: message.id,
+    parentId: message.parentId ?? null,
     role: message.role === 'USER' ? 'user' : 'assistant',
     body: message.content ?? '',
     createdAt: message.createdAt,
     mode: normalizeMode(message.mode),
     trace: traceLines(message.trace),
+    ...(message.suggestions ? { suggestions: message.suggestions } : {}),
+    ...(message.attachments?.length ? { attachments: message.attachments } : {}),
   }
 }
 
@@ -296,6 +303,33 @@ const LOCAL_ID = /^(local|subject|error|summary)-/
  * "Bạn muốn soạn môn nào?" and the words above it) is never stored, and a finished run's card is built here; a reload
  * of the thread keeps them where they were, after the message they followed.
  */
+/**
+ * The message each one follows: its parent, or, for a message older than versions, the one written before it.
+ * Takes the conversation in the order its messages were written.
+ */
+export function parentsOf(all: readonly AiChatMessage[]): Map<string, string | null> {
+  const parents = new Map<string, string | null>()
+  let before: string | null = null
+  for (const message of all) {
+    parents.set(message.id, message.parentId ?? before)
+    before = message.id
+  }
+  return parents
+}
+
+/** The branch of the conversation down to `head` (the newest message by default), from its first message. */
+function branchOf(all: readonly AiChatMessage[], head: string | null = all.at(-1)?.id ?? null): AiChatMessage[] {
+  const byId = new Map(all.map((message) => [message.id, message]))
+  const parents = parentsOf(all)
+  const path: AiChatMessage[] = []
+  const seen = new Set<string>()
+  for (let id = head; id && byId.has(id) && !seen.has(id); id = parents.get(id) ?? null) {
+    seen.add(id)
+    path.push(byId.get(id) as AiChatMessage)
+  }
+  return path.reverse()
+}
+
 function mergeServerMessages(server: AiChatMessage[], previous: AiChatMessage[]): AiChatMessage[] {
   const previousById = new Map(previous.map((message) => [message.id, message]))
   const merged = server.map((message) => {
@@ -402,6 +436,8 @@ export function useAiAssistant(bank: BankPaperList) {
   const generationRef = useRef(0)
   const conversationsRef = useRef<AiConversation[]>(cachedConversations ?? [])
   const messagesRef = useRef<AiChatMessage[]>([])
+  /** Every message of the open conversation the server holds, in every branch; `messages` is the one shown. */
+  const [allMessages, setAllMessages] = useState<AiChatMessage[]>([])
   const draftRef = useRef<AiDraftResponse | null>(null)
   const runRef = useRef<AiRun | null>(null)
   const sendingRef = useRef(false)
@@ -513,9 +549,10 @@ export function useAiAssistant(bank: BankPaperList) {
 
   const refreshMessages = useCallback(async (conversationId: string) => {
     try {
-      const server = await getAiMessages(conversationId)
+      const server = (await getAiMessages(conversationId)).map(mapMessage)
       if (activeIdRef.current !== conversationId) return false
-      updateMessages(mergeServerMessages(server.map(mapMessage), messagesRef.current))
+      setAllMessages(server)
+      updateMessages(mergeServerMessages(branchOf(server), messagesRef.current))
       return true
     } catch {
       return false
@@ -662,6 +699,10 @@ export function useAiAssistant(bank: BankPaperList) {
           })
           return
         }
+        case 'text': {
+          updateRun({ ...current, answer: event.data.text })
+          return
+        }
         case 'tool': {
           const line = toolLine(event.data)
           const item: AiTraceItem = {
@@ -677,6 +718,8 @@ export function useAiAssistant(bank: BankPaperList) {
                 ? [...current.trace, line.detail ? `${line.label} · ${line.detail}` : line.label]
                 : current.trace,
             stages: addTraceItem(current.stages, item),
+            // Words written before a tool call were the model thinking, not the answer.
+            answer: undefined,
           })
           return
         }
@@ -714,16 +757,12 @@ export function useAiAssistant(bank: BankPaperList) {
             text,
             view: liveDraftView(text),
           }
-          const tail = liveDraftTail(draft.view)
-          const stages = finishBefore(current.stages, 'write')
-          const items = (stages.find((stage) => stage.id === 'write')?.items ?? []).filter((entry) => entry.id !== 'draft')
+          // The words show on the sheet; the chat's steps change only when the writing stage starts, not with each word.
+          const writing = current.stages.some((stage) => stage.id === 'write' && stage.state === 'running')
           updateRun({
             ...current,
             draft,
-            stages: withStage(stages, 'write', {
-              state: 'running',
-              items: tail ? [...items, { id: 'draft', label: 'Đang viết', detail: tail, state: 'running' }] : items,
-            }),
+            ...(writing ? {} : { stages: withStage(finishBefore(current.stages, 'write'), 'write', { state: 'running' }) }),
           })
           return
         }
@@ -770,7 +809,8 @@ export function useAiAssistant(bank: BankPaperList) {
               },
             ])
           }
-          updateRun({ ...current, stages: markAllDone(current.stages) })
+          // The reply now holds the words; the running turn stops showing them.
+          updateRun({ ...current, stages: markAllDone(current.stages), answer: undefined })
           return
         }
         case 'end': {
@@ -917,6 +957,7 @@ export function useAiAssistant(bank: BankPaperList) {
       // Before the server's list is in, the mode shown is a guess (this tab's copy, or none) that the list corrects.
       modeFromListRef.current = conversation && listedRef.current ? null : conversationId
       if (conversationMode) setMode(conversationMode)
+      setAllMessages([])
       updateMessages([])
       updateDraft(null)
       setDraftLoading(true)
@@ -927,7 +968,9 @@ export function useAiAssistant(bank: BankPaperList) {
           getAiDraft(conversationId),
         ])
         if (activeIdRef.current !== conversationId) return
-        updateMessages(serverMessages.map(mapMessage))
+        const all = serverMessages.map(mapMessage)
+        setAllMessages(all)
+        updateMessages(branchOf(all))
         updateDraft(draftResponse)
         // The config the exam was last asked with comes back to the settings (a reload would reset it).
         showSettings(settingsFromConfig(draftResponse.draft?.config, preferredSettingsRef.current))
@@ -1125,7 +1168,9 @@ export function useAiAssistant(bank: BankPaperList) {
       text: string,
       runMode: AiAssistantMode = mode,
       revise?: AiRevisedItem[],
-      document?: AiSheetDocument
+      document?: AiSheetDocument,
+      attachments?: AiAttachment[],
+      after?: string | null
     ): Promise<boolean> => {
       if (sendingRef.current || runRef.current) return false
       sendingRef.current = true
@@ -1151,6 +1196,19 @@ export function useAiAssistant(bank: BankPaperList) {
         )
       }
 
+      // Asked again: the page goes back to the message the first version followed, and the new one follows it.
+      if (after !== undefined) {
+        const at = after === null ? -1 : messagesRef.current.findIndex((message) => message.id === after)
+        if (after !== null && at < 0) {
+          sendingRef.current = false
+          setSending(false)
+          return false
+        }
+        updateMessages(messagesRef.current.slice(0, at + 1))
+      }
+      const parentId =
+        after !== undefined ? after : ([...messagesRef.current].reverse().find((message) => !LOCAL_ID.test(message.id))?.id ?? null)
+
       let conversationId = activeIdRef.current
       // Made for this send (not by an edit of the sheet): it is taken back when the send fails, leaving no empty exam.
       let createdHere = false
@@ -1173,9 +1231,11 @@ export function useAiAssistant(bank: BankPaperList) {
           ...messagesRef.current,
           {
             id: localUserId,
+            parentId,
             role: 'user',
             body: text,
             createdAt: new Date().toISOString(),
+            ...(attachments?.length ? { attachments } : {}),
           },
         ])
         const initialRun: AiRun = {
@@ -1202,6 +1262,8 @@ export function useAiAssistant(bank: BankPaperList) {
           content: text,
           mode: runMode,
           config: buildConfig(text, runMode === 'revise' ? revise : undefined, document),
+          ...(attachments?.length ? { attachments } : {}),
+          ...(parentId ? { parentId } : {}),
         })
         const running = runRef.current
         if (running) {
@@ -1290,13 +1352,26 @@ export function useAiAssistant(bank: BankPaperList) {
    * reads what the teacher sees.
    */
   const send = useCallback(
-    (words: string, extra?: { revise?: AiRevisedItem[]; document?: AiSheetDocument }) => {
+    (
+      words: string,
+      extra?: { revise?: AiRevisedItem[]; document?: AiSheetDocument; attachments?: AiAttachment[]; after?: string | null }
+    ) => {
       const text = words.trim()
       if (!text) return Promise.resolve(false)
       const revise = extra?.revise
-      return startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document)
+      return startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document, extra?.attachments, extra?.after)
     },
     [mode, startRun]
+  )
+
+  /** Stores an image or PDF for the next ask question, on the open exam (made now for a new one). */
+  const uploadAttachment = useCallback(
+    async (file: File) => {
+      const id = await ensureConversation(titleFromText(file.name))
+      if (!id) throw new Error('Không tạo được đề để đính kèm tệp.')
+      return uploadAiAttachment(id, file)
+    },
+    [ensureConversation]
   )
 
   /** A step the page took for the run going on (the answer key written again), shown with the run's own steps. */
@@ -1324,8 +1399,21 @@ export function useAiAssistant(bank: BankPaperList) {
       setNotice('Hãy nhắn lại yêu cầu sửa câu để trợ lý sửa lại.')
       return
     }
-    void startRun(lastUser.body, lastMode)
+    const at = messagesRef.current.indexOf(lastUser)
+    const before = [...messagesRef.current.slice(0, at)].reverse().find((message) => !LOCAL_ID.test(message.id))
+    void startRun(lastUser.body, lastMode, undefined, undefined, lastUser.attachments, before?.id ?? null)
   }, [mode, startRun])
+
+  /** Shows another branch of the conversation: the messages the thread lists, by id. */
+  const showBranch = useCallback(
+    (ids: readonly string[]) => {
+      if (sendingRef.current || runRef.current) return
+      const known = new Map([...allMessages, ...messagesRef.current].map((message) => [message.id, message]))
+      const branch = ids.flatMap((id) => (known.has(id) ? [known.get(id) as AiChatMessage] : []))
+      if (branch.length === ids.length) updateMessages(branch)
+    },
+    [allMessages, updateMessages]
+  )
 
   /** Sends words the page wrote (not the composer's); resolves to them when they did not go, for the input. */
   const sendFor = useCallback(
@@ -1646,6 +1734,9 @@ export function useAiAssistant(bank: BankPaperList) {
     activeId,
     activeConversation,
     messages,
+    /** Every message of the open conversation in every branch, for the thread's versions of a turn. */
+    allMessages,
+    showBranch,
     paper,
     numberOf,
     draftLoading,
@@ -1672,6 +1763,7 @@ export function useAiAssistant(bank: BankPaperList) {
     addRunStep,
     cancel,
     ensureConversation,
+    uploadAttachment,
     startNew,
     selectConversation,
     renameConversation,

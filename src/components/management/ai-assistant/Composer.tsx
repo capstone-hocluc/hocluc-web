@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from '../../console/icons'
 import { ComposerSend } from '../../assistant-ui/elements/composer'
-import { composerChip, composerTool, floating, paper } from '../../assistant-ui/elements/surfaces'
+import { composerChip, composerTool, floating, paper } from '../../assistant-ui/elements/console-surfaces'
 import Button from '../../console/button'
 import Notice from '../../console/notice'
 import type { SelectOption } from '../../console/select-field'
@@ -277,6 +277,37 @@ export default function Composer({
           )}
         </ComposerPrimitive.Root>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The mode menu and the settings chip alone, for a composer that brings its own box and send button (assistant-ui's
+ * Thread takes them as its composer's extra).
+ */
+export function ComposerChips({
+  mode,
+  onModeChange,
+  settings,
+  onSettingsChange,
+  papersError,
+}: Pick<ComposerProps, 'mode' | 'onModeChange' | 'settings' | 'onSettingsChange' | 'papersError'>) {
+  const text = useAuiState(({ composer }) => composer.text)
+  const [sends, setSends] = useState(0)
+  useAuiEvent('composer.send', () => setSends((count) => count + 1))
+  return (
+    <div className="flex min-w-0 items-center gap-0.5">
+      <ModeMenu mode={mode} onModeChange={onModeChange} />
+      {mode !== 'ask' && (
+        <SettingsMenu
+          key={sends}
+          summary={settingsSummary(mode, settings, requestedCount(text))}
+          missing={mode === 'mock-exam' && !settings.bankSourceId}
+          hasError={Boolean(mode === 'mock-exam' && papersError)}
+        >
+          <QuizConfigBar mode={mode === 'revise' ? 'compose' : mode} settings={settings} onChange={onSettingsChange} />
+        </SettingsMenu>
+      )}
     </div>
   )
 }

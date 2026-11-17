@@ -289,6 +289,18 @@ test.afterEach(() => {
   expect(fixture.pageErrors, 'errors thrown in the page').toEqual([])
 })
 
+/** Opens every folded step of the run in the chat: the reasoning of each stage and the tools it called. */
+async function openRunSteps(page: Page) {
+  const triggers = page.locator('[data-slot="reasoning-trigger"], [data-slot="tool-group-trigger"]')
+  for (let index = 0; index < (await triggers.count()); index++) {
+    const trigger = triggers.nth(index)
+    if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+  }
+}
+
+/** The error a failed reply shows in the thread. */
+const replyError = (page: Page) => page.locator('[data-slot="aui_assistant-message-content"] .aui-message-error-root')
+
 async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options: AiFixtureOptions = {}) {
   const quiz = await installQuizFixture(page, role)
   checkedFixture = quiz
@@ -965,8 +977,8 @@ test('a compose run streams its stages and items into the paper', async ({ page 
   await expect(page.getByRole('button', { name: 'Dừng tạo câu trả lời' })).toBeVisible()
   await expect(page.getByText('Khảo sát ngân hàng câu hỏi')).toBeVisible()
   await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
-  // Each stage folds to one line; opening the writing stage shows the questions it went through.
-  await page.getByRole('button', { name: /^Soạn câu hỏi/ }).click()
+  // Each stage folds to one line; opening the steps shows the questions it went through.
+  await openRunSteps(page)
   await expect(page.getByText('Đang soạn câu 2/2', { exact: true })).toBeVisible()
   await expect(page.getByText('Mình đã soạn xong 2 câu cho phần Toán học.')).toBeVisible()
   // The finished exam is offered as files, not as a jump to the sheet beside.
@@ -1291,7 +1303,7 @@ test('an ask run that fails shows the error inside the thread', async ({ page })
   await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Đạo hàm là gì?')
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
 
-  await expect(page.getByText('Trợ lý AI báo lỗi')).toBeVisible({ timeout: 15_000 })
+  await expect(replyError(page)).toBeVisible({ timeout: 15_000 })
   await expect(page.getByText('Máy chủ không xử lý được câu hỏi.')).toBeVisible()
   expect(state.requests.find((entry) => entry.method === 'POST' && entry.path.endsWith('/messages'))?.body)
     .toMatchObject({ content: 'Đạo hàm là gì?', mode: 'ask' })
@@ -1983,7 +1995,7 @@ test('"Sửa câu 2" rewrites only that question where it stands and writes its 
   const sent = state.requests.filter((entry) => entry.method === 'POST' && entry.path === `${BASE}/conversations/conv-1/messages`).at(-1)
   expect(sent?.body).toMatchObject({ mode: 'revise', config: { items: [{ itemId: 'item-2', number: 2 }], instruction: 'Sửa câu 2 cho khó hơn' } })
   // The run's steps read as what they did, once its stage is opened.
-  await page.getByRole('button', { name: /^Sửa câu hỏi/ }).click()
+  await openRunSteps(page)
   for (const step of ['Đọc câu trong đề', 'Viết lại câu', 'Kiểm tra lại câu', 'Cập nhật đáp án']) {
     await expect(page.getByText(step, { exact: true }).first()).toBeVisible()
   }
@@ -2133,7 +2145,7 @@ test('a compose request naming no subject is answered with the subjects to choos
 
   // A question, not an error; the teacher's words stay above it, and no empty exam is left in the list.
   await expect(page.getByText('Bạn muốn soạn môn nào?', { exact: true })).toBeVisible()
-  await expect(page.getByText('Trợ lý AI báo lỗi')).toHaveCount(0)
+  await expect(replyError(page)).toHaveCount(0)
   await expect(page.getByText('Soạn 5 câu trung bình', { exact: true })).toBeVisible()
   await expect(page.getByRole('list', { name: 'Chọn môn' }).getByRole('button')).toHaveText(['Toán học', 'Vật lí'])
   await expect(page.getByRole('list', { name: 'Đề của tôi', exact: true }).getByText('Soạn 5 câu trung bình')).toHaveCount(0)
@@ -2175,7 +2187,7 @@ test('the subjects stay offered while what answers their question is refused', a
   state.busy = true
   await input.fill('Soạn 5 câu trung bình môn Vật lí')
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
-  await expect(page.getByText('Trợ lý AI báo lỗi')).toBeVisible()
+  await expect(replyError(page)).toBeVisible()
   await expect(choices.getByRole('button')).toHaveText(['Toán học', 'Vật lí'])
 
   state.busy = false
@@ -2258,7 +2270,7 @@ test('a failed send leaves no empty exam behind and can be tried again', async (
   await input.fill('Soạn 2 câu đại số cơ bản')
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
 
-  await expect(page.getByText('Trợ lý AI báo lỗi')).toBeVisible()
+  await expect(replyError(page)).toBeVisible()
   await expect(page.getByRole('list', { name: 'Đề của tôi', exact: true }).getByText('Soạn 2 câu đại số cơ bản')).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).not.toHaveValue('Soạn 2 câu đại số cơ bản')
   expect(state.requests.some((entry) => entry.method === 'DELETE')).toBe(true)
@@ -2266,7 +2278,7 @@ test('a failed send leaves no empty exam behind and can be tried again', async (
   state.busy = false
   await page.getByRole('button', { name: 'Thử lại' }).click()
   await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
-  await expect(page.getByText('Trợ lý AI báo lỗi')).toHaveCount(0)
+  await expect(replyError(page)).toHaveCount(0)
   expect(messagePosts(state).at(-1)?.body).toMatchObject({ content: 'Soạn 2 câu đại số cơ bản' })
 })
 
@@ -2286,7 +2298,7 @@ test('a new exam the server refuses leaves the current questions and their answe
   await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn 2 câu hình học')
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
   await page.getByRole('dialog', { name: 'Soạn đề mới thay đề hiện tại?' }).getByRole('button', { name: 'Thay đề' }).click()
-  await expect(page.getByText('Trợ lý AI báo lỗi')).toBeVisible()
+  await expect(replyError(page)).toBeVisible()
   // No run ended, so the key is not written again (from a draft the send had emptied, it would be gone).
   await page.waitForTimeout(1_000)
   await expect(questionLines(sheet)).toHaveText(questions)
@@ -2311,7 +2323,7 @@ test('the plan step tells what it changed, and the config chip follows the count
   await input.fill('Soạn 2 câu đại số cơ bản')
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
   await expect(page.getByText('Đã thêm 2 câu vào đề')).toBeVisible({ timeout: 15_000 })
-  await page.getByRole('button', { name: /^Lập ma trận đề/ }).click()
+  await openRunSteps(page)
   await expect(page.getByText('Đề tối đa 120 câu; yêu cầu 500 câu được rút về 120.')).toBeVisible()
   await expect(page.getByText('2 câu', { exact: true }).first()).toBeVisible()
   // The AI's own codes and words for cells stay out of the steps.
@@ -2815,6 +2827,7 @@ test('a run still going when the exam is opened is followed again, from right be
   const stop = page.getByRole('button', { name: 'Dừng tạo câu trả lời' })
   await expect(stop).toBeVisible()
   await expect(page.getByText('Khảo sát ngân hàng câu hỏi')).toBeVisible()
+  await openRunSteps(page)
   await expect(page.getByText('Đang soạn câu 2/2', { exact: true })).toBeVisible()
   await expect(page.getByText(/excludeIds|patternCode/)).toHaveCount(0)
   // The question being written shows word by word on the sheet (and as one line in the chat), never in the saved document.
@@ -2822,10 +2835,8 @@ test('a run still going when the exam is opened is followed again, from right be
   await expect(live).toContainText('Tập nghiệm của phương trình x bình phương bằng 4 là')
   await expect(live).toContainText('A. {2}')
   await expect(live).toContainText('B. {-2')
-  await expect(page.getByText('Đang viết', { exact: true })).toBeVisible()
   // A running stage folds to what it is doing now; opening it shows every step, and tool calls read as what they
   // did, without their raw arguments.
-  await page.getByRole('button', { name: /^Soạn câu hỏi/ }).click()
   await expect(page.getByText('Tìm câu mẫu trong ngân hàng', { exact: true })).toBeVisible()
   await expect(page.getByText(/excludeIds|patternCode/)).toHaveCount(0)
   // The sheet follows the writing; scrolling lets go of it, and the button picks it up again.

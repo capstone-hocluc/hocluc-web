@@ -1,4 +1,5 @@
 import type {
+  AiAttachment,
   AiAgentStep,
   AiAssistantMode,
   AiChart,
@@ -33,6 +34,12 @@ export interface AiTraceStage {
 
 export interface AiChatMessage {
   id: string
+  /** The message this one follows, as the server keeps it; none on older messages, which follow the one before. */
+  parentId?: string | null
+  /** What the teacher might ask after this ask answer, as the server kept them. */
+  suggestions?: string[]
+  /** The images and PDFs the teacher attached to this question. */
+  attachments?: AiAttachment[]
   role: 'user' | 'assistant'
   body: string
   createdAt: string

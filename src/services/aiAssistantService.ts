@@ -41,13 +41,26 @@ export interface AiAgentStep {
   resultSize?: number | null
 }
 
+/** An image or PDF the teacher attached to an ask question, as the server stored it. */
+export interface AiAttachment {
+  key: string
+  name: string
+  contentType: string
+  size: number
+}
+
 export interface AiMessage {
   id: string
+  /** The message this one follows; none on messages older than versions, which follow the one before them. */
+  parentId?: string | null
   conversationId?: string
   role: 'USER' | 'ASSISTANT'
   mode?: AiAssistantMode | string | null
   content: string
   trace?: AiAgentStep[] | string[] | null
+  /** What the teacher might ask next, once proposed for an ask answer. */
+  suggestions?: string[] | null
+  attachments?: AiAttachment[] | null
   createdAt: string
 }
 
@@ -258,6 +271,8 @@ export type AiStreamEvent =
       }
     }
   | { type: 'tool'; data: { tool: string; iteration?: number | null; arguments?: unknown } }
+  /** The words of an ask answer as they are written: all of model turn `turn` so far. */
+  | { type: 'text'; data: { turn: number; text: string } }
   | {
       type: 'slot'
       data: {
@@ -323,7 +338,7 @@ export type AiStreamEvent =
   | { type: 'error'; data: { message: string } }
 
 const BASE = '/api/v1/ai-assistant'
-const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'item', 'rewrite', 'answer', 'end', 'error'])
+const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'text', 'item', 'rewrite', 'answer', 'end', 'error'])
 const MAX_RETRIES = 5
 const RETRY_MS = 2000
 
@@ -380,9 +395,35 @@ export async function getAiMessages(conversationId: string): Promise<AiMessage[]
   )
 }
 
+/** What the teacher might ask after the ask answer `messageId`: proposed the first time, then kept with it. */
+export async function getAiSuggestions(conversationId: string, messageId: string): Promise<string[]> {
+  return requireData(
+    await request<string[]>(
+      `${BASE}/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/suggestions`,
+      { auth: true, method: 'POST' }
+    ),
+    'Không tải được gợi ý.'
+  )
+}
+
+/** Stores an image or PDF for the next ask question of the conversation; the question names it when sent. */
+export async function uploadAiAttachment(conversationId: string, file: File): Promise<AiAttachment> {
+  const form = new FormData()
+  form.append('file', file)
+  return requireData(
+    await request<AiAttachment>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/attachments`, {
+      auth: true,
+      method: 'POST',
+      body: form,
+      timeoutMs: 60_000,
+    }),
+    'Không tải tệp lên được.'
+  )
+}
+
 export async function sendAiMessage(
   conversationId: string,
-  body: { content: string; mode: AiAssistantMode; config?: AiSendConfig }
+  body: { content: string; mode: AiAssistantMode; config?: AiSendConfig; attachments?: AiAttachment[]; parentId?: string }
 ): Promise<AiSent> {
   return requireData(
     await request<AiSent>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/messages`, {
