@@ -2276,6 +2276,70 @@ test('the assistant takes a question off the open exam without asking first, and
   await expect(questionLines(sheet)).toHaveCount(EXAM_STEMS.length)
 })
 
+test('the assistant adds the exam header and fills its time line, and Ctrl+Z takes the change back', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', assistantOnExam(
+    [
+      ['tool', { tool: 'add_exam_header', arguments: {} }],
+      ['edit', { editId: 'edit-header', op: 'header' }],
+      ['tool', { tool: 'edit_text', arguments: { block: 'H2.4', text: 'Thời gian làm bài: 90 phút' } }],
+      ['edit', { editId: 'edit-time', op: 'text', block: 'H2.4', from: 'Thời gian làm bài: … phút, không kể thời gian giao đề', text: 'Thời gian làm bài: 90 phút' }],
+    ],
+    { status: 'DONE', reply: 'Mình đã thêm đầu đề và đổi thời gian làm bài.' }
+  ))
+  await openSavedExam(page)
+  const sheet = docEditor(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('đổi thời gian làm bài thành 90 phút')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Mình đã thêm đầu đề và đổi thời gian làm bài.')).toBeVisible({ timeout: 15_000 })
+  const time = sheet.getByText('Thời gian làm bài: 90 phút', { exact: true })
+  await expect(time).toBeVisible()
+  // The line keeps the template's emphasis.
+  await expect(time).toHaveCSS('font-style', 'italic')
+  await expect(sheet.getByText('TRƯỜNG ………………')).toBeVisible()
+  await expect(questionLines(sheet)).toHaveCount(EXAM_STEMS.length)
+  // The assistant read the words outside the questions, each line with its id.
+  const sent = messagePosts(state).at(-1)?.body as { config: { sheet: { blocks: Array<{ id: string; kind: string; text: string }> } } }
+  expect(sent.config.sheet.blocks.map(({ id, kind, text }) => ({ id, kind, text }))).toEqual([
+    { id: 'B1', kind: 'heading', text: 'ĐỀ KIỂM TRA TOÁN 10' },
+    { id: 'B2', kind: 'heading', text: 'PHẦN I. TRẮC NGHIỆM' },
+    { id: 'B11', kind: 'paragraph', text: '--- HẾT ---' },
+  ])
+
+  await sheet.locator(':scope > p', { hasText: EXAM_STEMS[0] }).click()
+  await page.keyboard.press('Control+z')
+  await expect(time).toHaveCount(0)
+})
+
+test('the assistant replaces words in the questions it names and sets the title out as asked', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', assistantOnExam(
+    [
+      ['edit', { editId: 'edit-replace', op: 'replace', find: 'bao nhiêu', replace: 'mấy', numbers: [2, 3], items: [null, null], blocks: [] }],
+      ['edit', { editId: 'edit-title', op: 'text', block: 'B1', from: 'ĐỀ KIỂM TRA TOÁN 10', text: 'ĐỀ KIỂM TRA GIỮA KỲ I – TOÁN 10', align: 'center' }],
+      // A line the teacher has changed since the assistant read it is left as it is.
+      ['edit', { editId: 'edit-stale', op: 'removeText', blocks: [{ block: 'B2', from: 'PHẦN II. TỰ LUẬN' }] }],
+    ],
+    { status: 'DONE', reply: 'Mình đã sửa chữ trên đề.' }
+  ))
+  await openSavedExam(page)
+  const sheet = docEditor(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('đổi "bao nhiêu" thành "mấy" ở câu 2, 3 và căn giữa tên đề')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Mình đã sửa chữ trên đề.')).toBeVisible({ timeout: 15_000 })
+  await expect(questionLines(sheet)).toHaveText([
+    `Câu 1. ${EXAM_STEMS[0]}`,
+    `Câu 2. ${EXAM_STEMS[1].replace('bao nhiêu', 'mấy')}`,
+    `Câu 3. ${EXAM_STEMS[2].replace('bao nhiêu', 'mấy')}`,
+    `Câu 4. ${EXAM_STEMS[3]}`,
+  ])
+  const title = sheet.getByRole('heading', { name: 'ĐỀ KIỂM TRA GIỮA KỲ I – TOÁN 10', exact: true })
+  await expect(title).toHaveCSS('text-align', 'center')
+  await expect(sheet.getByRole('heading', { name: 'PHẦN I. TRẮC NGHIỆM', exact: true })).toBeVisible()
+})
+
 test('the assistant offers only the file the teacher asked for, made from the sheet', async ({ page }) => {
   await installAiFixture(page, 'MANAGER', assistantOnExam(
     [['tool', { tool: 'export_exam', arguments: { format: 'word', answers: false } }]],

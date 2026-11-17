@@ -298,6 +298,11 @@ const TOOL_LABELS: Record<string, string> = {
   update_answer_key: 'Cập nhật đáp án',
   remove_answer_key: 'Bỏ đáp án',
   import_paper: 'Chuẩn bị nạp đề',
+  edit_text: 'Sửa chữ trên đề',
+  insert_text: 'Thêm dòng chữ',
+  remove_text: 'Bỏ dòng chữ',
+  add_exam_header: 'Thêm đầu đề',
+  replace_text: 'Tìm và thay chữ',
 }
 
 /** A file of the exam in the teacher's words: "Word không đáp án". */

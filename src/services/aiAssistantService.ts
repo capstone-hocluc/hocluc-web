@@ -261,13 +261,26 @@ export interface AiSendConfig {
 export interface AiExamSheet {
   outline: string
   questions: Array<{ number: number; text: string; itemId?: string; part?: string; group?: string; context?: string }>
+  /** The lines outside the questions (header, title, instructions, headings); `cut`: only their first words. */
+  blocks?: Array<{
+    id: string
+    kind: 'header' | 'heading' | 'paragraph'
+    text: string
+    cut?: boolean
+    part?: string
+    /** The heading a part starts at: the questions after it are placed by it. */
+    opensPart?: boolean
+    align?: string
+    bold?: boolean
+    italic?: boolean
+  }>
 }
 
 /**
  * A change to the order of the exam the assistant made, for the page to make on the sheet: the questions by their draft
  * item (or, for one the teacher typed, the number the sheet printed before the change).
  */
-export interface AiSheetEdit {
+export interface AiQuestionEdit {
   editId: string
   op: 'remove' | 'move'
   numbers: number[]
@@ -278,12 +291,50 @@ export interface AiSheetEdit {
   part?: string
 }
 
+/** A line of the sheet outside its questions, as the assistant read it: found by its words, the id breaking a tie. */
+export interface AiSheetLine {
+  block: string
+  from: string
+  /** Only the line's first words were read. */
+  cut?: boolean
+}
+
+/** How a line the assistant writes is set out; what it leaves out stays as it was. */
+export interface AiLineFormat {
+  align?: 'left' | 'center' | 'right' | 'justify'
+  bold?: boolean
+  italic?: boolean
+}
+
+/** A change to the words outside the questions, or found and replaced in them. */
+export type AiTextEdit = { editId: string } & (
+  | ({ op: 'text'; text: string } & AiSheetLine & AiLineFormat)
+  | ({
+      op: 'insert'
+      text: string
+      kind: 'header' | 'heading' | 'paragraph'
+      /** After a line (`block`, `from`), after question `number` (its `item`), or at the start. */
+      after: 'start' | 'block' | 'question'
+      block?: string
+      from?: string
+      cut?: boolean
+      number?: number
+      item?: string
+    } & AiLineFormat)
+  | { op: 'removeText'; blocks: AiSheetLine[] }
+  | { op: 'header' }
+  | { op: 'replace'; find: string; replace: string; numbers: number[]; items: Array<string | null>; blocks: AiSheetLine[] }
+)
+
+/** A change the assistant made on the exam, for the page to make on the sheet. */
+export type AiSheetEdit = AiQuestionEdit | AiTextEdit
+
 /** What the assistant left for the teacher to agree to before it changes the exam. */
 export type AiConfirmRequest =
   | { action: 'compose'; total: number; kept: number; content: string }
   /** A mock of a paper the bank has read: `sourceId` is that paper, `content` the teacher's request for it. */
   | { action: 'mock'; sourceId: string; name: string; total: number; content: string }
-  | ({ action: 'remove' } & AiSheetEdit)
+  | ({ action: 'remove' } & AiQuestionEdit)
   | ({ action: 'import' } & AiPaperImport)
 
 /** A paper attached in the chat to load into the bank: its PDF, its answer key's, and the details printed on it. */

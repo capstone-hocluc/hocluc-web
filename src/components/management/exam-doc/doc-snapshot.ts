@@ -218,7 +218,98 @@ export function examSheet(doc: ProseMirrorNode, items?: ReadonlyMap<string, Draf
       ...(question.group ? { group: question.group } : {}),
       ...(question.context ? { context: question.context } : {}),
     })),
+    blocks: blocksForAssistant(doc, items),
   }
+}
+
+/** The most lines outside the questions sent to the assistant, and the most of a line's words. */
+const MAX_BLOCKS = 80
+const MAX_BLOCK_TEXT = 300
+
+/** A line of the sheet outside its questions: a header line, a title, an instruction, a heading, a passage. */
+export interface SheetBlock {
+  /** `H<column>.<line>` for a header line, `B<n>` for the n-th block of the sheet; it holds while the sheet is unchanged. */
+  id: string
+  kind: 'header' | 'heading' | 'paragraph'
+  node: ProseMirrorNode
+  /** Where the line's node starts. */
+  pos: number
+  text: string
+  /** The draft part it stands in, or null. */
+  part: string | null
+}
+
+/**
+ * The lines of the sheet outside its questions and before its answer key, in sheet order: the header's lines, then each
+ * paragraph or heading no question or shared passage holds.
+ */
+export function sheetBlocks(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): SheetBlock[] {
+  const held = sheetQuestions(doc, items).map((question) => [question.from, question.to] as const)
+  const out: SheetBlock[] = []
+  let part: string | null = null
+  let passage = false
+  let ended = false
+  doc.forEach((node, pos, index) => {
+    if (ended || node.attrs.examKey) {
+      ended = true
+      return
+    }
+    if (node.attrs.examPart) part = String(node.attrs.examPart)
+    if (held.some(([from, to]) => pos >= from && pos < to)) {
+      passage = false
+      return
+    }
+    // A passage shared by a group of questions is the questions' own words, written with them.
+    if (node.attrs.examGroup) passage = true
+    else if (node.attrs.examPart || node.type.name === 'heading') passage = false
+    if (passage) return
+    if (node.type.name === 'examHeader') {
+      node.forEach((column, columnOffset, columnIndex) => {
+        column.forEach((line, lineOffset, lineIndex) => {
+          const text = inlineText(line).trim()
+          if (text) {
+            out.push({ id: `H${columnIndex + 1}.${lineIndex + 1}`, kind: 'header', node: line, pos: pos + 1 + columnOffset + 1 + lineOffset, text, part: null })
+          }
+        })
+      })
+      return
+    }
+    if (node.type.name !== 'paragraph' && node.type.name !== 'heading') return
+    const text = inlineText(node).trim()
+    if (!text) return
+    out.push({ id: `B${index + 1}`, kind: node.type.name === 'heading' ? 'heading' : 'paragraph', node, pos, text, part })
+  })
+  return out
+}
+
+/** Whether every word of the line carries the mark (`bold`, `italic`). */
+function allMarked(node: ProseMirrorNode, mark: string) {
+  let runs = 0
+  let marked = 0
+  node.forEach((child) => {
+    if (!child.isText) return
+    runs++
+    if (child.marks.some((entry) => entry.type.name === mark)) marked++
+  })
+  return runs > 0 && runs === marked
+}
+
+/** The sheet's lines as the assistant reads them: cut to a size, with their alignment and emphasis. */
+function blocksForAssistant(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): NonNullable<AiExamSheet['blocks']> {
+  return sheetBlocks(doc, items).slice(0, MAX_BLOCKS).map((block) => {
+    const align = typeof block.node.attrs.textAlign === 'string' ? block.node.attrs.textAlign : null
+    return {
+      id: block.id,
+      kind: block.kind,
+      text: block.text.slice(0, MAX_BLOCK_TEXT),
+      ...(block.text.length > MAX_BLOCK_TEXT ? { cut: true } : {}),
+      ...(block.part ? { part: block.part } : {}),
+      ...(block.node.attrs.examPart ? { opensPart: true } : {}),
+      ...(align && align !== 'justify' ? { align } : {}),
+      ...(allMarked(block.node, 'bold') ? { bold: true } : {}),
+      ...(allMarked(block.node, 'italic') ? { italic: true } : {}),
+    }
+  })
 }
 
 /** The paper in a few lines: its headings and each question's first words, for the assistant to find its way. */
