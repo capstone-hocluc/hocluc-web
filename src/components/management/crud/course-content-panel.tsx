@@ -44,7 +44,7 @@ import LessonSkillsDialog from './lesson-skills-dialog'
 import LessonSkillSuggestionsPanel from './lesson-skill-suggestions-panel'
 import { getLessonLabels } from '../../../services/lessonLabelService'
 import { getBankScopes } from '../../../services/questionBankService'
-import { useActiveRole } from '../../../hooks/useActiveRole'
+import { useCurrentUser } from '../../../hooks/useCurrentUser'
 
 interface Props {
   courseId: string
@@ -104,9 +104,9 @@ export default function CourseContentPanel({
   const canLabel = Boolean(scopes.data && (scopes.data.administrator ||
     (categoryId && scopes.data.authorSubjectIds.includes(categoryId))))
   // Skill suggestions are authoring work: a teacher only teaches, so they are neither shown nor fetched for one,
-  // nor before the active role is known.
-  const { activeRole } = useActiveRole()
-  const suggestsSkills = activeRole === 'STAFF' || activeRole === 'MANAGER' || activeRole === 'ADMINISTRATOR'
+  // nor before the role is known.
+  const role = useCurrentUser().profile?.role
+  const suggestsSkills = role === 'STAFF' || role === 'MANAGER' || role === 'ADMINISTRATOR'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')

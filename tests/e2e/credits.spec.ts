@@ -49,7 +49,7 @@ async function install(page: Page, role = 'STUDENT') {
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
     if (path === '/api/v1/notifications') return answer({ content: [], totalElements: 0, last: true })
     if (path === '/api/v1/users/profiles')
-      return answer({ id: USER, role, roles: [role], displayName: 'Học sinh', firstName: 'Học', lastName: 'Sinh',
+      return answer({ id: USER, role, displayName: 'Học sinh', firstName: 'Học', lastName: 'Sinh',
         email: 'student@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
     if (path === '/api/v1/credits/me') return answer(state.balance)
     if (path === '/api/v1/credits/streak')

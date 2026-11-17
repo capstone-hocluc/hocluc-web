@@ -80,12 +80,8 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
     if (path === '/api/v1/credits/me') return answer({ available: 0, bonus: 0, paid: 0, held: 0 })
     if (path === '/api/v1/credits/streak') return answer({ current: 0, longest: 0, doneToday: false, freezesAvailable: 0, maxFreezes: 2, freezePrice: 10, today: '2026-11-05', days: [] })
     if (path === '/api/v1/users/profiles') return answer({ id: QUIZ_IDS.user, role: activeRole,
-      roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER', 'STUDENT'], displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
+      displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
       email: 'quiz@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
-    if (path === '/api/v1/auth/switch-role') {
-      state.role = body.role as UserRole
-      return answer({ accessToken: quizToken(state.role) })
-    }
     if (activeRole === 'STUDENT' && method === 'GET') {
       if (path === `/api/v1/courses/${QUIZ_IDS.course}/study`) {
         return answer({ courseId: QUIZ_IDS.course, title: 'Khóa học Student', courseType: 'MAIN',

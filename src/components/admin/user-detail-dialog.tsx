@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import Button from '../console/button'
-import { grantedRoles as getGrantedRoles } from '../../lib/role-home'
+import SelectField from '../console/select-field'
 import { LoaderCircle } from '../console/icons'
 import type { UpdateUserRequest, UserProfile, UserRole } from '../../services/userService'
 import { getAdminEnrollments } from '../../services/enrollmentAdminService'
@@ -17,14 +17,13 @@ import DetailSection from '../console/detail/detail-section'
 import SystemInfo from '../console/detail/system-info'
 import { getInitials } from '../console/profile-utils'
 import { Avatar, AvatarFallback, AvatarImage } from '../tailgrids/core/avatar'
-import { Checkbox } from '../tailgrids/core/checkbox'
 import SubjectScopeEditor from './subject-scope-editor'
 import FactGrid from './fact-grid'
 import MentorProfilePanel from './mentor-profile-panel'
 import {
   ROLE_LABELS,
   STATUS_LABELS,
-  SWITCHABLE_ROLES,
+  PERSONNEL_ROLES,
   getStatusTone,
   getUserName,
 } from './user-labels'
@@ -38,7 +37,7 @@ interface UserDetailDialogProps {
   canEditProfile: boolean
   savingProfile: boolean
   onClose: () => void
-  onSaveRoles: (user: UserProfile, roles: UserRole[]) => Promise<void>
+  onSaveRole: (user: UserProfile, role: UserRole) => Promise<void>
   onSaveProfile: (user: UserProfile, payload: UpdateUserRequest) => Promise<void>
 }
 
@@ -66,11 +65,10 @@ function UserDetail({
   canEditProfile,
   savingProfile,
   onClose,
-  onSaveRoles,
+  onSaveRole,
   onSaveProfile,
 }: UserDetailDialogProps) {
   const { profile: viewer } = useCurrentUser()
-  const grantedRoles = user ? getGrantedRoles(user) : []
   const student = user?.studentProfile
   const isStudent = user?.role === 'STUDENT'
   const showRoleTab = canGrantRoles && !!user && !isStudent
@@ -78,7 +76,7 @@ function UserDetail({
   const showSubjectTab = !!user && !isStudent && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER')
   // The back office reads a mentor's profile; only administrators change it.
   const showMentorTab =
-    grantedRoles.includes('MENTOR') && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
+    user?.role === 'MENTOR' && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
   const [tab, setTab] = useState<UserTab>('overview')
   const busy = grantingRoles || savingProfile
   const [editing, setEditing] = useState(false)
@@ -180,9 +178,7 @@ function UserDetail({
               <p className="text-sm break-all text-text-tertiary">{user.email}</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {grantedRoles.map((role) => (
-                <RoleBadge key={role} role={role} />
-              ))}
+              <RoleBadge role={user.role} />
               <Status tone={getStatusTone(user.status ?? 'PENDING')}>{STATUS_LABELS[user.status ?? 'PENDING']}</Status>
             </div>
             {canEditProfile && !editing && (
@@ -319,13 +315,13 @@ function UserDetail({
 
                   {showRoleTab && (
                     <ConsoleTabsContent value="roles">
-                      <RoleEditor key={`${user.id}:${grantedRoles.join(',')}`} user={user} saving={grantingRoles} onSave={onSaveRoles} />
+                      <RoleEditor key={`${user.id}:${user.role}`} user={user} saving={grantingRoles} onSave={onSaveRole} />
                     </ConsoleTabsContent>
                   )}
 
                   {showSubjectTab && (
                     <ConsoleTabsContent value="subjects">
-                      <SubjectScopeEditor key={`${user.id}:${grantedRoles.join(',')}`} userId={user.id} roles={grantedRoles} />
+                      <SubjectScopeEditor key={`${user.id}:${user.role}`} userId={user.id} role={user.role} />
                     </ConsoleTabsContent>
                   )}
 
@@ -351,33 +347,28 @@ function UserDetail({
 function RoleEditor({ user, saving, onSave }: {
   user: UserProfile
   saving: boolean
-  onSave: (user: UserProfile, roles: UserRole[]) => Promise<void>
+  onSave: (user: UserProfile, role: UserRole) => Promise<void>
 }) {
-  const original = getGrantedRoles(user)
-  const [draft, setDraft] = useState(original)
+  const [draft, setDraft] = useState<UserRole>(user.role)
   const [error, setError] = useState('')
-  const dirty = draft.length !== original.length || draft.some((role) => !original.includes(role))
+  const dirty = draft !== user.role
   const save = async () => {
     setError('')
     try { await onSave(user, draft) }
-    catch (err) { setError(err instanceof Error ? err.message : 'Không thể lưu vai trò.') }
+    catch (err) { setError(err instanceof Error ? err.message : 'Không thể đổi vai trò.') }
   }
   return (
     <fieldset disabled={saving}>
-      <legend className="sr-only">Vai trò được cấp</legend>
-      <p className="text-xs leading-5 text-text-tertiary">Để gỡ vai trò đang dùng, người dùng cần chuyển sang vai trò khác trước. Thay đổi quyền sẽ kết thúc các phiên đăng nhập của tài khoản này.</p>
-      <div className="mt-3 flex flex-wrap gap-5">
-        {SWITCHABLE_ROLES.map((role) => (
-          <Checkbox key={role} isSelected={draft.includes(role)} isDisabled={role === user.role || saving}
-            onChange={(checked) => setDraft((current) => checked ? [...current, role] : current.filter((item) => item !== role))}>
-            {ROLE_LABELS[role]}{role === user.role ? ' (đang dùng)' : ''}
-          </Checkbox>
-        ))}
+      <legend className="sr-only">Vai trò</legend>
+      <p className="text-xs leading-5 text-text-tertiary">Đổi vai trò sẽ kết thúc các phiên đăng nhập của tài khoản này.</p>
+      <div className="mt-3 max-w-xs">
+        <SelectField ariaLabel="Vai trò" options={PERSONNEL_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
+          value={draft} disabled={saving} onChange={(value) => setDraft(value as UserRole)} />
       </div>
       {error && <p role="alert" className="mt-3 text-sm text-badge-danger-text">{error}</p>}
       <div className="mt-4 flex justify-end gap-2">
-        <Button appearance="outline" disabled={!dirty || saving} onClick={() => { setDraft(original); setError('') }}>Hủy thay đổi</Button>
-        <Button disabled={!dirty || saving || draft.length === 0} onClick={() => void save()}>{saving ? 'Đang lưu...' : 'Lưu vai trò'}</Button>
+        <Button appearance="outline" disabled={!dirty || saving} onClick={() => { setDraft(user.role); setError('') }}>Hủy thay đổi</Button>
+        <Button disabled={!dirty || saving} onClick={() => void save()}>{saving ? 'Đang lưu...' : 'Lưu vai trò'}</Button>
       </div>
     </fieldset>
   )

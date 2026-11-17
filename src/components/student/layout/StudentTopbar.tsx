@@ -1,7 +1,6 @@
 import { Flame, LogOut, Menu, Settings, User, UserRound } from '../../console/icons'
 import Logo from '../../common/Logo'
 import Avatar from '../../ui/Avatar'
-import RoleSwitcher from '../../ui/RoleSwitcher'
 import Skeleton from '../../ui/Skeleton'
 import {
   DropdownMenu,
@@ -115,7 +114,6 @@ function StudentTopbar({
           )}
         </button>
 
-        <RoleSwitcher className="h-11 rounded-xl" />
 
         <NotificationBell variant="student" />
 

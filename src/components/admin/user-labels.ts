@@ -1,6 +1,6 @@
 import type { UserStatus, UserSummary } from '../../services/userService'
 
-export { ROLE_LABELS, PERSONNEL_ROLES as SWITCHABLE_ROLES } from '../../lib/role-home'
+export { ROLE_LABELS, PERSONNEL_ROLES } from '../../lib/role-home'
 
 export const STATUS_LABELS: Record<UserStatus, string> = {
   ACTIVE: 'Đang hoạt động',

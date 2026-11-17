@@ -42,8 +42,7 @@ async function installAuthFixture(page: Page, role: UserRole = 'STUDENT') {
       }
       if (state.loginGate) await state.loginGate
       const body = request.postDataJSON() ?? {}
-      if (path.endsWith('/switch-role')) state.role = body.role
-      else state.role = path.endsWith('/google/console') || body.audience === 'CONSOLE' ? 'STAFF' : 'STUDENT'
+      state.role = path.endsWith('/google/console') || body.audience === 'CONSOLE' ? 'STAFF' : 'STUDENT'
       state.activeCookie = `session-${++state.revision}`
       state.access = token(state.role, state.revision)
       return respond(route, { accessToken: state.access }, 200, cookie(state.activeCookie))
@@ -195,21 +194,6 @@ test('invalid cookie ends the local session without an infinite refresh loop', a
   })
   expect(value).toEqual([null, null])
   expect(refreshes(state)).toHaveLength(1)
-})
-
-test('role switch uses access-only JSON, rotates the cookie and does not store a refresh credential', async ({ page }) => {
-  const { state, seedCookie } = await installAuthFixture(page, 'STAFF')
-  await seedCookie()
-  await page.goto('/login')
-  await page.evaluate(async accessToken => {
-    const path = '/src/lib/api.ts', api = await import(path)
-    api.setTokens({ accessToken }, true)
-    const authPath = '/src/services/authService.ts', auth = await import(authPath)
-    await auth.switchRole('TEACHER')
-  }, state.access)
-  expect(await page.evaluate(() => localStorage.getItem('hocluc.refreshToken'))).toBeNull()
-  expect(state.role).toBe('TEACHER')
-  expect(state.requests.find(request => request.path.endsWith('/switch-role'))?.cookie).toBe('session-1')
 })
 
 test('logout works with cookie only and prevents automatic restoration after F5', async ({ page }) => {
@@ -373,7 +357,7 @@ test('console profile network failure retains the new session and allows deliber
 test('a rejected console role is logged out on BE instead of leaving its refresh cookie behind', async ({ page }) => {
   const { state } = await installAuthFixture(page)
   await page.route('**/api/v1/users/profiles', route => route.fulfill({ json: { success: true,
-    data: { id: QUIZ_IDS.user, role: 'STUDENT', roles: ['STUDENT'], displayName: 'Rejected learner' } } }))
+    data: { id: QUIZ_IDS.user, role: 'STUDENT', displayName: 'Rejected learner' } } }))
   await page.goto('/console/login')
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill('student@example.invalid')
   await page.getByPlaceholder('Nhập mật khẩu', { exact: true }).fill('fixture-password')
