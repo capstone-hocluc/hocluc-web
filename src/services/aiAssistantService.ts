@@ -1,5 +1,6 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import { API_BASE_URL, getAccessToken, refreshAfterUnauthorized, request } from '../lib/api'
+import type { BankSource } from './questionBankService'
 
 /** 'revise' is a compose run that rewrites named questions ("Sửa câu 2"); the composer never offers it as a mode. */
 export type AiAssistantMode = 'ask' | 'compose' | 'mock-exam' | 'revise'
@@ -281,6 +282,35 @@ export interface AiSheetEdit {
 export type AiConfirmRequest =
   | { action: 'compose'; total: number; kept: number; content: string }
   | ({ action: 'remove' } & AiSheetEdit)
+  | ({ action: 'import' } & AiPaperImport)
+
+/** A paper attached in the chat to load into the bank: its PDF, its answer key's, and the details printed on it. */
+export interface AiPaperImport {
+  exam: AiAttachment
+  key?: AiAttachment
+  title?: string
+  year?: number
+  round?: string
+  answerSource?: 'PUBLISHED_KEY' | 'REFERENCE_KEY'
+}
+
+/** Loads into the bank a paper attached in this conversation, as the assistant proposed and the teacher agreed. */
+export async function importAiPaper(conversationId: string, paper: AiPaperImport): Promise<BankSource> {
+  return requireData(
+    await request<BankSource>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/papers`, {
+      auth: true,
+      method: 'POST',
+      body: {
+        exam: paper.exam,
+        ...(paper.key ? { key: paper.key, answerSource: paper.answerSource ?? 'REFERENCE_KEY' } : {}),
+        ...(paper.title ? { title: paper.title } : {}),
+        ...(paper.year ? { year: paper.year } : {}),
+        ...(paper.round ? { round: paper.round } : {}),
+      },
+    }),
+    'Chưa nạp được đề.'
+  )
+}
 
 /**
  * A question to rewrite, by the number the sheet prints: its draft item when the AI wrote it, and its words as the

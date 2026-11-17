@@ -381,7 +381,7 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
     const request = route.request()
     const path = new URL(request.url()).pathname
     const method = request.method()
-    const body = (method === 'GET' || method === 'DELETE'
+    const body = (method === 'GET' || method === 'DELETE' || /multipart/.test(request.headers()['content-type'] ?? '')
       ? {}
       : (request.postDataJSON() as Record<string, unknown> | null) ?? {}) as Record<string, unknown>
     state.requests.push({ method, path, body, lastEventId: request.headers()['last-event-id'] ?? '' })
@@ -513,6 +513,18 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
       return reply({ text: 'Phương trình $x + 2 = 0$ có bao nhiêu nghiệm?' })
     }
 
+    // A file attached in the chat is stored under its exam; a paper attached there is loaded as the teacher agreed.
+    if (action === 'attachments' && method === 'POST') {
+      const name = /filename="([^"]+)"/.exec(route.request().postData() ?? '')?.[1] ?? 'tệp'
+      return reply({ key: `ai-assistant/${conversationId}/${name}`, name, contentType: 'application/pdf', size: 8 })
+    }
+    if (action === 'papers' && method === 'POST') {
+      bank.paper = body
+      const queued = bankSource('src-new', 'Đề vừa nạp', 'PENDING')
+      bank.sources = [queued, ...bank.sources]
+      return reply(queued, 202)
+    }
+
     if (action === 'messages') {
       if (method === 'GET') return reply(state.messages.get(conversationId) ?? [])
       if (options.subjectRequired && body.mode === 'compose' && !/môn|cả đề/i.test(String(body.content))) {
@@ -528,7 +540,10 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
       // With the assistant on, a compose request on an exam with questions changes that exam, unless the teacher agreed
       // to replace it: the draft and the sheet stay, and the run's reply is the assistant's message.
       const config = (body.config ?? {}) as { confirmed?: boolean; sheet?: { questions?: unknown[] } }
-      if (options.composeAgent && body.mode === 'compose' && !config.confirmed && (config.sheet?.questions?.length ?? 0) > 0) {
+      // So does one with files attached, on any exam.
+      const attached = Array.isArray(body.attachments) && body.attachments.length > 0
+      if (options.composeAgent && body.mode === 'compose' && !config.confirmed
+        && ((config.sheet?.questions?.length ?? 0) > 0 || attached)) {
         state.posted = true
         state.mode = 'agent'
         if (options.agentItems?.length) {
@@ -754,7 +769,7 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
   })
 
   // The papers loaded into the bank: listed with the exams, loaded and read in the workspace.
-  const bank = { sources: [...(options.bankSources ?? [])], upload: null as string | null }
+  const bank = { sources: [...(options.bankSources ?? [])], upload: null as string | null, paper: null as unknown }
   await page.route('**/api/v1/question-bank/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -2188,6 +2203,41 @@ const assistantOnExam = (events: [string, unknown][], end: Record<string, unknow
   composeAgent: true,
   agentEvents: events,
   agentEnd: end,
+})
+
+test('a paper attached in the chat is loaded into the bank once the teacher agrees to what the assistant proposes', async ({ page }) => {
+  const exam = { key: `ai-assistant/${savedExam.id}/de-2025.pdf`, name: 'de-2025.pdf', contentType: 'application/pdf', size: 8 }
+  const { state, bank } = await installAiFixture(page, 'MANAGER', assistantOnExam(
+    [['tool', { tool: 'import_paper', arguments: { year: 2025 } }]],
+    {
+      status: 'DONE',
+      reply: 'Mình sẽ nạp đề de-2025.pdf vào ngân hàng; mình chờ thầy cô đồng ý.',
+      confirm: { action: 'import', exam, year: 2025 },
+    }
+  ))
+  await openSavedExam(page)
+  // Where the assistant changes the exam, a paper is loaded from the chat, not from a button of its own.
+  await expect(page.getByRole('button', { name: 'Nạp đề', exact: true })).toHaveCount(0)
+
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Đính kèm tệp' }).click()
+  await (await chooser).setFiles({ name: 'de-2025.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.7') })
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('nạp đề này vào ngân hàng, năm 2025')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Nạp đề vào ngân hàng?' })
+  await expect(dialog).toBeVisible({ timeout: 15_000 })
+  const sent = messagePosts(state).at(-1)?.body as { mode: string; attachments: unknown[] }
+  expect(sent.mode).toBe('compose')
+  expect(sent.attachments).toEqual([exam])
+  // Nothing is loaded before the teacher agrees.
+  expect(bank.paper).toBeNull()
+
+  await dialog.getByRole('button', { name: 'Nạp đề' }).click()
+  await expect(dialog).toBeHidden()
+  await expect.poll(() => bank.paper).toEqual({ exam, year: 2025 })
+  await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('Đề vừa nạp')
+  await expect(page.getByRole('complementary', { name: 'Tiến trình đọc đề' })).toBeVisible()
 })
 
 test('the assistant takes a question off the open exam without asking first, and the sheet numbers the rest again', async ({ page }) => {

@@ -294,6 +294,7 @@ const TOOL_LABELS: Record<string, string> = {
   export_exam: 'Chuẩn bị file',
   update_answer_key: 'Cập nhật đáp án',
   remove_answer_key: 'Bỏ đáp án',
+  import_paper: 'Chuẩn bị nạp đề',
 }
 
 /** A file of the exam in the teacher's words: "Word không đáp án". */
@@ -1360,7 +1361,9 @@ export function useAiAssistant(bank: BankPaperList) {
         const examRun = runMode !== 'ask' && runMode !== 'revise'
         // The sheet says whether the exam has questions; the draft keeps the ones the teacher took off the sheet.
         const holdsQuestions = compose?.sheet ? compose.sheet.questions.length > 0 : (draftRef.current?.items.length ?? 0) > 0
-        const toAssistant = runMode === 'compose' && Boolean(draftRef.current?.composeAgent) && !compose?.confirmed && holdsQuestions
+        // Files attached to a compose request are for the assistant too, on any exam (a paper to load into the bank).
+        const toAssistant = runMode === 'compose' && Boolean(draftRef.current?.composeAgent) && !compose?.confirmed
+          && (holdsQuestions || Boolean(attachments?.length))
         const replacing = examRun && !toAssistant
         const initialRun: AiRun = {
           mode: runMode,

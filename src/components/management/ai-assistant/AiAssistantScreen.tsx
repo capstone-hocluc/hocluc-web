@@ -2,7 +2,7 @@
 // panel (the exams, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { AssistantRuntime } from '@assistant-ui/react'
-import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem, type AiAttachment, type AiSolutionStyle } from '../../../services/aiAssistantService'
+import { importAiPaper, rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem, type AiAttachment, type AiPaperImport, type AiSolutionStyle } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getErrorMessage } from '../../../lib/errors'
@@ -511,6 +511,11 @@ export default function AiAssistantScreen({
         ...(after !== undefined ? { after } : {}),
       })
     }
+    // Files attached in compose mode are for the assistant, on any exam: it proposes loading a paper into the bank.
+    if (ai.mode === 'compose' && ai.composeAgent && attachments.length > 0) {
+      const sheet = onSheet ? examSheet(onSheet.state.doc, draftPlaces) : undefined
+      return ai.send(text, { attachments, compose: sheet ? { sheet } : {} })
+    }
     // "Sửa câu 2 …" revises in compose and mock-exam alike, once there is an exam to revise.
     const hasQuestions = ai.paper.questions.length > 0 || (onSheet ? sheetQuestions(onSheet.state.doc).length > 0 : false)
     const numbers = ai.mode === 'compose' || hasQuestions ? revisedNumbers(text) : null
@@ -557,6 +562,15 @@ export default function AiAssistantScreen({
       return Promise.resolve(false)
     }
     return ai.send(text, { revise: targets })
+  }
+
+  /** The paper the assistant proposed, loaded as the teacher agreed: it opens here as the AI reads it. */
+  async function loadPaper(conversationId: string, paper: AiPaperImport) {
+    try {
+      openQueued(await importAiPaper(conversationId, paper))
+    } catch (reason) {
+      showErrorToast(getErrorMessage(reason))
+    }
   }
 
   /** Words a send of the page's own (a retry, a subject chosen) did not get through go back to an empty composer. */
@@ -806,7 +820,8 @@ export default function AiAssistantScreen({
         loading={ai.draftLoading}
         sendBlocked={ai.mode === 'mock-exam' && !ai.settings.bankSourceId}
         onSend={(text, attachments) => sendMessage(text, false, attachments)}
-        onAttach={ai.mode === 'ask' ? ai.uploadAttachment : undefined}
+        // A question takes images and PDFs; where the assistant changes the exam, staff attach a paper for it to load.
+        onAttach={ai.mode === 'ask' || (ai.mode === 'compose' && ai.composeAgent && canImport) ? ai.uploadAttachment : undefined}
         onCancel={ai.cancel}
         onRegenerate={regenerate}
         examCard={!ai.composeAgent}
@@ -858,7 +873,8 @@ export default function AiAssistantScreen({
                   <span className="hidden lg:inline">Lưu vào ngân hàng</span>
                 </Button>
               )}
-              {canImport && (
+              {/* Where the assistant changes the exam, a paper is loaded by attaching it in the chat. */}
+              {canImport && !ai.composeAgent && (
                 <Button appearance="ghost" size="sm" onClick={() => setImporting(true)} aria-label="Nạp đề" title="Nạp đề">
                   <FileText size={15} />
                   <span className="hidden lg:inline">Nạp đề</span>
@@ -1135,6 +1151,21 @@ export default function AiAssistantScreen({
               const content = ai.confirmRequest?.action === 'compose' ? ai.confirmRequest.content : ''
               ai.dismissConfirm()
               if (content) void sendMessage(content, true)
+            }}
+          />
+        )}
+
+        {ai.confirmRequest?.action === 'import' && (
+          <ConfirmDialog
+            title="Nạp đề vào ngân hàng?"
+            description={`AI sẽ đọc mọi trang của ${ai.confirmRequest.exam.name}${ai.confirmRequest.key ? ` cùng file đáp án ${ai.confirmRequest.key.name}` : ''} và tốn token.`}
+            cancelLabel="Chưa nạp"
+            confirmLabel="Nạp đề"
+            onCancel={ai.dismissConfirm}
+            onConfirm={() => {
+              const request = ai.confirmRequest
+              ai.dismissConfirm()
+              if (request?.action === 'import' && ai.activeId) void loadPaper(ai.activeId, request)
             }}
           />
         )}
