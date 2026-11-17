@@ -540,7 +540,15 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
         const messageId = `user-${messages.length + 1}`
         messages.push(
           { id: messageId, conversationId, role: 'USER', mode: 'compose', content: body.content, createdAt: stamp },
-          { id: `assistant-${messages.length + 2}`, conversationId, role: 'ASSISTANT', mode: 'compose', content: String(options.agentEnd?.reply ?? ''), createdAt: stamp }
+          {
+            id: `assistant-${messages.length + 2}`,
+            conversationId,
+            role: 'ASSISTANT',
+            mode: 'compose',
+            content: String(options.agentEnd?.reply ?? ''),
+            ...(options.agentEnd?.files ? { files: options.agentEnd.files } : {}),
+            createdAt: stamp,
+          }
         )
         state.messages.set(conversationId, messages)
         return reply({ messageId, jobId: 'job-3', replaced: false })
@@ -2216,6 +2224,73 @@ test('the assistant takes a question off the open exam without asking first, and
   await sheet.locator(':scope > p', { hasText: EXAM_STEMS[0] }).click()
   await page.keyboard.press('Control+z')
   await expect(questionLines(sheet)).toHaveCount(EXAM_STEMS.length)
+})
+
+test('the assistant offers only the file the teacher asked for, made from the sheet', async ({ page }) => {
+  await installAiFixture(page, 'MANAGER', assistantOnExam(
+    [['tool', { tool: 'export_exam', arguments: { format: 'word', answers: false } }]],
+    { status: 'DONE', reply: 'Mình đã chuẩn bị file Word không đáp án.', files: [{ format: 'word', answers: false }] }
+  ))
+  await openSavedExam(page)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('xuất word không đáp án')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Mình đã chuẩn bị file Word không đáp án.')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Đề thi · Word không đáp án')).toBeVisible()
+  // No card of every file under a reply: the one asked for is all there is.
+  await expect(page.getByRole('button', { name: 'Tải Word', exact: true })).toHaveCount(1)
+  for (const name of ['Tải PDF', 'Word không đáp án', 'PDF không đáp án', 'Cập nhật đáp án']) {
+    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0)
+  }
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Tải Word', exact: true }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toMatch(/-khong-dap-an\.docx$/)
+  const body = (await (await JSZip.loadAsync(await readFile(await file.path()))).file('word/document.xml')?.async('string')) ?? ''
+  expect(body).toContain(EXAM_STEMS[0])
+  expect(body).not.toContain('BẢNG ĐÁP ÁN')
+})
+
+test('asking the assistant for the answer key writes it after the exam with the solutions asked for', async ({ page }) => {
+  // The key is written from the assistant's questions: the one this run adds is the exam's first.
+  const added = item(savedExam.id, 'item-added', 1, 'Tìm tập xác định của hàm số y bằng căn x.', { passed: true })
+  const options: AiFixtureOptions = {
+    ...assistantOnExam(
+      [
+        ['item', { stage: 'write', status: 'saved', itemId: added.id, section: 'P2', position: 1, source: 'AI', question: added.question, check: added.checkResult }],
+        ['tool', { tool: 'update_answer_key', arguments: { solutions: 'full' } }],
+      ],
+      { status: 'DONE', reply: 'Mình đã cập nhật đáp án và lời giải.', answerKey: { action: 'write', solutions: 'full', guide: true } }
+    ),
+    agentItems: [added],
+  }
+  await installAiFixture(page, 'MANAGER', options)
+  await openSavedExam(page)
+  const sheet = docEditor(page)
+  const guide = sheet.getByRole('heading', { name: 'HƯỚNG DẪN GIẢI', exact: true })
+  const table = sheet.getByRole('heading', { name: 'BẢNG ĐÁP ÁN', exact: true })
+  await expect(guide).toHaveCount(0)
+
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('thêm 1 câu hàm số rồi cập nhật đáp án lời giải đầy đủ')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Mình đã cập nhật đáp án và lời giải.')).toBeVisible({ timeout: 15_000 })
+  await expect(guide).toHaveCount(1)
+  await expect(table).toHaveCount(1)
+  await expect(page.getByRole('dialog', { name: 'Soạn đề mới thay đề hiện tại?' })).toHaveCount(0)
+
+  // "Bỏ lời giải" takes the solutions off and keeps the answer table.
+  options.agentItems = []
+  options.agentEvents = [['tool', { tool: 'remove_answer_key', arguments: { part: 'guide' } }]]
+  options.agentEnd = { status: 'DONE', reply: 'Mình đã bỏ lời giải.', answerKey: { action: 'remove', part: 'guide' } }
+  await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('bỏ lời giải của toàn bộ đề đi')
+  await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  await expect(page.getByText('Mình đã bỏ lời giải.')).toBeVisible({ timeout: 15_000 })
+  await expect(guide).toHaveCount(0)
+  await expect(table).toHaveCount(1)
 })
 
 test('a question the assistant adds after taking one off is numbered after the questions left on the sheet', async ({ page }) => {

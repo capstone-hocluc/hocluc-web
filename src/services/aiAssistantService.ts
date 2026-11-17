@@ -61,7 +61,24 @@ export interface AiMessage {
   /** What the teacher might ask next, once proposed for an ask answer. */
   suggestions?: string[] | null
   attachments?: AiAttachment[] | null
+  /** The files of the exam the assistant prepared in this reply, because the teacher asked for them. */
+  files?: AiExamFile[] | null
   createdAt: string
+}
+
+/**
+ * The answer key written again (`guide` false: the answer table alone; no `solutions`: the exam's), or its solutions
+ * (`guide`) or the whole of it (`all`) taken off.
+ */
+export type AiAnswerKeyAsk =
+  | { action: 'write'; solutions?: AiSolutionStyle; guide?: boolean }
+  | { action: 'remove'; part: 'guide' | 'all' }
+
+/** A file of the exam the assistant offers: the page makes it from the sheet when it is downloaded. */
+export interface AiExamFile {
+  format: 'word' | 'pdf'
+  /** With the answer key and solutions after the exam; false: the exam alone. */
+  answers: boolean
 }
 
 export interface AiSent {
@@ -372,6 +389,10 @@ export type AiStreamEvent =
         restored?: boolean
         /** The assistant's turn ended on a change the teacher must agree to first. */
         confirm?: AiConfirmRequest | null
+        /** The files of the exam the teacher asked the assistant for. */
+        files?: AiExamFile[] | null
+        /** What the teacher asked done to the answer key after the exam. */
+        answerKey?: AiAnswerKeyAsk | null
       }
     }
   /** The assistant changed the order of the exam: the page makes the same change on the sheet. */

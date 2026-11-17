@@ -2,7 +2,7 @@
 // panel (the exams, templates) on the left, the A4 paper in the middle, the AI chat on the right, a status bar below.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { AssistantRuntime } from '@assistant-ui/react'
-import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem, type AiAttachment } from '../../../services/aiAssistantService'
+import { rewriteAiSelection, type AiAssistantMode, type AiConversation, type AiRevisedItem, type AiAttachment, type AiSolutionStyle } from '../../../services/aiAssistantService'
 import { useAiAssistant, type AiComposeSettings } from '../../../hooks/useAiAssistant'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getErrorMessage } from '../../../lib/errors'
@@ -37,7 +37,7 @@ import { EditorOutlineTree, PaperOutlineTree } from '../exam-doc/doc-tree'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
 import { clearExam, deliveredItems, findTagged, partHeadingPlace, questionInsertPos } from '../exam-doc/exam-tags'
 import { refreshChartImages } from '../exam-doc/chart-refresh'
-import { downloadExamOnlyDocx, replaceAnswerKey } from '../exam-doc/answer-key'
+import { downloadExamOnlyDocx, keyParts, removeAnswerKey, replaceAnswerKey, type KeyParts } from '../exam-doc/answer-key'
 import { restoreSoloPassages } from '../exam-doc/solo-passages'
 import { replaceQuestionBlocks, replaceSheetRange } from '../exam-doc/replace-question'
 import { examSheet, sheetDocument, sheetQuestion, sheetQuestions, type DraftPlace } from '../exam-doc/doc-snapshot'
@@ -299,11 +299,8 @@ export default function AiAssistantScreen({
       const at = replaceQuestionBlocks(editor, ai.paper, question)
       shown ??= at
     }
-    let hasKey = false
-    editor.state.doc.forEach((node) => {
-      if (node.attrs.examKey) hasKey = true
-    })
-    if (hasKey && replaceAnswerKey(editor, ai.paper, solutionStyle)) addRunStep('Cập nhật đáp án')
+    const parts = keyParts(editor.state.doc)
+    if ((parts.table || parts.guide) && replaceAnswerKey(editor, ai.paper, solutionStyle, parts)) addRunStep('Cập nhật đáp án')
     if (shown !== null) scrollToPos(editor, shown)
   }, [ai.paper, addRunStep, examDoc.loading, examDoc.mode, editor, solutionStyle])
 
@@ -352,11 +349,8 @@ export default function AiAssistantScreen({
   /** An exam that has an answer key gets it written again from the sheet as it is now. */
   function rewriteKey() {
     if (!editor) return
-    let hasKey = false
-    editor.state.doc.forEach((node) => {
-      if (node.attrs.examKey) hasKey = true
-    })
-    if (hasKey && replaceAnswerKey(editor, ai.paper, solutionStyle)) addRunStep('Cập nhật đáp án')
+    const parts = keyParts(editor.state.doc)
+    if ((parts.table || parts.guide) && replaceAnswerKey(editor, ai.paper, solutionStyle, parts)) addRunStep('Cập nhật đáp án')
   }
 
   // An assistant run that ended changed the exam there is: an exam with an answer key gets it written again once the
@@ -370,6 +364,27 @@ export default function AiAssistantScreen({
     keyRewrittenFor.current = ai.agentRunsEnded
     rewriteKey()
   }, [ai.agentRunsEnded, ai.paper, ai.running, ai.draftLoading, examDoc.loading, examDoc.mode, editor]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // What the teacher asked the assistant to do to the answer key, done once the run's questions are on the sheet: it is
+  // written as "Cập nhật đáp án" writes it (solutions asked for, "lời giải đầy đủ", stay the exam's from then on), or
+  // its solutions or the whole of it come off.
+  const keyAskedFor = useRef(ai.answerKeyRequest?.seq ?? 0)
+  useEffect(() => {
+    const request = ai.answerKeyRequest
+    if (!request || keyAskedFor.current === request.seq) return
+    if (ai.running || !editor || examDoc.loading || ai.draftLoading) return
+    const delivered = deliveredItems(editor.state)
+    if (delivered && ai.paper.questions.some((question) => !delivered.has(question.id))) return
+    keyAskedFor.current = request.seq
+    const { ask } = request
+    if (ask.action === 'remove') {
+      removeAnswerKey(editor, ask.part)
+      return
+    }
+    const style = ask.solutions ?? solutionStyle
+    if (style !== solutionStyle) ai.setSettings((previous) => ({ ...previous, solutionStyle: style }))
+    writeAnswerKey(style, { table: true, guide: ask.guide !== false })
+  }, [ai.answerKeyRequest, ai.paper, ai.running, ai.draftLoading, examDoc.loading, editor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Charts are drawn again from their data when an exam opens, so one saved with an older drawing looks current.
   useEffect(() => {
@@ -570,13 +585,13 @@ export default function AiAssistantScreen({
   }
 
   /** The answer key written again from the questions the sheet holds now, in the chosen solution style. */
-  function writeAnswerKey() {
+  function writeAnswerKey(style: AiSolutionStyle = solutionStyle, parts?: KeyParts) {
     setChatSheet(false)
     if (!editor || examDoc.mode !== 'FREE') {
       showErrorToast('Đáp án chỉ ghi được ở chế độ Văn bản tự do')
       return
     }
-    replaceAnswerKey(editor, ai.paper, solutionStyle)
+    replaceAnswerKey(editor, ai.paper, style, parts)
     let at: number | null = null
     editor.state.doc.forEach((node, pos) => {
       if (at === null && node.attrs.examKey && node.type.name === 'heading') at = pos
@@ -689,7 +704,7 @@ export default function AiAssistantScreen({
 
   const chatActions: ChatActions = {
     onDownload: downloadExam,
-    onAnswerKey: writeAnswerKey,
+    onAnswerKey: () => writeAnswerKey(),
     onRetry: (messageId) => void ai.retry(messageId).then(giveBack),
     onChooseSubject: (messageId, subjectName) => void ai.chooseSubject(messageId, subjectName).then(giveBack),
   }
@@ -797,6 +812,7 @@ export default function AiAssistantScreen({
         onAttach={ai.mode === 'ask' ? ai.uploadAttachment : undefined}
         onCancel={ai.cancel}
         onRegenerate={regenerate}
+        examCard={!ai.composeAgent}
         allMessages={ai.allMessages}
         onShowBranch={ai.showBranch}
         onEdit={(text, after) => {

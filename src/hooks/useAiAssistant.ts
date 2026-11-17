@@ -35,6 +35,7 @@ import {
   type AiSheetEdit,
   type AiSolutionStyle,
   type AiStreamEvent,
+  type AiAnswerKeyAsk,
 } from '../services/aiAssistantService'
 import { ApiError } from '../lib/api'
 import type { BankSource } from '../services/questionBankService'
@@ -290,6 +291,14 @@ const TOOL_LABELS: Record<string, string> = {
   rewrite_questions: 'Viết lại câu',
   add_questions: 'Thêm câu',
   compose_exam: 'Hỏi trước khi thay đề',
+  export_exam: 'Chuẩn bị file',
+  update_answer_key: 'Cập nhật đáp án',
+  remove_answer_key: 'Bỏ đáp án',
+}
+
+/** A file of the exam in the teacher's words: "Word không đáp án". */
+export function examFileName(file: { format?: unknown; answers?: unknown }) {
+  return `${file.format === 'pdf' ? 'PDF' : 'Word'} ${file.answers === false ? 'không đáp án' : 'có đáp án'}`
 }
 
 /** A tool call as one plain line: what it did, and at most a short readable hint (a difficulty, a query). */
@@ -307,6 +316,8 @@ function toolLine(data: { tool: string; arguments?: unknown }) {
         : typeof args.count === 'number'
           ? `${args.count} câu`
           : undefined
+  if (data.tool === 'export_exam') return { label, detail: examFileName(args) }
+  if (data.tool === 'remove_answer_key') return { label: args.part === 'all' ? 'Bỏ đáp án và lời giải' : 'Bỏ lời giải' }
   const detail =
     number ?? (difficulty ? `mức ${difficulty.toLowerCase()}` : query ? (query.length > 60 ? `${query.slice(0, 59)}…` : query) : undefined)
   return { label, detail }
@@ -323,6 +334,7 @@ function mapMessage(message: AiMessage): AiChatMessage {
     trace: traceLines(message.trace),
     ...(message.suggestions ? { suggestions: message.suggestions } : {}),
     ...(message.attachments?.length ? { attachments: message.attachments } : {}),
+    ...(message.files?.length ? { files: message.files } : {}),
   }
 }
 
@@ -515,6 +527,13 @@ export function useAiAssistant(bank: BankPaperList) {
   const [sheetEdits, setSheetEdits] = useState<Array<AiSheetEdit & { conversationId: string }>>([])
   /** A change the assistant left for the teacher to agree to, on the exam it is for. */
   const [confirmRequest, setConfirmRequest] = useState<{ conversationId: string; request: AiConfirmRequest } | null>(null)
+  // What the teacher asked the assistant to do to the answer key, done once the run's questions are in; `seq` tells
+  // each request from the last.
+  const [answerKeyRequest, setAnswerKeyRequest] = useState<{
+    conversationId: string
+    seq: number
+    ask: AiAnswerKeyAsk
+  } | null>(null)
 
   /** The mode the teacher picks; an exam opened before the list arrived then keeps it. */
   const chooseMode = useCallback((next: AiAssistantMode) => {
@@ -679,6 +698,8 @@ export function useAiAssistant(bank: BankPaperList) {
         refreshDraft(conversationId),
       ])
       examRunEnded(conversationId, finished.mode, finished.agent)
+      const ask = endEvent.data.answerKey
+      if (ask) setAnswerKeyRequest((previous) => ({ conversationId, seq: (previous?.seq ?? 0) + 1, ask }))
       if (!messagesLoaded || activeIdRef.current !== conversationId) return
 
       const known = new Set(finished.knownAssistantIds)
@@ -712,6 +733,7 @@ export function useAiAssistant(bank: BankPaperList) {
           mode: finished.mode,
           stages: markAllDone(finished.stages),
           addedItemIds: finished.itemIds,
+          ...(endEvent.data.files?.length ? { files: endEvent.data.files } : {}),
           ...(stopped ? { stopped } : {}),
         },
       ])
@@ -1901,5 +1923,7 @@ export function useAiAssistant(bank: BankPaperList) {
     dismissConfirm,
     /** A request on this exam goes to the assistant that reads and changes it once the exam has questions. */
     composeAgent: Boolean(draft?.composeAgent),
+    /** The answer key the teacher asked the assistant to write again on the open exam, or null. */
+    answerKeyRequest: answerKeyRequest && answerKeyRequest.conversationId === activeId ? answerKeyRequest : null,
   }
 }
