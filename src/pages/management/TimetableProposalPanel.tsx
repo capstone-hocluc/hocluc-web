@@ -1,5 +1,4 @@
 import DateField from '../../components/console/date-field'
-import SelectField from '../../components/console/select-field'
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../../lib/api'
 import { SCHEDULING_TIMEZONE, localDateLabel, localToday } from '../../lib/scheduling'
@@ -9,7 +8,7 @@ import {
   generateTimetableProposal,
   proposalSchedulesAsRecurring,
 } from '../../services/timetableProposalService'
-import type { DeliveryMode, TimetableProposalResponse } from '../../types/scheduling'
+import type { TimetableProposalResponse } from '../../types/scheduling'
 import type { ScheduleResourceStatus } from '../../hooks/useScheduleResource'
 import { Checkbox } from '../../components/tailgrids/core/checkbox'
 import Button from '../../components/console/button'
@@ -27,13 +26,6 @@ const weekdays: Record<string, string> = {
   FRIDAY: 'Thứ Sáu',
   SATURDAY: 'Thứ Bảy',
   SUNDAY: 'Chủ Nhật',
-}
-
-const deliveryModes: Record<DeliveryMode, string> = {
-  PHYSICAL: 'Trực tiếp',
-  ONLINE: 'Trực tuyến',
-  HYBRID: 'Kết hợp',
-  OFFLINE: 'Ngoại tuyến',
 }
 
 interface Props {
@@ -69,7 +61,6 @@ export default function TimetableProposalPanel({
   const [sectionSelection, setSectionSelection] = useState<string[] | null>(null)
   const [sessionsPerWeek, setSessionsPerWeek] = useState(2)
   const [durationMinutes, setDurationMinutes] = useState(120)
-  const [preferredMode, setPreferredMode] = useState<DeliveryMode>('PHYSICAL')
   const [proposal, setProposal] = useState<TimetableProposalResponse | null>(null)
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -133,7 +124,6 @@ export default function TimetableProposalPanel({
             sectionTitle: section.title,
             sessionsPerWeek,
             durationMinutes,
-            preferredMode,
           })),
       })
       setProposal(result)
@@ -212,7 +202,7 @@ export default function TimetableProposalPanel({
           <DateField label="Đến ngày" name="proposalEndDate" value={endDate} onChange={(value) => { setEndDate(value); clearResult() }} min={startDate} disabled={controlsDisabled} required />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm font-medium text-text-primary">
             Buổi mỗi tuần
             <input
@@ -248,26 +238,6 @@ export default function TimetableProposalPanel({
               className={fieldClass + ' mt-1 w-full'}
               disabled={controlsDisabled}
               required
-            />
-          </label>
-          <label className="text-sm font-medium text-text-primary">
-            Hình thức
-            <SelectField
-              ariaLabel="Hình thức"
-              name="preferredMode"
-              value={preferredMode}
-              onChange={(nextValue) => {
-                setPreferredMode(nextValue as DeliveryMode)
-                clearResult()
-              }}
-              triggerClassName={fieldClass + ' mt-1 w-full'}
-              disabled={controlsDisabled}
-              options={[
-                { id: 'PHYSICAL', label: 'Trực tiếp' },
-                { id: 'ONLINE', label: 'Trực tuyến' },
-                { id: 'HYBRID', label: 'Kết hợp' },
-                { id: 'OFFLINE', label: 'Ngoại tuyến' },
-              ]}
             />
           </label>
         </div>
@@ -324,7 +294,7 @@ export default function TimetableProposalPanel({
                 <article key={`${schedule.sectionId}-${schedule.dayOfWeek}-${schedule.startTime}-${index}`} className="rounded-xl border border-card-border bg-card-background px-3 py-3">
                   <p className="m-0 text-sm font-medium text-text-primary">{schedule.sectionTitle}</p>
                   <p className="mt-1 mb-0 text-sm text-text-tertiary">
-                    {weekdays[schedule.dayOfWeek] ?? schedule.dayOfWeek} · {schedule.startTime.slice(0, 5)}–{schedule.endTime.slice(0, 5)} · {schedule.durationMinutes} phút · {deliveryModes[schedule.mode] ?? schedule.mode} · {schedule.teacherName}
+                    {weekdays[schedule.dayOfWeek] ?? schedule.dayOfWeek} · {schedule.startTime.slice(0, 5)}–{schedule.endTime.slice(0, 5)} · {schedule.durationMinutes} phút · {schedule.teacherName}
                   </p>
                   <p className="mt-1 mb-0 text-xs text-text-tertiary">
                     {schedule.projectedSessionDates.length} buổi trong kỳ
