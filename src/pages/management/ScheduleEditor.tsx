@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { localDateTimeToInstant, instantToLocalDateTimeInput, SCHEDULING_TIMEZONE } from '../../lib/scheduling'
-import type { CreateScheduleRequest, DeliveryMode, ScheduleResponse, UpdateScheduleRequest } from '../../types/scheduling'
+import type { CreateScheduleRequest, ScheduleResponse, UpdateScheduleRequest } from '../../types/scheduling'
 import type { UserSummary } from '../../services/userService'
 import Button from '../../components/console/button'
 import ConfirmDialog from '../../components/console/confirm-dialog'
@@ -43,8 +43,6 @@ export default function ScheduleEditor({
     title: initial?.title ?? '',
     startDateTime: initial ? instantToLocalDateTimeInput(initial.startTime, timezone) : '',
     endDateTime: initial ? instantToLocalDateTimeInput(initial.endTime, timezone) : '',
-    deliveryMode: initial?.deliveryMode ?? 'PHYSICAL',
-    location: initial?.location ?? '',
     description: initial?.description ?? '',
   }
   const [teacherId, setTeacherId] = useState(initial?.instructorId ?? '')
@@ -58,7 +56,7 @@ export default function ScheduleEditor({
   const updateFieldDraft = (event: FormEvent<HTMLFormElement>) => {
     const form = new FormData(event.currentTarget)
     setFieldsDirty(
-      (['title', 'startDateTime', 'endDateTime', 'deliveryMode', 'location', 'description'] as const)
+      (['title', 'startDateTime', 'endDateTime', 'description'] as const)
         .some((name) => String(form.get(name) ?? '') !== baseline[name])
     )
   }
@@ -102,8 +100,6 @@ export default function ScheduleEditor({
       startTime,
       endTime,
       timezone,
-      deliveryMode: String(form.get('deliveryMode') || 'PHYSICAL') as DeliveryMode,
-      location: String(form.get('location') || ''),
     }
     setValidationMessage('')
     if (initial) {
@@ -118,7 +114,7 @@ export default function ScheduleEditor({
       <ConsoleSheet open onClose={requestClose} closeDisabled={busy} title={initial ? 'Chỉnh sửa lịch học' : 'Tạo lịch học'}>
         <form className="flex flex-col gap-4" onSubmit={submit} onChange={updateFieldDraft}>
           {courseName && <Notice tone="info">Khóa: {courseName}</Notice>}
-          {initial?.deliveryMode === 'ONLINE' && (
+          {initial && (
             <Notice tone="warning">
               Lịch trực tuyến đã gắn phòng Zoom. Sửa giờ hoặc giáo viên ở đây không cập nhật phòng Zoom và lớp
               trực tuyến đã tạo; hãy kiểm tra lại link họp sau khi lưu.
@@ -149,26 +145,6 @@ export default function ScheduleEditor({
             {!teachersError && !teachersLoading && !initial && teachers.length === 0 && (
               <p className="text-xs text-text-tertiary">Chưa có giáo viên phù hợp.</p>
             )}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Hình thức">
-              <SelectField
-                ariaLabel="Hình thức"
-                name="deliveryMode"
-                disabled={busy}
-                defaultValue={initial?.deliveryMode ?? 'PHYSICAL'}
-                triggerClassName={fieldControlClass}
-                options={[
-                  { id: 'PHYSICAL', label: 'Trực tiếp' },
-                  { id: 'ONLINE', label: 'Trực tuyến' },
-                  { id: 'HYBRID', label: 'Kết hợp' },
-                  { id: 'OFFLINE', label: 'Ngoại tuyến' },
-                ]}
-              />
-            </Field>
-            <Field label="Phòng / địa điểm">
-              <input name="location" autoComplete="off" disabled={busy} defaultValue={initial?.location ?? ''} className={fieldControlClass} />
-            </Field>
           </div>
           <Field label="Mô tả">
             <textarea name="description" autoComplete="off" rows={3} disabled={busy} defaultValue={initial?.description ?? ''} className={textareaControlClass} />

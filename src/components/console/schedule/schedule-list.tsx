@@ -1,6 +1,6 @@
-import { ArrowUpRight, CalendarClock, MapPin } from '../icons'
+import { ArrowUpRight, CalendarClock } from '../icons'
 import type { ScheduleCalendarItem } from '../../../types/scheduling'
-import { itemDateKey, itemLocation, itemSubtitle, itemTimeLabel, itemTitle, localDateLabel, sortScheduleItems } from '../../../lib/scheduling'
+import { itemDateKey, itemSubtitle, itemTimeLabel, itemTitle, localDateLabel, sortScheduleItems } from '../../../lib/scheduling'
 import Button from '../button'
 import Status from '../status'
 import ScheduleStatusBadge from './schedule-status-badge'
@@ -44,12 +44,6 @@ export default function ScheduleList({ items, onSelect, timezone }: Props) {
                   <p className="mt-1 truncate text-sm text-text-tertiary">{itemSubtitle(item)}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-tertiary">
                     <time dateTime={item.item.startTime}>{itemTimeLabel(item, timezone)}</time>
-                    {itemLocation(item) && (
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin size={12} aria-hidden="true" />
-                        {itemLocation(item)}
-                      </span>
-                    )}
                     <span>{scheduleKindLabel(item.kind)}</span>
                   </div>
                 </div>

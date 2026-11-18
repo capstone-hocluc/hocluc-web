@@ -596,9 +596,7 @@ export default function SchedulingPage({ role, navigation }: Props) {
       {deleteSchedule && (
         <ConfirmDialog
           title="Hủy lịch học?"
-          description={deleteSchedule.deliveryMode === 'ONLINE'
-            ? 'Chỉ lịch này bị hủy. Phòng Zoom và lớp trực tuyến đã tạo cho lịch này không tự động bị hủy; hãy xử lý riêng để học viên không vào nhầm phòng.'
-            : 'Chỉ lịch này bị hủy.'}
+          description="Chỉ lịch này bị hủy. Phòng Zoom và lớp trực tuyến đã tạo cho lịch này không tự động bị hủy; hãy xử lý riêng để học viên không vào nhầm phòng."
           cancelLabel="Quay lại"
           confirmLabel="Hủy lịch"
           variant="danger"

@@ -1,7 +1,7 @@
 import { ExternalLink } from '../icons'
 import { useState, type ReactNode } from 'react'
 import type { ScheduleCalendarItem } from '../../../types/scheduling'
-import { itemDateKey, itemLocation, itemMeetingUrl, itemTimeLabel, itemTimezone, itemTitle, localDateLabel } from '../../../lib/scheduling'
+import { itemDateKey, itemMeetingUrl, itemTimeLabel, itemTimezone, itemTitle, localDateLabel } from '../../../lib/scheduling'
 import ConsoleSheet from '../sheet'
 import Button from '../button'
 import Status from '../status'
@@ -44,7 +44,6 @@ function facts(item: ScheduleCalendarItem, displayTimezone: string | undefined) 
     item.kind === 'classSession'
       ? { label: 'Phần học', value: item.item.sectionTitle }
       : { label: 'Khóa học', value: item.kind === 'schedule' ? item.item.courseName : null },
-    { label: 'Địa điểm', value: itemLocation(item) },
     { label: 'Sĩ số dự kiến', value: item.kind === 'schedule' ? item.item.enrolledStudentsCount : null },
   ]
 }
