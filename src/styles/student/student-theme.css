@@ -156,6 +156,27 @@ html[data-learner] .dropdown-field-trigger {
   font-weight: 500;
 }
 
+html[data-learner]:has(.student-layout) [data-dropdown-content] {
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px #14385818;
+}
+html[data-learner]:has(.student-layout) [data-dropdown-content] [role='listbox'] {
+  max-height: min(256px, calc(var(--radix-popover-content-available-height, 320px) - 64px));
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  border-radius: 12px;
+}
+html[data-learner]:has(.student-layout) [data-dropdown-content] [role='option'] {
+  min-height: 40px;
+  border-radius: 10px;
+}
+html[data-learner]:has(.student-layout) [data-dropdown-option-label] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 360px) {
   .student-topbar hocluc-logo::part(wordmark) {
     display: none;

@@ -40,6 +40,38 @@ async function setup(page: Page, authenticated = true) {
   return { state, papers, requestedCourses, setListStatus: (status: number) => { listStatus = status }, setCompetencyStatus: (status: number) => { competencyStatus = status } }
 }
 
+test('Student review workspace navigates all answers, filters verdicts and scrolls internally', async ({ page }, testInfo) => {
+  const { state } = await setup(page)
+  state.studentStatus = 'GRADED'
+  await page.route(`**/api/v1/assessments/quizzes/${QUIZ_IDS.quiz}`, route => route.fulfill({ json: { success: true, data: {
+    id: QUIZ_IDS.quiz, title: 'Đề thi xem lại', type: 'EXAM', showAnswers: true, questions: [], attempts: [{ attemptId: QUIZ_IDS.attempt, attemptNumber: 1, status: 'GRADED', score: 4, maxScore: 12, percentage: 33.33, timeSpentSeconds: 120, submittedAt: '2026-11-18T04:00:00Z' }],
+  } } }))
+  await page.route(`**/api/v1/assessments/attempts/${QUIZ_IDS.attempt}/review`, route => route.fulfill({ json: { success: true, data: {
+    attemptId: QUIZ_IDS.attempt, quizId: QUIZ_IDS.quiz, totalQuestions: 12, correctCount: 4, questions: Array.from({ length: 12 }, (_, index) => ({
+      questionId: `review-${index}`, sequence: index + 1, questionText: `Nội dung câu hỏi ${index + 1}`, answered: index % 3 !== 2, correct: index % 3 === 0, selectedOptionId: index % 3 === 2 ? null : index % 3 === 0 ? 'a' : 'b', explanation: `Giải thích câu ${index + 1}`,
+      options: [{ optionId: 'a', optionText: 'Đáp án đúng', correct: true, sequence: 1 }, { optionId: 'b', optionText: 'Đáp án sai', correct: false, sequence: 2 }],
+    })),
+  } } }))
+  await page.goto(`/student/assessments/attempts/${QUIZ_IDS.attempt}/review`)
+  const panel = page.getByRole('region', { name: 'Nội dung xem lại bài' })
+  await expect(panel.getByText('Nội dung câu hỏi 12', { exact: true })).toHaveCount(1)
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true)
+  await page.getByRole('navigation', { name: 'Danh sách câu hỏi' }).getByRole('button', { name: 'Câu 12, Chưa trả lời', exact: true }).click()
+  await expect(panel.getByText('Nội dung câu hỏi 12', { exact: true })).toBeVisible()
+  expect(await panel.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  const filters = page.getByRole('group', { name: 'Lọc câu hỏi xem lại' })
+  await filters.getByRole('button', { name: /^Sai\s*4$/ }).click()
+  await expect(panel.getByText('Nội dung câu hỏi 1', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Danh sách câu hỏi' }).getByRole('button')).toHaveCount(4)
+  await filters.getByRole('button', { name: /^Tất cả\s*12$/ }).click()
+  await panel.evaluate(element => element.scrollTop = 0)
+  await page.screenshot({ path: testInfo.outputPath('student-review-desktop.png') })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('student-review-mobile.png') })
+})
+
 test('Student account compacts and paginates orders, sorts wallet history and simplifies the account menu', async ({ page }) => {
   await setup(page)
   await page.route('**/api/v1/orders/me', route => route.fulfill({ json: { success: true, data: Array.from({ length: 7 }, (_, index) => ({
@@ -219,13 +251,45 @@ test('free-exams: the selected paper uses the quiz API, persists its result and 
   expect(state.pageErrors).toEqual([])
 })
 
+test('Student dropdowns constrain long course titles and support search on mobile', async ({ page }, testInfo) => {
+  const { papers } = await setup(page)
+  const title = 'Luyện thi ĐGNL ĐHQG-HCM 2027 · Lộ trình Dài hạn – Từ nền tảng đến bứt phá và luyện tập chuyên sâu'
+  papers.filter(exam => exam.courseId === QUIZ_IDS.course).forEach(exam => { exam.courseTitle = title })
+  await page.route('**/api/v1/courses/main', route => route.fulfill({ json: { success: true, data: [
+    { id: QUIZ_IDS.course, title, courseType: 'MAIN' },
+    { id: QUIZ_IDS.otherCourse, title: 'Khóa B', courseType: 'MAIN' },
+  ] } }))
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(`/student/learning-profile?tab=learning&courseId=${QUIZ_IDS.course}`)
+  const trigger = page.getByRole('button', { name: 'Khóa dùng để đánh giá', exact: true })
+  await trigger.click()
+  const option = page.getByRole('option', { name: title, exact: true })
+  await expect(option).toBeVisible()
+  const menu = page.locator('[data-dropdown-content]')
+  const bounds = await menu.boundingBox()
+  const buttonBounds = await trigger.boundingBox()
+  expect(bounds!.width).toBeLessThanOrEqual(buttonBounds!.width + 1)
+  expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390)
+  expect(await option.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('student-dropdown-long-mobile.png'), fullPage: true })
+  await page.getByRole('searchbox', { name: 'Tìm khóa dùng để đánh giá' }).fill('Khóa B')
+  await expect(page.getByRole('option')).toHaveCount(1)
+  await page.getByRole('option', { name: 'Khóa B', exact: true }).click()
+  await expect(trigger).toContainText('Khóa B')
+  await trigger.click()
+  await page.keyboard.press('Escape')
+  await expect(menu).toHaveCount(0)
+})
+
 test('free-exams: course switching shows empty analysis, errors and retry without stale results', async ({ page }, testInfo) => {
   const { requestedCourses, setCompetencyStatus, state } = await setup(page)
   await page.goto(`/student/learning-profile?tab=learning&courseId=${QUIZ_IDS.course}`)
   const panel = page.getByRole('region', { name: 'Đánh giá năng lực theo khóa', exact: true })
   await expect(panel.getByText('Nâng cao', { exact: true })).toBeVisible()
   setCompetencyStatus(500)
-  await panel.getByRole('combobox', { name: 'Khóa dùng để đánh giá' }).selectOption(QUIZ_IDS.otherCourse)
+  await panel.getByRole('button', { name: 'Khóa dùng để đánh giá', exact: true }).click()
+  await page.getByRole('option', { name: 'Khóa B', exact: true }).click()
   await expect(panel.getByText('Không thể tải đánh giá năng lực', { exact: true })).toBeVisible()
   await expect(panel.getByText('Nâng cao', { exact: true })).toHaveCount(0)
   setCompetencyStatus(200)
@@ -233,7 +297,7 @@ test('free-exams: course switching shows empty analysis, errors and retry withou
   await expect(panel.getByText('Bạn chưa có kết quả đánh giá cho khóa này', { exact: true })).toBeVisible()
   await expect(panel.getByText('Đề chưa làm của B', { exact: true })).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('combobox', { name: 'Khóa dùng để đánh giá' })).toHaveValue(QUIZ_IDS.otherCourse)
+  await expect(page.getByRole('button', { name: 'Khóa dùng để đánh giá', exact: true })).toContainText('Khóa B')
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('course-competency-empty-mobile.png'), fullPage: true })
@@ -409,11 +473,14 @@ test('Student assessment catalog combines enrolled course exams and lesson tests
   await expect(list.getByRole('listitem')).toHaveCount(2)
   await expect(list.getByRole('listitem').filter({ hasText: 'Đề đã làm được 0 điểm' })).toHaveAttribute('data-completed', 'true')
   await page.getByRole('tab', { name: /^Tất cả/ }).click()
-  await page.getByRole('combobox', { name: 'Loại bài kiểm tra', exact: true }).selectOption('LESSON')
+  await page.getByRole('button', { name: 'Loại bài kiểm tra', exact: true }).click()
+  await page.getByRole('option', { name: 'Kiểm tra cuối bài', exact: true }).click()
   await expect(list).toContainText('Kiểm tra cuối bài đang khóa')
   await expect(list.getByRole('listitem')).toHaveCount(1)
-  await page.getByRole('combobox', { name: 'Loại bài kiểm tra', exact: true }).selectOption('ALL')
-  await page.getByRole('combobox', { name: 'Khóa học', exact: true }).selectOption(QUIZ_IDS.otherCourse)
+  await page.getByRole('button', { name: 'Loại bài kiểm tra', exact: true }).click()
+  await page.getByRole('option', { name: 'Tất cả loại bài', exact: true }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await page.getByRole('option', { name: 'Khóa bổ trợ B', exact: true }).click()
   await page.getByRole('searchbox', { name: 'Tìm kiếm bài kiểm tra' }).fill('Quiz dùng chung')
   await expect(list.getByRole('listitem')).toHaveCount(1)
   const returnUrl = page.url()
@@ -422,8 +489,9 @@ test('Student assessment catalog combines enrolled course exams and lesson tests
   await page.reload()
   await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
   await expect(page).toHaveURL(returnUrl)
-  await expect(page.getByRole('combobox', { name: 'Khóa học', exact: true })).toHaveValue(QUIZ_IDS.otherCourse)
-  await page.getByRole('combobox', { name: 'Khóa học', exact: true }).selectOption('')
+  await expect(page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true })).toContainText('Khóa bổ trợ B')
+  await page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await page.getByRole('option', { name: 'Tất cả khóa học', exact: true }).click()
   await page.getByRole('searchbox', { name: 'Tìm kiếm bài kiểm tra' }).fill('')
   await page.screenshot({ path: testInfo.outputPath('student-assessments-course-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })

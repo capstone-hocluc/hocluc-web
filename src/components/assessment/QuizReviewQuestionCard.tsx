@@ -28,7 +28,7 @@ function QuizReviewQuestionCard({ question, index }: QuizReviewQuestionCardProps
       )}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2.5">
-        <span className="grid size-9 place-items-center rounded-xl bg-assess-soft text-base font-bold text-assess">
+        <span className="grid size-9 place-items-center rounded-xl bg-surface-brand text-base font-bold text-primary-text">
           {index + 1}
         </span>
         <span className="text-base font-semibold text-text-heading">Câu {index + 1}</span>

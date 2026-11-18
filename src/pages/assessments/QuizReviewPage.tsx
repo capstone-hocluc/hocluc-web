@@ -1,15 +1,11 @@
-import QuizResultSummary from '../../components/assessment/QuizResultSummary'
-import QuizReviewQuestionCard from '../../components/assessment/QuizReviewQuestionCard'
-import BackLink from '../../components/student/common/BackLink'
+import ReviewWorkspace from '../../components/assessment/ReviewWorkspace'
+import styles from '../../components/assessment/AssessmentWorkspace.module.css'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
-import Button from '../../components/ui/Button'
-import Notice from '../../components/ui/Notice'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getAttempt, getAttemptReview, getQuiz, type QuizReview } from '../../services/assessmentService'
 import { ApiError } from '../../lib/api'
-import { bySequence } from '../../lib/sequence'
 
 interface QuizReviewPageProps {
   attemptId: string
@@ -48,58 +44,15 @@ function QuizReviewPage({ attemptId, onBackToQuiz, backLabel = 'Quay lại bài 
     return { quiz, result, review, answersHidden, reviewFailed }
   }, [attemptId])
 
-  return (
-    <StudentPageContainer width="reading" spacing="stack">
-      <ResourceState
-        status={status}
-        errorMessage={errorMessage}
-        onRetry={reload}
-        loading={
-          <>
-            <Skeleton className="h-40 rounded-xl" />
-            <Skeleton className="h-80 rounded-xl" />
-          </>
-        }
-        forbidden={{ title: 'Bạn chưa có quyền xem kết quả bài kiểm tra này.' }}
-        notFound={{ title: 'Không tìm thấy kết quả bài kiểm tra.' }}
-        error={{ title: 'Không thể tải kết quả bài kiểm tra.' }}
-      />
-
-      {status === 'ready' && data && (
-        <>
-          <BackLink onClick={() => onBackToQuiz(data.quiz.id)}>{backLabel}</BackLink>
-
-          <QuizResultSummary title={data.quiz.title} result={data.result} review={data.review} />
-          {data.quiz.type === 'PLACEMENT' && data.quiz.sectionCourseId && onOpenCompetency && <Button appearance="outline" onClick={() => onOpenCompetency(data.quiz.sectionCourseId!)}>Xem đánh giá năng lực</Button>}
-          {data.quiz.type === 'PLACEMENT' && !data.quiz.sectionCourseId && <Notice>Đề này không gắn với khóa học. Kết quả được lưu trong lịch sử của đề, không cộng vào đánh giá năng lực theo khóa.</Notice>}
-
-          {data.answersHidden && <Notice>Bài kiểm tra này không hiển thị đáp án sau khi nộp.</Notice>}
-          {data.reviewFailed && (
-            <Notice tone="warning">
-              Không thể tải chi tiết đáp án.
-              <Button size="sm" appearance="outline" onClick={reload}>Thử lại</Button>
-            </Notice>
-          )}
-          {data.review && (
-            <section className="flex flex-col gap-4">
-              <h2 className="text-xl font-bold tracking-[-0.2px] text-text-heading">
-                Chi tiết bài làm
-              </h2>
-              <div className="flex flex-col gap-4">
-                {bySequence(data.review.questions).map((question, index) => (
-                  <QuizReviewQuestionCard
-                    key={question.questionId}
-                    question={question}
-                    index={index}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
-    </StudentPageContainer>
-  )
+  return <StudentPageContainer width="fluid" className={styles.page}>
+    <ResourceState status={status} errorMessage={errorMessage} onRetry={reload}
+      loading={<><Skeleton className="h-40 rounded-xl" /><Skeleton className="h-80 rounded-xl" /></>}
+      forbidden={{ title: 'Bạn chưa có quyền xem kết quả bài kiểm tra này.' }}
+      notFound={{ title: 'Không tìm thấy kết quả bài kiểm tra.' }}
+      error={{ title: 'Không thể tải kết quả bài kiểm tra.' }} />
+    {status === 'ready' && data && <ReviewWorkspace key={attemptId} {...data} onRetry={reload}
+      onBack={() => onBackToQuiz(data.quiz.id)} backLabel={backLabel} onOpenCompetency={onOpenCompetency} />}
+  </StudentPageContainer>
 }
 
 export default QuizReviewPage

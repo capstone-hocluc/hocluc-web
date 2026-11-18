@@ -12,6 +12,6 @@
 .sources [role='tab'][data-state='active'] { background: var(--color-surface); color: var(--color-primary-text); }
 .panel { min-width: 0; padding: 22px; border-radius: 24px; background: var(--color-surface); }
 .searchFilters { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
-.searchFilters label { display: grid; flex: 1 1 200px; gap: 8px; min-width: 0; color: var(--color-text-secondary); font-size: 13px; }
+.searchFilters label, .filterField { display: grid; flex: 1 1 200px; gap: 8px; min-width: 0; color: var(--color-text-secondary); font-size: 13px; }
 .searchFilters input, .searchFilters select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--color-line-card); border-radius: 12px; background: var(--color-surface); color: var(--color-text-heading); }
 @media (max-width: 640px) { .banner { padding: 8px 8px 0; } .heading { margin-bottom: 20px; } .decoration { inset-inline: 0; opacity: 0.5; } .panel { padding: 16px; } .sources [role='tab'] { padding-inline: 14px; font-size: 13px; } }

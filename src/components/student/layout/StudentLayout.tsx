@@ -38,6 +38,7 @@ function StudentLayout({
   const isAccount = /^\/student\/(profile|wallet)\/?$/.test(workspacePath)
   const isLesson = /^\/student\/courses\/[^/]+\/study\/lessons\/[^/]+\/?$/.test(workspacePath)
     || /^\/student\/assessments\/quizzes\/[^/]+\/attempts\/[^/]+\/?$/.test(workspacePath)
+    || /^\/student\/assessments\/attempts\/[^/]+\/review\/?$/.test(workspacePath)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   useEffect(() => {

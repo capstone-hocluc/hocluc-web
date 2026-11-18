@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import {
   BookOpen,
-  ClipboardCheck,
+  FileText,
   MailQuestion,
   BarChart3,
   User,
@@ -48,7 +48,7 @@ export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Luyện tập',
     items: [
-      { key: 'assessments', label: 'Luyện đề', icon: ClipboardCheck, path: studentRoutes.assessments() },
+      { key: 'assessments', label: 'Luyện đề', icon: FileText, path: studentRoutes.assessments() },
       { key: 'chat', label: 'Hỏi Mentor', icon: MailQuestion, path: studentRoutes.chat() },
     ],
   },

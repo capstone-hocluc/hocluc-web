@@ -8,6 +8,7 @@ import { hasCompletedExam } from '../../components/student/course/courseExamStat
 import examStyles from '../../components/student/course/CourseExams.module.css'
 import MascotState from '../../components/common/MascotState'
 import Button from '../../components/ui/Button'
+import DropdownField from '../../components/ui/DropdownField'
 import Notice from '../../components/ui/Notice'
 import Skeleton from '../../components/ui/Skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs'
@@ -86,10 +87,12 @@ function AssessmentCatalog({ source, onOpenQuiz, onOpenFree }: { source: Source;
       {failures.length > 0 && <Notice tone="warning" className="mb-4"><div className="min-w-0 flex-1"><p>Chưa tải được bài kiểm tra của một số khóa học.</p><ul className="mt-1 text-xs font-normal">{failures.map(item => <li key={`${item.courseId}:${item.title}`}>{item.title}: {item.message}</li>)}</ul></div><Button size="sm" appearance="outline" onClick={resource.reload}>Thử lại các khóa học</Button></Notice>}
       <div className={styles.searchFilters}>
         <label>Tìm kiếm bài kiểm tra<input type="search" value={filters.search} placeholder="Nhập tên đề…" onChange={event => update({ search: event.target.value })} /></label>
-        <label>Khóa học<select value={filters.course} onChange={event => update({ course: event.target.value })}><option value="">Tất cả khóa học</option>
-          {filters.course && !data.courses.some(course => course.id === filters.course) && <option value={filters.course}>Khóa đang chọn</option>}
-          {data.courses.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>
-        {source === 'course' && <label>Loại bài kiểm tra<select value={filters.type} onChange={event => update({ type: event.target.value })}>{types.map(type => <option key={type} value={type}>{type === 'ALL' ? 'Tất cả loại bài' : quizTypeLabel(type)}</option>)}</select></label>}
+        <div className={styles.filterField}><span>Khóa học</span><DropdownField ariaLabel="Khóa học" value={filters.course} onChange={value => update({ course: value ?? '' })} isSearchable options={[
+          { id: '', label: 'Tất cả khóa học' },
+          ...(filters.course && !data.courses.some(course => course.id === filters.course) ? [{ id: filters.course, label: 'Khóa đang chọn' }] : []),
+          ...data.courses.map(course => ({ id: course.id, label: course.title })),
+        ]} /></div>
+        {source === 'course' && <div className={styles.filterField}><span>Loại bài kiểm tra</span><DropdownField ariaLabel="Loại bài kiểm tra" value={filters.type} onChange={value => update({ type: value ?? 'ALL' })} options={types.map(type => ({ id: type, label: type === 'ALL' ? 'Tất cả loại bài' : quizTypeLabel(type) }))} /></div>}
       </div>
       <div className={examStyles.toolbar}>
         <Tabs value={filters.status} onValueChange={value => update({ status: value as StatusFilter })}>

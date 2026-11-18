@@ -1,5 +1,6 @@
 import { ArrowRight, CheckCircle2, Target } from '../../console/icons'
 import Button from '../../ui/Button'
+import DropdownField from '../../ui/DropdownField'
 import Card from '../../ui/Card'
 import Progress from '../../ui/Progress'
 import StatusBadge from '../../ui/StatusBadge'
@@ -20,16 +21,16 @@ export default function CourseCompetencyPanel({ competency, onNavigate, compact 
   const options = courses.data ?? []
   return <Card as="section" aria-label="Đánh giá năng lực theo khóa" className="min-w-0 space-y-4 rounded-3xl p-5 max-[640px]:p-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><h2 className="text-lg font-bold">Đánh giá năng lực theo khóa</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">Tổng hợp từ lần thi chính thức đầu tiên đã chấm của mỗi đề miễn phí thuộc khóa. Thi lại và luyện tập không cộng vào phân tích.</p></div>
+      <div><h2 className="text-lg font-bold">Đánh giá năng lực theo khóa</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">Tổng hợp từ lần thi chính thức đầu tiên đã chấm của mỗi đề miễn phí thuộc khóa.</p></div>
       <Button size="sm" appearance="outline" className="border-primary-text text-primary-text" onClick={() => onNavigate(studentRoutes.assessments('free', courseId || undefined))}>Làm đề miễn phí<ArrowRight size={16} /></Button>
     </div>
     <ResourceState status={courses.status} errorMessage={courses.errorMessage} onRetry={courses.reload} imageSrc="/mascot/03.png" loading={<Skeleton className="h-12" />} error={{ title: 'Không thể tải danh sách khóa để đánh giá' }} />
-    {(options.length > 0 || courseId) && <label className="grid max-w-xl gap-2 text-sm font-semibold">Khóa dùng để đánh giá
-      <select className="min-h-11 min-w-0 rounded-xl border border-line-card bg-surface px-3 text-text-heading" value={courseId} onChange={event => changeCourse(event.target.value)}>
-        {courseId && !options.some(course => course.id === courseId) && <option value={courseId}>{data?.courseTitle ?? 'Khóa đang chọn'}</option>}
-        {options.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}
-      </select>
-    </label>}
+    {(options.length > 0 || courseId) && <div className="grid max-w-xl gap-2 text-sm font-semibold"><span>Khóa dùng để đánh giá</span>
+      <DropdownField ariaLabel="Khóa dùng để đánh giá" value={courseId} onChange={value => { if (value) changeCourse(value) }} isSearchable options={[
+        ...(courseId && !options.some(course => course.id === courseId) ? [{ id: courseId, label: data?.courseTitle ?? 'Khóa đang chọn' }] : []),
+        ...options.map(course => ({ id: course.id, label: course.title })),
+      ]} />
+    </div>}
     {courseId && <ResourceState status={status} errorMessage={errorMessage} onRetry={reload} imageSrc="/mascot/03.png" loading={<Skeleton className="h-48" />} forbidden={{ title: 'Bạn chưa có quyền xem đánh giá này' }} notFound={{ title: 'Không tìm thấy khóa dùng để đánh giá' }} error={{ title: 'Không thể tải đánh giá năng lực' }} />}
     {courses.status === 'ready' && !courseId && <MascotState imageSrc="/mascot/03.png" title="Chưa có khóa để đánh giá" message="Bạn vẫn có thể làm các đề thi thử miễn phí." />}
     {status === 'ready' && data && <>
