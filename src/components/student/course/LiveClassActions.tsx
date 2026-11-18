@@ -40,7 +40,8 @@ function LiveClassActions({ liveClass, size = 'sm', joinLabel = 'Tham gia' }: Li
   const [loadedAt] = useState(() => Date.now())
   const notStarted = liveClass.status === 'SCHEDULED' && new Date(liveClass.startTime).getTime() > loadedAt
   const canJoin = booked && liveClass.joinable
-  const canReplay = booked && liveClass.status === 'COMPLETED'
+  // anyone studying the course replays a class held, booked or not
+  const canReplay = liveClass.status === 'COMPLETED'
 
   // The link is fetched up front so "Tham gia" is a real link: opening a tab after an await gets blocked.
   useEffect(() => {
