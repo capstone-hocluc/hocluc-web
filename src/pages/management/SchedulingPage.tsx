@@ -45,6 +45,7 @@ import ClassSessionEditor from './ClassSessionEditor'
 import RecurringClassEditor from './RecurringClassEditor'
 import ScheduleEditor from './ScheduleEditor'
 import TimetableProposalPanel from './TimetableProposalPanel'
+import LiveTimetablePanel from './LiveTimetablePanel'
 import { getErrorMessage } from '../../lib/errors'
 import type { ManagementRole } from '../../components/management/ManagementRouteGuard'
 
@@ -477,6 +478,15 @@ export default function SchedulingPage({ role, navigation }: Props) {
             }}
             onConfirmed={calendar.reload}
           />
+          {role === 'STAFF' && courseDetails.status === 'ready' && (
+            <LiveTimetablePanel
+              key={'live-' + activeCourseId}
+              courseId={activeCourseId}
+              phases={courseDetails.data?.phases ?? []}
+              teachers={teachers}
+              onCreated={calendar.reload}
+            />
+          )}
         </>
       )}
 

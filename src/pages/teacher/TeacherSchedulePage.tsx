@@ -27,6 +27,7 @@ import ScheduleList from '../../components/console/schedule/schedule-list'
 import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
 import ClassSessionRecordingsPanel from '../../components/console/schedule/class-session-recordings-panel'
 import ScheduleAttendancePanel from '../../components/console/schedule/schedule-attendance-panel'
+import TeacherLiveClassesPanel from '../../components/teacher/TeacherLiveClassesPanel'
 
 export default function TeacherSchedulePage() {
   const { profile } = useCurrentUser()
@@ -106,6 +107,7 @@ export default function TeacherSchedulePage() {
           <ScheduleCalendar items={items} date={date} onDateChange={changeDate} onSelect={selectItem} />
         )}
       </ScheduleResourceState>
+      {profile?.id && <TeacherLiveClassesPanel teacherId={profile.id} />}
       <ScheduleDetailsSheet
         item={selectedItem}
         onClose={closeDetails}
