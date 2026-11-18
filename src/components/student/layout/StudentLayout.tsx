@@ -35,6 +35,7 @@ function StudentLayout({
   children,
 }: StudentLayoutProps) {
   const workspacePath = currentPath.split('?')[0]
+  const isAccount = /^\/student\/(profile|wallet)\/?$/.test(workspacePath)
   const isLesson = /^\/student\/courses\/[^/]+\/study\/lessons\/[^/]+\/?$/.test(workspacePath)
     || /^\/student\/assessments\/quizzes\/[^/]+\/attempts\/[^/]+\/?$/.test(workspacePath)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -61,7 +62,7 @@ function StudentLayout({
         'dashboard-layout student-layout grid min-h-screen grid-rows-[72px_minmax(0,1fr)] bg-app-bg text-text-heading transition-[grid-template-columns] duration-250',
         sidebarCollapsed ? 'grid-cols-[80px_minmax(0,1fr)]' : 'grid-cols-[248px_minmax(0,1fr)]',
         'max-[1180px]:grid-cols-[80px_minmax(0,1fr)] max-[760px]:block',
-        isLesson && styles.lessonLayout
+        (isLesson || isAccount) && styles.lessonLayout
       )}
     >
       <a
@@ -97,7 +98,7 @@ function StudentLayout({
       <main
         id="student-content"
         tabIndex={-1}
-        className={cn('col-start-2 row-start-2 min-w-0 px-8 pt-8 pb-12 max-[760px]:px-4 max-[760px]:pt-6 max-[760px]:pb-8', isLesson && styles.lessonMain)}
+        className={cn('col-start-2 row-start-2 min-w-0 px-8 pt-8 pb-12 max-[760px]:px-4 max-[760px]:pt-6 max-[760px]:pb-8', isLesson && styles.lessonMain, isAccount && styles.accountMain)}
       >
         <LearningProfileFlow currentPath={currentPath} onNavigate={onNavigate}>{children}</LearningProfileFlow>
       </main>

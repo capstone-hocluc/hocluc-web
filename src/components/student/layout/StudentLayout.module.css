@@ -11,6 +11,12 @@
   padding-bottom: 20px;
 }
 
+.accountMain {
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 24px;
+}
+
 @media (max-width: 760px) {
   .lessonLayout {
     display: grid;
@@ -21,5 +27,11 @@
     grid-column: 1;
     padding-top: 12px;
     padding-bottom: 12px;
+  }
+
+  .accountMain {
+    grid-column: 1;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
 }

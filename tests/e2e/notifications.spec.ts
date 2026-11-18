@@ -53,6 +53,11 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     const { state, base } = await fixture(page, role)
     await page.goto(role === 'STUDENT' ? '/student/assessments/placement' : `/console/${area}/quizzes`)
     await expect(visibleBell(page)).toHaveAccessibleDescription('3 thông báo chưa đọc')
+    if (role === 'STUDENT') {
+      expect(await visibleBell(page).evaluate(element => parseFloat(getComputedStyle(element).borderRadius) >= element.clientHeight / 2)).toBe(true)
+      await expect(visibleBell(page).locator('span[aria-hidden="true"]')).toHaveCSS('background-color', 'rgb(253, 137, 69)')
+      await expect(visibleBell(page)).toHaveCSS('color', 'rgb(255, 255, 255)')
+    }
     await visibleBell(page).click()
     await page.getByRole('button', { name: 'Xem thông báo: Thông báo QA 1', exact: true }).click()
     const detail = page.getByRole('dialog', { name: 'Chi tiết thông báo', exact: true })
@@ -64,6 +69,10 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     await visibleBell(page).click()
     await page.getByRole('button', { name: 'Đánh dấu đã đọc tất cả', exact: true }).click()
     await expect(visibleBell(page)).toHaveAccessibleDescription('0 thông báo chưa đọc')
+    if (role === 'STUDENT') {
+      await expect(visibleBell(page)).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+      await expect(visibleBell(page).locator('span[aria-hidden="true"]')).toHaveCount(0)
+    }
     await page.keyboard.press('Escape')
     await visibleBell(page).click()
     await expect(page.getByLabel('Chưa đọc', { exact: true })).toHaveCount(0)

@@ -22,6 +22,10 @@ export function MyOrdersContent({ onOpenOrder, onBrowseCourses, student = false 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
+  const [page, setPage] = useState(1)
+  const sortedOrders = [...orders].sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0))
+  const pages = Math.max(1, Math.ceil(sortedOrders.length / 5))
+  const currentPage = Math.min(page, pages)
   useEffect(() => {
     let active = true
     getMyOrders()
@@ -44,7 +48,11 @@ export function MyOrdersContent({ onOpenOrder, onBrowseCourses, student = false 
   if (student) return <div className="space-y-4">
     {loading ? <Skeleton className="h-48 rounded-2xl" /> : error ? <Notice role="alert" tone="danger">
       {error}<Button appearance="outline" size="sm" onClick={() => { setLoading(true); setReload((value) => value + 1) }}>Thử lại</Button>
-    </Notice> : orders.length ? orders.map((order) => <OrderCard key={order.id} order={order} onOpen={onOpenOrder} student />)
+    </Notice> : orders.length ? <>
+      <p className="text-xs text-text-secondary">{orders.length} đơn hàng · Mới nhất trước</p>
+      <div className="space-y-2.5">{sortedOrders.slice((currentPage - 1) * 5, currentPage * 5).map((order) => <OrderCard key={order.id} order={order} onOpen={onOpenOrder} student />)}</div>
+      {pages > 1 && <nav aria-label="Phân trang đơn hàng" className="flex items-center justify-end gap-2 text-xs text-text-secondary"><span>Trang {currentPage}/{pages}</span><Button size="sm" appearance="outline" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Trước</Button><Button size="sm" appearance="outline" disabled={currentPage === pages} onClick={() => setPage(currentPage + 1)}>Sau</Button></nav>}
+    </>
       : <MascotState title="Bạn chưa có đơn hàng nào" message="Đơn mua khóa học và gói Sao sẽ xuất hiện tại đây."
         actionLabel="Khám phá khóa học" onAction={onBrowseCourses} />}
   </div>

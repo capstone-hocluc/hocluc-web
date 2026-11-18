@@ -36,7 +36,7 @@ function StudentWalletPage({ onOpenPayment }: StudentWalletPageProps) {
 
 export function StudentWalletContent({ onOpenPayment }: StudentWalletPageProps) {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-5">
       <BalanceCard />
       <Packs onOpenPayment={onOpenPayment} />
       <History />
@@ -52,10 +52,10 @@ function BalanceCard() {
   return (
     <>
       {balanceError && <BalanceLoadError hasPreviousBalance />}
-      <Card variant="panel" radius="lg" padding="lg" className="flex flex-wrap items-center gap-5">
-        <CreditIcon size={64} />
+      <Card variant="panel" radius="lg" padding="none" className="flex flex-wrap items-center gap-4 p-4">
+        <CreditIcon size={44} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="text-[34px] leading-none font-bold text-text-heading tabular-nums">
+          <p className="text-[28px] leading-none font-bold text-text-heading tabular-nums">
             {balance.available.toLocaleString('vi-VN')}
             <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
           </p>
@@ -108,8 +108,8 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
 
   return (
     <section>
-      <SectionHeader title={`Mua ${CREDIT_UNIT}`} />
-      <div className="mt-4 flex flex-col gap-4">
+      <SectionHeader title={`Mua ${CREDIT_UNIT}`} titleClassName="text-lg max-[760px]:text-lg" />
+      <div className="mt-3 flex flex-col gap-3">
         {error && (
           <Notice tone="warning" className="flex flex-wrap items-center gap-3">
             <span>{error.message}</span>
@@ -137,15 +137,15 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
           <MascotState title="Chưa có gói nào đang bán" />
         )}
         {status === 'ready' && packs && packs.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
+          <div className="grid max-h-[360px] grid-cols-3 gap-3 overflow-y-auto p-1 max-[1100px]:grid-cols-2 max-[560px]:grid-cols-1" role="region" aria-label="Các gói Sao" tabIndex={0}>
             {packs.map((pack) => (
-              <Card key={pack.id} variant="elevated" radius="lg" padding="lg" className="flex flex-col items-center gap-3 text-center">
-                <CreditIcon size={44} />
-                <p className="text-2xl font-bold text-text-heading tabular-nums">
+              <Card key={pack.id} variant="elevated" radius="lg" padding="none" className="flex flex-col items-center gap-2 p-3 text-center">
+                <CreditIcon size={28} />
+                <p className="text-xl font-bold text-text-heading tabular-nums">
                   {pack.credits.toLocaleString('vi-VN')} <span className="text-base font-semibold text-text-muted">{CREDIT_UNIT}</span>
                 </p>
                 <p className="text-sm text-text-muted">{pack.name}</p>
-                <Button className="w-full" disabled={buying !== null} onClick={() => void buy(pack)}>
+                <Button size="sm" className="w-full" disabled={buying !== null} onClick={() => void buy(pack)}>
                   {buying === pack.id ? 'Đang tạo đơn...' : vnd(pack.price)}
                 </Button>
               </Card>
@@ -172,10 +172,10 @@ function History() {
   useEffect(() => {
     let cancelled = false
     creditService
-      .history(0, 20)
+      .history(0, 5)
       .then((result) => {
         if (cancelled) return
-        setRows(result.content)
+        setRows([...result.content].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)))
         setPage(0)
         setLast(result.last)
         setError(null)
@@ -189,8 +189,8 @@ function History() {
   const loadMore = async () => {
     setLoadingMore(true)
     try {
-      const result = await creditService.history(page + 1, 20)
-      setRows((current) => [...(current ?? []), ...result.content])
+      const result = await creditService.history(page + 1, 5)
+      setRows((current) => [...new Map([...(current ?? []), ...result.content].map(row => [row.id, row])).values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)))
       setPage(page + 1)
       setLast(result.last)
     } catch (e) {
@@ -202,14 +202,15 @@ function History() {
 
   return (
     <section>
-      <SectionHeader title="Lịch sử" />
-      <div className="mt-4">
+      <SectionHeader title="Lịch sử giao dịch" titleClassName="text-lg max-[760px]:text-lg" />
+      <p className="mt-1 text-xs text-text-secondary">Mới nhất trước · Tải thêm 5 giao dịch mỗi lần</p>
+      <div className="mt-3">
         {error && <Notice tone="danger">{error}</Notice>}
         {rows === null && !error && <Skeleton className="h-[240px] rounded-2xl" />}
         {rows !== null && rows.length === 0 && <MascotState title={`Chưa có giao dịch ${CREDIT_UNIT}`} />}
         {rows !== null && rows.length > 0 && (
           <Card radius="lg" padding="none">
-            <ul className="divide-y divide-line">
+            <ul className="max-h-[300px] divide-y divide-line overflow-y-auto" aria-label="Lịch sử giao dịch Sao" tabIndex={0}>
               {rows.map((row) => (
                 <HistoryRow key={row.id} row={row} />
               ))}
@@ -232,7 +233,7 @@ function HistoryRow({ row }: { row: CreditEntry }) {
   const purpose = creditEntryPurpose(row.refType)
   const label = CREDIT_ENTRY_LABELS[row.type] ?? row.type
   return (
-    <li className="flex items-center justify-between gap-4 px-5 py-3.5">
+    <li className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-text-heading">
           {purpose ? `${label} · ${purpose}` : row.note ? `${label} · ${row.note}` : label}

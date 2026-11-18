@@ -119,7 +119,7 @@ function StudentRoutes({
       case 'profile':
       case 'wallet': {
         const requestedSection = route.name === 'wallet' ? 'wallet' : new URLSearchParams(window.location.search).get('section')
-        const section: AccountSection = requestedSection === 'wallet' || requestedSection === 'orders' || requestedSection === 'security' || requestedSection === 'student'
+        const section: AccountSection = requestedSection === 'wallet' || requestedSection === 'orders' || requestedSection === 'security'
           ? requestedSection : 'personal'
         return <AccountProfile section={section} onChangeSection={(value) => navigate(studentRoutes.profile(value))}
           onOpenPayment={(orderId) => navigate(`/orders/${encodeURIComponent(orderId)}/payment`)}

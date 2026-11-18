@@ -40,6 +40,68 @@ async function setup(page: Page, authenticated = true) {
   return { state, papers, requestedCourses, setListStatus: (status: number) => { listStatus = status }, setCompetencyStatus: (status: number) => { competencyStatus = status } }
 }
 
+test('Student account compacts and paginates orders, sorts wallet history and simplifies the account menu', async ({ page }) => {
+  await setup(page)
+  await page.route('**/api/v1/orders/me', route => route.fulfill({ json: { success: true, data: Array.from({ length: 7 }, (_, index) => ({
+    id: `order-${index}`, orderCode: `ORDER-${index}`, status: 'EXPIRED', totalAmount: 49000, createdAt: `2026-11-${String(index + 1).padStart(2, '0')}T00:00:00Z`,
+    items: [{ courseId: null, courseTitle: 'Gói Sao', credits: 50 }],
+  })) } }))
+  const historyRequests: string[] = []
+  await page.route('**/api/v1/credits/me/history*', route => {
+    const url = new URL(route.request().url())
+    historyRequests.push(url.search)
+    const second = url.searchParams.get('page') === '1'
+    return route.fulfill({ json: { success: true, data: { content: Array.from({ length: 5 }, (_, index) => ({
+      id: `entry-${second ? index + 5 : index}`, type: 'PURCHASE', amount: 50, note: `Giao dịch ${second ? index + 5 : index}`,
+      createdAt: `2026-11-${String((second ? 5 : 10) - index).padStart(2, '0')}T00:00:00Z`, refType: null,
+    })).reverse(), last: second } } })
+  })
+  await page.goto('/student/profile?section=orders')
+  const panel = page.getByRole('region', { name: 'Nội dung tài khoản' })
+  await expect(panel.getByRole('button', { name: /ORDER-/ })).toHaveCount(5)
+  await expect(panel.getByRole('button', { name: /ORDER-/ }).first()).toContainText('ORDER-6')
+  await panel.getByRole('button', { name: 'Sau', exact: true }).click()
+  await expect(panel.getByRole('button', { name: /ORDER-/ })).toHaveCount(2)
+  await page.getByRole('navigation', { name: 'Cài đặt tài khoản' }).getByRole('button', { name: 'Ví Sao' }).click()
+  const history = panel.getByRole('list', { name: 'Lịch sử giao dịch Sao' })
+  await expect(history.getByRole('listitem')).toHaveCount(5)
+  await expect(history.getByRole('listitem').first()).toContainText('Giao dịch 0')
+  await panel.getByRole('button', { name: 'Xem thêm', exact: true }).click()
+  await expect(history.getByRole('listitem')).toHaveCount(10)
+  await expect(history.getByRole('listitem').last()).toContainText('Giao dịch 9')
+  expect(historyRequests.some(query => new URLSearchParams(query).get('size') === '5')).toBe(true)
+  await expect(history).toHaveCSS('overflow-y', 'auto')
+  await page.getByRole('button', { name: 'Mở menu hồ sơ' }).click()
+  await expect(page.getByRole('menuitem')).toHaveText(['Tài khoản', 'Đăng xuất'])
+  await page.getByRole('menuitem', { name: 'Tài khoản', exact: true }).click()
+  await expect(page).toHaveURL(/\/student\/profile$/)
+})
+
+test('Student account uses a fluid fixed workspace and scrolls only its content panel', async ({ page }, testInfo) => {
+  await setup(page)
+  await page.setViewportSize({ width: 1440, height: 800 })
+  await page.goto('/student/profile')
+  const content = page.getByRole('region', { name: 'Nội dung tài khoản' })
+  await expect(content).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hồ sơ học tập', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Tài khoản của tôi' })).toHaveCSS('color', 'rgb(30, 136, 255)')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
+  await expect(content).toHaveCSS('overflow-y', 'auto')
+  expect(await content.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true)
+  await content.evaluate(element => element.scrollTop = 250)
+  expect(await content.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => window.scrollY)).toBe(0)
+  await page.screenshot({ path: testInfo.outputPath('student-account-desktop.png') })
+  await page.getByRole('navigation', { name: 'Cài đặt tài khoản' }).getByRole('button', { name: 'Đổi mật khẩu' }).click()
+  await expect(content.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible()
+  expect(await content.evaluate(element => element.scrollTop)).toBe(0)
+  await page.goto('/student/profile?section=student')
+  await expect(content.getByRole('heading', { name: 'Hồ sơ', exact: true })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight && document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('student-account-mobile.png') })
+})
+
 test('Student suggested courses use saved goals in profile and course tabs with pagination and purchase navigation', async ({ page }, testInfo) => {
   await setup(page)
   let hasGoal = true

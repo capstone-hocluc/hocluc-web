@@ -1,4 +1,4 @@
-import { BarChart3, KeyRound, ShoppingBag, User, Wallet } from '../../components/console/icons'
+import { KeyRound, ShoppingBag, User, Wallet } from '../../components/console/icons'
 import MascotState from '../../components/common/MascotState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
@@ -7,11 +7,11 @@ import Skeleton from '../../components/ui/Skeleton'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { cn } from '../../lib/cn'
 import PersonalInfoTab from './account-profile/PersonalInfoTab'
-import StudentInfoTab from './account-profile/StudentInfoTab'
 import SecurityTab from './account-profile/SecurityTab'
 import { StudentWalletContent } from './StudentWalletPage'
 import { MyOrdersContent } from '../orders/MyOrdersPage'
 import SectionHeader from '../../components/student/common/SectionHeader'
+import styles from './AccountProfile.module.css'
 
 const navGroups = [
   {
@@ -23,15 +23,11 @@ const navGroups = [
       { key: 'orders', label: 'Đơn hàng', icon: ShoppingBag },
     ],
   },
-  {
-    label: 'Học tập',
-    items: [{ key: 'student', label: 'Hồ sơ học tập', icon: BarChart3 }],
-  },
 ]
 
 // Account settings for the signed-in student. The profile itself is loaded
 // once by StudentLayout (useHydrateCurrentUser) and read here from context.
-export type AccountSection = 'personal' | 'student' | 'security' | 'wallet' | 'orders'
+export type AccountSection = 'personal' | 'security' | 'wallet' | 'orders'
 
 interface AccountProfileProps {
   section: AccountSection
@@ -46,7 +42,7 @@ function AccountProfile({ section: activeSection, onChangeSection, onOpenPayment
 
   if (!profile) {
     return (
-      <StudentPageContainer>
+      <StudentPageContainer width="fluid" className={styles.page}>
         {status === 'error' ? (
           <MascotState
             title="Không thể tải thông tin hồ sơ"
@@ -61,22 +57,23 @@ function AccountProfile({ section: activeSection, onChangeSection, onOpenPayment
   }
 
   return (
-    <StudentPageContainer>
+    <StudentPageContainer width="fluid" className={styles.page}>
       <StudentPageHeader
         title="Tài khoản của tôi"
         description="Quản lý hồ sơ, bảo mật, Ví Sao và đơn hàng của bạn."
+        className={styles.heading}
       />
-      <div className="grid grid-cols-[240px_minmax(0,1fr)] items-start gap-6 max-[900px]:grid-cols-1">
+      <div className={styles.workspace}>
         <Card
           as="nav"
           variant="elevated"
           padding="none"
           radius="xl"
-          className="flex flex-col gap-4 p-4 max-[900px]:flex-row max-[900px]:flex-wrap"
+          className={styles.navigation}
           aria-label="Cài đặt tài khoản"
         >
           {navGroups.map((group) => (
-            <div className="flex flex-col gap-1" key={group.label}>
+            <div className={styles.navGroup} key={group.label}>
               <span className="px-3 text-xs font-semibold tracking-[0.08em] text-text-muted uppercase">
                 {group.label}
               </span>
@@ -105,12 +102,11 @@ function AccountProfile({ section: activeSection, onChangeSection, onOpenPayment
           ))}
         </Card>
 
-        <div className="min-w-0">
+        <div key={activeSection} className={styles.content} role="region" aria-label="Nội dung tài khoản" tabIndex={0}>
           {activeSection === 'personal' && <PersonalInfoTab key={profile.id} />}
-          {activeSection === 'student' && <StudentInfoTab key={profile.id} />}
-          {activeSection === 'security' && <SecurityTab />}
-          {activeSection === 'wallet' && <div className="space-y-5"><SectionHeader title="Ví Sao" /><StudentWalletContent onOpenPayment={onOpenPayment} /></div>}
-          {activeSection === 'orders' && <div className="space-y-5"><SectionHeader title="Đơn hàng của tôi" /><MyOrdersContent student onOpenOrder={onOpenOrder} onBrowseCourses={onBrowseCourses} /></div>}
+          {activeSection === 'security' && <div className={styles.security}><SecurityTab /></div>}
+          {activeSection === 'wallet' && <div className="space-y-4"><SectionHeader title="Ví Sao" titleClassName="text-lg max-[760px]:text-lg" /><StudentWalletContent onOpenPayment={onOpenPayment} /></div>}
+          {activeSection === 'orders' && <div className="space-y-4"><SectionHeader title="Đơn hàng của tôi" titleClassName="text-lg max-[760px]:text-lg" /><MyOrdersContent student onOpenOrder={onOpenOrder} onBrowseCourses={onBrowseCourses} /></div>}
         </div>
       </div>
     </StudentPageContainer>

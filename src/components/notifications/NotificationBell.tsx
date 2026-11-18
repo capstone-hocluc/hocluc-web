@@ -1,4 +1,5 @@
 import { useContext, useId, useRef, useState } from 'react'
+import { Bell as OutlineBell } from 'lucide-react'
 import { Bell, BookOpen, CalendarDays, CheckCircle2, RefreshCw } from '../console/icons'
 import { NotificationContext, useNotifications } from '../../hooks/useNotifications'
 import { cn } from '../../lib/cn'
@@ -37,10 +38,13 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
   }}>
     <PopoverTrigger asChild>
       <button ref={bellRef} type="button" aria-label="Thông báo" aria-describedby={descriptionId}
-        className={cn('relative grid flex-none cursor-pointer place-items-center border bg-surface text-text-heading transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
-          variant === 'student' ? 'size-11 rounded-xl border-line' : 'size-10 rounded-lg border-card-border bg-card-background text-icon-primary shadow-xs')}>
-        <Bell size={18} />
-        {feed.unread !== null && feed.unread > 0 && <span aria-hidden="true"
+        className={cn('relative grid flex-none cursor-pointer place-items-center border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
+          variant === 'student'
+            ? cn('size-11 rounded-full border-0', hasUnread ? 'bg-primary-bright text-white hover:bg-primary' : 'bg-surface text-text-heading hover:bg-surface-hover')
+            : 'size-10 rounded-lg border-card-border bg-card-background text-icon-primary shadow-xs hover:bg-surface-hover')}>
+        {variant === 'student' ? <OutlineBell size={18} strokeWidth={1.8} /> : <Bell size={18} />}
+        {variant === 'student' && hasUnread && <span aria-hidden="true" className="absolute top-1 right-1 size-2.5 rounded-full border-2 border-surface bg-streak" />}
+        {variant !== 'student' && feed.unread !== null && feed.unread > 0 && <span aria-hidden="true"
           className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full border border-surface bg-danger px-1 text-[10px] font-bold text-white">
           {feed.unread > 99 ? '99+' : feed.unread}
         </span>}
@@ -48,7 +52,7 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
       </button>
     </PopoverTrigger>
     <PopoverContent aria-label="Danh sách thông báo" className="w-[380px] max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border-card-border bg-card-background p-0 text-text-primary">
-      <div className="flex items-center justify-between gap-2 border-b border-card-border px-4 py-3">
+      <div className={cn('flex items-center justify-between gap-2 px-4 py-3', variant !== 'student' && 'border-b border-card-border')}>
         <h2 className="text-base font-semibold">Thông báo</h2>
         <Button appearance="ghost" size="icon" aria-label="Tải lại thông báo" disabled={disabled} onClick={() => {
           void feed.loadPage(feed.page?.pageNumber ?? 0)
@@ -59,17 +63,17 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
         Chưa tải được số chưa đọc. <button type="button" className="font-semibold text-primary-text underline" onClick={() => void feed.refreshCount()}>Thử lại số chưa đọc</button>
       </div>}
       {feed.mutationError && <Notice tone="danger" role="alert" className="m-3 text-xs font-normal">{feed.mutationError}</Notice>}
-      <div className="max-h-[min(420px,55vh)] app-scroll overflow-y-auto overscroll-contain" aria-busy={loading}>
+      <div className="max-h-[min(360px,50dvh)] app-scroll overflow-y-auto overscroll-contain" aria-label="Danh sách thông báo mới nhất" role="region" tabIndex={0} aria-busy={loading}>
         {loading ? <div role="status" aria-label="Đang tải thông báo" className="space-y-3 p-4">
           {[0, 1, 2].map(item => <Skeleton key={item} className="h-16 w-full rounded-xl" />)}
         </div> : feed.status === 'error' ? <div className="space-y-3 p-5 text-center">
           <p role="alert" className="text-sm text-text-secondary">{feed.error}</p>
           <Button size="sm" appearance="outline" onClick={() => void feed.loadPage(feed.page?.pageNumber ?? 0)}>Thử lại</Button>
-        </div> : feed.page?.content.length === 0 ? <div className="px-5 py-10 text-center">
-          <Bell className="mx-auto mb-3 text-icon-tertiary" size={24} />
+        </div> : feed.page?.content.length === 0 ? <div className="px-5 py-6 text-center">
+          {variant === 'student' ? <img src="/mascot/08.png" alt="" width={128} height={128} className="mx-auto mb-3 size-32 object-contain" /> : <Bell className="mx-auto mb-3 text-icon-tertiary" size={24} />}
           <p className="text-sm text-text-secondary">Chưa có thông báo nào.</p>
         </div> : <ul className="space-y-1 p-2">
-          {feed.page?.content.map(item => {
+          {feed.page && [...feed.page.content].sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0)).map(item => {
             const Icon = item.entityType === 'COURSE' ? BookOpen : item.entityType === 'LIVE_CLASS' ? CalendarDays : Bell
             return <li key={item.id}>
               <button type="button" aria-label={`Xem thông báo: ${item.title}`} aria-haspopup="dialog"
@@ -92,7 +96,7 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
           })}
         </ul>}
       </div>
-      <div className="space-y-2 border-t border-card-border p-3">
+      <div className={cn('space-y-2 p-3', variant !== 'student' && 'border-t border-card-border')}>
         {feed.page && feed.page.totalPages > 1 && <nav aria-label="Phân trang thông báo" className="flex items-center justify-between gap-2">
           <Button size="sm" appearance="ghost" disabled={disabled || feed.page.pageNumber === 0} onClick={() => void feed.loadPage(feed.page!.pageNumber - 1)}>Trước</Button>
           <span className="text-xs text-text-tertiary">Trang {feed.page.pageNumber + 1}/{feed.page.totalPages}</span>
