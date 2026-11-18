@@ -18,7 +18,9 @@ async function courseWithSubject(page: Page) {
       id: IDS.phase1,
       name: 'Nền tảng',
       sequence: 1,
-      sections: [{ sectionCourseId: IDS.section, title: 'SECTION Đại số', categoryId: SUBJECT, categoryName: 'Toán', sequence: 1, chapters: [] }],
+      // as the API sends it: the subject sits on the gift course, the main course's own sections carry none
+      gifts: [{ courseId: IDS.section, phaseId: IDS.phase1, title: 'SECTION Đại số', categoryId: SUBJECT, categoryName: 'Toán', chapterCount: 1, lessonCount: 1, completedLessonCount: 0 }],
+      sections: [{ sectionCourseId: IDS.section, title: 'SECTION Đại số', sequence: 1, chapters: [] }],
     }],
   })))
 }
@@ -66,6 +68,33 @@ test('staff generate a teacher live timetable and see what did not fit', async (
     phaseSessions: [{ phaseId: IDS.phase1, sessionCount: 2 }],
   })
   expect(fixtureProblems(page)).toMatchObject({ unmatchedRequests: [], pageErrors: [] })
+})
+
+test('a timetable whose outcome is unknown locks the form instead of inviting a resend', async ({ page }) => {
+  test.setTimeout(120_000)
+  await installCrudFixture(page)
+  await courseWithSubject(page)
+  let calls = 0
+  await page.route(`**/api/v1/courses/${IDS.main}/live-timetables`, (route) => {
+    calls += 1
+    return route.fulfill(answer(null, 502))
+  })
+  await page.goto('/staff/schedules')
+  const panel = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Thời khóa biểu trực tuyến', exact: true }) })
+  await expect(panel).toBeVisible({ timeout: 90_000 })
+
+  await panel.locator('[name="liveTimetableTitle"]').fill('Toán tối')
+  await panel.getByRole('button', { name: /Giáo viên/ }).click()
+  await page.getByRole('option').first().click()
+  await panel.getByRole('button', { name: /Môn học/ }).click()
+  await page.getByRole('option', { name: 'Toán', exact: true }).click()
+  await panel.getByRole('group', { name: 'Đến ngày' }).getByRole('spinbutton').first().click()
+  await page.keyboard.type('31122026')
+  await panel.getByRole('button', { name: 'Tạo lớp trực tuyến', exact: true }).click()
+
+  await expect(panel.getByText(/Đừng gửi lại/)).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Tạo lớp trực tuyến', exact: true })).toBeDisabled()
+  expect(calls).toBe(1)
 })
 
 test('a teacher fills in the title and description of a coming live class', async ({ page }) => {
