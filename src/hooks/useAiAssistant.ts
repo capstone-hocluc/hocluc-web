@@ -1649,6 +1649,8 @@ export function useAiAssistant(bank: BankPaperList) {
     autoSelectRef.current = false
     activeIdRef.current = null
     setActiveId(null)
+    // The versions of the exam left behind go with it: its first question would count as one of the new one's.
+    setAllMessages([])
     updateMessages([])
     updateDraft(null)
     updateRun(null)
