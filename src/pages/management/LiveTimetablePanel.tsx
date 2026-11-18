@@ -9,7 +9,15 @@ import { ApiError } from '../../lib/api'
 import { localToday } from '../../lib/scheduling'
 import type { CoursePhase } from '../../services/courseService'
 import type { UserSummary } from '../../services/userService'
-import { createLiveTimetable, type LiveTimetableResponse, type LiveTimetableSlot } from '../../services/liveClassService'
+import {
+  createLiveTimetable,
+  getTeacherZoomAccount,
+  MISSING_ZOOM_ACCOUNT,
+  zoomErrorMessage,
+  type LiveTimetableResponse,
+  type LiveTimetableSlot,
+} from '../../services/liveClassService'
+import { useScheduleResource } from '../../hooks/useScheduleResource'
 import type { DayOfWeek } from '../../types/scheduling'
 
 const weekdays: { id: DayOfWeek; label: string }[] = [
@@ -56,6 +64,9 @@ export default function LiveTimetablePanel({ courseId, phases, teachers, onCreat
   const [result, setResult] = useState<LiveTimetableResponse | null>(null)
   const [outcomeUnknown, setOutcomeUnknown] = useState(false)
   const locked = busy || outcomeUnknown
+  // with real Zoom meetings, a teacher without the Zoom user the center gives them cannot be given classes
+  const teacherZoom = useScheduleResource(teacherId ? 'teacher-zoom:' + teacherId : null, () => getTeacherZoomAccount(teacherId))
+  const missingZoom = teacherZoom.status === 'ready' && teacherZoom.data?.zoomEnabled && !teacherZoom.data.zoomEmail
 
   const updateSlot = (index: number, change: Partial<LiveTimetableSlot>) =>
     setSlots((current) => current.map((slot, i) => (i === index ? { ...slot, ...change } : slot)))
@@ -95,7 +106,7 @@ export default function LiveTimetablePanel({ courseId, phases, teachers, onCreat
         setOutcomeUnknown(true)
         onCreated()
       } else {
-        setErrorMessage(error.message || 'Không tạo được thời khóa biểu trực tuyến.')
+        setErrorMessage(zoomErrorMessage(error, 'Không tạo được thời khóa biểu trực tuyến.'))
       }
     } finally {
       setBusy(false)
@@ -129,6 +140,7 @@ export default function LiveTimetablePanel({ courseId, phases, teachers, onCreat
             <SelectField ariaLabel="Giáo viên" value={teacherId} onChange={setTeacherId} disabled={locked || !teachers.length}
               placeholder={teachers.length ? 'Chọn giáo viên' : 'Chưa có giáo viên'} triggerClassName={fieldControlClass}
               options={teachers.map((teacher) => ({ id: teacher.id, label: teacherName(teacher) }))} />
+            {missingZoom && <p role="alert" className="m-0 text-xs text-badge-warning-text">{MISSING_ZOOM_ACCOUNT}</p>}
           </Field>
           <Field label="Môn học">
             <SelectField ariaLabel="Môn học" value={subjectId} onChange={setSubjectId} disabled={locked || !subjects.length}
@@ -184,7 +196,7 @@ export default function LiveTimetablePanel({ courseId, phases, teachers, onCreat
         )}
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={locked || !teachers.length || !subjects.length}>
+          <Button type="submit" disabled={locked || missingZoom || !teachers.length || !subjects.length}>
             {busy ? 'Đang tạo…' : 'Tạo lớp trực tuyến'}
           </Button>
         </div>

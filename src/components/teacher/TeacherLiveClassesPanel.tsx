@@ -6,7 +6,12 @@ import Field, { fieldControlClass, textareaControlClass } from '../console/form-
 import ScheduleResourceState from '../console/schedule/schedule-resource-state'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { formatDateTime, formatTime } from '../../lib/courseFormat'
-import { getMyLiveClasses, updateLiveClassDetails, type ConsoleLiveClass } from '../../services/liveClassService'
+import {
+  getMyLiveClasses,
+  getTeacherZoomAccount,
+  updateLiveClassDetails,
+  type ConsoleLiveClass,
+} from '../../services/liveClassService'
 
 function DetailsSheet({ liveClass, onClose, onSaved }: {
   liveClass: ConsoleLiveClass
@@ -57,12 +62,19 @@ function DetailsSheet({ liveClass, onClose, onSaved }: {
 /** The teacher's coming live classes; each needs its title and description filled in before it runs. */
 export default function TeacherLiveClassesPanel({ teacherId }: { teacherId: string }) {
   const resource = useScheduleResource('teacher-live-classes:' + teacherId, getMyLiveClasses)
+  const zoom = useScheduleResource('teacher-zoom:' + teacherId, () => getTeacherZoomAccount(teacherId))
   const [editing, setEditing] = useState<ConsoleLiveClass | null>(null)
   const classes = resource.data ?? []
+  const missingZoom = zoom.status === 'ready' && zoom.data?.zoomEnabled && !zoom.data.zoomEmail
 
   return (
     <section className="space-y-3">
       <h2 className="text-base font-medium text-text-primary">Lớp trực tuyến</h2>
+      {missingZoom && (
+        <Notice tone="warning">
+          Bạn chưa được cấp tài khoản Zoom nên chưa thể được xếp lớp trực tuyến. Vui lòng liên hệ quản trị viên để được cấp.
+        </Notice>
+      )}
       <ScheduleResourceState
         status={resource.status}
         errorMessage={resource.errorMessage}
