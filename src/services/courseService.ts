@@ -292,6 +292,8 @@ export interface CourseStudy {
   nextLiveClass: CourseStudyLiveClass | null
   /** Included by the current BE; optional for older deployments. */
   exams?: CourseExamSummary[]
+  placementExams?: CourseExamSummary[]
+  showPlacementReminder?: boolean
   phases: CourseStudyPhase[]
 }
 

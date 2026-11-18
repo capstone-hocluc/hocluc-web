@@ -427,35 +427,20 @@ test('Mentor cannot open quiz screens even with direct console URLs', async ({ p
   expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/'))).toEqual([])
 })
 
-test('Student quiz detail fills the available width as the sidebar and viewport change', async ({ page }) => {
+test('Student quiz detail adapts its history and score columns as the sidebar and viewport change', async ({ page }) => {
   const state = await installQuizFixture(page, 'STUDENT')
   state.studentStatus = 'GRADED'
   await page.setViewportSize({ width: 1600, height: 950 })
-  await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}`)
-
-  const main = page.getByRole('main')
-  const details = main.locator('section').filter({ has: page.getByRole('heading', { name: 'Quiz Student' }) }).last()
-  const history = main.locator('section').filter({ has: page.getByRole('heading', { name: 'Lịch sử làm bài' }) }).last()
-  const facts = details.getByRole('listitem')
-  await expect(history).toBeVisible()
-
-  const contentWidth = () => main.evaluate(element => {
-    const { paddingLeft, paddingRight } = getComputedStyle(element)
-    return element.clientWidth - parseFloat(paddingLeft) - parseFloat(paddingRight)
-  })
-  const panelWidth = (panel: Locator) => panel.evaluate(element => element.getBoundingClientRect().width)
-  const expandedWidth = await contentWidth()
-  expect(await panelWidth(details)).toBe(expandedWidth)
-  expect(await panelWidth(history)).toBe(expandedWidth)
-  expect((await facts.first().boundingBox())?.y).toBe((await facts.last().boundingBox())?.y)
-
+  await page.goto('/student/assessments/quizzes/' + QUIZ_IDS.quiz)
+  const details = page.getByRole('region', { name: 'Thông tin bài thi', exact: true })
+  const score = page.getByRole('complementary', { name: 'Điểm số bài thi', exact: true })
+  await expect(page.getByRole('region', { name: 'Lịch sử làm bài', exact: true })).toBeVisible()
+  const expandedWidth = (await details.boundingBox())!.width
+  expect((await score.boundingBox())!.x).toBeGreaterThan((await details.boundingBox())!.x + expandedWidth)
   await page.getByRole('button', { name: 'Thu gọn thanh điều hướng' }).click()
-  await expect.poll(() => panelWidth(details)).toBe(expandedWidth + 168)
-  expect(await panelWidth(history)).toBe(await contentWidth())
-
+  await expect.poll(async () => (await details.boundingBox())!.width).toBe(expandedWidth + 168)
   await page.setViewportSize({ width: 390, height: 844 })
-  expect(await panelWidth(details)).toBe(await contentWidth())
-  expect((await facts.last().boundingBox())?.y).toBeGreaterThan((await facts.first().boundingBox())?.y ?? 0)
+  expect((await score.boundingBox())!.y).toBeLessThan((await details.boundingBox())!.y)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   await expect(details.getByRole('button', { name: 'Bắt đầu làm bài' })).toBeVisible()
 })
@@ -501,7 +486,7 @@ test('Student exits a quiz to its course content or lesson and can return from a
   await page.getByRole('button', { name: /Quiz được giao/ }).click()
   await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
   await expect(page).toHaveURL(lessonPath)
-  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await page.getByRole('button', { name: 'Khóa học', exact: true }).click()
   await expect(page).toHaveURL(studyPath)
 
   await page.goto(quizPath)
@@ -538,7 +523,7 @@ test('Student resumes lessons, unlocks the lesson and chapter quizzes, and sees 
   await expect(page.getByText('Tiến độ bài học: 100%')).toBeVisible()
   await expect(lessonQuiz).toBeVisible()
 
-  const backToCourse = page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'Khóa học', exact: true })
+  const backToCourse = page.getByRole('button', { name: 'Khóa học', exact: true })
   await backToCourse.click()
   await expect(page).toHaveURL(studyPath)
   await expect(page.getByText('1/2 bài học', { exact: true }).first()).toBeVisible()
@@ -548,6 +533,7 @@ test('Student resumes lessons, unlocks the lesson and chapter quizzes, and sees 
   await complete.click()
   await expect(page.getByText('Chương đã hoàn thành')).toBeVisible()
   await backToCourse.click()
+  await page.getByRole('button', { name: 'Chương học 2/2', exact: true }).click()
   await expect(chapterQuiz).toBeVisible()
   await page.getByRole('button', { name: '1 Sao', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Ví Sao', exact: true })).toBeVisible()

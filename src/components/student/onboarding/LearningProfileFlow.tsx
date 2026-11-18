@@ -40,7 +40,7 @@ export default function LearningProfileFlow({ currentPath, onNavigate, children 
           onComplete={() => {
             close()
             if (!(manualOpen && currentPath.split('?')[0] === '/student/learning-profile')) {
-              onNavigate('/student/assessments/placement')
+              onNavigate('/free-exams')
             }
           }} />
       )}

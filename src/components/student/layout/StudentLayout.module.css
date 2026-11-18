@@ -1,0 +1,25 @@
+.lessonLayout {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lessonMain {
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+@media (max-width: 760px) {
+  .lessonLayout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lessonMain {
+    grid-column: 1;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}

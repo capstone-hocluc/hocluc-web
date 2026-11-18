@@ -3,7 +3,7 @@ import {
   BookOpen,
   ClipboardCheck,
   MailQuestion,
-  UserRound,
+  BarChart3,
   User,
 } from '../components/console/icons'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from './studentRoutes'
@@ -41,15 +41,15 @@ export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Học tập',
     items: [
-      { key: 'courses', label: 'Khóa học của tôi', icon: BookOpen, path: studentRoutes.courses() },
+      { key: 'learning-profile', label: 'Hồ sơ năng lực', icon: BarChart3, path: studentRoutes.learningProfile() },
+      { key: 'courses', label: 'Khóa học', icon: BookOpen, path: studentRoutes.courses() },
     ],
   },
   {
     label: 'Luyện tập',
     items: [
+      { key: 'assessments', label: 'Bài kiểm tra', icon: ClipboardCheck, path: studentRoutes.placement() },
       { key: 'chat', label: 'Hỏi Mentor', icon: MailQuestion, path: studentRoutes.chat() },
-      { key: 'assessments', label: 'Bài kiểm tra / thi thử', icon: ClipboardCheck, path: studentRoutes.placement() },
-      { key: 'learning-profile', label: 'Hồ sơ năng lực', icon: UserRound, path: studentRoutes.learningProfile() },
     ],
   },
   {

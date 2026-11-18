@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { ArrowLeft, BookOpen, CalendarDays, Play } from '../../console/icons'
 import type { CourseStudy } from '../../../services/courseService'
-import { formatDate, prettifyEnum } from '../../../lib/courseFormat'
+import { formatDate, formatCourseTrack } from '../../../lib/courseFormat'
 import Button from '../../ui/Button'
 import Progress from '../../ui/Progress'
 import StatusBadge from '../../ui/StatusBadge'
@@ -26,7 +26,7 @@ function MetaChip({ icon, children }: { icon: ReactNode; children: ReactNode }) 
 // Course Study hero: title + meta on the left, learning progress and the
 // continue / start CTA on the right (stacked below 820px).
 function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
-  const trackLabel = prettifyEnum(study.track || undefined)
+  const trackLabel = formatCourseTrack(study.track)
   const startLabel = formatDate(study.startDate || undefined)
   const endLabel = formatDate(study.endDate || undefined)
 
@@ -58,7 +58,7 @@ function CourseOverview({ study, onBack, onOpenLesson }: CourseOverviewProps) {
             <StatusBadge
               tone="primary"
               size="sm"
-              className="bg-surface px-3 py-1 text-xs uppercase"
+              className="bg-surface px-3 py-1 text-xs"
             >
               {trackLabel}
             </StatusBadge>

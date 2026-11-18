@@ -8,6 +8,7 @@ import { getAttempt, getQuiz } from '../../services/assessmentService'
 import { getAssessmentLockMessage } from '../../lib/quizLock'
 import { refreshCredits } from '../../lib/credits'
 import { bySequence } from '../../lib/sequence'
+import styles from '../../components/assessment/AssessmentWorkspace.module.css'
 
 interface QuizAttemptPageProps {
   quizId: string
@@ -35,7 +36,7 @@ function QuizAttemptPage({ quizId, attemptId, onExit, onSubmitted }: QuizAttempt
   const backToQuiz = () => onExit(quizId)
 
   return (
-    <StudentPageContainer width="reading" spacing="stack">
+    <StudentPageContainer width="fluid" className={styles.page}>
       <ResourceState
         status={status}
         errorMessage={errorMessage}
@@ -62,6 +63,7 @@ function QuizAttemptPage({ quizId, attemptId, onExit, onSubmitted }: QuizAttempt
       {status === 'ready' && data && (
         <AttemptWorkspace
           session={session}
+          title={data.quiz.title}
           questions={bySequence(data.quiz.questions)}
           onExit={backToQuiz}
           onViewResult={() => session.attempt && onSubmitted(session.attempt.attemptId)}

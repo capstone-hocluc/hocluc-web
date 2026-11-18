@@ -10,7 +10,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 const ROLE_HOME: Record<UserRole, string> = {
-  STUDENT: '/student/dashboard',
+  STUDENT: '/student/learning-profile',
   MENTOR: '/console/mentor/dashboard',
   TEACHER: '/console/teacher/dashboard',
   STAFF: '/console/staff/dashboard',

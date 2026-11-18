@@ -1,196 +1,81 @@
-import { ArrowLeft, ArrowRight } from '../console/icons'
+import { useRef } from 'react'
 import type { QuizQuestion } from '../../services/assessmentService'
 import type { AttemptSession } from '../../hooks/useAttemptSession'
 import BackLink from '../student/common/BackLink'
 import Button from '../ui/Button'
-import Card from '../ui/Card'
 import Notice from '../ui/Notice'
 import Progress from '../ui/Progress'
 import QuestionNavigator from './QuestionNavigator'
 import QuizQuestionCard from './QuizQuestionCard'
 import QuizTimer from './QuizTimer'
 import SubmitQuizDialog from './SubmitQuizDialog'
+import styles from './AssessmentWorkspace.module.css'
 
 interface AttemptWorkspaceProps {
   session: AttemptSession
-  /** Questions in display order. */
   questions: QuizQuestion[]
+  title?: string
   onExit: () => void
   onViewResult: () => void
 }
 
-// The "taking a test" screen (question, prev/next, timer, navigator, submit)
-// shared by course quizzes and the placement test. All state lives in the
-// useAttemptSession() the page passes in.
-function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptWorkspaceProps) {
-  const { attempt, currentIndex, setCurrentIndex, selectedAnswers, inputsDisabled, submitting } =
-    session
-  const currentQuestion = questions[currentIndex] || null
+function AttemptWorkspace({ session, questions, title = 'Bài thi', onExit, onViewResult }: AttemptWorkspaceProps) {
+  const { attempt, currentIndex, setCurrentIndex, selectedAnswers, inputsDisabled, submitting } = session
+  const questionRefs = useRef(new Map<string, HTMLDivElement>())
+  const currentQuestion = questions[currentIndex] ?? questions[0]
   if (!attempt) return null
+  if (attempt.status !== 'IN_PROGRESS') return <div className={styles.attempt}>
+    <BackLink onClick={onExit}>Quay lại bài kiểm tra</BackLink>
+    <Notice className="justify-between"><span>Lượt làm này đã kết thúc.</span>{attempt.status === 'GRADED' && <Button shape="pill" size="sm" onClick={onViewResult}>Xem kết quả</Button>}</Notice>
+  </div>
+  if (!currentQuestion) return <Notice>Đề thi chưa có câu hỏi để hiển thị.</Notice>
 
-  if (attempt.status !== 'IN_PROGRESS') {
-    return (
-      <>
-        <BackLink onClick={onExit}>Quay lại bài kiểm tra</BackLink>
-        <Notice className="justify-between">
-          <span>Lượt làm này đã kết thúc.</span>
-          {attempt.status === 'GRADED' && (
-            <Button shape="pill" size="sm" onClick={onViewResult}>Xem kết quả</Button>
-          )}
-        </Notice>
-      </>
-    )
+  const goToQuestion = (questionId: string) => {
+    const index = questions.findIndex(question => question.id === questionId)
+    if (index < 0) return
+    setCurrentIndex(index)
+    const target = questionRefs.current.get(questionId)
+    target?.focus({ preventScroll: true })
+    target?.scrollIntoView({ block: 'start', behavior: 'instant' })
   }
-  if (!currentQuestion) return null
 
-  const isLast = currentIndex === questions.length - 1
-
-  return (
-    <>
+  return <div className={styles.attempt}>
+    <header className={styles.attemptHeader}>
+      <h1>{title}</h1>
       {!submitting && <BackLink onClick={onExit}>Thoát bài kiểm tra</BackLink>}
-
-      {session.expired ? (
-        <Notice tone="warning" className="justify-between">
-          <span>{submitting ? 'Hết giờ. Đang nộp bài…' : 'Hết giờ. Chưa xác nhận được kết quả nộp bài.'}</span>
-          {!submitting && (
-            <Button size="sm" appearance="outline" onClick={() => void session.retryExpiredSubmit()}>
-              Thử nộp lại
-            </Button>
-          )}
-        </Notice>
-      ) : session.failedQuestionIds.size > 0 ? (
-        <Notice tone="danger" className="justify-between">
-          <span>Còn {session.failedQuestionIds.size} đáp án chưa lưu. Hãy lưu lại trước khi nộp bài.</span>
-          <Button size="sm" appearance="outline" disabled={inputsDisabled} onClick={session.retryFailedAnswers}>
-            Lưu lại đáp án
-          </Button>
-        </Notice>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-[18px] min-[860px]:grid-cols-[minmax(0,1fr)_260px] min-[860px]:items-start">
-        <div className="flex min-w-0 flex-col gap-4">
-          <QuizQuestionCard
-            question={currentQuestion}
-            index={currentIndex}
-            total={questions.length}
-            selectedOptionId={selectedAnswers[currentQuestion.id] || null}
-            saving={session.savingQuestionIds.has(currentQuestion.id)}
-            saveFailed={session.failedQuestionIds.has(currentQuestion.id)}
-            disabled={inputsDisabled}
-            onSelectOption={(optionId) => session.selectOption(currentQuestion.id, optionId)}
-          />
-
-          <div className="flex items-center justify-between gap-3 max-[640px]:flex-col-reverse [&>button]:max-[640px]:w-full">
-            <Button
-              appearance="outline"
-              shape="pill"
-              className="h-12 border px-6 text-[15px] font-semibold text-text-heading"
-              disabled={currentIndex === 0}
-              onClick={() => setCurrentIndex((current) => Math.max(0, current - 1))}
-            >
-              <ArrowLeft size={16} />
-              Câu trước
-            </Button>
-
-            {isLast ? (
-              <Button
-                shape="pill"
-                className="h-12 px-6 text-[15px] font-semibold"
-                disabled={inputsDisabled}
-                onClick={() => session.setShowSubmitDialog(true)}
-              >
-                Nộp bài
-              </Button>
-            ) : (
-              <Button
-                shape="pill"
-                className="h-12 px-6 text-[15px] font-semibold"
-                onClick={() =>
-                  setCurrentIndex((current) => Math.min(questions.length - 1, current + 1))
-                }
-              >
-                Câu tiếp theo
-                <ArrowRight size={16} />
-              </Button>
-            )}
+    </header>
+    <div className={styles.attemptGrid}>
+      <aside className={styles.controls} aria-label="Thời gian và tiến độ làm bài">
+        {session.isActive && (attempt.deadlineAt ? <QuizTimer deadlineAt={attempt.deadlineAt} onExpire={session.handleExpire} /> : <Notice>Không giới hạn thời gian</Notice>)}
+        {session.expired ? <Notice tone="warning"><div className="space-y-2"><p>{submitting ? 'Hết giờ. Đang nộp bài…' : 'Hết giờ. Chưa xác nhận được kết quả nộp bài.'}</p>{!submitting && <Button size="sm" appearance="outline" onClick={() => void session.retryExpiredSubmit()}>Thử nộp lại</Button>}</div></Notice>
+          : session.failedQuestionIds.size > 0 ? <Notice tone="danger"><div className="space-y-2"><p>Còn {session.failedQuestionIds.size} đáp án chưa lưu. Hãy lưu lại trước khi nộp bài.</p><Button size="sm" appearance="outline" disabled={inputsDisabled} onClick={session.retryFailedAnswers}>Lưu lại đáp án</Button></div></Notice> : null}
+        <section className={styles.navigator} aria-label="Tiến độ làm bài">
+          <div><div className="mb-2 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Tiến độ làm bài</h2><strong className="text-sm text-primary-text">{session.answeredCount}/{questions.length}</strong></div>
+            <Progress value={questions.length ? session.answeredCount / questions.length * 100 : 0} aria-label="Tỷ lệ câu đã trả lời" />
+            <p className="mt-2 text-xs text-text-secondary">Đã trả lời {session.answeredCount}/{questions.length} câu</p>
           </div>
-        </div>
-
-        {/* Below 860px the aside dissolves into the grid so the single timer can stick to the top
-            (order-first) while the navigator card falls under the question. */}
-        <aside className="flex flex-col gap-4 min-[860px]:sticky min-[860px]:top-24 max-[859px]:contents">
-          {session.isActive && (
-            <QuizTimer
-              deadlineAt={attempt.deadlineAt}
-              onExpire={session.handleExpire}
-              className="max-[859px]:sticky max-[859px]:top-[84px] max-[859px]:z-20 max-[859px]:order-first"
-            />
-          )}
-
-          <Card variant="panel" padding="none" radius="xl" className="flex flex-col gap-4 p-5">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-base font-bold text-text-heading">Tiến độ làm bài</h2>
-                <span className="text-sm font-semibold text-primary-text">
-                  {session.answeredCount}/{questions.length}
-                </span>
-              </div>
-              <Progress
-                value={questions.length ? (session.answeredCount / questions.length) * 100 : 0}
-                size="md"
-              />
-              <p className="text-sm font-semibold text-text-secondary">
-                Đã trả lời {session.answeredCount}/{questions.length} câu
-              </p>
-            </div>
-
-            <QuestionNavigator
-              questions={questions}
-              currentQuestionId={currentQuestion.id}
-              answeredQuestionIds={new Set(Object.keys(selectedAnswers))}
-              disabled={submitting}
-              onSelect={(questionId) => {
-                const index = questions.findIndex((question) => question.id === questionId)
-                if (index >= 0) setCurrentIndex(index)
-              }}
-            />
-
-            <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-bold text-text-secondary">
-              <li className="flex items-center gap-1.5">
-                <span className="size-3 rounded-[4px] bg-primary" /> Đang làm
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="size-3 rounded-[4px] border border-line-brand bg-surface-brand" />{' '}
-                Đã trả lời
-              </li>
-              <li className="flex items-center gap-1.5">
-                <span className="size-3 rounded-[4px] border border-line bg-surface" /> Chưa làm
-              </li>
-            </ul>
-
-            <Button
-              variant="danger"
-              className="h-12 w-full rounded-xl text-[15px] font-semibold"
-              disabled={inputsDisabled}
-              onClick={() => session.setShowSubmitDialog(true)}
-            >
-              Nộp bài
-            </Button>
-          </Card>
-        </aside>
+          <nav aria-label="Danh sách câu hỏi"><QuestionNavigator questions={questions} currentQuestionId={currentQuestion.id} answeredQuestionIds={new Set(Object.keys(selectedAnswers))} disabled={submitting} onSelect={goToQuestion} /></nav>
+          <ul className="flex flex-wrap gap-x-3 gap-y-2 text-xs text-text-secondary">
+            <li className="flex items-center gap-1.5"><span className="size-3 rounded border border-primary bg-primary" />Đang chọn</li>
+            <li className="flex items-center gap-1.5"><span className="size-3 rounded border border-line-brand bg-surface-brand" />Đã trả lời</li>
+            <li className="flex items-center gap-1.5"><span className="size-3 rounded border border-line bg-surface" />Chưa làm</li>
+          </ul>
+          <Button disabled={inputsDisabled} onClick={() => session.setShowSubmitDialog(true)}>Nộp bài</Button>
+        </section>
+      </aside>
+      <div className={styles.questions} role="region" aria-label="Nội dung đề thi" tabIndex={0}>
+        {questions.map((question, index) => <div key={question.id} className={styles.question} tabIndex={-1}
+          ref={element => { if (element) questionRefs.current.set(question.id, element); else questionRefs.current.delete(question.id) }}
+          onFocusCapture={() => setCurrentIndex(index)}>
+          <QuizQuestionCard question={question} index={index} total={questions.length} selectedOptionId={selectedAnswers[question.id] || null}
+            saving={session.savingQuestionIds.has(question.id)} saveFailed={session.failedQuestionIds.has(question.id)} disabled={inputsDisabled}
+            onSelectOption={optionId => { setCurrentIndex(index); session.selectOption(question.id, optionId) }} />
+        </div>)}
+        <div className={styles.endAction}><Button disabled={inputsDisabled} onClick={() => session.setShowSubmitDialog(true)}>Nộp bài</Button></div>
       </div>
-
-      {session.showSubmitDialog && (
-        <SubmitQuizDialog
-          answeredCount={session.answeredCount}
-          totalQuestions={questions.length}
-          submitting={submitting}
-          onCancel={() => session.setShowSubmitDialog(false)}
-          onConfirm={session.handleConfirmSubmit}
-        />
-      )}
-    </>
-  )
+    </div>
+    {session.showSubmitDialog && <SubmitQuizDialog answeredCount={session.answeredCount} totalQuestions={questions.length} submitting={submitting} onCancel={() => session.setShowSubmitDialog(false)} onConfirm={session.handleConfirmSubmit} />}
+  </div>
 }
 
 export default AttemptWorkspace

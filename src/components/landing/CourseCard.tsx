@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2, Sparkles } from '../console/icons'
 import SubjectAvatarIcon from '../common/SubjectAvatarIcon'
 import { SUBJECT_AVATAR_TYPES } from '../common/subjectAvatars'
 import type { Course } from '../../services/courseService'
-import { formatCoursePrice, formatDate, formatExamLabel, prettifyEnum } from '../../lib/courseFormat'
+import { formatCoursePrice, formatDate, formatExamLabel, formatCourseTrack } from '../../lib/courseFormat'
 
 interface CourseCardProps {
   course: Course
@@ -11,7 +11,7 @@ interface CourseCardProps {
 }
 
 function CourseCard({ course, onOpen, avatarIndex = 0 }: CourseCardProps) {
-  const badgeLabel = formatExamLabel(course.targetExam) || prettifyEnum(course.track) || 'Khóa học'
+  const badgeLabel = formatExamLabel(course.targetExam) || formatCourseTrack(course.track) || 'Khóa học'
   const startLabel = formatDate(course.startDate)
 
   return (

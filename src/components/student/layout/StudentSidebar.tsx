@@ -1,6 +1,7 @@
 import { studentNavGroups, type StudentNavKey } from '../../../lib/studentNav'
 import { cn } from '../../../lib/cn'
 import { Sheet, SheetBody } from '../../ui/Sheet'
+import styles from './StudentSidebar.module.css'
 
 interface StudentSidebarProps {
   activeKey: StudentNavKey | null
@@ -34,8 +35,7 @@ function StudentSidebar({
             }}
             className={cn(
               'flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 text-left text-sm font-semibold transition-colors duration-200 active:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
-              !mobile &&
-                'group-data-[collapsed=true]/sidebar:justify-center group-data-[collapsed=true]/sidebar:px-0 max-[1180px]:justify-center max-[1180px]:px-0',
+              !mobile && styles.item,
               active
                 ? 'bg-surface-brand text-primary-text'
                 : 'text-text-body hover:bg-surface-brand hover:text-primary-text'
@@ -45,7 +45,7 @@ function StudentSidebar({
             <span
               className={cn(
                 'min-w-0',
-                !mobile && 'group-data-[collapsed=true]/sidebar:hidden max-[1180px]:hidden'
+                !mobile && styles.label
               )}
             >
               {item.label}
@@ -61,11 +61,7 @@ function StudentSidebar({
       <aside
         id="student-navigation"
         data-collapsed={collapsed}
-        className={cn(
-          'group/sidebar sticky top-[72px] col-start-1 row-start-2 flex h-[calc(100dvh-72px)] flex-col bg-surface py-6 max-[760px]:hidden',
-          collapsed ? 'items-center px-3' : 'px-4',
-          'max-[1180px]:items-center max-[1180px]:px-3'
-        )}
+        className={styles.sidebar}
       >
         {navigation(false)}
       </aside>

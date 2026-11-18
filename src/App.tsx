@@ -2,6 +2,7 @@ import { roleHome } from './lib/role-home'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import CourseCatalogPage from './pages/CourseCatalogPage'
+import FreeExamsPage from './pages/FreeExamsPage'
 import LessonVideosMockPage from './pages/mock/LessonVideosMockPage'
 import AlertsMockPage from './pages/mock/AlertsMockPage'
 import CourseDetailPage from './pages/course/CourseDetailPage'
@@ -123,6 +124,7 @@ function App() {
     if (path === '/forgot-password') return 'forgot-password'
     if (path === '/reset-password') return 'reset-password'
     if (path === '/courses') return 'courses'
+    if (path === '/free-exams') return 'free-exams'
     if (import.meta.env.DEV && path === '/mock/lesson-videos') return 'mock-lesson-videos'
     if (import.meta.env.DEV && path === '/mock/alerts') return 'mock-alerts'
     if (path === '/cart') return 'cart'
@@ -522,7 +524,7 @@ function App() {
   const studentRoute = parseStudentRoute(currentPath)
   if (studentRoute)
     return (
-      <StudentRouteGuard onLogin={() => navigateTo(loginPathFor(currentPath))} onGoToRole={navigateTo}>
+      <StudentRouteGuard onLogin={() => navigateTo(loginPathFor(window.location.pathname + window.location.search))} onGoToRole={navigateTo}>
         <StudentRoutes
           route={studentRoute}
           currentPath={currentPath}
@@ -574,6 +576,8 @@ function App() {
     return <AlertsMockPage />
   if (authMode === 'courses')
     return <CourseCatalogPage />
+  if (authMode === 'free-exams')
+    return <FreeExamsPage />
   if (authMode === 'cart')
     return purchase(
       <CartPage

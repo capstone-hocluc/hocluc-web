@@ -1,31 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
-import LessonBreadcrumb from '../../components/lesson/LessonBreadcrumb'
 import LessonContent from '../../components/lesson/LessonContent'
 import LessonInfoCard from '../../components/lesson/LessonInfoCard'
 import LessonNavFooter from '../../components/lesson/LessonNavFooter'
+import LessonWorkspaceNav from '../../components/lesson/LessonWorkspaceNav'
+import CourseTutorMascot from '../../components/student/course/CourseTutorMascot'
 import LessonQuizzes from '../../components/lesson/LessonQuizzes'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
 import Button from '../../components/ui/Button'
-import { Bot } from '../../components/console/icons'
+import { ArrowLeft, BookOpen, X } from '../../components/console/icons'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getLesson, updateLessonProgress, type LessonProgress } from '../../services/lessonService'
 import { refreshCredits } from '../../lib/credits'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast, showSuccessToast } from '../../lib/toastBus'
+import { bySequence } from '../../lib/sequence'
+import styles from '../../components/lesson/LessonWorkspace.module.css'
 
 interface LessonPageProps {
   courseId: string | null
   lessonId: string
   onBackToStudy: () => void
-  onNavigateLesson: (lessonId: string) => void
+  onNavigateLesson: (lessonId: string, courseId?: string) => void
   onOpenQuiz: (quizId: string) => void
   onOpenTutor: () => void
 }
 
-function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onOpenTutor }: LessonPageProps) {
+function LessonPage({ courseId, lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onOpenTutor }: LessonPageProps) {
   const [completing, setCompleting] = useState(false)
+  const [navigationOpen, setNavigationOpen] = useState(() => window.innerWidth > 760)
+  const [selectedVideoId, setSelectedVideoId] = useState('')
+  const [switchingVideo, setSwitchingVideo] = useState(false)
+  const activeVideoRef = useRef('')
+  const watchedByVideoRef = useRef<Record<string, number>>({})
 
   const watchSecondsRef = useRef(0)
   const {
@@ -36,7 +44,12 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onO
     reload,
   } = usePageResource(() => getLesson(lessonId), [lessonId], {
     onLoaded: (data) => {
-      watchSecondsRef.current = Math.max(0, data.progress?.watchDurationSeconds ?? 0)
+      const videos = bySequence(data.videos ?? [])
+      const initialVideo = videos.find(video => video.id === data.progress?.lastVideoId) ?? videos[0]
+      activeVideoRef.current = data.contentType === 'VIDEO' ? initialVideo?.id ?? '' : ''
+      setSelectedVideoId(activeVideoRef.current)
+      watchedByVideoRef.current = Object.fromEntries((data.progress?.videos ?? []).map(video => [video.videoId, Math.max(0, video.watchedSeconds)]))
+      watchSecondsRef.current = watchedByVideoRef.current[activeVideoRef.current] ?? (data.progress?.videos ? 0 : Math.max(0, data.progress?.watchDurationSeconds ?? 0))
     },
   })
 
@@ -52,8 +65,9 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onO
 
   const clampWatchSeconds = () => {
     let seconds = Math.max(0, Math.floor(watchSecondsRef.current))
-    if (lesson?.durationSeconds && lesson.durationSeconds > 0) {
-      seconds = Math.min(seconds, lesson.durationSeconds)
+    const duration = lesson?.videos?.find(video => video.id === activeVideoRef.current)?.durationSeconds ?? lesson?.durationSeconds
+    if (duration && duration > 0) {
+      seconds = Math.min(seconds, duration)
     }
     return seconds
   }
@@ -62,14 +76,16 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onO
   const saveProgress = async (completed: boolean) => {
     if (!lesson?.owned) return null
     const pending = savingRef.current
-    if (pending && !completed) return pending
+    const videoId = activeVideoRef.current
+    const seconds = clampWatchSeconds()
 
     const saving = (async () => {
       const previous = await pending
       try {
         const updated = await updateLessonProgress(lesson.id, {
           completed,
-          watchDurationSeconds: clampWatchSeconds(),
+          watchDurationSeconds: seconds,
+          ...(videoId ? { videoId } : {}),
         })
         setLesson((prev) => (prev ? { ...prev, progress: updated } : prev))
         if (updated.status === 'COMPLETED' && (previous ?? lesson.progress)?.status !== 'COMPLETED') {
@@ -97,6 +113,7 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onO
   const handleTimeUpdate = () => {
     const current = videoRef.current?.currentTime ?? 0
     watchSecondsRef.current = Math.max(watchSecondsRef.current, Math.floor(current))
+    if (activeVideoRef.current) watchedByVideoRef.current[activeVideoRef.current] = watchSecondsRef.current
   }
 
   const handlePause = () => {
@@ -119,9 +136,29 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onO
     if (mountedRef.current) navigate()
   }
 
+  const selectVideo = async (id: string) => {
+    if (id === activeVideoRef.current || leavingRef.current || completing || !lesson?.videos?.some(video => video.id === id)) return
+    leavingRef.current = true
+    setSwitchingVideo(true)
+    videoRef.current?.pause()
+    await saveProgress(false)
+    if (mountedRef.current) {
+      activeVideoRef.current = id
+      watchSecondsRef.current = watchedByVideoRef.current[id] ?? 0
+      setSelectedVideoId(id)
+      setSwitchingVideo(false)
+    }
+    leavingRef.current = false
+  }
+  const navigateLesson = (id: string) => {
+    if (id !== lesson?.id) void leaveLesson(() => onNavigateLesson(id, lesson?.sectionCourseId ?? courseId ?? undefined))
+  }
+  const isTextLesson = lesson?.contentType === 'TEXT' || lesson?.contentType === 'ARTICLE'
+
   return (
-    <StudentPageContainer width="narrow" className="pb-8">
+    <StudentPageContainer width="fluid" className={styles.page}>
       <ResourceState
+        imageSrc="/mascot/03.png"
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
@@ -148,30 +185,47 @@ function LessonPage({ lessonId, onBackToStudy, onNavigateLesson, onOpenQuiz, onO
       />
 
       {status === 'ready' && lesson && (
-        <div className="flex flex-col gap-4">
-          <LessonBreadcrumb lesson={lesson} onBack={() => void leaveLesson(onBackToStudy)} />
+        <>
+          <div className={styles.toolbar}>
+            <div className={styles.toolbarActions}>
+            <Button size="sm" appearance="outline" onClick={() => void leaveLesson(onBackToStudy)}>
+              <ArrowLeft size={16} />Khóa học
+            </Button>
+            <Button size="sm" appearance="outline" aria-expanded={navigationOpen} aria-controls="lesson-workspace-menu" onClick={() => setNavigationOpen(open => !open)}>
+              {navigationOpen ? <X size={16} /> : <BookOpen size={16} />}{navigationOpen ? 'Ẩn danh sách bài học' : 'Hiện danh sách bài học'}
+            </Button>
+            </div>
+            <LessonNavFooter previousLessonId={lesson.previousLessonId} nextLessonId={lesson.nextLessonId} onNavigate={navigateLesson} compact />
+          </div>
+          <div className={styles.workspace} data-collapsed={!navigationOpen || undefined}>
+          {navigationOpen && <aside id="lesson-workspace-menu" className={styles.sidebar}>
+            <LessonWorkspaceNav courseId={lesson.sectionCourseId ?? courseId ?? ''} lesson={lesson} activeVideoId={selectedVideoId}
+              onSelectVideo={id => { void selectVideo(id) }} onNavigateLesson={navigateLesson} />
+          </aside>}
+          <div className={styles.viewer} data-reading={isTextLesson || undefined} aria-busy={switchingVideo} role="region" aria-label="Nội dung bài học" tabIndex={0}>
+          {!isTextLesson && <h1 className="text-xl font-bold text-text-heading">{lesson.title}</h1>}
+          {switchingVideo && <p role="status" className="text-sm text-text-secondary">Đang lưu và chuyển video…</p>}
           <LessonContent
             lesson={lesson}
             videoRef={videoRef}
             onTimeUpdate={handleTimeUpdate}
             onPause={handlePause}
+            activeVideoId={selectedVideoId}
+            onSelectVideo={id => { void selectVideo(id) }}
+            hideVideoChooser={navigationOpen}
+            textFooter={isTextLesson ? <LessonInfoCard lesson={lesson} completing={completing} onMarkComplete={handleMarkComplete} embedded /> : undefined}
           />
-          <LessonInfoCard
+          {!isTextLesson && <LessonInfoCard
+            compact
             lesson={lesson}
             completing={completing}
             onMarkComplete={handleMarkComplete}
-          />
-          {lesson.owned && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-card bg-surface-brand p-4">
-            <p className="text-sm text-text-body">Chưa hiểu bài tập? Gửi ảnh để Gia sư AI hỗ trợ giải thích.</p>
-            <Button appearance="outline" onClick={() => void leaveLesson(onOpenTutor)}><Bot size={18} />Gia sư AI</Button>
-          </div>}
-          <LessonQuizzes quizzes={lesson.quizzes} onOpenQuiz={onOpenQuiz} />
-          <LessonNavFooter
-            previousLessonId={lesson.previousLessonId}
-            nextLessonId={lesson.nextLessonId}
-            onNavigate={(id) => void leaveLesson(() => onNavigateLesson(id))}
-          />
-        </div>
+          />}
+          <LessonQuizzes quizzes={lesson.quizzes} onOpenQuiz={id => void leaveLesson(() => onOpenQuiz(id))} />
+          </div>
+          </div>
+          {lesson.owned && <CourseTutorMascot onOpenTutor={() => void leaveLesson(onOpenTutor)} />}
+        </>
       )}
     </StudentPageContainer>
   )

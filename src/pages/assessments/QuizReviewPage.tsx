@@ -15,9 +15,10 @@ interface QuizReviewPageProps {
   attemptId: string
   onBackToQuiz: (quizId: string) => void
   backLabel?: string
+  onOpenCompetency?: (courseId: string) => void
 }
 
-function QuizReviewPage({ attemptId, onBackToQuiz, backLabel = 'Quay lại bài kiểm tra' }: QuizReviewPageProps) {
+function QuizReviewPage({ attemptId, onBackToQuiz, backLabel = 'Quay lại bài kiểm tra', onOpenCompetency }: QuizReviewPageProps) {
   const {
     data,
     status,
@@ -32,9 +33,10 @@ function QuizReviewPage({ attemptId, onBackToQuiz, backLabel = 'Quay lại bài 
     }
 
     let review: QuizReview | null = null
-    let answersHidden = !quiz.showAnswers
+    const allowsReview = quiz.type === 'PLACEMENT' || quiz.showAnswers
+    let answersHidden = !allowsReview
     let reviewFailed = false
-    if (quiz.showAnswers) {
+    if (allowsReview) {
       try {
         review = await getAttemptReview(attemptId)
       } catch (error) {
@@ -68,6 +70,8 @@ function QuizReviewPage({ attemptId, onBackToQuiz, backLabel = 'Quay lại bài 
           <BackLink onClick={() => onBackToQuiz(data.quiz.id)}>{backLabel}</BackLink>
 
           <QuizResultSummary title={data.quiz.title} result={data.result} review={data.review} />
+          {data.quiz.type === 'PLACEMENT' && data.quiz.sectionCourseId && onOpenCompetency && <Button appearance="outline" onClick={() => onOpenCompetency(data.quiz.sectionCourseId!)}>Xem đánh giá năng lực</Button>}
+          {data.quiz.type === 'PLACEMENT' && !data.quiz.sectionCourseId && <Notice>Đề này không gắn với khóa học. Kết quả được lưu trong lịch sử của đề, không cộng vào đánh giá năng lực theo khóa.</Notice>}
 
           {data.answersHidden && <Notice>Bài kiểm tra này không hiển thị đáp án sau khi nộp.</Notice>}
           {data.reviewFailed && (

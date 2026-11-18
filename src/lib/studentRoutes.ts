@@ -32,7 +32,7 @@ export const studentRoutes = {
   quizAttempt: (quizId: string, attemptId: string) =>
     `/student/assessments/quizzes/${enc(quizId)}/attempts/${enc(attemptId)}`,
   attemptReview: (attemptId: string) => `/student/assessments/attempts/${enc(attemptId)}/review`,
-  placement: () => '/student/assessments/placement',
+  placement: () => '/free-exams',
   placementResult: () => '/student/assessments/placement/result',
   placementAttempt: (attemptId: string) =>
     `/student/assessments/placement/attempts/${enc(attemptId)}`,

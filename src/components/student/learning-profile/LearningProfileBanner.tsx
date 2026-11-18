@@ -4,12 +4,12 @@ import Card from '../../ui/Card'
 import { getUserDisplayName } from '../../../lib/userDisplay'
 import type { ResourceStatus } from '../../../hooks/usePageResource'
 import type { UserProfile } from '../../../services/userService'
-import type { PlacementResult } from '../../../services/assessmentService'
+import type { CourseCompetency } from '../../../services/freeExamService'
 import styles from './LearningProfileBanner.module.css'
 
 interface Props {
   profile: UserProfile | null
-  result: PlacementResult | null
+  result: CourseCompetency | null
   resultStatus: ResourceStatus
   onEdit: () => void
 }
@@ -43,9 +43,10 @@ export default function LearningProfileBanner({ profile, result, resultStatus, o
         </dl>
       </section>
       <section className="min-w-0 rounded-3xl bg-surface p-4" aria-labelledby="profile-entry-heading">
-        <h3 id="profile-entry-heading" className="mb-2 text-base font-bold text-text-heading">Năng lực đầu vào của bạn</h3>
+        <h3 id="profile-entry-heading" className="mb-2 text-base font-bold text-text-heading">Năng lực theo khóa đang chọn</h3>
+        {result && <p className="mb-2 text-xs text-text-secondary">{result.courseTitle} · {result.examCount} đề được tính</p>}
         <dl className="grid gap-3 sm:grid-cols-2">
-          <BannerMetric label="Kết quả gần nhất" value={resultStatus === 'ready' && result ? `${result.overallPercentage}% câu đúng` : resultPlaceholder} />
+          <BannerMetric label="Tỷ lệ điểm tổng hợp" value={resultStatus === 'ready' && result?.overallPercentage != null ? `${result.overallPercentage}%` : resultPlaceholder} />
           <BannerMetric label="Mức năng lực" value={resultStatus === 'ready' && result?.level ? levels[result.level] ?? result.level : resultPlaceholder} />
         </dl>
       </section>

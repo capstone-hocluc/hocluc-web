@@ -5,12 +5,12 @@ import {
 } from '../data/studentDashboard'
 import { learningProfilePage, type LearningProfileData } from '../data/learningProfile'
 import type { CourseStudy, MyCourseEnrollment } from '../services/courseService'
-import type { PlacementResult } from '../services/assessmentService'
+import type { CourseCompetency } from '../services/freeExamService'
 import type { StudentApiSnapshot } from '../services/studentService'
 import type { UserProfile } from '../services/userService'
 import type { LessonDetail } from '../services/lessonService'
 import { findFirstLesson } from '../components/student/course/studyUtils'
-import { formatExamLabel, prettifyEnum } from './courseFormat'
+import { formatExamLabel, formatCourseTrack } from './courseFormat'
 import { bySequence } from './sequence'
 
 // Field-level merge of real API data over the prototype data in data/*.ts.
@@ -24,7 +24,7 @@ function normalize(text: string) {
   return text.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').toLowerCase().trim()
 }
 
-function categoryFor(title: string, result: PlacementResult | null) {
+function categoryFor(title: string, result: CourseCompetency | null) {
   if (!result) return undefined
   const wanted = normalize(title)
   return result.categories.find((category) => {
@@ -87,7 +87,7 @@ export function buildDashboardViewModel(api: StudentApiSnapshot) {
       id: item.course.id,
       title: item.course.title,
       category:
-        formatExamLabel(item.course.targetExam) || prettifyEnum(item.course.track) || 'Khóa học',
+        formatExamLabel(item.course.targetExam) || formatCourseTrack(item.course.track) || 'Khóa học',
       progress: study
         ? learned > 0
           ? `Đã học ${learned}/${study.totalLessons} bài học`

@@ -91,6 +91,21 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
       body: JSON.stringify({ success: status < 400, status, data, message }) })
     if (path === '/api/v1/auth/refresh') return answer(null, 401, 'No refresh cookie')
     if (path === '/api/v1/auth/logout') return answer(null)
+    if (path === '/api/v1/free-exams') return answer(state.quizzes.filter(q => q.type === 'PLACEMENT' && q.status === 'PUBLISHED')
+      .sort((a, b) => Date.parse(b.createdAt!) - Date.parse(a.createdAt!)).map(q => ({
+        id: q.id, title: q.title, description: q.description, courseId: q.courseId, courseTitle: q.courseTitle,
+        durationMinutes: q.durationMinutes, questionCount: q.questionCount, maxAttempts: q.maxAttempts,
+        practiceAllowed: q.practiceAllowed, publishedAt: q.createdAt, availableFrom: q.availableFrom, availableUntil: q.availableUntil,
+        attemptsUsed: activeRole === 'STUDENT' ? 0 : null, bestPercentage: null, locked: activeRole === 'STUDENT' ? false : null,
+        lockReason: null, inProgressAttemptId: null,
+      })))
+    if (path === '/api/v1/courses/main') return answer([])
+    if (/^\/api\/v1\/courses\/[^/]+\/competency$/.test(path)) return answer({
+      courseId: path.split('/').at(-2), courseTitle: 'Khóa Student', studentId: QUIZ_IDS.user,
+      examCount: 0, totalQuestions: 0, correctCount: 0, wrongCount: 0, score: null, maxScore: null,
+      overallPercentage: null, timeSpentSeconds: 0, level: null, weakCategoryId: null, weakCategoryName: null,
+      strongCategoryId: null, strongCategoryName: null, categories: [], exams: [], pendingExams: [],
+    })
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
     // Every student page shows the star balance and the streak in its top bar.
     if (path === '/api/v1/credits/me') {

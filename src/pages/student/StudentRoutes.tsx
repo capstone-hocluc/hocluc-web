@@ -1,8 +1,10 @@
-import { lazy, Suspense, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
-import type { QuizDetail } from '../../services/assessmentService'
+import { getAttempt, type QuizDetail } from '../../services/assessmentService'
+import { usePageResource } from '../../hooks/usePageResource'
+import ResourceState from '../../components/student/common/ResourceState'
 import StudentChatPage from './StudentChatPage'
 import StudentAiSolvePage from './StudentAiSolvePage'
 import ChatFeatureGate from '../../components/chat-feature-gate'
@@ -19,10 +21,6 @@ import LessonPage from '../course/LessonPage'
 import QuizDetailPage from '../assessments/QuizDetailPage'
 import QuizAttemptPage from '../assessments/QuizAttemptPage'
 import QuizReviewPage from '../assessments/QuizReviewPage'
-import PlacementIntroPage from '../assessments/PlacementIntroPage'
-import PlacementAttemptPage from '../assessments/PlacementAttemptPage'
-import PlacementResultPage from '../assessments/PlacementResultPage'
-import PlacementReviewPage from '../assessments/PlacementReviewPage'
 
 const StudentSchedulePage = lazy(() => import('./StudentSchedulePage'))
 
@@ -43,6 +41,7 @@ interface StudentRoutesProps {
 }
 
 function quizCoursePath(quiz: QuizDetail | null) {
+  if (quiz?.type === 'PLACEMENT') return '/free-exams'
   if (!quiz?.sectionCourseId) return studentRoutes.courses()
   if (quiz.lessonId) return studentRoutes.lesson(quiz.sectionCourseId, quiz.lessonId)
   return studentRoutes.courseStudy(quiz.sectionCourseId, quiz.type === 'EXAM' ? 'exams' : undefined)
@@ -63,14 +62,9 @@ function StudentRoutes({
   const studyCourseId: unknown = window.history.state?.lessonStudyCourseId
   const isProfileReturn = typeof returnPath === 'string' &&
     (returnPath === studentRoutes.learningProfile() || returnPath.startsWith(`${studentRoutes.learningProfile()}?`))
-  const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn)
-    ? returnPath : undefined
+  const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn || returnPath === '/free-exams')
+    ? returnPath : new URLSearchParams(window.location.search).get('from') === 'free-exams' ? '/free-exams' : undefined
   const lessonStudyCourseId = typeof studyCourseId === 'string' ? studyCourseId : undefined
-  const placementOrigin: unknown = window.history.state?.placementReturnTo
-  const placementReturnTo = typeof placementOrigin === 'string' &&
-    (placementOrigin === studentRoutes.learningProfile() || placementOrigin.startsWith(`${studentRoutes.learningProfile()}?`))
-    ? placementOrigin : undefined
-  const navigatePlacement = (path: string) => navigate(path, { placementReturnTo })
   const navigateQuiz = (path: string, returnTo = quizReturnTo) =>
     navigate(path, { quizReturnTo: returnTo, lessonStudyCourseId })
   const tutorOrigin: unknown = window.history.state?.tutorReturnTo
@@ -159,8 +153,8 @@ function StudentRoutes({
             courseId={route.courseId}
             lessonId={route.lessonId}
             onBackToStudy={() => navigate(studentRoutes.courseStudy(lessonStudyCourseId ?? route.courseId))}
-            onNavigateLesson={(lessonId) =>
-              navigate(studentRoutes.lesson(route.courseId, lessonId), { lessonStudyCourseId })
+            onNavigateLesson={(lessonId, lessonCourseId) =>
+              navigate(studentRoutes.lesson(lessonCourseId ?? route.courseId, lessonId), { lessonStudyCourseId })
             }
             onOpenQuiz={(quizId) => navigateQuiz(studentRoutes.quiz(quizId), studentRoutes.lesson(route.courseId, route.lessonId))}
             onOpenTutor={() => openTutor()}
@@ -208,6 +202,7 @@ function StudentRoutes({
               navigateQuiz(studentRoutes.quizAttempt(quizId, attemptId))
             }
             onOpenReview={(attemptId) => navigateQuiz(studentRoutes.attemptReview(attemptId))}
+            onOpenCompetency={(courseId) => navigate(`/student/learning-profile?tab=learning&courseId=${encodeURIComponent(courseId)}`)}
           />
         )
       case 'quiz-attempt':
@@ -226,57 +221,43 @@ function StudentRoutes({
             key={route.attemptId}
             attemptId={route.attemptId}
             backLabel={isProfileReturn ? 'Quay lại hồ sơ năng lực' : undefined}
+            onOpenCompetency={(courseId) => navigate(`/student/learning-profile?tab=learning&courseId=${encodeURIComponent(courseId)}`)}
             onBackToQuiz={(quizId) => isProfileReturn ? navigate(quizReturnTo!) : navigateQuiz(studentRoutes.quiz(quizId))}
           />
         )
       case 'placement':
-        return (
-          <PlacementIntroPage
-            onStartAttempt={(attemptId) => navigatePlacement(studentRoutes.placementAttempt(attemptId))}
-            onOpenReview={(attemptId) => navigatePlacement(studentRoutes.placementReview(attemptId))}
-            onBack={() => navigate(placementReturnTo ?? studentRoutes.dashboard())}
-          />
-        )
+        return <FreeExamRedirect navigate={navigate} />
       case 'placement-attempt':
-        return (
-          <PlacementAttemptPage
-            key={route.attemptId}
-            attemptId={route.attemptId}
-            onExit={() => navigatePlacement(studentRoutes.placement())}
-            onSubmitted={() => navigatePlacement(studentRoutes.placementResult())}
-          />
-        )
+        return <LegacyAssessmentRedirect key={route.attemptId} attemptId={route.attemptId} navigate={navigate} />
       case 'placement-result':
-        return (
-          <PlacementResultPage
-            onBack={placementReturnTo ? () => navigate(placementReturnTo) : undefined}
-            onOpenReview={(attemptId) => navigatePlacement(studentRoutes.placementReview(attemptId))}
-            onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
-          />
-        )
+        return <LegacyAssessmentRedirect navigate={navigate} />
       case 'placement-review':
-        return (
-          <PlacementReviewPage
-            key={route.attemptId}
-            attemptId={route.attemptId}
-            onBack={() => navigatePlacement(studentRoutes.placementResult())}
-          />
-        )
+        return <LegacyAssessmentRedirect key={route.attemptId} attemptId={route.attemptId} review navigate={navigate} />
     }
   }
 
   return (
-    <StudentLayout
-      currentPath={currentPath}
-      onNavigate={navigate}
-      onLogout={onLogout}
-      logoutLoading={logoutLoading}
-    >
-      <Suspense fallback={<SchedulingPageFallback title="Lịch học" />}>
-        {page()}
-      </Suspense>
+    <StudentLayout currentPath={currentPath} onNavigate={navigate} onLogout={onLogout} logoutLoading={logoutLoading}>
+      <Suspense fallback={<SchedulingPageFallback title="Lịch học" />}>{page()}</Suspense>
     </StudentLayout>
   )
+}
+
+function FreeExamRedirect({ navigate }: { navigate: (path: string) => void }) {
+  useEffect(() => { navigate('/free-exams') }, [navigate])
+  return <p role="status">Đang mở danh sách đề thi thử miễn phí…</p>
+}
+
+function LegacyAssessmentRedirect({ attemptId, review = false, navigate }: { attemptId?: string; review?: boolean; navigate: (path: string) => void }) {
+  const resource = usePageResource(() => attemptId ? getAttempt(attemptId) : Promise.resolve(null), [attemptId])
+  useEffect(() => {
+    if (resource.status !== 'ready') return
+    if (!attemptId) navigate('/student/learning-profile?tab=learning')
+    else if (resource.data) navigate(review || resource.data.status === 'GRADED'
+      ? studentRoutes.attemptReview(attemptId) : studentRoutes.quizAttempt(resource.data.quizId, attemptId))
+  }, [attemptId, review, navigate, resource.data, resource.status])
+  return <ResourceState status={resource.status} errorMessage={resource.errorMessage} onRetry={resource.reload}
+    loading={<p role="status">Đang mở bài thi…</p>} error={{ title: 'Không thể mở bài thi cũ' }} />
 }
 
 export default StudentRoutes

@@ -41,7 +41,7 @@ function QuizQuestionCard({
         : null
 
   return (
-    <Card variant="panel" padding="none" radius="xl" className="p-6 max-[640px]:p-4">
+    <Card as="article" aria-label={`Câu ${index + 1}`} variant="panel" padding="none" radius="xl" className="p-6 max-[640px]:p-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <StatusBadge tone="assessment" className="px-3.5 py-1 text-sm">
           Câu {index + 1}/{total}
@@ -67,6 +67,7 @@ function QuizQuestionCard({
 
       {question.questionType === 'SINGLE_CHOICE' ? (
         <RadioGroup
+          aria-label={`Đáp án câu ${index + 1}`}
           value={selectedOptionId ?? ''}
           onValueChange={onSelectOption}
           disabled={disabled}

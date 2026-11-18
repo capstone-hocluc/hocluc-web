@@ -11,7 +11,7 @@ import {
   formatDate,
   formatEnrollmentType,
   formatExamLabel,
-  prettifyEnum,
+  formatCourseTrack,
 } from '../../../lib/courseFormat'
 import StatusBadge from '../../ui/StatusBadge'
 import CourseProgress from './CourseProgress'
@@ -46,7 +46,7 @@ function MyCourseCard({ enrollment, onOpen, progressDetail, actionLabel = 'Tiế
   const progress = Math.max(0, Math.min(100, enrollment.progressPercentage ?? 0))
   const status = getStatus(progress)
   const isCompleted = status === 'completed'
-  const badgeLabel = formatExamLabel(course.targetExam) || prettifyEnum(course.track) || 'Khóa học'
+  const badgeLabel = formatExamLabel(course.targetExam) || formatCourseTrack(course.track) || 'Khóa học'
   const enrolledAtLabel = formatDate(enrollment.enrolledAt)
   const enrollmentTypeLabel = formatEnrollmentType(enrollment.enrollmentType)
 

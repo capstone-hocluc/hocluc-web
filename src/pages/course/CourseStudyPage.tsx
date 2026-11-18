@@ -8,6 +8,7 @@ import CourseExamsTab from '../../components/student/course/CourseExamsTab'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
+import Button from '../../components/ui/Button'
 import { BookOpen, CalendarDays, FileQuestion } from '../../components/console/icons'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
@@ -57,6 +58,7 @@ function CourseStudyPage({
     const tab = new URLSearchParams(window.location.search).get('tab')
     return isStudyTab(tab) ? tab : 'content'
   })
+  const [reminderDismissed, setReminderDismissed] = useState(false)
   useEffect(() => {
     const search = new URLSearchParams(window.location.search)
     if (search.get('tab') !== 'plan') return
@@ -87,7 +89,7 @@ function CourseStudyPage({
   }
 
   return (
-    <StudentPageContainer className="pb-8">
+    <StudentPageContainer width="fluid" className="pb-8">
       <ResourceState
         imageSrc="/mascot/03.png"
         status={status}
@@ -122,6 +124,10 @@ function CourseStudyPage({
           className="flex flex-col gap-6"
         >
           <CourseOverview study={study} onBack={onBackToMyCourses} onOpenLesson={onOpenLesson} />
+          {study.showPlacementReminder && !reminderDismissed && <aside className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-card bg-surface p-4" aria-label="Nhắc thi thử miễn phí">
+            <div><h2 className="font-semibold">Thử sức trước khi bắt đầu học</h2><p className="mt-1 text-sm text-text-secondary">Làm đề miễn phí của khóa để xem đánh giá năng lực. Bạn vẫn có thể tiếp tục học ngay.</p></div>
+            <div className="flex flex-wrap gap-2"><Button size="sm" appearance="outline" onClick={() => setReminderDismissed(true)}>Để sau</Button><Button asChild size="sm"><a href={`/free-exams?courseId=${encodeURIComponent(courseId)}`}>Xem đề miễn phí</a></Button></div>
+          </aside>}
 
           <div>
             <TabsList className={styles.studyTabs} aria-label="Nội dung khóa học">
