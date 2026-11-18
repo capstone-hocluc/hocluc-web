@@ -1509,6 +1509,35 @@ test('opening a saved conversation loads its messages, title and paper', async (
   await expect(page.getByRole('textbox', { name: 'Tên đề thi' })).toHaveValue('')
 })
 
+test('the first question of a new exam has no versions from the exam opened before it', async ({ page }) => {
+  const saved: Conversation = { id: 'conv-9', title: 'Đề đã lưu', subjectId: 'category-1', mode: 'compose', createdAt: stamp, updatedAt: stamp }
+  await installAiFixture(page, 'MANAGER', {
+    conversations: [saved],
+    endless: true,
+    messages: {
+      'conv-9': [
+        { id: 'm1', conversationId: 'conv-9', role: 'USER', mode: 'compose', content: 'Soạn giúp tôi một câu đại số.', createdAt: stamp },
+        { id: 'm2', conversationId: 'conv-9', role: 'ASSISTANT', mode: 'compose', content: 'Mình đã thêm câu hỏi vào đề.', createdAt: stamp },
+      ],
+    },
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant')
+  const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
+  await expect(chat.getByText('Soạn giúp tôi một câu đại số.')).toBeVisible()
+
+  await chat.getByRole('button', { name: 'Cuộc trò chuyện mới', exact: true }).click()
+  await chat.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn 1 câu Toán về phương trình bậc hai')
+  await chat.getByRole('button', { name: 'Gửi tin nhắn' }).click()
+
+  // While its run goes on, the new question is the only version of its turn.
+  await expect(chat.getByRole('button', { name: 'Dừng tạo câu trả lời' })).toBeVisible()
+  await expect(chat.getByText('Soạn 1 câu Toán về phương trình bậc hai')).toBeVisible()
+  await page.waitForTimeout(500)
+  await expect(chat.getByRole('button', { name: 'Trước', exact: true })).toHaveCount(0)
+  await expect(chat.getByText(/^\s*\d+\s*\/\s*\d+\s*$/)).toHaveCount(0)
+})
+
 // Free documents: the exam is a Tiptap document on paged A4 sheets ("Văn bản tự do", the default mode).
 
 const savedExam: Conversation = {
