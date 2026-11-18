@@ -104,7 +104,7 @@ test('a booked class that has opened joins through the student own link', async 
   await expect(page.getByRole('button', { name: 'Hủy giữ chỗ' })).toHaveCount(0)
 })
 
-test('a full class cannot be booked and only a booked past class can be replayed', async ({ page }) => {
+test('a full class cannot be booked and every past class can be replayed, booked or not', async ({ page }) => {
   const past = Date.now() - 72 * HOUR
   const pastTimes = { startTime: new Date(past).toISOString(), endTime: new Date(past + 2 * HOUR).toISOString() }
   await installRoadmapFixture(page, {
@@ -124,6 +124,7 @@ test('a full class cannot be booked and only a booked past class can be replayed
 
   await expect(page.getByRole('button', { name: 'Hết chỗ' })).toBeDisabled()
   const replays = page.getByRole('link', { name: 'Xem bản ghi' })
-  await expect(replays).toHaveCount(1)
-  await expect(replays).toHaveAttribute('href', REPLAY_URL)
+  await expect(replays).toHaveCount(2)
+  await expect(replays.first()).toHaveAttribute('href', REPLAY_URL)
+  await expect(replays.last()).toHaveAttribute('href', REPLAY_URL)
 })
