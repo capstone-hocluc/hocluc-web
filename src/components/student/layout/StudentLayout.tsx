@@ -9,7 +9,7 @@ import StudentToast from '../common/StudentToast'
 import { useCredits } from '../../../lib/credits'
 import { getAccessToken } from '../../../lib/api'
 import { getStudentNavKeyForPath } from '../../../lib/studentNav'
-import { studentRoutes } from '../../../lib/studentRoutes'
+import { isStudentAssessmentsPath, studentRoutes } from '../../../lib/studentRoutes'
 import { cn } from '../../../lib/cn'
 import styles from './StudentLayout.module.css'
 
@@ -88,7 +88,7 @@ function StudentLayout({
         onNotify={notify}
       />
       <StudentSidebar
-        activeKey={getStudentNavKeyForPath(currentPath)}
+        activeKey={isStudentAssessmentsPath(window.history.state?.quizReturnTo) && /^\/student\/assessments\/(quizzes|attempts)\//.test(currentPath) ? 'assessments' : getStudentNavKeyForPath(currentPath)}
         onNavigate={onNavigate}
         collapsed={sidebarCollapsed}
         mobileOpen={mobileNavigationOpen}

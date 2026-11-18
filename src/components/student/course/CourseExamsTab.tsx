@@ -77,7 +77,7 @@ function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
         <Card as="section" padding="lg" radius="xl" className="border-0 p-0 shadow-none" aria-label="Bài thi của khóa học">
           <div className={examStyles.toolbar}>
             <Tabs value={filter} onValueChange={(value) => updateView(value as ExamFilter, 1)}>
-              <TabsList aria-label="Lọc bài thi" className={examStyles.filters}>
+              <TabsList data-pill-tabs="" aria-label="Lọc bài thi" className={examStyles.filters}>
                 <TabsTrigger value="all">Tất cả <span>{exams.length}</span></TabsTrigger>
                 <TabsTrigger value="todo">Chưa làm <span>{exams.length - doneCount}</span></TabsTrigger>
                 <TabsTrigger value="done">Đã làm <span>{doneCount}</span></TabsTrigger>

@@ -8,6 +8,7 @@ import { CourseDistribution, CourseMockExamResults, LearningCourseList, type Pro
 import CourseLearningAnalytics from '../../components/student/learning-profile/CourseLearningAnalytics'
 import CourseCompetencyPanel from '../../components/student/learning-profile/CourseCompetencyPanel'
 import LearningPracticePanel from '../../components/student/learning-profile/LearningPracticePanel'
+import SuggestedCourses from '../../components/student/course/SuggestedCourses'
 import { useCourseCompetency } from '../../hooks/useCourseCompetency'
 import LearningProfileBanner from '../../components/student/learning-profile/LearningProfileBanner'
 import bannerStyles from '../../components/student/learning-profile/LearningProfileBanner.module.css'
@@ -106,6 +107,7 @@ function LearningProfile({ onNavigate }: LearningProfileProps) {
           </div>
           <CourseCompetencyPanel competency={competency} onNavigate={onNavigate} compact />
           <SavedLearningGoals />
+          <SuggestedCourses onOpen={course => onNavigate(course.purchased ? studentRoutes.courseStudy(course.id) : `/courses/${encodeURIComponent(course.id)}`)} />
         </>}
         {activeTab === 'learning' && <>
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold text-primary-text">Tổng quan học tập</h2><p className="mt-1 text-sm text-text-body">Tiếp tục học, theo dõi kết quả và lịch sử luyện đề.</p></div><Button size="sm" shape="pill" appearance="outline" className="border-primary-text text-primary-text not-disabled:hover:bg-primary/6" onClick={() => onNavigate(studentRoutes.courses())}>Khóa học của tôi<ArrowRight size={16} /></Button></div>

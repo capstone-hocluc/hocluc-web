@@ -48,7 +48,7 @@ export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Luyện tập',
     items: [
-      { key: 'assessments', label: 'Bài kiểm tra', icon: ClipboardCheck, path: studentRoutes.placement() },
+      { key: 'assessments', label: 'Luyện đề', icon: ClipboardCheck, path: studentRoutes.assessments() },
       { key: 'chat', label: 'Hỏi Mentor', icon: MailQuestion, path: studentRoutes.chat() },
     ],
   },
@@ -80,6 +80,7 @@ export function getStudentNavKey(route: StudentRoute | null): StudentNavKey | nu
       return 'schedule'
     case 'learning-profile':
       return 'learning-profile'
+    case 'assessments':
     case 'placement':
     case 'placement-result':
     case 'placement-attempt':

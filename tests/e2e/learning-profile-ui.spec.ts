@@ -774,7 +774,7 @@ test('My courses links to the catalog and AI returns to its course or lesson aft
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.getByRole('button', { name: 'Quay lại học tập', exact: true }).click()
   await expect(page).toHaveURL(`/student/courses/${QUIZ_IDS.otherCourse}/study/lessons/${QUIZ_IDS.lesson}`)
-  await page.getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true }).click()
   await expect(page).toHaveURL(`/student/courses/${QUIZ_IDS.course}/study`)
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByRole('button', { name: 'Mở Gia sư AI', exact: true })).toBeVisible()
@@ -909,7 +909,7 @@ test('Learning profile uses real categories and progress and restores the select
   await page.screenshot({ path: testInfo.outputPath('competency-desktop.png'), fullPage: true })
 
   await page.getByRole('button', { name: 'Làm đề miễn phí', exact: true }).click()
-  await expect(page).toHaveURL('/free-exams?courseId=' + QUIZ_IDS.course)
+  await expect(page).toHaveURL('/student/assessments?tab=free&course=' + QUIZ_IDS.course)
   await page.goBack()
   await expect(page).toHaveURL(`${profilePath}?tab=learning`)
 
@@ -919,7 +919,7 @@ test('Learning profile uses real categories and progress and restores the select
   await expect(page.getByRole('tab', { name: 'Học tập', exact: true })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('button', { name: /Khóa ĐGNL QA/ }).click()
   await expect(page).toHaveURL(`/student/courses/${QUIZ_IDS.otherCourse}/study/lessons/${QUIZ_IDS.lesson}`)
-  await page.getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true }).click()
   await expect(page).toHaveURL(`/student/courses/${QUIZ_IDS.course}/study`)
 
   await page.goto(`${profilePath}?tab=plan`, { waitUntil: 'domcontentloaded' })

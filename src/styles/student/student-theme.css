@@ -127,6 +127,29 @@ html[data-learner] :where(input:not([type='checkbox']):not([type='radio']), text
 .student-layout .hl-scheduling {
   --color-scheduling-primary-text: var(--color-primary-text);
 }
+
+/* Scope rounded Student controls to the shell, including its portalled dialogs. */
+html[data-learner]:has(.student-layout) {
+  --learner-control-radius: 9999px;
+  --learner-panel-radius: 24px;
+}
+html[data-learner]:has(.student-layout) [data-ui-button],
+html[data-learner]:has(.student-layout) [data-pill-tabs],
+html[data-learner]:has(.student-layout) [data-pill-tabs] [role='tab'],
+html[data-learner]:has(.student-layout) :is(
+  input:not([type]), input[type='text'], input[type='search'], input[type='email'],
+  input[type='password'], input[type='tel'], input[type='url'], input[type='number'],
+  input[type='date'], input[type='time'], input[type='datetime-local'],
+  select, [role='combobox'], [data-dropdown-trigger], .dropdown-field-trigger
+) {
+  border-radius: var(--learner-control-radius);
+}
+html[data-learner]:has(.student-layout) :is([role='dialog'], [role='alertdialog']) {
+  border-radius: 28px;
+}
+html[data-learner]:has(.student-layout) :is(textarea, [role='listbox'], [role='menu']) {
+  border-radius: 20px;
+}
 html[data-learner] .dropdown-field-trigger {
   min-height: 44px;
   border-radius: var(--learner-control-radius);

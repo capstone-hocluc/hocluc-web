@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import MascotState from '../../components/common/MascotState'
 import MyCourseCard from '../../components/student/course/MyCourseCard'
+import SuggestedCourses from '../../components/student/course/SuggestedCourses'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
 import SearchInput from '../../components/ui/SearchInput'
 import Button from '../../components/ui/Button'
-import { BookOpen, BookOpenCheck, FileText, Search } from '../../components/console/icons'
+import { ArrowRight, BookOpen, BookOpenCheck, FileText, Sparkles } from '../../components/console/icons'
 import Skeleton from '../../components/ui/Skeleton'
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
@@ -17,13 +18,14 @@ import styles from './MyCourses.module.css'
 interface MyCoursesProps {
   onOpenCourse: (course: MyCourseEnrollment['course']) => void
   onBrowseCourses: () => void
+  onOpenSuggestedCourse: (course: MyCourseEnrollment['course']) => void
 }
 
-type CourseTab = 'main' | 'support'
+type CourseTab = 'main' | 'support' | 'suggested'
 
 const courseGrid = styles.courseGrid
 
-function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
+function MyCourses({ onOpenCourse, onBrowseCourses, onOpenSuggestedCourse }: MyCoursesProps) {
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<CourseTab>('main')
   const {
@@ -70,6 +72,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
             <TabsList aria-label="Loại khóa học" className={styles.tabs}>
               <TabsTrigger value="main"><BookOpen size={20} />Khóa học chính</TabsTrigger>
               <TabsTrigger value="support"><BookOpenCheck size={20} />Khóa học bổ trợ</TabsTrigger>
+              <TabsTrigger value="suggested"><Sparkles size={20} />Khóa học đề xuất</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className={styles.actions}>
@@ -80,13 +83,13 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
               placeholder="Tìm kiếm khóa học"
             />
             <Button appearance="outline" className={styles.browseButton} onClick={onBrowseCourses}>
-              <Search size={18} />Khám phá khóa học
+              Khám phá khóa học<ArrowRight size={18} />
             </Button>
           </div>
         </div>
       </div>
 
-      <section className={styles.content} aria-label={isMain ? 'Khóa học chính' : 'Khóa học bổ trợ'}>
+      {tab === 'suggested' ? <SuggestedCourses compact query={query} onOpen={onOpenSuggestedCourse} /> : <section className={styles.content} aria-label={isMain ? 'Khóa học chính' : 'Khóa học bổ trợ'}>
         {status === 'loading' && (
           <div className={courseGrid}>
             {Array.from({ length: 3 }).map((_, index) => (
@@ -143,7 +146,7 @@ function MyCourses({ onOpenCourse, onBrowseCourses }: MyCoursesProps) {
             ))}
           </div>
         )}
-      </section>
+      </section>}
     </StudentPageContainer>
   )
 }

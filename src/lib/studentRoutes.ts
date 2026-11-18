@@ -32,6 +32,12 @@ export const studentRoutes = {
   quizAttempt: (quizId: string, attemptId: string) =>
     `/student/assessments/quizzes/${enc(quizId)}/attempts/${enc(attemptId)}`,
   attemptReview: (attemptId: string) => `/student/assessments/attempts/${enc(attemptId)}/review`,
+  assessments: (tab?: 'course' | 'free', courseId?: string) => {
+    const query = new URLSearchParams()
+    if (tab) query.set('tab', tab)
+    if (courseId) query.set('course', courseId)
+    return `/student/assessments${query.size ? `?${query}` : ''}`
+  },
   placement: () => '/free-exams',
   placementResult: () => '/student/assessments/placement/result',
   placementAttempt: (attemptId: string) =>
@@ -57,6 +63,7 @@ export type StudentRoute =
   | { name: 'quiz'; quizId: string }
   | { name: 'quiz-attempt'; quizId: string; attemptId: string }
   | { name: 'attempt-review'; attemptId: string }
+  | { name: 'assessments' }
   | { name: 'placement' }
   | { name: 'placement-result' }
   | { name: 'placement-attempt'; attemptId: string }
@@ -123,6 +130,7 @@ export function parseStudentRoute(path: string): StudentRoute | null {
       return null
     }
     case 'assessments': {
+      if (rest.length === 0) return { name: 'assessments' }
       if (a === 'quizzes' && rest.length === 2) return { name: 'quiz', quizId: b }
       if (a === 'quizzes' && rest.length === 4 && c === 'attempts')
         return { name: 'quiz-attempt', quizId: b, attemptId: d }
@@ -141,4 +149,8 @@ export function parseStudentRoute(path: string): StudentRoute | null {
     default:
       return null
   }
+}
+
+export function isStudentAssessmentsPath(value: unknown): value is string {
+  return typeof value === 'string' && !value.includes('\\') && /^\/student\/assessments(?:\?[^#]*)?$/.test(value)
 }

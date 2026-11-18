@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
-import { parseStudentRoute, studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
+import { isStudentAssessmentsPath, parseStudentRoute, studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
 import { getAttempt, type QuizDetail } from '../../services/assessmentService'
 import { usePageResource } from '../../hooks/usePageResource'
 import ResourceState from '../../components/student/common/ResourceState'
@@ -11,6 +11,7 @@ import ChatFeatureGate from '../../components/chat-feature-gate'
 import MascotState from '../../components/common/MascotState'
 import StudentDashboard from './StudentDashboard'
 import MyCourses from './MyCourses'
+import StudentAssessments from './StudentAssessments'
 import CourseDetail from './CourseDetail'
 import LearningActivity from './LearningActivity'
 import VideoLearningPage from './VideoLearningPage'
@@ -41,7 +42,7 @@ interface StudentRoutesProps {
 }
 
 function quizCoursePath(quiz: QuizDetail | null) {
-  if (quiz?.type === 'PLACEMENT') return '/free-exams'
+  if (quiz?.type === 'PLACEMENT') return studentRoutes.assessments('free')
   if (!quiz?.sectionCourseId) return studentRoutes.courses()
   if (quiz.lessonId) return studentRoutes.lesson(quiz.sectionCourseId, quiz.lessonId)
   return studentRoutes.courseStudy(quiz.sectionCourseId, quiz.type === 'EXAM' ? 'exams' : undefined)
@@ -62,7 +63,7 @@ function StudentRoutes({
   const studyCourseId: unknown = window.history.state?.lessonStudyCourseId
   const isProfileReturn = typeof returnPath === 'string' &&
     (returnPath === studentRoutes.learningProfile() || returnPath.startsWith(`${studentRoutes.learningProfile()}?`))
-  const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn || returnPath === '/free-exams')
+  const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn || returnPath === '/free-exams' || isStudentAssessmentsPath(returnPath))
     ? returnPath : new URLSearchParams(window.location.search).get('from') === 'free-exams' ? '/free-exams' : undefined
   const lessonStudyCourseId = typeof studyCourseId === 'string' ? studyCourseId : undefined
   const navigateQuiz = (path: string, returnTo = quizReturnTo) =>
@@ -79,6 +80,8 @@ function StudentRoutes({
 
   const page = (): ReactNode => {
     switch (route.name) {
+      case 'assessments':
+        return <StudentAssessments onOpenQuiz={quizId => navigateQuiz(studentRoutes.quiz(quizId), `${window.location.pathname}${window.location.search}`)} />
       case 'dashboard':
         return (
           <StudentDashboard
@@ -127,6 +130,7 @@ function StudentRoutes({
         return (
           <MyCourses
             onOpenCourse={(course) => navigate(studentRoutes.courseStudy(course.id))}
+            onOpenSuggestedCourse={(course) => navigate(course.purchased ? studentRoutes.courseStudy(course.id) : `/courses/${encodeURIComponent(course.id)}`)}
             onBrowseCourses={() => navigate('/courses')}
           />
         )
@@ -244,7 +248,7 @@ function StudentRoutes({
 }
 
 function FreeExamRedirect({ navigate }: { navigate: (path: string) => void }) {
-  useEffect(() => { navigate('/free-exams') }, [navigate])
+  useEffect(() => { navigate(studentRoutes.assessments('free')) }, [navigate])
   return <p role="status">Đang mở danh sách đề thi thử miễn phí…</p>
 }
 

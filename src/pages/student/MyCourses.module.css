@@ -67,6 +67,7 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px 24px;
@@ -89,7 +90,7 @@
   display: flex;
   gap: 0;
   border: 0;
-  border-radius: 20px 20px 0 0;
+  border-radius: 14px 14px 0 0;
   background: #e1f5ff;
 }
 
@@ -97,18 +98,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 58px;
-  padding: 14px 24px;
+  gap: 7px;
+  min-height: 48px;
+  padding: 12px 22px;
   border: 0;
-  border-radius: 20px 20px 0 0;
-  font-size: 16px;
+  border-radius: 14px 14px 0 0;
+  font-size: 14px;
   color: var(--color-text-dim);
 }
 
 .tabs [role='tab'][data-state='active'] {
   background: var(--color-surface);
   color: var(--color-primary-text);
+}
+
+.tabs [role='tab'] svg {
+  width: 18px;
+  height: 18px;
 }
 
 .content {
@@ -188,8 +194,16 @@
 
   .tabs [role='tab'] {
     flex: 1;
-    padding: 12px;
-    font-size: 14px;
+    min-width: 0;
+    white-space: normal;
+    padding: 12px 8px;
+    gap: 5px;
+    font-size: 12px;
+  }
+
+  .tabs [role='tab'] svg {
+    flex-shrink: 0;
+    width: 16px;
   }
 
   .content {

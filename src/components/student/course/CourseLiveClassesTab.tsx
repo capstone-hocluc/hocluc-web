@@ -59,7 +59,7 @@ function CourseLiveClassesTab({ courseId }: { courseId: string }) {
     <section aria-label="Lịch học trực tuyến của khóa học">
       <div className={cardStyles.toolbar}>
         <Tabs value={view} onValueChange={value => updateView(value as LiveView, 1)}>
-          <TabsList aria-label="Lọc lớp học trực tuyến" className={cardStyles.filters}>
+          <TabsList data-pill-tabs="" aria-label="Lọc lớp học trực tuyến" className={cardStyles.filters}>
             <TabsTrigger value="all">Tất cả <span>{all.length}</span></TabsTrigger>
             <TabsTrigger value="upcoming">Sắp tới <span>{upcoming.length}</span></TabsTrigger>
             <TabsTrigger value="past">Đã qua <span>{past.length}</span></TabsTrigger>

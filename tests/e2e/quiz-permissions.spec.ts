@@ -486,7 +486,7 @@ test('Student exits a quiz to its course content or lesson and can return from a
   await page.getByRole('button', { name: /Quiz được giao/ }).click()
   await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
   await expect(page).toHaveURL(lessonPath)
-  await page.getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true }).click()
   await expect(page).toHaveURL(studyPath)
 
   await page.goto(quizPath)
@@ -523,7 +523,7 @@ test('Student resumes lessons, unlocks the lesson and chapter quizzes, and sees 
   await expect(page.getByText('Tiến độ bài học: 100%')).toBeVisible()
   await expect(lessonQuiz).toBeVisible()
 
-  const backToCourse = page.getByRole('button', { name: 'Khóa học', exact: true })
+  const backToCourse = page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true })
   await backToCourse.click()
   await expect(page).toHaveURL(studyPath)
   await expect(page.getByText('1/2 bài học', { exact: true }).first()).toBeVisible()

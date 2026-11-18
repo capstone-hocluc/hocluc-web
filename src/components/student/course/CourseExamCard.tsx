@@ -14,7 +14,17 @@ const lockLabels: Record<string, string> = {
   NOT_PURCHASED: 'Chưa có quyền',
 }
 
-function CourseExamCard({ exam, onOpenQuiz }: { exam: CourseExamSummary; onOpenQuiz: (quizId: string) => void }) {
+type ExamCardData = Pick<CourseExamSummary, 'id' | 'title' | 'questionCount' | 'durationMinutes' | 'maxAttempts' | 'bestPercentage' | 'lockReason' | 'inProgressAttemptId'> & {
+  attemptsUsed: number | null
+  locked: boolean | null
+  passed?: boolean
+  passingPercentage?: number | null
+  showAnswers?: boolean
+  availableFrom?: string | null
+  availableUntil?: string | null
+}
+
+function CourseExamCard({ exam, onOpenQuiz, contextLabel }: { exam: ExamCardData; onOpenQuiz: (quizId: string) => void; contextLabel?: string }) {
   const completed = hasCompletedExam(exam)
   const stateLabel = exam.locked ? lockLabels[exam.lockReason ?? ''] ?? 'Chưa khả dụng'
     : exam.inProgressAttemptId ? 'Đang làm'
@@ -27,6 +37,7 @@ function CourseExamCard({ exam, onOpenQuiz }: { exam: CourseExamSummary; onOpenQ
         <span className={styles.icon} aria-hidden="true"><FileQuestion size={24} /></span>
         <div className="min-w-0">
           <h3 className={styles.title}>{exam.title}</h3>
+          {contextLabel && <p className="mt-1 text-xs text-text-secondary">{contextLabel}</p>}
           <div className={styles.meta}>
             <span>{exam.questionCount} câu hỏi</span>
             <span><Clock3 size={13} aria-hidden="true" />{exam.durationMinutes != null && exam.durationMinutes > 0 ? `${exam.durationMinutes} phút` : 'Không giới hạn thời gian'}</span>
@@ -35,10 +46,10 @@ function CourseExamCard({ exam, onOpenQuiz }: { exam: CourseExamSummary; onOpenQ
       </div>
 
       <dl className={styles.stats}>
-        <div><dt>Lượt chính thức</dt><dd>{exam.attemptsUsed}/{exam.maxAttempts}</dd></div>
+        <div><dt>Lượt chính thức</dt><dd>{exam.attemptsUsed == null ? 'Chưa có dữ liệu' : `${exam.attemptsUsed}/${exam.maxAttempts}`}</dd></div>
         <div><dt>Điểm cao nhất</dt><dd>{exam.bestPercentage != null ? `${exam.bestPercentage}%` : 'Chưa có điểm'}</dd></div>
         {exam.passingPercentage != null && <div><dt>Mức đạt</dt><dd>{exam.passingPercentage}%</dd></div>}
-        <div><dt>Đáp án sau nộp</dt><dd>{exam.showAnswers ? 'Được công bố' : 'Không công bố'}</dd></div>
+        <div><dt>Đáp án sau nộp</dt><dd>{exam.showAnswers == null ? 'Xem trong chi tiết đề' : exam.showAnswers ? 'Được công bố' : 'Không công bố'}</dd></div>
       </dl>
 
       {(exam.availableFrom || exam.availableUntil) && (

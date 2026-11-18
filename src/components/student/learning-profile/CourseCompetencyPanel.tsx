@@ -7,7 +7,6 @@ import Skeleton from '../../ui/Skeleton'
 import ResourceState from '../common/ResourceState'
 import MascotState from '../../common/MascotState'
 import type { useCourseCompetency } from '../../../hooks/useCourseCompetency'
-import { freeExamsPath } from '../../../services/freeExamService'
 import { studentRoutes } from '../../../lib/studentRoutes'
 import { formatDateTime } from '../../../lib/courseFormat'
 import type { ProfileNavigate } from './LearningCoursePanel'
@@ -22,7 +21,7 @@ export default function CourseCompetencyPanel({ competency, onNavigate, compact 
   return <Card as="section" aria-label="Đánh giá năng lực theo khóa" className="min-w-0 space-y-4 rounded-3xl p-5 max-[640px]:p-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h2 className="text-lg font-bold">Đánh giá năng lực theo khóa</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">Tổng hợp từ lần thi chính thức đầu tiên đã chấm của mỗi đề miễn phí thuộc khóa. Thi lại và luyện tập không cộng vào phân tích.</p></div>
-      <Button size="sm" appearance="outline" className="border-primary-text text-primary-text" onClick={() => onNavigate(freeExamsPath(courseId || undefined))}>Làm đề miễn phí<ArrowRight size={16} /></Button>
+      <Button size="sm" appearance="outline" className="border-primary-text text-primary-text" onClick={() => onNavigate(studentRoutes.assessments('free', courseId || undefined))}>Làm đề miễn phí<ArrowRight size={16} /></Button>
     </div>
     <ResourceState status={courses.status} errorMessage={courses.errorMessage} onRetry={courses.reload} imageSrc="/mascot/03.png" loading={<Skeleton className="h-12" />} error={{ title: 'Không thể tải danh sách khóa để đánh giá' }} />
     {(options.length > 0 || courseId) && <label className="grid max-w-xl gap-2 text-sm font-semibold">Khóa dùng để đánh giá
