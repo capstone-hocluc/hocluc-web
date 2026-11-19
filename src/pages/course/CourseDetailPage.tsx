@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import BundleCourses from '../../components/course/BundleCourses'
 import ChapterList from '../../components/course/ChapterList'
 import CourseAbout from '../../components/course/CourseAbout'
+import IntroVideo from '../../components/course/IntroVideo'
 import {
   ownChapters,
   parseDescription,
@@ -20,6 +21,7 @@ import { PublicFooter, PublicHeader } from '../../components/landing-page/Public
 import { landingHero } from '../../data/landing-content'
 import { ApiError } from '../../lib/api'
 import { formatDuration, formatExamLabel } from '../../lib/courseFormat'
+import { introVideoSource } from '../../lib/introVideo'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast, showSuccessToast } from '../../lib/toastBus'
 import { addCartItem } from '../../services/cartService'
@@ -45,6 +47,17 @@ interface CourseDetailPageProps {
 const day = (value?: string) => {
   const date = parseCourseDate(value)
   return date ? courseDate.format(date) : null
+}
+
+// How long a buyer keeps the course; null when the backend does not say.
+function accessLength(course: CourseDetail): string | null {
+  if (course.accessMode === 'DAYS_FROM_PURCHASE' && course.accessDays) {
+    return `${course.accessDays} ngày từ khi mua`
+  }
+  if (course.accessMode === 'FIXED_END_DATE') {
+    return day(course.endDate) ? `Đến hết ${day(course.endDate)}` : 'Không giới hạn'
+  }
+  return null
 }
 
 function GiftCard({ gift }: { gift: GiftCourse }) {
@@ -327,6 +340,12 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                             <dd>{formatDuration(course.estimatedDurationMinutes * 60)}</dd>
                           </div>
                         ) : null}
+                        {accessLength(course) && (
+                          <div>
+                            <dt>Hạn dùng</dt>
+                            <dd>{accessLength(course)}</dd>
+                          </div>
+                        )}
                         {view.gifts.length > 0 && !view.bundle && (
                           <div>
                             <dt>Khóa đi kèm</dt>
@@ -377,7 +396,9 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                   <aside className="cd-aside" aria-label="Đăng ký khóa học">
                     <div className="cd-buy">
                       <div className="cd-buy-cover">
-                        {course.imageUrl && !coverFailed ? (
+                        {introVideoSource(course.videoUrl) ? (
+                          <IntroVideo url={course.videoUrl} title={course.title} poster={course.imageUrl} />
+                        ) : course.imageUrl && !coverFailed ? (
                           <img src={course.imageUrl} alt="" onError={() => setCoverFailed(true)} />
                         ) : (
                           <div className="course-cover-fallback">
