@@ -348,8 +348,8 @@ function RelatedTrace({ selection }: { selection: Selection }) {
         {skill && <a className="text-brand-500 hover:underline" href={consoleTracePath('question-bank', { primarySkillCode: selection.code })}>Câu hỏi ({questions})</a>}
       </div>
       {expanded && <ul className="flex flex-col gap-2">
-        {lessons.map((lesson) => <li key={lesson.lessonId}><a className="break-words text-brand-500 hover:underline" href={consoleTracePath('courses', { courseId: lesson.courseId })}>{lesson.courseTitle} › {lesson.chapterTitle} › {lesson.lessonTitle}</a></li>)}
-        {chapters.map((chapter) => <li key={chapter.chapterId}><a className="break-words text-brand-500 hover:underline" href={consoleTracePath('courses', { courseId: chapter.courseId })}>{chapter.courseTitle} › {chapter.chapterTitle}</a></li>)}
+        {lessons.map((lesson) => <li key={lesson.lessonId}><a className="break-words text-brand-500 hover:underline" href={consoleTracePath('courses', { courseId: lesson.courseId, tab: 'content' })}>{lesson.courseTitle} › {lesson.chapterTitle} › {lesson.lessonTitle}</a></li>)}
+        {chapters.map((chapter) => <li key={chapter.chapterId}><a className="break-words text-brand-500 hover:underline" href={consoleTracePath('courses', { courseId: chapter.courseId, tab: 'content' })}>{chapter.courseTitle} › {chapter.chapterTitle}</a></li>)}
       </ul>}
     </section>
   )
