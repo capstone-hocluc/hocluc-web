@@ -2,12 +2,12 @@ import type { ComponentProps } from 'react'
 import { Search } from '../console/icons'
 import { cn } from '../../lib/cn'
 
-// Rounded search field with a leading icon; focus ring on the wrapper.
+// Rounded search field with a leading icon; a faint border tint marks focus.
 function SearchInput({ className, ...props }: Omit<ComponentProps<'input'>, 'type'>) {
   return (
     <label
       className={cn(
-        'flex min-h-11 min-w-70 items-center gap-2 rounded-xl border border-line bg-surface px-3.5 text-text-faint transition-colors focus-within:border-primary focus-within:ring-3 focus-within:ring-focus-ring/15 max-[560px]:min-w-0 max-[560px]:flex-1',
+        'flex min-h-11 min-w-70 items-center gap-2 rounded-xl border border-line bg-surface px-3.5 text-text-faint transition-colors focus-within:border-primary/40 max-[560px]:min-w-0 max-[560px]:flex-1',
         className
       )}
     >

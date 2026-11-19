@@ -2,6 +2,7 @@ import DateField from '../date-field'
 import { CalendarDays, List, Search } from '../icons'
 import Button from '../button'
 import { fieldControlClass } from '../form-field'
+import { cn } from '../../../lib/cn'
 
 export type ScheduleViewMode = 'agenda' | 'week'
 
@@ -26,7 +27,7 @@ export default function ScheduleFilters({ date, onDateChange, query, onQueryChan
           autoComplete="off"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          className={`${fieldControlClass} pl-10`}
+          className={cn(fieldControlClass, 'pl-10 focus:border-input-primary-focus-border/40')}
           placeholder="Tìm buổi hoặc lớp"
         />
       </label>
