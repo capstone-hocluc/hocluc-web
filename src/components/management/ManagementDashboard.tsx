@@ -15,6 +15,7 @@ import OrderManagement from './crud/order-management'
 import CreditManagement from './crud/credit-management'
 import EnrollmentManagement from './crud/enrollment-management'
 import ManagerOverview from './ManagerOverview'
+import MentorOverview from './MentorOverview'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import type { ManagementRole } from './ManagementRouteGuard'
 import {
@@ -96,7 +97,9 @@ export function ManagementScreen({
                 onNavigate={onNavigate}
                 areaLabel={role === 'ADMINISTRATOR' ? 'quản trị' : 'vận hành'}
               />
-            ) : null}
+            ) : (
+              <MentorOverview />
+            )}
             <DashboardActions role={role} onNavigate={onNavigate} />
           </>
         )
