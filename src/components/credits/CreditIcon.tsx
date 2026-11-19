@@ -8,16 +8,31 @@ type CreditIconProps = {
   title?: string;
 };
 
+/** The Hocluc mark (head and two swooshes), drawn in its own 16 19 317 419 box, as in public/hocluc-mark.svg. */
+const MARK_PATHS = [
+  "M225.7537,118.9119A40.5325,40.5325 0 0 1 185.2212,159.4444A40.5325,40.5325 0 0 1 144.6886,118.9119A40.5325,40.5325 0 0 1 185.2212,78.3793A40.5325,40.5325 0 0 1 225.7537,118.9119Z",
+  "M17.220,167.000C66.923,198.487 80.405,221.623 73.000,280.989C89.316,249.107 115.290,226.007 142.000,202.897C122.546,173.063 50.415,154.821 17.220,167.000Z",
+  "M328.518,19.272C299.417,96.693 287.323,118.643 214.002,165.783C178.848,188.385 143.570,205.310 114.192,239.619C78.509,281.292 54.562,318.822 54.562,375.510C54.563,397.462 59.607,417.339 66.642,436.728C75.988,433.579 146.934,373.922 156.855,362.534C198.693,314.507 195.594,255.769 229.255,219.888C283.951,161.585 350.052,109.432 328.518,19.272Z",
+];
+
+function Mark({ fill, dy = 0 }: { fill: string; dy?: number }) {
+  return (
+    <svg x="7.75" y={6.05 + dy} width="8.5" height="11.2" viewBox="16 19 317 419" fill={fill}>
+      {MARK_PATHS.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
 /**
- * The credit unit: a gold four-pointed star. Each arm is split into a lit and a shaded facet with light
- * from the top left, so the star reads as a bevelled, slightly raised piece.
+ * The credit unit: a gold coin with the Hocluc mark struck in pale gold. A darker rim below gives it thickness,
+ * and a short glint on the upper left catches the light.
  */
 export function CreditIcon({ size = 20, className, title }: CreditIconProps) {
   const id = useId().replace(/:/g, "");
-  const light = `${id}-light`;
-  const mid = `${id}-mid`;
-  const dark = `${id}-dark`;
-  const shadow = `${id}-shadow`;
+  const face = `${id}-face`;
+  const field = `${id}-field`;
 
   return (
     <svg
@@ -32,51 +47,27 @@ export function CreditIcon({ size = 20, className, title }: CreditIconProps) {
     >
       {title ? <title>{title}</title> : null}
       <defs>
-        <linearGradient id={light} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#FFF4B8" />
-          <stop offset="1" stopColor="#FFD54A" />
+        <linearGradient id={face} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFE07A" />
+          <stop offset="1" stopColor="#F2A81D" />
         </linearGradient>
-        <linearGradient id={mid} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#FFD54A" />
-          <stop offset="1" stopColor="#F5B325" />
+        <linearGradient id={field} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#F7B92E" />
+          <stop offset="1" stopColor="#FFD963" />
         </linearGradient>
-        <linearGradient id={dark} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#E9A117" />
-          <stop offset="1" stopColor="#B87308" />
-        </linearGradient>
-        <filter id={shadow} x="-20%" y="-20%" width="140%" height="150%">
-          <feDropShadow dx="0" dy="0.8" stdDeviation="0.6" floodColor="#8A5200" floodOpacity="0.35" />
-        </filter>
       </defs>
-
-      <g filter={`url(#${shadow})`} strokeLinejoin="round">
-        {/* top arm */}
-        <path d="M12 12 L8.5 8.5 L12 1.5 Z" fill={`url(#${light})`} />
-        <path d="M12 12 L12 1.5 L15.5 8.5 Z" fill={`url(#${mid})`} />
-        {/* right arm */}
-        <path d="M12 12 L15.5 8.5 L22.5 12 Z" fill={`url(#${mid})`} />
-        <path d="M12 12 L22.5 12 L15.5 15.5 Z" fill={`url(#${dark})`} />
-        {/* bottom arm */}
-        <path d="M12 12 L15.5 15.5 L12 22.5 Z" fill={`url(#${dark})`} />
-        <path d="M12 12 L12 22.5 L8.5 15.5 Z" fill={`url(#${mid})`} />
-        {/* left arm */}
-        <path d="M12 12 L8.5 15.5 L1.5 12 Z" fill={`url(#${mid})`} />
-        <path d="M12 12 L1.5 12 L8.5 8.5 Z" fill={`url(#${light})`} />
-        {/* rim */}
-        <path
-          d="M12 1.5 L15.5 8.5 L22.5 12 L15.5 15.5 L12 22.5 L8.5 15.5 L1.5 12 L8.5 8.5 Z"
-          fill="none"
-          stroke="#B07006"
-          strokeWidth="0.7"
-        />
-      </g>
-      {/* glint on the lit side */}
-      <path d="M9.4 5.6 L9.9 6.9 L11.2 7.4 L9.9 7.9 L9.4 9.2 L8.9 7.9 L7.6 7.4 L8.9 6.9 Z" fill="#FFFFFF" opacity="0.85" />
+      <circle cx="12" cy="12.6" r="10.4" fill="#B8760A" />
+      <circle cx="12" cy="11.6" r="10.4" fill={`url(#${face})`} />
+      <circle cx="12" cy="11.6" r="7.6" fill={`url(#${field})`} stroke="#E39A12" strokeWidth="0.8" />
+      {/* The mark, embossed: a darker copy just below, the pale one on top. */}
+      <Mark fill="#C98309" dy={0.45} />
+      <Mark fill="#FFF6D2" />
+      <path d="M6 7.4a7.6 7.6 0 0 1 4-3" stroke="#FFF6D2" strokeWidth="1.1" strokeLinecap="round" fill="none" opacity="0.8" />
     </svg>
   );
 }
 
-/** An amount of credits: the star followed by the number, for balances, prices and history rows. */
+/** An amount of credits: the coin followed by the number, for balances, prices and history rows. */
 export function CreditAmount({
   value,
   size = 16,

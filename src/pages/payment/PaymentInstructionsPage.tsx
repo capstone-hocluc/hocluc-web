@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import PurchaseLayout, { PurchaseNotice } from '../../components/purchase/PurchaseLayout'
 import PaymentInstructionsCard from '../../components/payment/PaymentInstructionsCard'
-import { getPaymentData, isCreditPackOrder, payOrder, type OrderPaymentData } from '../../services/orderService'
-import { refreshCredits } from '../../lib/credits'
+import {
+  getPaymentData,
+  isCreditPackOrder,
+  packCredits,
+  payOrder,
+  type OrderPaymentData,
+} from '../../services/orderService'
+import { announcePurchase, refreshCredits } from '../../lib/credits'
 import { getErrorMessage } from '../../lib/errors'
 import { canPayOrder, getOrderStatusLabel } from '../../lib/orderStatus'
 import { formatCoursePrice } from '../../lib/courseFormat'
@@ -109,9 +115,22 @@ export default function PaymentInstructionsPage({
   const pending = order?.status === 'PENDING'
   const creditOrder = order ? isCreditPackOrder(order) : false
   const creditOrderPaid = creditOrder && order?.status === 'PAID'
-  // The stars land when the payment is confirmed; show the new balance everywhere.
+  // Seen waiting for the transfer here, so a later PAID is the payment arriving now, not an old order reopened.
+  const sawPending = useRef(false)
   useEffect(() => {
-    if (creditOrderPaid) void refreshCredits()
+    if (pending) sawPending.current = true
+  }, [pending])
+  // The stars land when the payment is confirmed. Paid while the student watched: the wallet shows them arriving.
+  // Opened already paid: just show the new balance everywhere.
+  useEffect(() => {
+    if (!creditOrderPaid || !order) return
+    if (sawPending.current) {
+      sawPending.current = false
+      announcePurchase(order.id, packCredits(order))
+      onGoToWallet()
+    } else void refreshCredits()
+    // Runs once per flip to paid; `order` and the callback are read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creditOrderPaid])
   const seconds = order?.expiresAt
     ? Math.max(0, Math.ceil((Date.parse(order.expiresAt) - now) / 1000))
