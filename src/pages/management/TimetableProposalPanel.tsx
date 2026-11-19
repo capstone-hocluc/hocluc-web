@@ -1,4 +1,4 @@
-import DateField from '../../components/console/date-field'
+import DateRangeField from '../../components/console/date-range-field'
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../../lib/api'
 import { SCHEDULING_TIMEZONE, localDateLabel, localToday } from '../../lib/scheduling'
@@ -197,10 +197,19 @@ export default function TimetableProposalPanel({
       {successMessage && <Notice tone="info">{successMessage}</Notice>}
 
       <form className="space-y-4" onSubmit={(event) => void generate(event)}>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <DateField label="Từ ngày" name="proposalStartDate" value={startDate} onChange={(value) => { setStartDate(value); clearResult() }} disabled={controlsDisabled} required />
-          <DateField label="Đến ngày" name="proposalEndDate" value={endDate} onChange={(value) => { setEndDate(value); clearResult() }} min={startDate} disabled={controlsDisabled} required />
-        </div>
+        <DateRangeField
+          label="Khoảng ngày"
+          names={['proposalStartDate', 'proposalEndDate']}
+          value={{ from: startDate, to: endDate }}
+          onChange={(range) => {
+            setStartDate(range.from)
+            setEndDate(range.to)
+            clearResult()
+          }}
+          disabled={controlsDisabled}
+          required
+          showSummary
+        />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm font-medium text-text-primary">
