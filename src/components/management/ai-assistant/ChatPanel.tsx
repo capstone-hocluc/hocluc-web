@@ -11,6 +11,7 @@ import { EmptyState, EmptyStateGreeting } from '../../assistant-ui/elements/empt
 import { ChevronRight, Clock, PanelBottom, Sparkles, SquarePen, X } from '../../console/icons'
 import AssistantSources from './chat/AssistantSources'
 import { ComposerChips } from './Composer'
+import { modeOf } from './composer-modes'
 import { StageGroup } from './chat/stage-group'
 import StarterSuggestions from './StarterSuggestions'
 import type { AiChatMessage } from './exam-format'
@@ -271,7 +272,7 @@ export default function ChatPanel({
         >
           <TooltipProvider>
             <div className="min-h-0 flex-1">
-              <Thread components={THREAD_PARTS} autoFocus={false} />
+              <Thread components={THREAD_PARTS} autoFocus={false} placeholder={modeOf(mode).placeholder} />
             </div>
           </TooltipProvider>
         </PanelPartsContext.Provider>

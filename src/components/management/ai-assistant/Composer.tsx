@@ -13,11 +13,7 @@ import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import {
   Check,
   ChevronDown,
-  ClipboardList,
-  FileCheck2,
   Filter,
-  Sparkles,
-  type LucideIcon,
 } from '../../console/icons'
 import { ComposerSend } from '../../assistant-ui/elements/composer'
 import { composerChip, composerTool, floating, paper } from '../../assistant-ui/elements/console-surfaces'
@@ -28,6 +24,7 @@ import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import QuizConfigBar from './QuizConfigBar'
 import { EXAM_FORMATS } from './exam-format'
 import { requestedCount } from './revise-request'
+import { COMPOSER_MODES, modeOf } from './composer-modes'
 import { COMPOSE_COUNTS, MOCK_COUNTS, SOLUTION_STYLES } from './quiz-config-options'
 
 /**
@@ -63,39 +60,6 @@ function useDismiss(
     root.current?.querySelector('button')?.focus()
   }
 }
-
-const EXAM_PLACEHOLDER = 'Nhập yêu cầu tạo, sửa, giải đề thi…'
-
-const MODES: {
-  id: AiAssistantMode
-  label: string
-  description: string
-  placeholder: string
-  icon: LucideIcon
-}[] = [
-  {
-    id: 'ask',
-    label: 'Hỏi đáp',
-    description: 'Hỏi kiến thức, bài tập hoặc cách dạy',
-    placeholder: 'Hỏi về khái niệm, bài tập hoặc cách dạy…',
-    icon: Sparkles,
-  },
-  {
-    id: 'compose',
-    label: 'Soạn câu hỏi',
-    description: 'Tạo câu hỏi mới theo cấu hình',
-    // The subjects come from the request's own words, so the hint shows naming one.
-    placeholder: 'Ví dụ: Soạn 10 câu Toán mức trung bình, kèm lời giải…',
-    icon: ClipboardList,
-  },
-  {
-    id: 'mock-exam',
-    label: 'Mô phỏng đề',
-    description: 'Soạn đề mới theo một đề mẫu',
-    placeholder: EXAM_PLACEHOLDER,
-    icon: FileCheck2,
-  },
-]
 
 // The menus open upwards over the composer, as wide as it is (capped): aligned to its right edge under the panel's
 // chips, to its left edge under the bar's, which sit first.
@@ -152,7 +116,7 @@ export default function Composer({
   trailing,
 }: ComposerProps) {
   const bar = variant === 'bar'
-  const active = MODES.find((item) => item.id === mode) ?? MODES[0]
+  const active = modeOf(mode)
   const missingConfig = mode === 'mock-exam' && !settings.bankSourceId
   const text = useAuiState(({ composer }) => composer.text)
   // Counts the sends; the settings menu is keyed by it, so it closes and does not cover the progress.
@@ -325,7 +289,7 @@ function ModeMenu({
 }) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
-  const active = MODES.find((item) => item.id === mode) ?? MODES[0]
+  const active = modeOf(mode)
   const ActiveIcon = active.icon
   const onEscape = useDismiss(open, setOpen, root)
 
@@ -367,7 +331,7 @@ function ModeMenu({
           aria-label="Chế độ trả lời"
           className={cn(menuAt(compact), 'max-w-[328px] p-1.5')}
         >
-          {MODES.map((item) => {
+          {COMPOSER_MODES.map((item) => {
             const Icon = item.icon
             const selected = item.id === mode
             return (
