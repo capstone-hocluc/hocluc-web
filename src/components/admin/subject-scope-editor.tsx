@@ -69,7 +69,7 @@ export default function SubjectScopeEditor({ userId, role }: { userId: string; r
 
   return (
     <fieldset disabled={saving} className="flex min-w-0 flex-col gap-3">
-      <legend className="sr-only">Quyền theo môn</legend>
+      <legend className="sr-only">Chuyên môn</legend>
       <div className="overflow-x-auto rounded-lg border border-card-border">
         <table className="w-full text-sm">
           <thead className="bg-background-gray-secondary text-left text-xs text-text-tertiary">

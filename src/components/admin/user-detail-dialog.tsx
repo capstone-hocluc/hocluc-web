@@ -44,7 +44,7 @@ interface UserDetailDialogProps {
 
 const LISTED_COURSES = 3
 
-type UserTab = 'overview' | 'learning' | 'profile' | 'mentor' | 'zoom' | 'roles' | 'subjects' | 'system'
+type UserTab = 'overview' | 'learning' | 'profile' | 'mentor' | 'zoom' | 'subjects' | 'system'
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' }
 const TRACK_LABELS: Record<string, string> = {
@@ -72,7 +72,6 @@ function UserDetail({
   const { profile: viewer } = useCurrentUser()
   const student = user?.studentProfile
   const isStudent = user?.role === 'STUDENT'
-  const showRoleTab = canGrantRoles && !!user && !isStudent
   // Subject permissions are granted by administrators and managers, to staff-side accounts only.
   const showSubjectTab = !!user && !isStudent && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER')
   // The back office reads a mentor's profile; only administrators change it.
@@ -84,6 +83,8 @@ function UserDetail({
   const [tab, setTab] = useState<UserTab>('overview')
   const busy = grantingRoles || savingProfile
   const [editing, setEditing] = useState(false)
+  // Changing the role sits beside the profile summary, not in a tab of its own.
+  const canChangeRole = canGrantRoles && !!user && !isStudent && !editing
   const [draft, setDraft] = useState({ firstName: '', lastName: '', email: '', phone: '' })
   const [error, setError] = useState('')
 
@@ -182,9 +183,12 @@ function UserDetail({
               <p className="text-sm break-all text-text-tertiary">{user.email}</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <RoleBadge role={user.role} />
+              {!canChangeRole && <RoleBadge role={user.role} />}
               <Status tone={getStatusTone(user.status ?? 'PENDING')}>{STATUS_LABELS[user.status ?? 'PENDING']}</Status>
             </div>
+            {canChangeRole && (
+              <RoleEditor key={`${user.id}:${user.role}`} user={user} saving={grantingRoles} onSave={onSaveRole} />
+            )}
             {canEditProfile && !editing && (
               <Button appearance="outline" onClick={startEditing} disabled={busy} className="w-full">
                 Sửa thông tin
@@ -259,8 +263,7 @@ function UserDetail({
                   {isStudent && <ConsoleTabsTrigger value="profile">Hồ sơ</ConsoleTabsTrigger>}
                   {showMentorTab && <ConsoleTabsTrigger value="mentor">Hồ sơ Mentor</ConsoleTabsTrigger>}
                   {showZoomTab && <ConsoleTabsTrigger value="zoom">Zoom</ConsoleTabsTrigger>}
-                  {showRoleTab && <ConsoleTabsTrigger value="roles">Vai trò</ConsoleTabsTrigger>}
-                  {showSubjectTab && <ConsoleTabsTrigger value="subjects">Quyền theo môn</ConsoleTabsTrigger>}
+                  {showSubjectTab && <ConsoleTabsTrigger value="subjects">Chuyên môn</ConsoleTabsTrigger>}
                   <ConsoleTabsTrigger value="system">Hệ thống</ConsoleTabsTrigger>
                 </ConsoleTabsList>
 
@@ -324,12 +327,6 @@ function UserDetail({
                     </ConsoleTabsContent>
                   )}
 
-                  {showRoleTab && (
-                    <ConsoleTabsContent value="roles">
-                      <RoleEditor key={`${user.id}:${user.role}`} user={user} saving={grantingRoles} onSave={onSaveRole} />
-                    </ConsoleTabsContent>
-                  )}
-
                   {showSubjectTab && (
                     <ConsoleTabsContent value="subjects">
                       <SubjectScopeEditor key={`${user.id}:${user.role}`} userId={user.id} role={user.role} />
@@ -369,18 +366,20 @@ function RoleEditor({ user, saving, onSave }: {
     catch (err) { setError(err instanceof Error ? err.message : 'Không thể đổi vai trò.') }
   }
   return (
-    <fieldset disabled={saving}>
-      <legend className="sr-only">Vai trò</legend>
-      <p className="text-xs leading-5 text-text-tertiary">Đổi vai trò sẽ kết thúc các phiên đăng nhập của tài khoản này.</p>
-      <div className="mt-3 max-w-xs">
-        <SelectField ariaLabel="Vai trò" options={PERSONNEL_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
-          value={draft} disabled={saving} onChange={(value) => setDraft(value as UserRole)} />
-      </div>
-      {error && <p role="alert" className="mt-3 text-sm text-badge-danger-text">{error}</p>}
-      <div className="mt-4 flex justify-end gap-2">
-        <Button appearance="outline" disabled={!dirty || saving} onClick={() => { setDraft(user.role); setError('') }}>Hủy thay đổi</Button>
-        <Button disabled={!dirty || saving} onClick={() => void save()}>{saving ? 'Đang lưu...' : 'Lưu vai trò'}</Button>
-      </div>
+    <fieldset disabled={saving} className="flex w-full flex-col gap-2 text-left">
+      <legend className="mb-1.5 text-xs text-text-tertiary">Vai trò</legend>
+      <SelectField ariaLabel="Vai trò" options={PERSONNEL_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
+        value={draft} disabled={saving} onChange={(value) => setDraft(value as UserRole)} />
+      {dirty && (
+        <>
+          <p className="text-xs leading-5 text-text-tertiary">Đổi vai trò sẽ kết thúc các phiên đăng nhập của tài khoản này.</p>
+          <div className="flex gap-2">
+            <Button size="sm" appearance="outline" className="flex-1" disabled={saving} onClick={() => { setDraft(user.role); setError('') }}>Hủy</Button>
+            <Button size="sm" className="flex-1" disabled={saving} onClick={() => void save()}>{saving ? 'Đang lưu...' : 'Lưu vai trò'}</Button>
+          </div>
+        </>
+      )}
+      {error && <p role="alert" className="text-sm text-badge-danger-text">{error}</p>}
     </fieldset>
   )
 }

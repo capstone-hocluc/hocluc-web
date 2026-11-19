@@ -170,7 +170,7 @@ function StudentTopbar({
               Cài đặt
             </DropdownMenuItem>
             <div role="separator" className="my-1 h-px bg-line-blue" />
-            <DropdownMenuItem disabled={logoutLoading} onSelect={() => onLogout?.()}>
+            <DropdownMenuItem disabled={logoutLoading} onSelect={() => onLogout?.()} className="text-danger data-[highlighted]:text-danger">
               <LogOut size={16} />
               {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}
             </DropdownMenuItem>

@@ -83,7 +83,7 @@ function ImportDialog({ quizId, file, onFileChange, onExit, onBusyChange }: {
     } catch (cause) {
       setUncertain(cause instanceof AmbiguousQuizImportError)
       setError(cause instanceof ApiError && cause.status === 403
-        ? 'Bạn không có quyền nhập câu hỏi vào bài này. Quyền theo môn/khóa do máy chủ kiểm tra.'
+        ? 'Bạn không có quyền nhập câu hỏi vào bài này. Chuyên môn và khóa học do máy chủ kiểm tra.'
         : cause instanceof ApiError && cause.status === 413
           ? 'File vượt giới hạn tải lên của máy chủ. Hãy chia thành các file nhỏ hơn.'
           : getErrorMessage(cause))

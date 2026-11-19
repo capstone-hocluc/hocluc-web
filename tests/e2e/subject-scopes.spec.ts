@@ -50,7 +50,7 @@ async function installScopes(page: Page, initial: Record<string, Grant[]>) {
 async function openSubjectTab(page: Page, rowName: RegExp) {
   await page.getByRole('row', { name: rowName }).click()
   const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
-  await dialog.getByRole('tab', { name: 'Quyền theo môn', exact: true }).click()
+  await dialog.getByRole('tab', { name: 'Chuyên môn', exact: true }).click()
   return dialog
 }
 
