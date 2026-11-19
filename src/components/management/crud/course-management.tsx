@@ -179,8 +179,20 @@ export default function CourseManagement({
   )
   useEffect(() => {
     const onPopState = () => applyView(readCourseView())
+    // A link opened from elsewhere in the app (a notification) while this page is showing: the app moves the URL
+    // in its own handler, so read it once that has run.
+    let timer: number | undefined
+    const onNavigate = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(onPopState)
+    }
     window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
+    window.addEventListener('hl-navigate', onNavigate)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('popstate', onPopState)
+      window.removeEventListener('hl-navigate', onNavigate)
+    }
   }, [applyView])
   const go = useCallback((next: CourseView) => {
     pushCourseView(next)
