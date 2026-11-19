@@ -17,8 +17,9 @@ import {
   UserCog,
   UserRound,
 } from '../components/console/icons'
-import type { NavIcon, NavSection } from '../components/console/layout/nav-types'
+import type { NavEntry, NavIcon, NavSection } from '../components/console/layout/nav-types'
 import { SOLUTION_QUEUE } from '../data/console-mock'
+import { quizMenuPage } from './console-routes'
 import { isFeatureEnabled, type FeatureFlag } from './feature-flags'
 import { can, type Permission } from './permissions'
 
@@ -26,7 +27,7 @@ import { can, type Permission } from './permissions'
 // sidebar from here and the router refuses pages that are not listed for the role.
 // Like permissions.ts this is display logic only: the backend's @PreAuthorize rules decide.
 
-export type NavGroupId = 'overview' | 'training' | 'classes' | 'learners' | 'support' | 'system'
+export type NavGroupId = 'overview' | 'operations' | 'classes' | 'learners' | 'training' | 'support' | 'system'
 
 export type NavBadgeKey = 'solutionQueue' | 'mentorAsk'
 
@@ -44,140 +45,81 @@ export interface ConsoleNavItem {
   writePermission?: Permission
   /** Limits a page to the roles that have a screen for it, on top of the permission check. */
   roles?: UserRole[]
-  /** Reached through tabs on another page; keeps its own route permission. */
+  /** Reached from another page (a tab, a button, or the same screen); keeps its own route permission. */
   tabOf?: string
+  /**
+   * Name in the tab row that a page and its `tabOf` pages share; the heading shows the host's name.
+   * Pages without one are reached another way and get no tab.
+   */
+  tabLabel?: string
   badgeKey?: NavBadgeKey
   featureFlag?: FeatureFlag
   /** Not built yet: opens the "Đang phát triển" state, and stays out of the menu while `unfinishedPages` is off. */
   soon?: boolean
 }
 
-const GROUP_LABELS: Record<NavGroupId, string> = {
-  overview: 'Tổng quan',
-  training: 'Đào tạo',
+const GROUP_LABELS: Record<NavGroupId, string | null> = {
+  // Its one entry has the group's name, so it sits on top without a heading.
+  overview: null,
+  operations: 'Vận hành',
   classes: 'Lớp học',
-  learners: 'Học viên & đơn hàng',
+  learners: 'Học viên & thanh toán',
+  training: 'Đào tạo',
   support: 'Hỗ trợ',
   system: 'Hệ thống',
 }
 
+// From the work a role does every day down to what it opens now and then.
 const GROUP_ORDER: NavGroupId[] = [
   'overview',
-  'training',
+  'operations',
   'classes',
   'learners',
+  'training',
   'support',
   'system',
 ]
 
+// Within a group, entries keep this order: the most used first. A host precedes its tabs.
 const CONSOLE_NAV: ConsoleNavItem[] = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, group: 'overview' },
   {
-    page: 'categories',
-    tabOf: 'courses',
-    label: 'Môn học',
-    icon: Layers3,
-    group: 'training',
-    permission: 'COURSE_READ',
-    writePermission: 'COURSE_WRITE',
-    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
-  },
-  {
-    page: 'taxonomy',
-    label: 'Khung đề thi',
-    icon: ListTree,
-    group: 'training',
-    permission: 'TAXONOMY_WRITE',
-    // A teacher teaches: the exam framework and the bank are kept by staff.
-    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
-  },
-  {
-    page: 'exam-years',
-    label: 'Năm thi & đợt thi',
+    page: 'schedules',
+    label: 'Lịch học',
+    tabLabel: 'Lịch học',
     icon: CalendarDays,
-    group: 'training',
-    permission: 'COURSE_READ',
-    writePermission: 'COURSE_WRITE',
-    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
+    group: 'operations',
+    permission: 'SCHEDULE_READ',
+    writePermission: 'SCHEDULE_WRITE',
+    roles: ['STAFF', 'MANAGER'],
   },
   {
-    page: 'courses',
-    label: 'Môn học và khóa học',
-    labels: { TEACHER: 'Lớp của tôi' },
-    icon: BookOpen,
-    group: 'training',
-    permission: 'COURSE_READ',
-    writePermission: 'COURSE_WRITE',
-  },
-  {
-    page: 'question-bank',
-    label: 'Ngân hàng câu hỏi',
-    icon: FileQuestion,
-    group: 'training',
-    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
-    writePermission: 'BANK_AUTHOR',
-    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
-  },
-  {
-    page: 'ai-assistant',
-    tabOf: 'question-bank',
-    label: 'Trợ lý AI',
-    icon: Sparkles,
-    group: 'training',
-    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
-    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
-  },
-  {
-    // A teacher has no bank page to reach the assistant through, so it is a menu entry of its own.
-    page: 'ai-assistant',
-    label: 'Trợ lý AI',
-    icon: Sparkles,
-    group: 'training',
-    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
-    roles: ['TEACHER'],
-  },
-  {
-    page: 'quizzes',
-    label: 'Bài kiểm tra',
+    page: 'attendance',
+    tabOf: 'schedules',
+    label: 'Điểm danh',
+    tabLabel: 'Điểm danh',
     icon: ClipboardCheck,
-    group: 'training',
-    permission: 'QUIZ_READ',
-    writePermission: 'QUIZ_WRITE',
+    group: 'operations',
+    permission: 'ATTENDANCE_WRITE',
+    roles: ['STAFF'],
   },
   {
-    page: 'placements',
-    tabOf: 'quizzes',
-    label: 'Đánh giá đầu vào',
-    icon: ClipboardCheck,
-    group: 'training',
-    permission: 'QUIZ_WRITE',
-    writePermission: 'QUIZ_WRITE',
-    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
+    page: 'chat-queue',
+    label: 'Phân công Mentor',
+    icon: MailQuestion,
+    group: 'operations',
+    permission: 'SUPPORT_HANDLE',
+    roles: ['STAFF', 'ADMINISTRATOR'],
+    featureFlag: 'mentorAsk',
   },
   {
-    page: 'mock-exams',
-    tabOf: 'quizzes',
-    label: 'Bài thi thử',
-    icon: ClipboardCheck,
-    group: 'training',
-    permission: 'QUIZ_READ',
-    writePermission: 'QUIZ_WRITE',
-  },
-  {
-    page: 'attempts',
-    label: 'Bài làm học viên',
-    icon: BookOpenCheck,
-    group: 'training',
-    permission: 'QUIZ_READ',
-  },
-  {
-    page: 'solution-queue',
-    label: 'Duyệt lời giải AI',
-    icon: Sparkles,
-    group: 'training',
-    permission: 'SOLUTION_APPROVE',
-    badgeKey: 'solutionQueue',
-    soon: true,
+    page: 'chat-monitoring',
+    label: 'Giám sát hỗ trợ',
+    icon: MailQuestion,
+    group: 'operations',
+    permission: 'SUPPORT_MONITOR',
+    roles: ['MANAGER'],
+    featureFlag: 'mentorAsk',
   },
   {
     page: 'schedule',
@@ -196,25 +138,9 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     roles: ['TEACHER'],
   },
   {
-    page: 'schedules',
-    label: 'Lịch học',
-    icon: CalendarDays,
-    group: 'classes',
-    permission: 'SCHEDULE_READ',
-    writePermission: 'SCHEDULE_WRITE',
-    roles: ['STAFF', 'MANAGER'],
-  },
-  {
-    page: 'attendance',
-    label: 'Điểm danh',
-    icon: ClipboardCheck,
-    group: 'classes',
-    permission: 'ATTENDANCE_WRITE',
-    roles: ['STAFF'],
-  },
-  {
     page: 'learners',
     label: 'Học viên',
+    tabLabel: 'Học viên',
     icon: UserRound,
     group: 'learners',
     permission: ['USER_MANAGE', 'USER_READ'],
@@ -222,7 +148,9 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   },
   {
     page: 'enrollments',
+    tabOf: 'learners',
     label: 'Ghi danh',
+    tabLabel: 'Ghi danh',
     icon: GraduationCap,
     group: 'learners',
     permission: 'ENROLLMENT_READ',
@@ -230,7 +158,8 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   },
   {
     page: 'orders',
-    label: 'Đơn hàng',
+    label: 'Thanh toán',
+    tabLabel: 'Đơn hàng',
     icon: ShoppingCart,
     group: 'learners',
     permission: 'ORDER_READ',
@@ -238,19 +167,131 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   },
   {
     page: 'credits',
+    tabOf: 'orders',
     label: 'Sao',
+    tabLabel: 'Sao',
     icon: Sparkles,
     group: 'learners',
     permission: 'ORDER_READ',
     roles: ['ADMINISTRATOR', 'MANAGER', 'STAFF'],
   },
   {
-    page: 'students',
-    label: 'Học viên',
-    icon: GraduationCap,
-    group: 'learners',
-    permission: 'REVIEW_QUEUE_HANDLE',
-    roles: ['MENTOR'],
+    page: 'courses',
+    label: 'Khóa học',
+    labels: { TEACHER: 'Lớp của tôi' },
+    tabLabel: 'Khóa học',
+    icon: BookOpen,
+    group: 'training',
+    permission: 'COURSE_READ',
+    writePermission: 'COURSE_WRITE',
+  },
+  {
+    // The old subject page is the merged course screen itself, so it has no tab of its own.
+    page: 'categories',
+    tabOf: 'courses',
+    label: 'Môn học',
+    icon: Layers3,
+    group: 'training',
+    permission: 'COURSE_READ',
+    writePermission: 'COURSE_WRITE',
+    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
+  },
+  {
+    page: 'exam-years',
+    tabOf: 'courses',
+    label: 'Đợt thi',
+    tabLabel: 'Đợt thi',
+    icon: CalendarDays,
+    group: 'training',
+    permission: 'COURSE_READ',
+    writePermission: 'COURSE_WRITE',
+    roles: ['ADMINISTRATOR', 'STAFF', 'MANAGER'],
+  },
+  {
+    page: 'quizzes',
+    label: 'Bài kiểm tra',
+    tabLabel: 'Bài học / chương',
+    icon: ClipboardCheck,
+    group: 'training',
+    permission: 'QUIZ_READ',
+    writePermission: 'QUIZ_WRITE',
+  },
+  {
+    page: 'placements',
+    tabOf: 'quizzes',
+    label: 'Đánh giá đầu vào',
+    tabLabel: 'Đánh giá đầu vào',
+    icon: ClipboardCheck,
+    group: 'training',
+    permission: 'QUIZ_WRITE',
+    writePermission: 'QUIZ_WRITE',
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
+  },
+  {
+    page: 'mock-exams',
+    tabOf: 'quizzes',
+    label: 'Bài thi thử',
+    tabLabel: 'Thi thử',
+    icon: ClipboardCheck,
+    group: 'training',
+    permission: 'QUIZ_READ',
+    writePermission: 'QUIZ_WRITE',
+  },
+  {
+    page: 'attempts',
+    tabOf: 'quizzes',
+    label: 'Bài làm học viên',
+    tabLabel: 'Bài làm học viên',
+    icon: BookOpenCheck,
+    group: 'training',
+    permission: 'QUIZ_READ',
+  },
+  {
+    page: 'question-bank',
+    label: 'Ngân hàng câu hỏi',
+    icon: FileQuestion,
+    group: 'training',
+    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
+    writePermission: 'BANK_AUTHOR',
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
+  },
+  {
+    // Opened from the bank's heading: a full-screen workspace, not a tab.
+    page: 'ai-assistant',
+    tabOf: 'question-bank',
+    label: 'Trợ lý AI',
+    icon: Sparkles,
+    group: 'training',
+    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
+  },
+  {
+    // Opened from the bank's heading, since the bank's questions are labelled by it.
+    page: 'taxonomy',
+    tabOf: 'question-bank',
+    label: 'Khung đề thi',
+    icon: ListTree,
+    group: 'training',
+    permission: 'TAXONOMY_WRITE',
+    // A teacher teaches: the exam framework and the bank are kept by staff.
+    roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
+  },
+  {
+    // A teacher has no bank page to reach the assistant through, so it is a menu entry of its own.
+    page: 'ai-assistant',
+    label: 'Trợ lý AI',
+    icon: Sparkles,
+    group: 'training',
+    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
+    roles: ['TEACHER'],
+  },
+  {
+    page: 'solution-queue',
+    label: 'Duyệt lời giải AI',
+    icon: Sparkles,
+    group: 'training',
+    permission: 'SOLUTION_APPROVE',
+    badgeKey: 'solutionQueue',
     soon: true,
   },
   {
@@ -264,22 +305,13 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     featureFlag: 'mentorAsk',
   },
   {
-    page: 'chat-queue',
-    label: 'Phân công Mentor',
-    icon: MailQuestion,
+    page: 'students',
+    label: 'Học viên',
+    icon: GraduationCap,
     group: 'support',
-    permission: 'SUPPORT_HANDLE',
-    roles: ['STAFF', 'ADMINISTRATOR'],
-    featureFlag: 'mentorAsk',
-  },
-  {
-    page: 'chat-monitoring',
-    label: 'Giám sát hỗ trợ',
-    icon: MailQuestion,
-    group: 'support',
-    permission: 'SUPPORT_MONITOR',
-    roles: ['MANAGER'],
-    featureFlag: 'mentorAsk',
+    permission: 'REVIEW_QUEUE_HANDLE',
+    roles: ['MENTOR'],
+    soon: true,
   },
   {
     page: 'users',
@@ -302,6 +334,11 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
 function allows(role: UserRole, item: ConsoleNavItem) {
   if (item.roles && !item.roles.includes(role)) return false
   return !item.permission || can(role, item.permission)
+}
+
+/** Feature flags and unfinished pages decide what is offered; a hidden page keeps its own gate. */
+function isOffered(item: ConsoleNavItem) {
+  return (!item.featureFlag || isFeatureEnabled(item.featureFlag)) && (!item.soon || isFeatureEnabled('unfinishedPages'))
 }
 
 /** The entry a role reaches a page through, ignoring feature flags (a hidden page keeps its own gate). */
@@ -328,24 +365,48 @@ export function navLabel(role: UserRole, item: ConsoleNavItem) {
   return item.labels?.[role] ?? item.label
 }
 
+/** The sidebar entry that stays lit on a page: a page reached from another one lights its host. */
+export function sidebarPage(role: UserRole, page: string) {
+  const menu = quizMenuPage(page)
+  return findNavItem(role, menu)?.tabOf ?? menu
+}
+
+export interface PageTab {
+  page: string
+  label: string
+}
+
+/**
+ * The tab row of the page's group, holding the tabs this role may open, host first.
+ * Empty when fewer than two are left: one page needs no tabs.
+ */
+export function pageTabs(role: UserRole, page: string): PageTab[] {
+  const host = sidebarPage(role, page)
+  const tabs = CONSOLE_NAV.filter(
+    (item) => (item.page === host || item.tabOf === host) && item.tabLabel && allows(role, item) && isOffered(item)
+  )
+  return tabs.length > 1 ? tabs.map((item) => ({ page: item.page, label: item.tabLabel! })) : []
+}
+
+/** A page as a shortcut elsewhere (the dashboard), also when the sidebar reaches it through a tab. */
+export function findNavEntry(role: UserRole, page: string): NavEntry | null {
+  const item = findNavItem(role, page)
+  return item && isOffered(item) ? { key: item.page, title: navLabel(role, item), icon: item.icon } : null
+}
+
 export interface ConsoleNavGroup {
   id: NavGroupId
-  label: string
+  label: string | null
   items: ConsoleNavItem[]
 }
 
 export function buildNav(role: UserRole): ConsoleNavGroup[] {
-  const visible = CONSOLE_NAV.filter(
-    (item) =>
-      !item.tabOf &&
-      allows(role, item) &&
-      (!item.featureFlag || isFeatureEnabled(item.featureFlag)) &&
-      (!item.soon || isFeatureEnabled('unfinishedPages'))
-  )
-  // The administrator works on the system first; for everyone else it is a side errand, so it goes last.
-  const order =
+  const visible = CONSOLE_NAV.filter((item) => !item.tabOf && allows(role, item) && isOffered(item))
+  // The administrator works on the system first, right under the overview; for everyone else it is a side
+  // errand, so it goes last.
+  const order: NavGroupId[] =
     role === 'ADMINISTRATOR'
-      ? ['system' as const, ...GROUP_ORDER.filter((id) => id !== 'system')]
+      ? ['overview', 'system', ...GROUP_ORDER.filter((id) => id !== 'overview' && id !== 'system')]
       : GROUP_ORDER
   return order
     .map((id) => ({
@@ -369,7 +430,8 @@ export function getNavBadges(role: UserRole): Partial<Record<NavBadgeKey, number
 export function buildNavSections(role: UserRole): NavSection[] {
   const badges = getNavBadges(role)
   return buildNav(role).map((group) => ({
-    label: group.label,
+    id: group.id,
+    label: group.label ?? undefined,
     items: group.items.map((item) => ({
       key: item.page,
       title: navLabel(role, item),

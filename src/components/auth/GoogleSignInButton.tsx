@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { cn } from '../../lib/cn'
 import Button from '../console/button'
+import { ThemeContext } from '../common/theme-context'
 
 // Minimal surface of Google Identity Services' global we actually use.
 interface GoogleIdCredentialResponse {
@@ -16,7 +17,7 @@ interface GoogleAccountsId {
     parent: HTMLElement,
     options: {
       type: 'standard'
-      theme: 'outline'
+      theme: 'outline' | 'filled_black'
       size: 'large'
       shape: 'pill' | 'rectangular'
       text: 'signin_with' | 'signup_with'
@@ -90,6 +91,10 @@ function GoogleSignInButton({
   const containerRef = useRef<HTMLDivElement>(null)
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
   const isConsole = variant === 'console'
+  // Google draws the button in its own iframe, so it is rendered again in the matching theme. Pages outside
+  // ThemeProvider (the learner sign-in) read the theme the root element carries.
+  const theme = useContext(ThemeContext)?.theme ?? document.documentElement.dataset.theme
+  const dark = theme === 'dark'
   const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>(() =>
     clientId ? 'loading' : 'unavailable'
   )
@@ -120,7 +125,7 @@ function GoogleSignInButton({
         const columnWidth = Math.round(containerRef.current.clientWidth)
         window.google.accounts.id.renderButton(containerRef.current, {
           type: 'standard',
-          theme: 'outline',
+          theme: dark ? 'filled_black' : 'outline',
           size: 'large',
           shape: isConsole ? 'rectangular' : 'pill',
           text: isSignup ? 'signup_with' : 'signin_with',
@@ -135,7 +140,7 @@ function GoogleSignInButton({
     return () => {
       cancelled = true
     }
-  }, [clientId, isSignup, isConsole])
+  }, [clientId, isSignup, isConsole, dark])
 
   if (status === 'unavailable') {
     if (isConsole)

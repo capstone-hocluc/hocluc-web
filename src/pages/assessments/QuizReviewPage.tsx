@@ -1,12 +1,14 @@
-import { useState } from 'react'
 import QuizResultSummary from '../../components/assessment/QuizResultSummary'
 import QuizReviewQuestionCard from '../../components/assessment/QuizReviewQuestionCard'
 import BackLink from '../../components/student/common/BackLink'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
+import Button from '../../components/ui/Button'
+import Notice from '../../components/ui/Notice'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getAttemptReview, getQuiz } from '../../services/assessmentService'
+import { getAttempt, getAttemptReview, getQuiz, type QuizReview } from '../../services/assessmentService'
+import { ApiError } from '../../lib/api'
 import { bySequence } from '../../lib/sequence'
 
 interface QuizReviewPageProps {
@@ -15,22 +17,33 @@ interface QuizReviewPageProps {
 }
 
 function QuizReviewPage({ attemptId, onBackToQuiz }: QuizReviewPageProps) {
-  const [showAnswers, setShowAnswers] = useState(false)
   const {
-    data: review,
+    data,
     status,
     errorMessage,
     reload,
-  } = usePageResource(() => getAttemptReview(attemptId), [attemptId], {
-    // showAnswers isn't part of the review contract - the only way to
-    // know it is to look at the quiz's own setting. Fails closed: if
-    // this lookup fails, per-question answers stay hidden.
-    onLoaded: (data) => {
-      getQuiz(data.quizId)
-        .then((quiz) => setShowAnswers(Boolean(quiz.showAnswers)))
-        .catch(() => {})
-    },
-  })
+  } = usePageResource(async () => {
+    const attempt = await getAttempt(attemptId)
+    const quiz = await getQuiz(attempt.quizId)
+    const result = quiz.attempts.find((item) => item.attemptId === attemptId && item.status === 'GRADED')
+    if (!result || result.percentage == null) {
+      throw new Error('Lượt làm này chưa có điểm. Hãy kiểm tra lại sau.')
+    }
+
+    let review: QuizReview | null = null
+    let answersHidden = !quiz.showAnswers
+    let reviewFailed = false
+    if (quiz.showAnswers) {
+      try {
+        review = await getAttemptReview(attemptId)
+      } catch (error) {
+        // The setting may change between loading the quiz and requesting its answer key.
+        answersHidden = error instanceof ApiError && error.code === 'REVIEW_NOT_AVAILABLE'
+        reviewFailed = !answersHidden
+      }
+    }
+    return { quiz, result, review, answersHidden, reviewFailed }
+  }, [attemptId])
 
   return (
     <StudentPageContainer width="reading" spacing="stack">
@@ -49,19 +62,26 @@ function QuizReviewPage({ attemptId, onBackToQuiz }: QuizReviewPageProps) {
         error={{ title: 'Không thể tải kết quả bài kiểm tra.' }}
       />
 
-      {status === 'ready' && review && (
+      {status === 'ready' && data && (
         <>
-          <BackLink onClick={() => onBackToQuiz(review.quizId)}>Quay lại bài kiểm tra</BackLink>
+          <BackLink onClick={() => onBackToQuiz(data.quiz.id)}>Quay lại bài kiểm tra</BackLink>
 
-          <QuizResultSummary review={review} />
+          <QuizResultSummary title={data.quiz.title} result={data.result} review={data.review} />
 
-          {showAnswers && (
+          {data.answersHidden && <Notice>Bài kiểm tra này không hiển thị đáp án sau khi nộp.</Notice>}
+          {data.reviewFailed && (
+            <Notice tone="warning">
+              Không thể tải chi tiết đáp án.
+              <Button size="sm" appearance="outline" onClick={reload}>Thử lại</Button>
+            </Notice>
+          )}
+          {data.review && (
             <section className="flex flex-col gap-4">
               <h2 className="text-xl font-bold tracking-[-0.2px] text-text-heading">
                 Chi tiết bài làm
               </h2>
               <div className="flex flex-col gap-4">
-                {bySequence(review.questions).map((question, index) => (
+                {bySequence(data.review.questions).map((question, index) => (
                   <QuizReviewQuestionCard
                     key={question.questionId}
                     question={question}

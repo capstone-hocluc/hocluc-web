@@ -22,7 +22,8 @@ export const studentRoutes = {
     section ? `/student/profile?section=${enc(section)}` : '/student/profile',
   courses: () => '/student/courses',
   courseDetail: (courseId: string) => `/student/courses/${enc(courseId)}`,
-  courseStudy: (courseId: string) => `/student/courses/${enc(courseId)}/study`,
+  courseStudy: (courseId: string, tab?: 'exams') =>
+    `/student/courses/${enc(courseId)}/study${tab ? `?tab=${tab}` : ''}`,
   lesson: (courseId: string, lessonId: string) =>
     `/student/courses/${enc(courseId)}/study/lessons/${enc(lessonId)}`,
   activity: (courseId: string, activityType: string, activityId: string) =>

@@ -1,10 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { LoaderCircle, ShieldAlert } from '../console/icons'
+import { ShieldAlert } from '../console/icons'
 import { getAccessToken } from '../../lib/api'
 import { useSessionRestore } from '../../hooks/useSessionRestore'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Button from '../ui/Button'
-import { useActiveRole } from '../../hooks/useActiveRole'
 import { roleHome } from '../../lib/role-home'
 
 interface Props {
@@ -13,10 +12,23 @@ interface Props {
   onGoToRole: (path: string) => void
 }
 
+/**
+ * While the session is checked the page stays empty on the student area's own background: the check takes a moment on
+ * a reload, and a loader flashing in front of every page only got in the way. Screen readers still hear what it waits on.
+ */
+function Waiting({ children }: { children: string }) {
+  return (
+    <main aria-busy="true" className="min-h-screen bg-app-bg">
+      <p role="status" className="sr-only">
+        {children}
+      </p>
+    </main>
+  )
+}
+
 export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Props) {
   const { profile, status, loadCurrentUser } = useCurrentUser()
   const session = useSessionRestore()
-  const { activeRole } = useActiveRole()
   const redirecting = useRef(false)
 
   useEffect(() => {
@@ -32,13 +44,7 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
   }, [loadCurrentUser, onLogin, status, session.checking, session.error])
 
   if (session.checking || (!session.error && !getAccessToken())) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-        <p className="text-[15px] font-semibold text-text-body" role="status">
-          {session.checking ? 'Đang kiểm tra phiên đăng nhập...' : 'Đang chuyển đến đăng nhập...'}
-        </p>
-      </main>
-    )
+    return <Waiting>{session.checking ? 'Đang kiểm tra phiên đăng nhập' : 'Đang chuyển đến đăng nhập'}</Waiting>
   }
 
   if (session.error || status === 'error') {
@@ -67,22 +73,9 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
     )
   }
 
-  if (status === 'idle' || status === 'loading' || !profile) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
-        <span
-          className="inline-flex items-center gap-2 text-[15px] font-semibold text-text-body"
-          role="status"
-        >
-          <LoaderCircle size={18} className="animate-spin text-primary" aria-hidden="true" />
-          Đang xác thực quyền học viên...
-        </span>
-      </main>
-    )
-  }
+  if (status === 'idle' || status === 'loading' || !profile) return <Waiting>Đang xác thực quyền học viên</Waiting>
 
-  const effectiveRole = activeRole ?? profile.role
-  if (effectiveRole !== 'STUDENT') {
+  if (profile.role !== 'STUDENT') {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
         <section className="w-full max-w-[460px] rounded-2xl border border-line-card bg-surface p-8 text-center shadow-card">
@@ -96,7 +89,7 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
           <Button
             variant="primary"
             className="mt-5"
-            onClick={() => onGoToRole(roleHome(effectiveRole))}
+            onClick={() => onGoToRole(roleHome(profile.role))}
           >
             Về khu vực của tôi
           </Button>

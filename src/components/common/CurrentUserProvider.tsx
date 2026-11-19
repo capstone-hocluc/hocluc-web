@@ -8,7 +8,7 @@ function sessionIdentity() {
   if (!token) return null
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return JSON.stringify([payload.sub, payload.role ?? payload.roles, authSessionGeneration()])
+    return JSON.stringify([payload.sub, payload.role, authSessionGeneration()])
   } catch {
     return JSON.stringify([token, authSessionGeneration()])
   }

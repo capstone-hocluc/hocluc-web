@@ -69,7 +69,7 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
         contentClassName="fixed top-1/2 left-1/2 z-50 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-card-border bg-card-background text-text-primary shadow-2xl overflow-hidden outline-none max-sm:max-w-[calc(100%-2rem)]"
       >
         <div className="border-b border-card-border p-3.5">
-          <InputGroup className="h-10">
+          <InputGroup className="h-10 focus-within:border-input-primary-focus-border/40">
             <InputGroupAddon align="inline-start" className="pr-0 text-icon-tertiary">
               <SearchIcon />
             </InputGroupAddon>
@@ -89,14 +89,14 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
           <Command.Empty className="py-8 text-center text-sm text-text-tertiary">Không tìm thấy trang phù hợp.</Command.Empty>
           {groups.map((section) => (
             <Command.Group
-              key={section.label}
+              key={section.id}
               heading={section.label}
               className="py-1.5 **:[[cmdk-group-heading]]:px-3 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-[11px] **:[[cmdk-group-heading]]:font-semibold **:[[cmdk-group-heading]]:tracking-wider **:[[cmdk-group-heading]]:text-text-tertiary **:[[cmdk-group-heading]]:uppercase"
             >
               {section.items.map((item) => (
                 <Command.Item
                   key={item.key}
-                  value={`${section.label} ${item.title}`}
+                  value={`${section.label ?? ''} ${item.title}`}
                   onSelect={() => handleSelect(item.key)}
                   className="flex cursor-pointer items-center rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-background-gray-primary data-[selected=true]:bg-background-gray-primary data-[selected=true]:text-text-primary"
                 >

@@ -1,6 +1,7 @@
-import { Extension } from '@tiptap/core'
+import { Extension, type Editor, type JSONContent } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { END_LINE, TAIL_HEADING } from './variants/parse-exam'
+import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state'
+import { END_LINE, QUESTION_LINE, TAIL_HEADING } from './exam-lines'
 
 /**
  * Ties blocks of the free document to the AI draft they came from, so later AI questions can be placed under their
@@ -9,11 +10,40 @@ import { END_LINE, TAIL_HEADING } from './variants/parse-exam'
  * - a passage's lead line carries `examGroup` (draft group id);
  * - a question's "Câu n." line carries `examItem` (draft item id);
  * - each block of the answer key after the end line carries `examKey`, so the key can be written again.
- * The document itself keeps `deliveredItems`: every draft item ever written into it. A question the teacher deleted
- * stays in that list, so it is not written back; one that arrived while the document was closed is not in it yet.
+ *
+ * The saved document lists in `deliveredItems` every draft item ever written into it: a question the teacher deleted
+ * stays listed, so it is not written back; one that arrived while the document was closed is not listed yet.
+ *
+ * While the document is open the list is not kept on it, because a doc attribute that changes makes ProseMirror draw
+ * the whole document again (every formula, option grid and chart). A question counts as written while its "Câu n."
+ * line is on the sheet; the plugin's state lists the saved ones and adds each whose line leaves. {@link examDocJSON}
+ * writes the whole list into what is saved.
  */
+const deliveredKey = new PluginKey<string[] | null>('examDeliveredItems')
+
 export const ExamTags = Extension.create({
   name: 'examTags',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin<string[] | null>({
+        key: deliveredKey,
+        state: {
+          init: (_, state) => listedItems(state.doc),
+          apply: (tr, listed) => {
+            // A new exam replaced the one on the sheet: none of the new draft's items has been written yet.
+            if (tr.getMeta(deliveredKey) === 'reset') return []
+            // The page sets the list once, for a document saved before items were tracked.
+            if (tr.doc.attrs.deliveredItems !== tr.before.attrs.deliveredItems) listed = joined(listed, listedItems(tr.doc))
+            if (!listed || !tr.docChanged) return listed
+            const known = new Set(listed)
+            const shown = taggedItems(tr.doc)
+            const left = [...taggedItems(tr.before)].filter((id) => !shown.has(id) && !known.has(id))
+            return left.length > 0 ? [...listed, ...left] : listed
+          },
+        },
+      }),
+    ]
+  },
   addGlobalAttributes() {
     const tag = (name: string, attribute: string) => ({
       default: null,
@@ -40,16 +70,82 @@ export const ExamTags = Extension.create({
         attributes: {
           // Never rendered: it only travels in the saved JSON.
           deliveredItems: { default: null, rendered: false },
+          // The assistant's changes to the exam's order already made on this sheet, so a replayed one is not made twice.
+          appliedEdits: { default: null, rendered: false },
         },
       },
     ]
   },
 })
 
-/** The draft items already written into the document; null for a document made before items were tracked. */
-export function deliveredItems(doc: ProseMirrorNode): Set<string> | null {
+/** The list a document was saved with; null for one saved before items were tracked. */
+function listedItems(doc: ProseMirrorNode): string[] | null {
   const value = doc.attrs.deliveredItems as unknown
-  return Array.isArray(value) ? new Set(value.filter((id): id is string => typeof id === 'string')) : null
+  return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : null
+}
+
+function joined(listed: string[] | null, more: string[] | null): string[] | null {
+  if (!listed || !more) return listed ?? more
+  const known = new Set(listed)
+  return [...listed, ...more.filter((id) => !known.has(id))]
+}
+
+/** The draft items whose "Câu n." line is in the document. */
+function taggedItems(doc: ProseMirrorNode): Set<string> {
+  const ids = new Set<string>()
+  doc.forEach((node) => {
+    const id = node.attrs.examItem as unknown
+    if (typeof id === 'string' && id) ids.add(id)
+  })
+  return ids
+}
+
+/** The draft items already written into the document; null for a document saved before items were tracked. */
+export function deliveredItems(state: EditorState): Set<string> | null {
+  const listed = deliveredKey.getState(state)
+  if (!listed) return null
+  const ids = new Set(listed)
+  for (const id of taggedItems(state.doc)) ids.add(id)
+  return ids
+}
+
+/** The document as it is saved (and exported as JSON), listing every draft item written into it. */
+export function examDocJSON(editor: Editor): JSONContent {
+  const json = editor.getJSON()
+  const ids = deliveredItems(editor.state)
+  return ids ? { ...json, attrs: { ...json.attrs, deliveredItems: [...ids] } } : json
+}
+
+/** Starts the exam's body: a tagged block, a section or part heading, or a question the teacher typed. */
+function startsBody(node: ProseMirrorNode) {
+  const { attrs } = node
+  if (attrs.examPart || attrs.examGroup || attrs.examItem) return true
+  if (node.type.name === 'heading') return Number(attrs.level ?? 2) >= 2
+  return node.type.name === 'paragraph' && QUESTION_LINE.test(node.textContent)
+}
+
+/**
+ * Takes the exam off the sheet for a new one the AI writes: its parts, passages and questions (the AI's and the
+ * teacher's) and the answer key. The title and time line above them and the end line stay, and no draft item counts as
+ * written any more. Not an edit: Ctrl+Z does not bring the old exam back (stopping the new run does).
+ */
+export function clearExam(editor: Editor) {
+  const blocks: Array<{ node: ProseMirrorNode; pos: number }> = []
+  editor.state.doc.forEach((node, pos) => blocks.push({ node, pos }))
+  const start = blocks.findIndex(({ node }) => startsBody(node))
+  const end = blocks.findIndex(({ node }, index) => index >= Math.max(start, 0) && endsQuestions(node))
+  const ranges: Array<{ from: number; to: number }> = []
+  blocks.forEach(({ node, pos }, index) => {
+    const body = start >= 0 && index >= start && (end === -1 || index < end)
+    if (body || node.attrs.examKey) ranges.push({ from: pos, to: pos + node.nodeSize })
+  })
+  const tr = editor.state.tr
+  if (ranges.length === blocks.length) {
+    tr.replaceWith(0, tr.doc.content.size, editor.schema.nodes.paragraph.create())
+  } else {
+    for (const range of [...ranges].reverse()) tr.delete(range.from, range.to)
+  }
+  editor.view.dispatch(tr.setDocAttribute('deliveredItems', []).setMeta(deliveredKey, 'reset').setMeta('addToHistory', false))
 }
 
 /** The first block after the questions: the "--- HẾT ---" line, or an answer key / marking scheme heading. */

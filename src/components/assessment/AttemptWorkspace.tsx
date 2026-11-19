@@ -26,27 +26,46 @@ function AttemptWorkspace({ session, questions, onExit, onViewResult }: AttemptW
   const { attempt, currentIndex, setCurrentIndex, selectedAnswers, inputsDisabled, submitting } =
     session
   const currentQuestion = questions[currentIndex] || null
-  if (!attempt || !currentQuestion) return null
+  if (!attempt) return null
+
+  if (attempt.status !== 'IN_PROGRESS') {
+    return (
+      <>
+        <BackLink onClick={onExit}>Quay lại bài kiểm tra</BackLink>
+        <Notice className="justify-between">
+          <span>Lượt làm này đã kết thúc.</span>
+          {attempt.status === 'GRADED' && (
+            <Button shape="pill" size="sm" onClick={onViewResult}>Xem kết quả</Button>
+          )}
+        </Notice>
+      </>
+    )
+  }
+  if (!currentQuestion) return null
 
   const isLast = currentIndex === questions.length - 1
 
   return (
     <>
-      <BackLink onClick={onExit}>Thoát bài kiểm tra</BackLink>
+      {!submitting && <BackLink onClick={onExit}>Thoát bài kiểm tra</BackLink>}
 
-      {attempt.status !== 'IN_PROGRESS' && (
+      {session.expired ? (
         <Notice tone="warning" className="justify-between">
-          <span>Bài làm này đã được nộp.</span>
-          <Button
-            shape="pill"
-            size="sm"
-            className="h-auto px-4 py-2 text-sm font-semibold"
-            onClick={onViewResult}
-          >
-            Xem kết quả
+          <span>{submitting ? 'Hết giờ. Đang nộp bài…' : 'Hết giờ. Chưa xác nhận được kết quả nộp bài.'}</span>
+          {!submitting && (
+            <Button size="sm" appearance="outline" onClick={() => void session.retryExpiredSubmit()}>
+              Thử nộp lại
+            </Button>
+          )}
+        </Notice>
+      ) : session.failedQuestionIds.size > 0 ? (
+        <Notice tone="danger" className="justify-between">
+          <span>Còn {session.failedQuestionIds.size} đáp án chưa lưu. Hãy lưu lại trước khi nộp bài.</span>
+          <Button size="sm" appearance="outline" disabled={inputsDisabled} onClick={session.retryFailedAnswers}>
+            Lưu lại đáp án
           </Button>
         </Notice>
-      )}
+      ) : null}
 
       <div className="grid grid-cols-1 gap-[18px] min-[860px]:grid-cols-[minmax(0,1fr)_260px] min-[860px]:items-start">
         <div className="flex min-w-0 flex-col gap-4">

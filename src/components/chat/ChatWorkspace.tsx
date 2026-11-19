@@ -24,6 +24,7 @@ import type { ChatAttachment, ChatStatus, SendChatMessage } from '../../types/ch
 import { CreditAmount } from '../credits/CreditIcon'
 import { refreshCredits } from '../../lib/credits'
 import MentorHoursEditor from './MentorHoursEditor'
+import MentorCardDialog from './mentor-card-dialog'
 export interface ChatWorkspaceProps {
   conversationId?: string
   onSelectConversation: (id?: string) => void
@@ -67,6 +68,7 @@ export default function ChatWorkspace({
   const [composerError, setComposerError] = useState('')
   const [newRequest, setNewRequest] = useState(false)
   const [hoursOpen, setHoursOpen] = useState(false)
+  const [mentorCardId, setMentorCardId] = useState<string | null>(null)
   const [newMessages, setNewMessages] = useState(false)
   const scroll = useRef<HTMLDivElement>(null)
   const previousMessageCount = useRef(0)
@@ -590,6 +592,18 @@ export default function ChatWorkspace({
                         </p>
                         <p className={`mt-1 text-xs ${muted}`}>
                           {chat.detail.mentorAvailability?.label || 'Chưa thiết lập lịch hỗ trợ'}
+                          {!isConsole && chat.detail.mentor && (
+                            <>
+                              {' · '}
+                              <button
+                                type="button"
+                                className="font-semibold text-primary-text underline-offset-2 hover:underline"
+                                onClick={() => setMentorCardId(chat.detail!.mentor!.id)}
+                              >
+                                Xem hồ sơ Mentor
+                              </button>
+                            </>
+                          )}
                         </p>
                         {!isConsole && chat.detail.creditCost ? (
                           <p className={`mt-1 inline-flex items-center gap-1 text-xs ${muted}`}>
@@ -899,6 +913,7 @@ export default function ChatWorkspace({
         />
       )}
       {hoursOpen && <MentorHoursEditor isConsole={isConsole} onClose={() => setHoursOpen(false)} />}
+      {mentorCardId && <MentorCardDialog mentorId={mentorCardId} onClose={() => setMentorCardId(null)} />}
       {guard.hasPendingAction &&
         (isConsole ? (
           <ConsoleDialog open title="Bỏ bản nháp chưa gửi?" onClose={guard.cancelDiscard}>

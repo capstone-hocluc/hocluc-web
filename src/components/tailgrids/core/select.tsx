@@ -255,18 +255,21 @@ function SelectContent({ children, className, ...props }: SelectContentProps) {
     );
   }
 
-  // Single selection mode (standard Select)
+  // Single selection mode (standard Select). The menu unrolls from the trigger's edge, and its
+  // padding puts option text and the check mark in line with the trigger's label and chevron.
   return (
     <Popover
+      offset={4}
       className={cn(
         "w-(--trigger-width) app-scroll overflow-auto rounded-lg border border-card-border bg-background-white-secondary",
-        "entering:animate-in entering:fade-in-0 entering:zoom-in-95",
-        "exiting:animate-out exiting:fade-out-0 exiting:zoom-out-95",
+        "duration-150 ease-out data-entering:animate-in data-entering:fade-in-0 data-exiting:animate-out data-exiting:fade-out-0",
+        "data-[placement=bottom]:slide-in-from-top-2 data-[placement=bottom]:slide-out-to-top-2",
+        "data-[placement=top]:slide-in-from-bottom-2 data-[placement=top]:slide-out-to-bottom-2",
         className,
       )}
       {...props}
     >
-      <ListBox className="p-1.5 outline-none">{children}</ListBox>
+      <ListBox className="p-1 outline-none">{children}</ListBox>
     </Popover>
   );
 }

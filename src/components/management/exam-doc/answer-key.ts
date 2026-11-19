@@ -2,9 +2,9 @@ import type { Editor, JSONContent } from '@tiptap/react'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { showErrorToast } from '../../../lib/toastBus'
 import type { AiSolutionStyle } from '../../../services/aiAssistantService'
-import type { ExamPaper, ExamPaperPart, ExamPaperQuestion } from '../ai-assistant/exam-format'
+import { compareDifficulty, type ExamPaper, type ExamPaperPart, type ExamPaperQuestion } from '../ai-assistant/exam-format'
 import { inlineContent, textBlocks } from './draft-to-doc'
-import { END_LINE } from './variants/parse-exam'
+import { END_LINE } from './exam-lines'
 
 type KeyKind = 'table' | 'guide'
 
@@ -85,10 +85,7 @@ const keyCell = (value: string, bold = false): JSONContent => ({
   content: [{ type: 'paragraph', attrs: { textAlign: 'center' }, ...(value ? { content: [text(value, bold ? ['bold'] : [])] } : {}) }],
 })
 
-/**
- * The answers of one part as rows of ten: "Câu | 1 … 10" over "Đáp án | A … D". This is the table the exam-variant
- * builder reads, so each exam code gets its own answers in it.
- */
+/** The answers of one part as rows of ten: "Câu | 1 … 10" over "Đáp án | A … D". */
 function answerTable(entries: KeyEntry[]): JSONContent {
   const width = Math.min(KEY_ROW, entries.length)
   const row = (head: string, values: string[]): JSONContent => ({
@@ -145,21 +142,37 @@ function guideBlocks(entry: KeyEntry, style: AiSolutionStyle): JSONContent[] {
  * (a table of ten per row for each part, and the questions the teacher should check), then a page break and
  * HƯỚNG DẪN GIẢI (each question's answer and solution). Empty when the document holds no AI question.
  */
-export function answerKeyBlocks(doc: ProseMirrorNode, paper: ExamPaper, style: AiSolutionStyle): JSONContent[] {
+export function answerKeyBlocks(
+  doc: ProseMirrorNode,
+  paper: ExamPaper,
+  style: AiSolutionStyle,
+  parts: KeyParts = BOTH_PARTS
+): JSONContent[] {
   const sections = keySections(doc, paper)
-  if (sections.length === 0) return []
+  if (sections.length === 0 || (!parts.table && !parts.guide)) return []
   const many = sections.length > 1
-  const review = sections.flatMap((section) => section.entries).filter((entry) => entry.question.needsReview)
-  const blocks: JSONContent[] = [{ type: 'pageBreak', attrs: { examKey: 'table' } }, title('BẢNG ĐÁP ÁN', 'table')]
-  for (const section of sections) blocks.push(...sectionTitle(section, 'table', many), answerTable(section.entries))
-  if (review.length > 0) {
-    // Tagged with the guide: it names the original's numbers, so exam codes leave it out as they leave the guide.
-    blocks.push(
-      paragraph(
-        [text(`Câu cần thầy cô kiểm tra lại trước khi dùng: ${review.map((entry) => entry.number).join(', ')}.`, ['italic'])],
-        'guide'
-      )
-    )
+  const entries = sections.flatMap((section) => section.entries)
+  const review = entries.filter((entry) => entry.question.needsReview)
+  // The AI's check judged these easier or harder than the level asked for; they were kept as written, not rewritten.
+  const off = (sign: number) =>
+    entries.filter(({ question }) => {
+      const estimate = question.estimatedDifficulty
+      return estimate ? Math.sign(compareDifficulty(estimate, question.difficulty)) === sign : false
+    })
+  const notes: [string, KeyEntry[]][] = [
+    ['Câu cần thầy cô kiểm tra lại trước khi dùng', review],
+    ['Câu AI ước lượng dễ hơn mức yêu cầu', off(-1)],
+    ['Câu AI ước lượng khó hơn mức yêu cầu', off(1)],
+  ]
+  const blocks: JSONContent[] = []
+  if (parts.table) {
+    blocks.push({ type: 'pageBreak', attrs: { examKey: 'table' } }, title('BẢNG ĐÁP ÁN', 'table'))
+    for (const section of sections) blocks.push(...sectionTitle(section, 'table', many), answerTable(section.entries))
+  }
+  if (!parts.guide) return blocks
+  for (const [lead, listed] of notes) {
+    if (listed.length === 0) continue
+    blocks.push(paragraph([text(`${lead}: ${listed.map((entry) => entry.number).join(', ')}.`, ['italic'])], 'guide'))
   }
   blocks.push({ type: 'pageBreak', attrs: { examKey: 'guide' } }, title('HƯỚNG DẪN GIẢI', 'guide'))
   for (const section of sections) {
@@ -169,14 +182,50 @@ export function answerKeyBlocks(doc: ProseMirrorNode, paper: ExamPaper, style: A
   return blocks
 }
 
+/** Which parts of the answer key are written: BẢNG ĐÁP ÁN (`table`) and HƯỚNG DẪN GIẢI (`guide`). */
+export interface KeyParts {
+  table: boolean
+  guide: boolean
+}
+
+const BOTH_PARTS: KeyParts = { table: true, guide: true }
+
+/** The parts of the answer key the document holds now, so writing it again keeps out a part the teacher took off. */
+export function keyParts(doc: ProseMirrorNode): KeyParts {
+  const parts = { table: false, guide: false }
+  doc.forEach((node) => {
+    if (node.attrs.examKey === 'table') parts.table = true
+    if (node.attrs.examKey === 'guide') parts.guide = true
+  })
+  return parts
+}
+
+/**
+ * Takes the solutions (`guide`) or the whole answer key (`all`) off the end of the exam, the way the key is written:
+ * not an undo step. Returns whether the document changed.
+ */
+export function removeAnswerKey(editor: Editor, part: 'guide' | 'all'): boolean {
+  const { state } = editor
+  const ranges: Array<{ from: number; to: number }> = []
+  state.doc.forEach((node, pos) => {
+    const kind = node.attrs.examKey
+    if (kind && (part === 'all' || kind === 'guide')) ranges.push({ from: pos, to: pos + node.nodeSize })
+  })
+  if (ranges.length === 0) return false
+  const tr = state.tr
+  for (const range of ranges.reverse()) tr.delete(range.from, range.to)
+  editor.view.dispatch(tr.setMeta('addToHistory', false))
+  return true
+}
+
 /**
  * Writes the answer key again from the draft: the old key's blocks go, the new ones follow the end line (or end the
  * document when it has none). Not an edit: the caret stays and Ctrl+Z does not undo it; the document saves it like an
  * edit, once. Returns whether the document changed.
  */
-export function replaceAnswerKey(editor: Editor, paper: ExamPaper, style: AiSolutionStyle): boolean {
+export function replaceAnswerKey(editor: Editor, paper: ExamPaper, style: AiSolutionStyle, parts: KeyParts = BOTH_PARTS): boolean {
   const { state } = editor
-  const blocks = answerKeyBlocks(state.doc, paper, style)
+  const blocks = answerKeyBlocks(state.doc, paper, style, parts)
   const old: Array<{ from: number; to: number; json: unknown }> = []
   state.doc.forEach((node, pos) => {
     if (node.attrs.examKey) old.push({ from: pos, to: pos + node.nodeSize, json: node.toJSON() })
@@ -202,11 +251,11 @@ export function withoutAnswerKey(doc: JSONContent): JSONContent {
 }
 
 /** Downloads the exam without its answer key as Word ("…-khong-dap-an.docx"). */
-export async function downloadExamOnlyDocx(editor: Editor, code: string | null = null) {
+export async function downloadExamOnlyDocx(editor: Editor) {
   if (editor.isDestroyed) return
   try {
     const [{ buildDocx }, { downloadBlob }] = await Promise.all([import('./export/export-docx'), import('./export/file-name')])
-    const { blob, fileName, formulas, missingImages } = await buildDocx(withoutAnswerKey(editor.getJSON()), { code })
+    const { blob, fileName, formulas, missingImages } = await buildDocx(withoutAnswerKey(editor.getJSON()))
     downloadBlob(blob, fileName.replace(/\.docx$/i, '-khong-dap-an.docx'))
     if (missingImages) showErrorToast(`Không tải được ${missingImages} hình; tệp Word ghi tên hình ở chỗ đó`)
     if (formulas.texts) showErrorToast(`${formulas.texts} công thức được ghi dưới dạng LaTeX`)

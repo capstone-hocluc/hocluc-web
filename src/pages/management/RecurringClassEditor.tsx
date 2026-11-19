@@ -1,10 +1,9 @@
-import DateField from '../../components/console/date-field'
+import DateRangeField from '../../components/console/date-range-field'
 import { useState, type FormEvent } from 'react'
 import { SCHEDULING_TIMEZONE } from '../../lib/scheduling'
 import type {
   CreateRecurringClassRequest,
   DayOfWeek,
-  DeliveryMode,
   RecurringClassResponse,
   UpdateRecurringClassRequest,
 } from '../../types/scheduling'
@@ -85,7 +84,7 @@ export default function RecurringClassEditor({
     if (!editing && !sectionId) return reject('Chọn môn học thuộc khóa.', '[aria-label="Chọn môn cho lớp lặp"]')
     if (startTime >= endTime) return reject('Giờ kết thúc phải sau giờ bắt đầu.', '[name="endTime"]')
     if (!startDate || !endDate || startDate > endDate) {
-      return reject('Chọn khoảng ngày hợp lệ.', !startDate ? '[aria-label="Chọn ngày: Ngày bắt đầu"]' : '[aria-label="Chọn ngày: Ngày kết thúc"]')
+      return reject('Chọn khoảng ngày hợp lệ.', '[aria-label="Chọn khoảng ngày: Thời gian lớp"]')
     }
     if (!Number.isInteger(durationMinutes) || durationMinutes < 1) {
       return reject('Nhập thời lượng hợp lệ.', '[name="durationMinutes"]')
@@ -104,8 +103,6 @@ export default function RecurringClassEditor({
       startTime,
       endTime,
       durationMinutes,
-      defaultMode: String(form.get('defaultMode') || 'PHYSICAL') as DeliveryMode,
-      defaultLocation: String(form.get('defaultLocation') || ''),
       startDate,
       endDate,
       timezone: SCHEDULING_TIMEZONE,
@@ -166,31 +163,15 @@ export default function RecurringClassEditor({
             triggerClassName="w-full"
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Ngày trong tuần">
-            <SelectField
-              ariaLabel="Ngày trong tuần"
-              name="dayOfWeek"
-              defaultValue={initial?.dayOfWeek ?? 'MONDAY'}
-              triggerClassName={fieldControlClass}
-              options={weekdays.map((day) => ({ id: String(day.id), label: day.label }))}
-            />
-          </Field>
-          <Field label="Hình thức">
-            <SelectField
-              ariaLabel="Hình thức"
-              name="defaultMode"
-              defaultValue={initial?.defaultMode ?? 'PHYSICAL'}
-              triggerClassName={fieldControlClass}
-              options={[
-                { id: 'PHYSICAL', label: 'Trực tiếp' },
-                { id: 'ONLINE', label: 'Trực tuyến' },
-                { id: 'HYBRID', label: 'Kết hợp' },
-                { id: 'OFFLINE', label: 'Ngoại tuyến' },
-              ]}
-            />
-          </Field>
-        </div>
+        <Field label="Ngày trong tuần">
+          <SelectField
+            ariaLabel="Ngày trong tuần"
+            name="dayOfWeek"
+            defaultValue={initial?.dayOfWeek ?? 'MONDAY'}
+            triggerClassName={fieldControlClass}
+            options={weekdays.map((day) => ({ id: String(day.id), label: day.label }))}
+          />
+        </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Bắt đầu">
             <input name="startTime" autoComplete="off" type="time" required defaultValue={initial?.startTime?.slice(0, 5)} className={fieldControlClass} />
@@ -202,13 +183,18 @@ export default function RecurringClassEditor({
         <Field label="Thời lượng mỗi buổi (phút)">
           <input name="durationMinutes" autoComplete="off" type="number" min="1" defaultValue={initial?.durationMinutes ?? 120} required className={fieldControlClass} />
         </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <DateField label="Ngày bắt đầu" name="startDate" value={startDate} onChange={setStartDate} required disabled={busy} />
-          <DateField label="Ngày kết thúc" name="endDate" value={endDate} onChange={setEndDate} required disabled={busy} />
-        </div>
-        <Field label="Phòng / địa điểm">
-          <input name="defaultLocation" autoComplete="off" defaultValue={initial?.defaultLocation ?? ''} className={fieldControlClass} />
-        </Field>
+        <DateRangeField
+          label="Thời gian lớp"
+          names={['startDate', 'endDate']}
+          value={{ from: startDate, to: endDate }}
+          onChange={(range) => {
+            setStartDate(range.from)
+            setEndDate(range.to)
+          }}
+          required
+          disabled={busy}
+          showSummary
+        />
         <p className="text-xs text-text-tertiary">Múi giờ: {SCHEDULING_TIMEZONE}</p>
         <div className="flex justify-end gap-2 border-t border-card-border pt-4">
           <Button type="button" appearance="outline" onClick={onClose}>Đóng</Button>

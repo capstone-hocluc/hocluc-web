@@ -221,15 +221,15 @@ export default function BankSourcesPanel({
       )}
       {actionError && <Notice tone="danger">{actionError}</Notice>}
       {unlabelled && labelling && !labelling.ready && <Notice tone="warning">{labelling.reason}</Notice>}
+      {!readOnly && onOpenAssistant && (
+        <div className="flex justify-end">
+          <Button onClick={onOpenAssistant}>
+            <Sparkles size={17} />
+            Nạp đề trong Trợ lý AI
+          </Button>
+        </div>
+      )}
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        {!readOnly && onOpenAssistant && (
-          <div className="flex justify-end border-b border-card-border px-5 py-4">
-            <Button onClick={onOpenAssistant}>
-              <Sparkles size={17} />
-              Nạp đề trong Trợ lý AI
-            </Button>
-          </div>
-        )}
         <ScheduleResourceState
           skeleton="table"
           inset

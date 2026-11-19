@@ -8,13 +8,20 @@ import { Input } from '../tailgrids/core/input'
 import { Label } from '../tailgrids/core/label'
 import { TextField } from '../tailgrids/core/text-field'
 import { Checkbox } from '../tailgrids/core/checkbox'
+import { Skeleton } from '../tailgrids/core/skeleton'
+import Notice from '../console/notice'
+import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { PERSONNEL_ROLES } from '../../lib/role-home'
+import { subjectRows } from '../../lib/subject-rows'
+import { getCategories } from '../../services/categoryService'
+import { assignTeacherZoomAccount, zoomErrorMessage } from '../../services/liveClassService'
 import { ROLE_LABELS, getErrorMessage } from './user-labels'
 
 type CreateUserForm = Required<Pick<CreateUserRequest, 'email' | 'password' | 'firstName' | 'lastName' | 'role'>> & {
   displayName: string
   phone: string
-  roles: UserRole[]
+  /** A teacher's live classes are hosted on the Zoom user the center gives them. */
+  zoomEmail: string
 }
 
 type AccountType = 'STUDENT' | 'PERSONNEL'
@@ -26,8 +33,8 @@ const emptyForm = (type: AccountType): CreateUserForm => ({
   lastName: '',
   displayName: '',
   phone: '',
+  zoomEmail: '',
   role: type === 'STUDENT' ? 'STUDENT' : 'STAFF',
-  roles: type === 'STUDENT' ? ['STUDENT'] : ['STAFF'],
 })
 
 interface UserCreateDialogProps {
@@ -40,35 +47,61 @@ interface UserCreateDialogProps {
 
 function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateDialogProps) {
   const [form, setForm] = useState<CreateUserForm>(() => emptyForm(accountType))
+  const [mentorSubjects, setMentorSubjects] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // the account exists but its Zoom user was refused: only closing is left, the rest is done on the account
+  const [createdWithoutZoom, setCreatedWithoutZoom] = useState(false)
+  const mentor = form.role === 'MENTOR'
+  const teacher = form.role === 'TEACHER'
+  const subjects = useScheduleResource(open && mentor ? 'create-user:subjects' : null, async () => subjectRows(await getCategories()))
 
   const set = <K extends keyof CreateUserForm>(key: K, value: CreateUserForm[K]) =>
     setForm((current) => ({ ...current, [key]: value }))
 
+  const reset = () => {
+    setForm(emptyForm(accountType))
+    setMentorSubjects([])
+    setCreatedWithoutZoom(false)
+  }
+
   const close = () => {
     if (loading) return
-    setForm(emptyForm(accountType))
+    const created = createdWithoutZoom
+    reset()
     setError('')
-    onClose()
+    if (created) onCreated()
+    else onClose()
   }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (loading) return
-    if (!form.roles.length || !form.roles.includes(form.role)) {
-      setError('Chọn ít nhất một vai trò và vai trò khởi đầu trong danh sách đã chọn.')
+    if (loading || createdWithoutZoom) return
+    if (mentor && !mentorSubjects.length) {
+      setError('Chọn ít nhất một môn cho Mentor.')
       return
     }
     setLoading(true)
     setError('')
     try {
-      await createUser({
-        ...form,
+      const { zoomEmail, ...account } = form
+      const created = await createUser({
+        ...account,
         displayName: form.displayName.trim() || undefined,
         phone: form.phone.trim() || undefined,
+        scopes: mentor ? mentorSubjects.map((categoryId) => ({ categoryId, capability: 'MENTOR' as const })) : undefined,
       })
-      setForm(emptyForm(accountType))
+      if (teacher && zoomEmail.trim()) {
+        try {
+          await assignTeacherZoomAccount(created.id, zoomEmail)
+        } catch (zoomError: unknown) {
+          setCreatedWithoutZoom(true)
+          setError('Đã tạo tài khoản nhưng chưa gán được Zoom: '
+            + zoomErrorMessage(zoomError, 'Không lưu được tài khoản Zoom.') + ' Mở tài khoản, thẻ Zoom, để gán lại.')
+          return
+        }
+      }
+      reset()
       onCreated()
     } catch (requestError: unknown) {
       setError(getErrorMessage(requestError))
@@ -88,12 +121,14 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
       footer={
         <>
           <Button type="button" appearance="outline" onClick={close} disabled={loading}>
-            Hủy
+            {createdWithoutZoom ? 'Đóng' : 'Hủy'}
           </Button>
-          <Button type="submit" disabled={loading}>
-            {loading && <LoaderCircle size={15} className="animate-spin" />}
-            Tạo
-          </Button>
+          {!createdWithoutZoom && (
+            <Button type="submit" disabled={loading}>
+              {loading && <LoaderCircle size={15} className="animate-spin" />}
+              Tạo
+            </Button>
+          )}
         </>
       }
     >
@@ -128,20 +163,39 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
         {form.role === 'STUDENT' ? (
           <p className="text-sm text-text-tertiary">Học sinh chỉ có vai trò Học viên.</p>
         ) : (
-          <fieldset disabled={loading} className="flex flex-col gap-3">
-            <legend className="mb-2 text-sm font-medium text-text-primary">Vai trò được cấp</legend>
-            <div className="flex flex-wrap gap-4">
-              {PERSONNEL_ROLES.map((role) => (
-                <Checkbox key={role} isSelected={form.roles.includes(role)} isDisabled={loading}
-                  onChange={(checked) => setForm((current) => {
-                    const roles = checked ? [...current.roles, role] : current.roles.filter((item) => item !== role)
-                    return { ...current, roles, role: roles.includes(current.role) ? current.role : roles[0] ?? current.role }
-                  })}>{ROLE_LABELS[role]}</Checkbox>
-              ))}
-            </div>
-            <SelectField ariaLabel="Vai trò khởi đầu" options={form.roles.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
-              value={form.roles.includes(form.role) ? form.role : ''} disabled={loading || !form.roles.length}
-              placeholder="Chọn vai trò khởi đầu" onChange={(value) => set('role', value as UserRole)} />
+          <SelectField ariaLabel="Vai trò" options={PERSONNEL_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
+            value={form.role} disabled={loading} onChange={(value) => set('role', value as UserRole)} />
+        )}
+
+        {teacher && (
+          <TextField className="gap-2" type="email" name="zoomEmail" autoComplete="off" value={form.zoomEmail}
+            disabled={loading || createdWithoutZoom} onChange={(v) => set('zoomEmail', v)}>
+            <Label>Email tài khoản Zoom</Label>
+            <Input className="w-full" />
+          </TextField>
+        )}
+
+        {mentor && (
+          <fieldset disabled={loading} className="flex flex-col gap-2">
+            <legend className="mb-2 text-sm font-medium text-text-primary">Chuyên môn</legend>
+            {subjects.status === 'ready' && subjects.data ? (
+              <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-lg border border-card-border p-3">
+                {subjects.data.map(({ category, child }) => (
+                  <Checkbox key={category.id} className={child ? 'pl-6' : undefined}
+                    isSelected={mentorSubjects.includes(category.id)} isDisabled={loading}
+                    onChange={(checked) => setMentorSubjects((current) =>
+                      checked ? [...current, category.id] : current.filter((id) => id !== category.id))}>
+                    {category.name}
+                  </Checkbox>
+                ))}
+              </div>
+            ) : subjects.status === 'loading' ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-card-border p-3">
+                {Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="h-5 w-48" />)}
+              </div>
+            ) : (
+              <Notice tone="danger">{subjects.errorMessage || 'Không thể tải môn học.'}</Notice>
+            )}
           </fieldset>
         )}
 

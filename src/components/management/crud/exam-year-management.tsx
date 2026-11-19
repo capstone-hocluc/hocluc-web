@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
@@ -7,17 +7,11 @@ import ConfirmDialog from '../../console/confirm-dialog'
 import PageHeading from '../../console/page-heading'
 import SelectField from '../../console/select-field'
 import Status from '../../console/status'
-import { FilterToolbar } from '../../console/filter-toolbar'
-import {
-  ConsoleTabs,
-  ConsoleTabsContent,
-  ConsoleTabsList,
-  ConsoleTabsTrigger,
-} from '../../console/tabs'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Pencil, Plus, Trash2 } from '../../console/icons'
+import { ChevronDown, Pencil, Plus, Trash2 } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { cn } from '../../../lib/cn'
 import {
   changeExamYearStatus,
   deleteExamSession,
@@ -45,13 +39,19 @@ const STATUS_OPTIONS = (Object.keys(EXAM_YEAR_STATUS_LABELS) as ExamYearStatus[]
 type Deleting =
   { kind: 'year'; year: ExamYear } | { kind: 'session'; year: ExamYear; session: ExamSession }
 
-/** Exam years (Năm thi 2026-2027, ...) and their sittings. MAIN courses pick a sitting from here. */
+/**
+ * Exam years (Năm thi 2026-2027, ...) with their sittings. Each year is one card listing its rounds, so a
+ * year and its Đợt 1 / Đợt 2 are read together. MAIN courses pick a sitting from here.
+ */
 export default function ExamYearManagement({
   readOnly = false,
   title,
+  navigation,
 }: {
   readOnly?: boolean
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }) {
   const resource = useScheduleResource('exam-years', getAdminExamYears)
   const [yearEditor, setYearEditor] = useState<{ year: ExamYear | null } | null>(null)
@@ -63,86 +63,11 @@ export default function ExamYearManagement({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [managementTab, setManagementTab] = useState<'sessions' | 'years'>('sessions')
-  const [selectedYearId, setSelectedYearId] = useState<string | null>(null)
-  const years = resource.data ?? []
-  const selectedYear =
-    years.find((year) => year.id === selectedYearId) ?? years[0] ?? null
-  const yearOptions = years.map((year) => ({
-    id: year.id,
-    label: `${year.name} · ${EXAM_YEAR_STATUS_LABELS[year.status]}`,
-  }))
-  const yearColumns: ColumnDef<ExamYear>[] = [
-    {
-      id: 'name',
-      header: 'Năm thi',
-      enableSorting: false,
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="font-medium text-text-primary">{row.original.name}</span>
-          {row.original.note && (
-            <span className="line-clamp-1 text-xs text-text-secondary">{row.original.note}</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'status',
-      header: 'Trạng thái',
-      enableSorting: false,
-      cell: ({ row }) =>
-        readOnly ? (
-          <Status tone={EXAM_YEAR_STATUS_TONES[row.original.status]}>
-            {EXAM_YEAR_STATUS_LABELS[row.original.status]}
-          </Status>
-        ) : (
-          <SelectField
-            ariaLabel={`Trạng thái ${row.original.name}`}
-            value={row.original.status}
-            onChange={(value) => void changeStatus(row.original, value as ExamYearStatus)}
-            disabled={busy}
-            options={STATUS_OPTIONS}
-            className="min-w-40"
-          />
-        ),
-    },
-    {
-      id: 'sessions',
-      header: 'Số đợt thi',
-      enableSorting: false,
-      cell: ({ row }) => <span className="tabular-nums">{row.original.sessions.length}</span>,
-    },
-    ...(readOnly
-      ? []
-      : [
-          {
-            id: 'actions',
-            header: 'Thao tác',
-            enableSorting: false,
-            meta: { className: 'w-28 text-right' },
-            cell: ({ row }) => (
-              <RowActions>
-                <IconAction
-                  label="Sửa năm thi"
-                  icon={Pencil}
-                  disabled={busy}
-                  onClick={() => setYearEditor({ year: row.original })}
-                />
-                <IconAction
-                  label="Xóa năm thi"
-                  icon={Trash2}
-                  variant="danger"
-                  disabled={busy}
-                  onClick={() => {
-                    setError('')
-                    setDeleting({ kind: 'year', year: row.original })
-                  }}
-                />
-              </RowActions>
-            ),
-          } satisfies ColumnDef<ExamYear>,
-        ]),
-  ]
+  // Newest year first: the one being prepared for is what staff open the page for.
+  const years = useMemo(
+    () => [...(resource.data ?? [])].sort((a, b) => b.examYear - a.examYear),
+    [resource.data]
+  )
 
   async function changeStatus(year: ExamYear, status: ExamYearStatus) {
     if (busy || status === year.status) return
@@ -187,22 +112,14 @@ export default function ExamYearManagement({
         readOnly={readOnly}
         action={
           !readOnly && (
-            <Button
-              onClick={() => {
-                if (managementTab === 'sessions' && selectedYear) {
-                  setSessionEditor({ year: selectedYear, session: null })
-                } else {
-                  setYearEditor({ year: null })
-                }
-              }}
-              disabled={busy || resource.status !== 'ready'}
-            >
+            <Button onClick={() => setYearEditor({ year: null })} disabled={busy || resource.status !== 'ready'}>
               <Plus size={16} />
-              {managementTab === 'sessions' && selectedYear ? 'Thêm đợt thi' : 'Thêm năm thi'}
+              Thêm năm thi
             </Button>
           )
         }
       />
+      {navigation}
       {notice && (
         <Notice tone="info">
           <span role="status">{notice}</span>
@@ -219,52 +136,32 @@ export default function ExamYearManagement({
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
       >
-        <ConsoleTabs
-          value={managementTab}
-          onValueChange={(value) => setManagementTab(value as 'sessions' | 'years')}
-        >
-          <ConsoleTabsList aria-label="Quản lý năm và đợt thi">
-            <ConsoleTabsTrigger value="sessions">Đợt thi</ConsoleTabsTrigger>
-            <ConsoleTabsTrigger value="years">Năm thi</ConsoleTabsTrigger>
-          </ConsoleTabsList>
-
-          <ConsoleTabsContent value="sessions">
-            {selectedYear ? (
-              <ExamYearPanel
-                year={selectedYear}
-                yearOptions={yearOptions}
-                onSelectYear={setSelectedYearId}
+        {years.length === 0 ? (
+          <Notice tone="warning">Chưa có năm thi. Tạo năm thi đầu tiên để thêm các đợt thi.</Notice>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {years.map((year) => (
+              <ExamYearCard
+                key={year.id}
+                year={year}
                 readOnly={readOnly}
                 busy={busy}
-                onEditSession={(session) => setSessionEditor({ year: selectedYear, session })}
+                onChangeStatus={(status) => void changeStatus(year, status)}
+                onEditYear={() => setYearEditor({ year })}
+                onDeleteYear={() => {
+                  setError('')
+                  setDeleting({ kind: 'year', year })
+                }}
+                onAddSession={() => setSessionEditor({ year, session: null })}
+                onEditSession={(session) => setSessionEditor({ year, session })}
                 onDeleteSession={(session) => {
                   setError('')
-                  setDeleting({ kind: 'session', year: selectedYear, session })
+                  setDeleting({ kind: 'session', year, session })
                 }}
               />
-            ) : (
-              <Notice tone="warning">
-                Chưa có năm thi. Tạo năm thi đầu tiên để thêm các đợt thi.
-              </Notice>
-            )}
-          </ConsoleTabsContent>
-
-          <ConsoleTabsContent value="years">
-            <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-              <FilterToolbar>
-                <span className="text-sm font-medium text-text-primary">Danh sách năm thi</span>
-                <span className="text-sm text-text-tertiary">{years.length} năm thi</span>
-              </FilterToolbar>
-              <DataTable
-                columns={yearColumns}
-                data={years}
-                getRowKey={(year) => year.id}
-                onRowClick={(year) => setSelectedYearId(year.id)}
-                emptyMessage="Chưa có năm thi. Tạo năm thi đầu tiên để cấu hình lịch thi."
-              />
-            </section>
-          </ConsoleTabsContent>
-        </ConsoleTabs>
+            ))}
+          </div>
+        )}
       </ScheduleResourceState>
 
       {yearEditor && (
@@ -325,39 +222,46 @@ export default function ExamYearManagement({
   )
 }
 
-interface PanelProps {
+interface ExamYearCardProps {
   year: ExamYear
-  yearOptions: { id: string; label: string }[]
-  onSelectYear: (yearId: string) => void
   readOnly: boolean
   busy: boolean
+  onChangeStatus: (status: ExamYearStatus) => void
+  onEditYear: () => void
+  onDeleteYear: () => void
+  onAddSession: () => void
   onEditSession: (session: ExamSession) => void
   onDeleteSession: (session: ExamSession) => void
 }
 
-function ExamYearPanel({
+function ExamYearCard({
   year,
-  yearOptions,
-  onSelectYear,
   readOnly,
   busy,
+  onChangeStatus,
+  onEditYear,
+  onDeleteYear,
+  onAddSession,
   onEditSession,
   onDeleteSession,
-}: PanelProps) {
+}: ExamYearCardProps) {
+  // A closed year is history: it starts folded so the open years stay on screen.
+  const [open, setOpen] = useState(year.status !== 'CLOSED')
+  const courseCount = year.sessions.reduce((total, session) => total + session.courseCount, 0)
   const columns = useMemo<ColumnDef<ExamSession>[]>(
     () => [
       {
         id: 'name',
         header: 'Đợt',
         enableSorting: false,
-        cell: ({ row }) => (
-          <span className="font-medium text-text-primary">{row.original.name}</span>
-        ),
+        meta: { className: 'w-28' },
+        cell: ({ row }) => <span className="font-medium text-text-primary">{row.original.name}</span>,
       },
       {
         id: 'date',
         header: 'Ngày thi',
         enableSorting: false,
+        meta: { className: 'w-72' },
         cell: ({ row }) => (
           <span className="flex flex-wrap items-center gap-2 whitespace-nowrap">
             {examDateRange(row.original)}
@@ -371,14 +275,13 @@ function ExamYearPanel({
         id: 'registration',
         header: 'Đăng ký dự thi',
         enableSorting: false,
-        cell: ({ row }) => (
-          <span className="whitespace-nowrap">{registrationRange(row.original)}</span>
-        ),
+        cell: ({ row }) => <span className="whitespace-nowrap">{registrationRange(row.original)}</span>,
       },
       {
         id: 'courses',
         header: 'Khóa học',
         enableSorting: false,
+        meta: { className: 'w-24' },
         cell: ({ row }) => <span className="tabular-nums">{row.original.courseCount}</span>,
       },
       ...(readOnly
@@ -391,14 +294,9 @@ function ExamYearPanel({
               meta: { className: 'w-28 text-right' },
               cell: ({ row }) => (
                 <RowActions>
+                  <IconAction label="Sửa đợt thi" icon={Pencil} disabled={busy} onClick={() => onEditSession(row.original)} />
                   <IconAction
-                    label="Sửa"
-                    icon={Pencil}
-                    disabled={busy}
-                    onClick={() => onEditSession(row.original)}
-                  />
-                  <IconAction
-                    label="Xóa"
+                    label="Xóa đợt thi"
                     icon={Trash2}
                     variant="danger"
                     disabled={busy || row.original.courseCount > 0}
@@ -413,26 +311,60 @@ function ExamYearPanel({
   )
 
   return (
-    <div className="flex flex-col gap-4">
-      {year.note && <p className="text-sm text-text-secondary">{year.note}</p>}
-      <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        <FilterToolbar>
-          <SelectField
-            ariaLabel="Chọn năm thi"
-            value={year.id}
-            onChange={onSelectYear}
-            options={yearOptions}
-            className="w-full sm:w-64"
-          />
-          <span className="text-sm text-text-tertiary">{year.sessions.length} đợt thi</span>
-        </FilterToolbar>
-        <DataTable
-          columns={columns}
-          data={year.sessions}
-          getRowKey={(session) => session.id}
-          emptyMessage="Năm thi này chưa có đợt thi."
-        />
-      </section>
-    </div>
+    <article className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+      <header className="flex flex-wrap items-center gap-3 px-5 py-4">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={open ? `Thu gọn ${year.name}` : `Mở ${year.name}`}
+          onClick={() => setOpen((current) => !current)}
+          className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg border-0 bg-transparent text-icon-primary hover:bg-background-gray-secondary"
+        >
+          <ChevronDown size={18} aria-hidden="true" className={cn('transition-transform', !open && '-rotate-90')} />
+        </button>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <h2 className="text-base font-semibold text-text-primary">{year.name}</h2>
+          <p className="text-sm text-text-tertiary">
+            {year.sessions.length} đợt thi · {courseCount} khóa học
+            {year.note ? ` · ${year.note}` : ''}
+          </p>
+        </div>
+        {readOnly ? (
+          <Status tone={EXAM_YEAR_STATUS_TONES[year.status]}>{EXAM_YEAR_STATUS_LABELS[year.status]}</Status>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <SelectField
+              ariaLabel={`Trạng thái ${year.name}`}
+              value={year.status}
+              onChange={(value) => onChangeStatus(value as ExamYearStatus)}
+              disabled={busy}
+              options={STATUS_OPTIONS}
+              className="w-40"
+              triggerClassName="h-9"
+            />
+            <Button size="sm" appearance="outline" disabled={busy} onClick={onAddSession}>
+              <Plus size={14} />
+              Thêm đợt
+            </Button>
+            <RowActions>
+              <IconAction label="Sửa năm thi" icon={Pencil} disabled={busy} onClick={onEditYear} />
+              <IconAction label="Xóa năm thi" icon={Trash2} variant="danger" disabled={busy} onClick={onDeleteYear} />
+            </RowActions>
+          </div>
+        )}
+      </header>
+      {open && (
+        <div className="border-t border-card-border">
+          {year.sessions.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-text-tertiary">Năm thi này chưa có đợt thi.</p>
+          ) : (
+            // Fixed column widths so the rounds of every year line up from card to card.
+            <div className="overflow-x-auto [&_table]:w-full [&_table]:min-w-[44rem] [&_table]:table-fixed">
+              <DataTable columns={columns} data={year.sessions} getRowKey={(session) => session.id} />
+            </div>
+          )}
+        </div>
+      )}
+    </article>
   )
 }

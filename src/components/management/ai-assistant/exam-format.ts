@@ -1,4 +1,5 @@
 import type {
+  AiAttachment,
   AiAgentStep,
   AiAssistantMode,
   AiChart,
@@ -7,6 +8,7 @@ import type {
   AiDraftItem,
   AiDraftQuestion,
   AiExamDraftRecord,
+  AiExamFile,
   AiExamFormat,
 } from '../../../services/aiAssistantService'
 
@@ -33,6 +35,12 @@ export interface AiTraceStage {
 
 export interface AiChatMessage {
   id: string
+  /** The message this one follows, as the server keeps it; none on older messages, which follow the one before. */
+  parentId?: string | null
+  /** What the teacher might ask after this ask answer, as the server kept them. */
+  suggestions?: string[]
+  /** The images and PDFs the teacher attached to this question. */
+  attachments?: AiAttachment[]
   role: 'user' | 'assistant'
   body: string
   createdAt: string
@@ -43,13 +51,18 @@ export interface AiChatMessage {
   stages?: AiTraceStage[]
   /** Questions this turn put on the paper; the chat links to them instead of printing them. */
   addedItemIds?: string[]
+  /** The files of the exam the teacher asked the assistant for in this turn. */
+  files?: AiExamFile[]
   error?: boolean
   /** The run was stopped by the teacher; the questions written until then stay. */
   stopped?: boolean
   /** An error of a send, with the words that can be sent again. */
   retryText?: string
-  /** The question "Bạn muốn soạn môn nào?" asks: the words it was asked about, and the subjects to answer it. */
-  subjectChoices?: { text: string; subjects: { id: string; name: string }[]; whole: boolean }
+  /**
+   * The question "Bạn muốn soạn môn nào?" asks: the words it was asked about, and the subjects to answer it. Once a
+   * later send has taken its place it is `answered`: it stays a question in the thread, its subjects no longer offered.
+   */
+  subjectChoices?: { text: string; subjects: { id: string; name: string }[]; whole: boolean; answered?: boolean }
 }
 
 export interface ExamPaperOption {
@@ -75,6 +88,8 @@ export interface ExamPaperQuestion {
   /** Why each wrong option is wrong (full solution), by option label. */
   eliminations: Record<string, string>
   difficulty: AiDifficulty
+  /** The level the AI's check judged the question to be, which may differ from `difficulty`; null when not judged. */
+  estimatedDifficulty?: AiDifficulty | null
   patternCode: string | null
   patternName: string | null
   /** The bank paper a reused question came from. */
@@ -173,7 +188,16 @@ function layoutParts(format: string | null | undefined): ExamPaperPart[] {
 }
 
 function difficultyOf(value: string | null | undefined): AiDifficulty {
-  return DIFFICULTIES.includes(value as AiDifficulty) ? (value as AiDifficulty) : 'TB'
+  return levelOf(value) ?? 'TB'
+}
+
+function levelOf(value: string | null | undefined): AiDifficulty | null {
+  return DIFFICULTIES.includes(value as AiDifficulty) ? (value as AiDifficulty) : null
+}
+
+/** Whether `level` is easier (negative) or harder (positive) than `than`. */
+export function compareDifficulty(level: AiDifficulty, than: AiDifficulty) {
+  return DIFFICULTIES.indexOf(level) - DIFFICULTIES.indexOf(than)
 }
 
 function findings(values: readonly (string | null | undefined)[] | null | undefined): string[] {
@@ -315,6 +339,7 @@ export function buildPaper(
       method: item.question.method?.trim() ?? '',
       eliminations: eliminationsOf(item.question.eliminations),
       difficulty: difficultyOf(item.question.difficulty),
+      estimatedDifficulty: levelOf(item.checkResult?.auditDifficulty),
       patternCode: item.question.patternCode?.trim() || null,
       patternName: item.question.patternName?.trim() || null,
       sourceTitle: item.question.sourceTitle?.trim() || null,

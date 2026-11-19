@@ -2,6 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
 import { studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
+import type { QuizDetail } from '../../services/assessmentService'
 import StudentChatPage from './StudentChatPage'
 import StudentWalletPage from './StudentWalletPage'
 import StudentAiSolvePage from './StudentAiSolvePage'
@@ -26,13 +27,24 @@ import PlacementReviewPage from '../assessments/PlacementReviewPage'
 
 const StudentSchedulePage = lazy(() => import('./StudentSchedulePage'))
 
+interface StudentNavigationState {
+  quizReturnTo?: string
+  lessonStudyCourseId?: string
+}
+
 interface StudentRoutesProps {
   route: StudentRoute
   currentPath: string
   /** Navigate to any app path (student or public, e.g. /courses/:id). */
-  navigate: (path: string) => void
+  navigate: (path: string, state?: StudentNavigationState) => void
   onLogout: () => void
   logoutLoading: boolean
+}
+
+function quizCoursePath(quiz: QuizDetail | null) {
+  if (!quiz?.sectionCourseId) return studentRoutes.courses()
+  if (quiz.lessonId) return studentRoutes.lesson(quiz.sectionCourseId, quiz.lessonId)
+  return studentRoutes.courseStudy(quiz.sectionCourseId, quiz.type === 'EXAM' ? 'exams' : undefined)
 }
 
 // Every authenticated learning screen renders inside the one StudentLayout
@@ -45,6 +57,15 @@ function StudentRoutes({
   onLogout,
   logoutLoading,
 }: StudentRoutesProps) {
+  // Keep the study context with each navigation entry, including after a reload.
+  const returnPath: unknown = window.history.state?.quizReturnTo
+  const studyCourseId: unknown = window.history.state?.lessonStudyCourseId
+  const quizReturnTo = typeof returnPath === 'string' && returnPath.startsWith('/student/courses/')
+    ? returnPath : undefined
+  const lessonStudyCourseId = typeof studyCourseId === 'string' ? studyCourseId : undefined
+  const navigateQuiz = (path: string, returnTo = quizReturnTo) =>
+    navigate(path, { quizReturnTo: returnTo, lessonStudyCourseId })
+
   const page = (): ReactNode => {
     switch (route.name) {
       case 'dashboard':
@@ -94,9 +115,12 @@ function StudentRoutes({
             courseId={route.courseId}
             onBackToMyCourses={() => navigate(studentRoutes.courses())}
             onViewCourseInfo={() => navigate(`/courses/${encodeURIComponent(route.courseId)}`)}
-            onOpenLesson={(lessonId, lessonCourseId) => navigate(studentRoutes.lesson(lessonCourseId ?? route.courseId, lessonId))}
+            onOpenLesson={(lessonId, lessonCourseId) => navigate(
+              studentRoutes.lesson(lessonCourseId ?? route.courseId, lessonId),
+              { lessonStudyCourseId: route.courseId }
+            )}
             onOpenGiftStudy={(giftId) => navigate(studentRoutes.courseStudy(giftId))}
-            onOpenQuiz={(quizId) => navigate(studentRoutes.quiz(quizId))}
+            onOpenQuiz={(quizId, tab) => navigateQuiz(studentRoutes.quiz(quizId), studentRoutes.courseStudy(route.courseId, tab))}
             onOpenCourse={(course) => navigate(`/courses/${course.id}`)}
             onEditProfile={() => navigate(studentRoutes.profile('student'))}
           />
@@ -107,11 +131,11 @@ function StudentRoutes({
             key={`${route.courseId}-${route.lessonId}`}
             courseId={route.courseId}
             lessonId={route.lessonId}
-            onBackToStudy={() => navigate(studentRoutes.courseStudy(route.courseId))}
+            onBackToStudy={() => navigate(studentRoutes.courseStudy(lessonStudyCourseId ?? route.courseId))}
             onNavigateLesson={(lessonId) =>
-              navigate(studentRoutes.lesson(route.courseId, lessonId))
+              navigate(studentRoutes.lesson(route.courseId, lessonId), { lessonStudyCourseId })
             }
-            onOpenQuiz={(quizId) => navigate(studentRoutes.quiz(quizId))}
+            onOpenQuiz={(quizId) => navigateQuiz(studentRoutes.quiz(quizId), studentRoutes.lesson(route.courseId, route.lessonId))}
           />
         )
       case 'course-detail':
@@ -151,10 +175,11 @@ function StudentRoutes({
           <QuizDetailPage
             key={route.quizId}
             quizId={route.quizId}
+            onBack={(quiz) => navigate(quizReturnTo ?? quizCoursePath(quiz), { lessonStudyCourseId })}
             onStartAttempt={(quizId, attemptId) =>
-              navigate(studentRoutes.quizAttempt(quizId, attemptId))
+              navigateQuiz(studentRoutes.quizAttempt(quizId, attemptId))
             }
-            onOpenReview={(attemptId) => navigate(studentRoutes.attemptReview(attemptId))}
+            onOpenReview={(attemptId) => navigateQuiz(studentRoutes.attemptReview(attemptId))}
           />
         )
       case 'quiz-attempt':
@@ -163,8 +188,8 @@ function StudentRoutes({
             key={route.attemptId}
             quizId={route.quizId}
             attemptId={route.attemptId}
-            onExit={(quizId) => navigate(studentRoutes.quiz(quizId))}
-            onSubmitted={(attemptId) => navigate(studentRoutes.attemptReview(attemptId))}
+            onExit={(quizId) => navigateQuiz(studentRoutes.quiz(quizId))}
+            onSubmitted={(attemptId) => navigateQuiz(studentRoutes.attemptReview(attemptId))}
           />
         )
       case 'attempt-review':
@@ -172,7 +197,7 @@ function StudentRoutes({
           <QuizReviewPage
             key={route.attemptId}
             attemptId={route.attemptId}
-            onBackToQuiz={(quizId) => navigate(studentRoutes.quiz(quizId))}
+            onBackToQuiz={(quizId) => navigateQuiz(studentRoutes.quiz(quizId))}
           />
         )
       case 'placement':

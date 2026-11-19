@@ -4,7 +4,6 @@ import { getErrorMessage } from '../../lib/errors'
 import { notificationTarget } from '../../lib/notificationTarget'
 import { showInfoToast } from '../../lib/toastBus'
 import { NotificationContext, type NotificationFeed } from '../../hooks/useNotifications'
-import { useActiveRole } from '../../hooks/useActiveRole'
 import {
   getNotifications, getUnreadNotificationCount, markAllNotificationsRead, markNotificationRead,
   type NotificationPage, type UserNotification,
@@ -33,12 +32,10 @@ function errorMessage(error: unknown) {
 
 interface Opened {
   item: UserNotification
-  switchTo: UserRole | null
   returnFocus: HTMLElement | null
 }
 
 function NotificationSession({ identity, children }: { identity: string | null; children: ReactNode }) {
-  const { roles } = useActiveRole()
   const [page, setPage] = useState<NotificationPage | null>(null)
   const [status, setStatus] = useState<NotificationFeed['status']>('idle')
   const [error, setError] = useState('')
@@ -172,13 +169,13 @@ function NotificationSession({ identity, children }: { identity: string | null; 
 
   const open = (item: UserNotification, returnFocus: HTMLElement | null = null) => {
     if (!current()) return
-    const target = notificationTarget(item, accessTokenRole() as UserRole | null, roles)
+    const target = notificationTarget(item, accessTokenRole() as UserRole | null)
     void markRead(item)
-    if (target && 'href' in target) {
+    if (target) {
       setOpened(null)
-      window.dispatchEvent(new CustomEvent('hl-navigate', { detail: { path: target.href } }))
+      window.dispatchEvent(new CustomEvent('hl-navigate', { detail: { path: target } }))
     } else {
-      setOpened({ item, switchTo: target && 'switchTo' in target ? target.switchTo : null, returnFocus })
+      setOpened({ item, returnFocus })
     }
   }
 
@@ -219,7 +216,7 @@ function NotificationSession({ identity, children }: { identity: string | null; 
     setListOpen: next => { listOpen.current = next },
   }}>
     {children}
-    <NotificationDetail notification={detail} switchTo={opened?.switchTo ?? null} onClose={closeDetail} />
+    <NotificationDetail notification={detail} onClose={closeDetail} />
   </NotificationContext.Provider>
 }
 

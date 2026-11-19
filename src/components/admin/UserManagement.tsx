@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   AlertCircle,
@@ -14,7 +14,7 @@ import {
   getUserById,
   getUsers,
   updateUser,
-  updateUserRoles,
+  updateUserRole,
   updateUserStatus,
   USER_ROLES,
   USER_STATUSES,
@@ -25,7 +25,6 @@ import {
   type UserStatus,
   type UserSummary,
 } from '../../services/userService'
-import { grantedRoles } from '../../lib/role-home'
 import Button from '../console/button'
 import DataTable from '../console/data-table'
 import PageHeading from '../console/page-heading'
@@ -61,11 +60,13 @@ interface UserManagementProps {
   /** Students are the platform's customers and personnel run it, so each has its own list. */
   audience: 'staff' | 'students'
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
   readOnly?: boolean
   canCreateUsers?: boolean
 }
 
-function UserManagement({ audience, title, readOnly = false, canCreateUsers = false }: UserManagementProps) {
+function UserManagement({ audience, title, navigation, readOnly = false, canCreateUsers = false }: UserManagementProps) {
   const students = audience === 'students'
   const noun = students ? 'học viên' : 'tài khoản'
   const [page, setPage] = useState(0)
@@ -136,7 +137,6 @@ function UserManagement({ audience, title, readOnly = false, canCreateUsers = fa
               avatarUrl: updated.avatarUrl ?? user.avatarUrl,
               status: updated.status ?? user.status,
               role: updated.role ?? user.role,
-              roles: updated.roles ?? user.roles,
               emailVerified: updated.emailVerified ?? user.emailVerified,
               lastLoginAt: updated.lastLoginAt ?? user.lastLoginAt,
               createdAt: updated.createdAt ?? user.createdAt,
@@ -164,14 +164,14 @@ function UserManagement({ audience, title, readOnly = false, canCreateUsers = fa
     [updateUserInPage]
   )
 
-  const handleGrantedRolesChange = useCallback(async (user: UserProfile, roles: UserRole[]) => {
+  const handleRoleChange = useCallback(async (user: UserProfile, role: UserRole) => {
     setGrantingRoles(true)
     setError('')
     try {
-      const updated = await updateUserRoles(user.id, roles)
+      const updated = await updateUserRole(user.id, role)
       updateUserInPage(user.id, updated)
       setReloadKey((key) => key + 1)
-      setFeedback('Đã cập nhật vai trò được cấp.')
+      setFeedback('Đã đổi vai trò.')
     } finally {
       setGrantingRoles(false)
     }
@@ -243,15 +243,7 @@ function UserManagement({ audience, title, readOnly = false, canCreateUsers = fa
         id: 'role',
         header: 'Vai trò',
         accessorFn: (user) => ROLE_LABELS[user.role],
-        cell: ({ row }) => {
-          const roles = grantedRoles(row.original)
-          return (
-            <span className="inline-flex items-center whitespace-nowrap">
-              <RoleBadge role={row.original.role} />
-              {roles.length > 1 && <span className="ml-1.5 text-xs text-text-tertiary">+{roles.length - 1}</span>}
-            </span>
-          )
-        },
+        cell: ({ row }) => <RoleBadge role={row.original.role} />,
       },
       {
         id: 'status',
@@ -334,6 +326,7 @@ function UserManagement({ audience, title, readOnly = false, canCreateUsers = fa
           )
         }
       />
+      {navigation}
       <section
         className="overflow-hidden rounded-xl border border-card-border bg-card-background"
         aria-busy={loading}
@@ -453,7 +446,7 @@ function UserManagement({ audience, title, readOnly = false, canCreateUsers = fa
         canEditProfile={canCreateUsers && !readOnly}
         savingProfile={savingProfile}
         onClose={() => { if (!grantingRoles && !savingProfile) setSelectedUser(null) }}
-        onSaveRoles={handleGrantedRolesChange}
+        onSaveRole={handleRoleChange}
         onSaveProfile={handleProfileChange}
       />
 

@@ -18,7 +18,7 @@ interface CourseStudyPageProps {
   onViewCourseInfo: () => void
   onOpenLesson: (lessonId: string, courseId?: string) => void
   onOpenGiftStudy: (courseId: string) => void
-  onOpenQuiz: (quizId: string) => void
+  onOpenQuiz: (quizId: string, tab?: 'exams') => void
   onOpenCourse: (course: Course) => void
   onEditProfile: () => void
 }
@@ -70,8 +70,7 @@ function CourseStudyPage({
     if (!isStudyTab(value)) return
     setActiveTab(value)
 
-    // Keep the selected tab in the current history entry so returning from a
-    // quiz detail page restores the student's place in the course.
+    // Keep the selected tab in the URL for reload and browser navigation.
     const search = new URLSearchParams(window.location.search)
     if (value === 'content') search.delete('tab')
     else search.set('tab', value)
@@ -148,7 +147,7 @@ function CourseStudyPage({
           </TabsContent>
 
           <TabsContent value="exams">
-            <CourseExamsTab courseId={courseId} onOpenQuiz={onOpenQuiz} />
+            <CourseExamsTab courseId={courseId} onOpenQuiz={(quizId) => onOpenQuiz(quizId, 'exams')} />
           </TabsContent>
 
           <TabsContent value="plan">

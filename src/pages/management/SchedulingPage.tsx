@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { matchesSearch } from '../../lib/search'
 import { CalendarPlus, Pencil, RefreshCw, Trash2 } from '../../components/console/icons'
 import type { Course, CourseSection } from '../../services/courseService'
@@ -45,11 +45,14 @@ import ClassSessionEditor from './ClassSessionEditor'
 import RecurringClassEditor from './RecurringClassEditor'
 import ScheduleEditor from './ScheduleEditor'
 import TimetableProposalPanel from './TimetableProposalPanel'
+import LiveTimetablePanel from './LiveTimetablePanel'
 import { getErrorMessage } from '../../lib/errors'
 import type { ManagementRole } from '../../components/management/ManagementRouteGuard'
 
 interface Props {
   role: Extract<ManagementRole, 'STAFF' | 'MANAGER'>
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }
 
 const weekdayLabels: Record<DayOfWeek, string> = {
@@ -82,7 +85,7 @@ async function loadTeachers(): Promise<UserSummary[]> {
   return [firstPage, ...remainingPages].flatMap((page) => page.content)
 }
 
-export default function SchedulingPage({ role }: Props) {
+export default function SchedulingPage({ role, navigation }: Props) {
   const [date, setDate] = useState(localToday())
   const [query, setQuery] = useState('')
   const [view, setView] = useState<ScheduleViewMode>('agenda')
@@ -365,6 +368,7 @@ export default function SchedulingPage({ role }: Props) {
           </>
         }
       />
+      {navigation}
       {(attendancePanelState.busy || mutationBusy) && (
         <Notice tone="info">Đang lưu…</Notice>
       )}
@@ -474,6 +478,15 @@ export default function SchedulingPage({ role }: Props) {
             }}
             onConfirmed={calendar.reload}
           />
+          {role === 'STAFF' && courseDetails.status === 'ready' && (
+            <LiveTimetablePanel
+              key={'live-' + activeCourseId}
+              courseId={activeCourseId}
+              phases={courseDetails.data?.phases ?? []}
+              teachers={teachers}
+              onCreated={calendar.reload}
+            />
+          )}
         </>
       )}
 
@@ -593,9 +606,7 @@ export default function SchedulingPage({ role }: Props) {
       {deleteSchedule && (
         <ConfirmDialog
           title="Hủy lịch học?"
-          description={deleteSchedule.deliveryMode === 'ONLINE'
-            ? 'Chỉ lịch này bị hủy. Phòng Zoom và lớp trực tuyến đã tạo cho lịch này không tự động bị hủy; hãy xử lý riêng để học viên không vào nhầm phòng.'
-            : 'Chỉ lịch này bị hủy.'}
+          description="Chỉ lịch này bị hủy. Phòng Zoom và lớp trực tuyến đã tạo cho lịch này không tự động bị hủy; hãy xử lý riêng để học viên không vào nhầm phòng."
           cancelLabel="Quay lại"
           confirmLabel="Hủy lịch"
           variant="danger"

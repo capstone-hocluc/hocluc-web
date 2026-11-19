@@ -5,8 +5,8 @@ import StatusBadge from '../ui/StatusBadge'
 interface ResultSummaryCardProps {
   eyebrow: string
   title: ReactNode
-  correctCount: number
-  totalQuestions: number
+  correctCount?: number
+  totalQuestions?: number
   percentage: number
   /** Extra rows under the score (placement stats, strengths...). */
   children?: ReactNode
@@ -52,12 +52,14 @@ function ResultSummaryCard({
           <h1 className="text-2xl leading-tight font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
             {title}
           </h1>
-          <p className="text-base text-text-body">
-            <strong className="text-xl font-bold text-text-heading">
-              {correctCount}/{totalQuestions}
-            </strong>{' '}
-            câu đúng
-          </p>
+          {correctCount != null && totalQuestions != null && (
+            <p className="text-base text-text-body">
+              <strong className="text-xl font-bold text-text-heading">
+                {correctCount}/{totalQuestions}
+              </strong>{' '}
+              câu đúng
+            </p>
+          )}
         </div>
       </div>
       {children}

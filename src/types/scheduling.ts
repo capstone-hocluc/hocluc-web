@@ -1,6 +1,5 @@
 /** Types for the hocluc-api PR #13 scheduling contract. Keep API resources and IDs distinct. */
 
-export type DeliveryMode = 'ONLINE' | 'OFFLINE' | 'PHYSICAL' | 'HYBRID'
 export type ScheduleStatus = 'SCHEDULED' | 'ONGOING' | 'COMPLETED' | 'CANCELLED'
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'
 export type MeetingProvider = 'ZOOM' | 'GOOGLE_MEET' | 'MICROSOFT_TEAMS' | 'OTHER'
@@ -25,8 +24,6 @@ export interface ScheduleResponse {
   startTime: string
   endTime: string
   timezone: string
-  deliveryMode: DeliveryMode
-  location?: string | null
   recurrenceRule?: string | null
   status: ScheduleStatus
   liveClassId?: string | null
@@ -45,8 +42,6 @@ export interface CreateScheduleRequest {
   startTime: string
   endTime: string
   timezone?: string
-  deliveryMode: DeliveryMode
-  location?: string
   recurrenceRule?: string
   lessonId?: string
 }
@@ -58,8 +53,6 @@ export interface UpdateScheduleRequest {
   startTime?: string
   endTime?: string
   timezone?: string
-  deliveryMode?: DeliveryMode
-  location?: string
   recurrenceRule?: string
   status?: ScheduleStatus
 }
@@ -77,8 +70,6 @@ export interface RecurringClassResponse {
   startTime: string
   endTime: string
   durationMinutes: number
-  defaultMode: DeliveryMode
-  defaultLocation?: string | null
   defaultMeetingProvider?: MeetingProvider | null
   defaultMeetingLink?: string | null
   startDate: string
@@ -95,8 +86,6 @@ export interface CreateRecurringClassRequest {
   startTime: string
   endTime?: string
   durationMinutes: number
-  defaultMode: DeliveryMode
-  defaultLocation?: string
   defaultMeetingProvider?: MeetingProvider
   defaultMeetingLink?: string
   startDate: string
@@ -115,8 +104,6 @@ export interface UpdateRecurringClassRequest {
   startTime?: string
   endTime?: string
   durationMinutes?: number
-  defaultMode?: DeliveryMode
-  defaultLocation?: string
   defaultMeetingProvider?: MeetingProvider
   defaultMeetingLink?: string
   startDate?: string
@@ -137,8 +124,6 @@ export interface ClassSessionResponse {
   sessionDate: string
   startTime: string
   endTime: string
-  mode: DeliveryMode
-  classroom?: string | null
   meetingProvider?: MeetingProvider | null
   meetingLink?: string | null
   status: ScheduleStatus
@@ -152,8 +137,6 @@ export interface UpdateClassSessionRequest {
   sessionDate?: string
   startTime?: string
   endTime?: string
-  mode?: DeliveryMode
-  classroom?: string
   meetingProvider?: MeetingProvider
   meetingLink?: string
   status?: ScheduleStatus
@@ -199,7 +182,6 @@ export interface SectionRequirement {
   candidateTeacherIds?: string[]
   sessionsPerWeek?: number
   durationMinutes?: number
-  preferredMode?: DeliveryMode
   preferredDays?: DayOfWeek[]
 }
 
@@ -207,7 +189,6 @@ export interface GenerateTimetableProposalRequest {
   startDate: string
   endDate: string
   sectionRequirements: SectionRequirement[]
-  roomPool?: string[]
 }
 
 export interface ProposedRecurringSchedule {
@@ -220,8 +201,6 @@ export interface ProposedRecurringSchedule {
   startTime: string
   endTime: string
   durationMinutes: number
-  mode: DeliveryMode
-  room?: string | null
   meetingProvider?: MeetingProvider | null
   meetingLink?: string | null
   projectedSessionDates: string[]

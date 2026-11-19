@@ -6,12 +6,12 @@ import ProfilePage from '../console/profile-page'
 import TeacherAssignments from './TeacherAssignments'
 import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
 import QuizConsoleScreen from '../management/quiz/QuizConsoleScreen'
-import { isQuizPage, quizMenuPage, quizSidebarPage } from '../../lib/console-routes'
+import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import { DashboardActions, RoleDashboardWelcome } from '../common/DashboardWelcome'
 import { ManagementScreen } from '../management/ManagementDashboard'
-import AiAssistantScreen from '../management/ai-assistant/AiAssistantScreen'
+import AiAssistantWorkspace from '../management/ai-assistant/AiAssistantWorkspace'
 import { ForbiddenPage } from '../console/access-states'
-import { buildNavSections, canAccessPage } from '../../lib/console-nav'
+import { buildNavSections, canAccessPage, sidebarPage } from '../../lib/console-nav'
 import { roleHome } from '../../lib/role-home'
 
 // Course sub-pages (quiz editor, assignments) belong to "Lớp của tôi".
@@ -107,13 +107,13 @@ function TeacherDashboard({
   ]
   if (allowed && menuPageOf(view) === 'ai-assistant') {
     return (
-      <AiAssistantScreen onBack={() => navigate('dashboard')} backHref={roleHome('TEACHER')} backLabel="Về trang tổng quan" />
+      <AiAssistantWorkspace onBack={() => navigate('dashboard')} backHref={roleHome('TEACHER')} backLabel="Về trang tổng quan" />
     )
   }
   return (
     <ConsoleShell
       sections={sections}
-      activeKey={quizSidebarPage(menuPageOf(view))}
+      activeKey={sidebarPage('TEACHER', menuPageOf(view))}
       onNavigate={navigate}
       onOpenProfile={() => navigate('profile')}
       onLogout={() => onLogout?.()}

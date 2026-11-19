@@ -369,7 +369,6 @@ export async function installRoadmapFixture(page: Page, seed: RoadmapSeed = {}) 
         firstName: 'Học viên',
         lastName: 'QA',
         role: 'STUDENT',
-        roles: ['STUDENT'],
         status: 'ACTIVE',
         emailVerified: true,
         onboardingState: 'COMPLETED',

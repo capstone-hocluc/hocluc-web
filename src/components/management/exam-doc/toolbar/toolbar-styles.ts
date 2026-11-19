@@ -10,7 +10,7 @@ export const textTriggerClass = 'gap-1 px-2 text-[13px] font-medium text-text-pr
 
 /** Floating surface for menus and popovers. */
 export const surfaceClass =
-  'z-70 rounded-xl border border-card-border bg-background-white-secondary p-1.5 text-text-primary shadow-md outline-none'
+  'exam-doc-ui z-70 rounded-xl border border-card-border bg-background-white-secondary p-1.5 text-text-primary shadow-md outline-none'
 
 /** A menu row; the right slot (pr-8) holds the check mark or submenu chevron. */
 export const menuItemClass =

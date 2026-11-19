@@ -292,15 +292,14 @@ test('a stream replaced by another screen stays closed until this one is shown a
   expect(base.pageErrors).toEqual([])
 })
 
-test('each notification opens the page its active role can reach', async ({ page }) => {
+test('each notification opens the page its role can reach', async ({ page }) => {
   await fixture(page, 'STUDENT')
   await page.goto('/student/assessments/placement')
   const targets = await page.evaluate(async () => {
     const module = '/src/lib/notificationTarget.ts'
     const { notificationTarget } = await import(/* @vite-ignore */ module)
-    const all = ['STUDENT', 'MENTOR', 'TEACHER', 'STAFF', 'MANAGER', 'ADMINISTRATOR']
-    const to = (role: string | null, entityType: string | null, entityId: string | null = 'id 1', audience: string | null = null, roles = all) =>
-      notificationTarget({ entityType, entityId, audience }, role, roles)
+    const to = (role: string | null, entityType: string | null, entityId: string | null = 'id 1', audience: string | null = null) =>
+      notificationTarget({ entityType, entityId, audience }, role)
     return {
       studentCourse: to('STUDENT', 'COURSE'), studentClass: to('STUDENT', 'LIVE_CLASS', null),
       studentSolve: to('STUDENT', 'STUDENT_SOLVE'), studentOrder: to('STUDENT', 'ORDER'),
@@ -310,22 +309,22 @@ test('each notification opens the page its active role can reach', async ({ page
       teacherClass: to('TEACHER', 'LIVE_CLASS'), staffClass: to('STAFF', 'LIVE_CLASS'), staffOrder: to('STAFF', 'ORDER'),
       sentToThisRole: to('STAFF', 'COURSE', 'id 1', 'STAFF'),
       sentToAnotherRole: to('STAFF', 'COURSE', 'id 1', 'TEACHER'),
-      sentToARoleTheyLack: to('STAFF', 'COURSE', 'id 1', 'TEACHER', ['STAFF']),
+      mentorChat: to('MENTOR', 'CHAT_CONVERSATION'), staffChat: to('STAFF', 'CHAT_CONVERSATION'),
       signedOut: to(null, 'COURSE'),
     }
   })
   expect(targets).toEqual({
-    studentCourse: { href: '/courses/id%201' }, studentClass: { href: '/student/schedule' },
-    studentSolve: { href: '/student/tutor' }, studentOrder: { href: '/orders/id%201' },
+    studentCourse: '/courses/id%201', studentClass: '/student/schedule',
+    studentSolve: '/student/tutor', studentOrder: '/orders/id%201',
     studentOrderWithoutId: null, studentOther: null,
-    staffCourse: { href: '/console/staff/courses?courseId=id%201' },
-    managerCourse: { href: '/console/manager/courses?courseId=id%201' },
-    adminCourse: { href: '/console/admin/courses?courseId=id%201' },
+    staffCourse: '/console/staff/courses?courseId=id%201',
+    managerCourse: '/console/manager/courses?courseId=id%201',
+    adminCourse: '/console/admin/courses?courseId=id%201',
     staffCourseWithoutId: null, teacherCourse: null,
-    teacherClass: { href: '/console/teacher/schedule' }, staffClass: null, staffOrder: null,
-    sentToThisRole: { href: '/console/staff/courses?courseId=id%201' },
-    sentToAnotherRole: { switchTo: 'TEACHER' },
-    sentToARoleTheyLack: null,
+    teacherClass: '/console/teacher/schedule', staffClass: null, staffOrder: null,
+    sentToThisRole: '/console/staff/courses?courseId=id%201',
+    sentToAnotherRole: null,
+    mentorChat: '/console/mentor/chat?conversationId=id%201', staffChat: null,
     signedOut: null,
   })
 })
@@ -346,7 +345,7 @@ for (const [role, start, entityType, entityId, destination] of [
   })
 }
 
-test('a notification sent to another of the user\'s roles is labelled and asks to switch to it', async ({ page }) => {
+test('a notification sent to another role is labelled and stays in its detail', async ({ page }) => {
   const { state, base } = await fixture(page)
   state.items[0] = { ...state.items[0], entityType: 'LIVE_CLASS', audience: 'TEACHER', title: 'Lớp học sắp bắt đầu' }
   state.items[1] = { ...state.items[1], audience: 'STAFF' }
@@ -358,9 +357,10 @@ test('a notification sent to another of the user\'s roles is labelled and asks t
   await row.click()
   const detail = page.getByRole('dialog', { name: 'Chi tiết thông báo', exact: true })
   await expect(detail.getByRole('heading', { name: 'Lớp học sắp bắt đầu', exact: true })).toBeVisible()
-  await detail.getByRole('button', { name: 'Chuyển sang vai trò Giáo viên', exact: true }).click()
-  await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
-  expect(base.requests.filter(r => r.path === '/api/v1/auth/switch-role').map(r => r.body)).toEqual([{ role: 'TEACHER' }])
+  // One role per account: there is no role to switch to, so it opens no page.
+  await expect(detail.getByRole('button', { name: /Chuyển sang vai trò/ })).toHaveCount(0)
+  await expect(page).toHaveURL(/\/console\/staff\/quizzes$/)
+  expect(base.pageErrors).toEqual([])
 })
 
 test('mobile bell fits the viewport and keeps read state when the popover reopens', async ({ page }, testInfo) => {

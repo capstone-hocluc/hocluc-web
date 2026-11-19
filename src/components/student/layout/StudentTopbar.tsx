@@ -1,7 +1,6 @@
 import { Flame, LogOut, Menu, Settings, User, UserRound } from '../../console/icons'
 import Logo from '../../common/Logo'
 import Avatar from '../../ui/Avatar'
-import RoleSwitcher from '../../ui/RoleSwitcher'
 import Skeleton from '../../ui/Skeleton'
 import {
   DropdownMenu,
@@ -15,6 +14,7 @@ import { getUserDisplayName, getUserInitials } from '../../../lib/userDisplay'
 import { ROLE_LABELS } from '../../../lib/role-home'
 import { cn } from '../../../lib/cn'
 import { CreditIcon } from '../../credits/CreditIcon'
+import { useShownBalance } from '../../credits/use-shown-balance'
 import { CREDIT_UNIT } from '../../../lib/credits'
 
 interface StudentTopbarProps {
@@ -58,6 +58,7 @@ function StudentTopbar({
   logoutLoading = false,
   onNotify,
 }: StudentTopbarProps) {
+  const shown = useShownBalance(balance)
   return (
     <header className="student-topbar sticky top-0 z-50 col-span-full row-start-1 flex min-h-[72px] items-center justify-between gap-4 bg-surface px-6 py-3 max-[760px]:gap-2 max-[760px]:px-4 max-[560px]:flex-wrap">
       <div className="flex min-w-0 flex-none items-center gap-3 max-[760px]:flex-[1_0_auto]">
@@ -86,7 +87,13 @@ function StudentTopbar({
           onClick={onNavigateHome}
           className="flex min-h-11 cursor-pointer items-center p-0"
         >
-          <Logo wordmarkSize={24} />
+          {/* A phone has no room for the wordmark next to the balance, the bell and the avatar. */}
+          <span className="max-[480px]:hidden">
+            <Logo wordmarkSize={24} />
+          </span>
+          <span className="hidden max-[480px]:inline-flex">
+            <Logo markOnly wordmarkSize={24} />
+          </span>
         </button>
       </div>
 
@@ -103,19 +110,27 @@ function StudentTopbar({
 
         <button
           type="button"
+          data-credit-pill
           aria-label={balance === null ? `Ví ${CREDIT_UNIT}` : `${balance} ${CREDIT_UNIT}`}
           onClick={onOpenWallet}
-          className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 text-text-heading transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2"
+          className={cn(
+            'relative inline-flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl px-3 text-text-heading transition-colors hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2',
+            shown.counting && 'credit-pill-bump'
+          )}
         >
           <CreditIcon size={20} />
-          {balance === null ? (
+          {shown.value === null ? (
             <Skeleton className="h-4 w-8 rounded-md" />
           ) : (
-            <strong className="text-sm font-semibold tabular-nums">{balance.toLocaleString('vi-VN')}</strong>
+            <strong className="text-sm font-semibold tabular-nums">{shown.value.toLocaleString('vi-VN')}</strong>
+          )}
+          {shown.gain && (
+            <span key={shown.gain.orderId} className="credit-gain" aria-hidden="true">
+              +{shown.gain.amount.toLocaleString('vi-VN')}
+            </span>
           )}
         </button>
 
-        <RoleSwitcher className="h-11 rounded-xl" />
 
         <NotificationBell variant="student" />
 
@@ -172,7 +187,7 @@ function StudentTopbar({
               Cài đặt
             </DropdownMenuItem>
             <div role="separator" className="my-1 h-px bg-line-blue" />
-            <DropdownMenuItem disabled={logoutLoading} onSelect={() => onLogout?.()}>
+            <DropdownMenuItem disabled={logoutLoading} onSelect={() => onLogout?.()} className="text-danger data-[highlighted]:text-danger">
               <LogOut size={16} />
               {logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}
             </DropdownMenuItem>

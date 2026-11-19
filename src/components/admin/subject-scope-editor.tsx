@@ -5,7 +5,8 @@ import { Checkbox } from '../tailgrids/core/checkbox'
 import { Skeleton } from '../tailgrids/core/skeleton'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { getErrorMessage } from '../../lib/errors'
-import { getCategories, type Category } from '../../services/categoryService'
+import { subjectRows } from '../../lib/subject-rows'
+import { getCategories } from '../../services/categoryService'
 import {
   CAPABILITY_LABELS,
   CAPABILITY_ROLES,
@@ -18,19 +19,8 @@ import type { UserRole } from '../../services/userService'
 const CAPABILITIES = Object.keys(CAPABILITY_ROLES) as SubjectCapability[]
 const key = (categoryId: string, capability: SubjectCapability) => `${categoryId}:${capability}`
 
-/** Parents first, each followed by its sub-subjects, so a grant on a parent reads as covering the rows under it. */
-function subjectRows(categories: Category[]) {
-  const active = categories.filter((category) => category.active)
-  const byOrder = (a: Category, b: Category) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'vi')
-  const roots = active.filter((category) => !category.parentId || !active.some((item) => item.id === category.parentId)).sort(byOrder)
-  return roots.flatMap((root) => [
-    { category: root, child: false },
-    ...active.filter((item) => item.parentId === root.id).sort(byOrder).map((category) => ({ category, child: true })),
-  ])
-}
-
-export default function SubjectScopeEditor({ userId, roles }: { userId: string; roles: UserRole[] }) {
-  const capabilities = CAPABILITIES.filter((capability) => CAPABILITY_ROLES[capability].some((role) => roles.includes(role)))
+export default function SubjectScopeEditor({ userId, role }: { userId: string; role: UserRole }) {
+  const capabilities = CAPABILITIES.filter((capability) => CAPABILITY_ROLES[capability].includes(role))
   const resource = useScheduleResource(`subject-scopes:${userId}`, async () => {
     const [scopes, categories] = await Promise.all([getUserSubjectScopes(userId), getCategories()])
     return { granted: scopes.scopes.map((scope) => key(scope.categoryId, scope.capability)), rows: subjectRows(categories) }
@@ -39,7 +29,7 @@ export default function SubjectScopeEditor({ userId, roles }: { userId: string; 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  if (roles.includes('ADMINISTRATOR') && capabilities.length === 0) {
+  if (role === 'ADMINISTRATOR' && capabilities.length === 0) {
     return <p className="text-sm text-text-tertiary">Quản trị viên có mọi quyền ở mọi môn.</p>
   }
   if (capabilities.length === 0) {
@@ -79,7 +69,7 @@ export default function SubjectScopeEditor({ userId, roles }: { userId: string; 
 
   return (
     <fieldset disabled={saving} className="flex min-w-0 flex-col gap-3">
-      <legend className="sr-only">Quyền theo môn</legend>
+      <legend className="sr-only">Chuyên môn</legend>
       <div className="overflow-x-auto rounded-lg border border-card-border">
         <table className="w-full text-sm">
           <thead className="bg-background-gray-secondary text-left text-xs text-text-tertiary">

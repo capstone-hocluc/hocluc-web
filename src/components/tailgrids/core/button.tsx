@@ -9,7 +9,7 @@ import {
 } from "react-aria-components";
 
 export const buttonStyles = cva(
-  "flex items-center justify-center rounded-lg text-sm font-medium transition outline-none focus:ring-4 disabled:pointer-events-none data-[focused=true]:ring-4 [&>svg]:text-current!",
+  "flex items-center justify-center rounded-lg text-sm font-medium transition outline-none disabled:pointer-events-none data-focus-visible:ring-4 [&>svg]:text-current!",
   {
     variants: {
       variant: {

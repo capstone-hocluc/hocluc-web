@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { SubjectCapability } from './subjectScopeService'
 
 export type OnboardingState = 'NOT_SHOWN' | 'DEFERRED' | 'COMPLETED'
 export type SubjectLevel = 'STRONG' | 'NEEDS_WORK'
@@ -47,8 +48,6 @@ export interface UserProfile {
   language?: string
   status?: UserStatus
   role: UserRole
-  // Granted roles; role is the role currently in use.
-  roles?: UserRole[]
   emailVerified?: boolean
   lastLoginAt?: string
   createdAt?: string
@@ -81,7 +80,6 @@ export interface UserSummary {
   avatarUrl?: string
   status: UserStatus
   role: UserRole
-  roles?: UserRole[]
   emailVerified: boolean
   lastLoginAt?: string
   createdAt?: string
@@ -104,7 +102,8 @@ export interface CreateUserRequest {
   displayName?: string
   phone?: string
   role: UserRole
-  roles?: UserRole[]
+  /** Subjects granted with the account, such as the subjects a mentor supports. */
+  scopes?: { categoryId: string; capability: SubjectCapability }[]
 }
 
 export async function getCurrentProfile() {
@@ -272,13 +271,14 @@ export async function updateUserStatus(id: string, status: UserStatus): Promise<
   return requireResponseData(response, 'Không thể cập nhật trạng thái người dùng.')
 }
 
-export async function updateUserRoles(id: string, roles: UserRole[]): Promise<UserProfile> {
-  const response = await request<UserProfile>(`/api/v1/users/${id}/roles`, {
-    method: 'PUT',
+/** An account's one role, set by an administrator; the account's sessions end. */
+export async function updateUserRole(id: string, role: UserRole): Promise<UserProfile> {
+  const response = await request<UserProfile>(`/api/v1/users/${id}/role`, {
+    method: 'PATCH',
     auth: true,
-    body: { roles },
+    body: { role },
   })
-  return requireResponseData(response, 'Không thể cập nhật vai trò được cấp.')
+  return requireResponseData(response, 'Không thể đổi vai trò.')
 }
 
 export interface ProfileSubject {

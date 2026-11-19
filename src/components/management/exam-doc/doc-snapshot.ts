@@ -1,5 +1,6 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { END_LINE } from './variants/parse-exam'
+import type { AiExamSheet } from '../../../services/aiAssistantService'
+import { END_LINE, QUESTION_LINE } from './exam-lines'
 
 /*
  * The exam as the sheet shows it, read as plain text for the AI assistant: what "câu 5" says now (the teacher may have
@@ -7,7 +8,6 @@ import { END_LINE } from './variants/parse-exam'
  * model reads them as the teacher wrote them.
  */
 
-const QUESTION_LINE = /^\s*Câu\s+(\d{1,3})\s*[.:]/u
 const OPTION_LINE = /^\s*[A-H]\s*[.)]/u
 const LABELS = 'ABCDEFGH'
 /** The most of the passage above a question sent with it. */
@@ -81,6 +81,11 @@ export interface SheetQuestion {
   text: string
   /** The passage or lead above it (shared by the questions under it), or null. */
   context: string | null
+  /** The draft part whose heading it stands under, or null. */
+  part: string | null
+  /** The AI passage it stands under (`examGroup`), and where that passage's lead starts; null without one. */
+  group: string | null
+  groupFrom: number | null
 }
 
 /** A block that starts something other than the question before it: a part, a passage lead, the end, the key. */
@@ -100,12 +105,14 @@ const questionNumber = (node: ProseMirrorNode) =>
  * next question). Each carries the passage above it: the blocks after the last part heading or after the questions
  * of the previous passage.
  */
-export function sheetQuestions(doc: ProseMirrorNode): SheetQuestion[] {
+export function sheetQuestions(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): SheetQuestion[] {
   const blocks: Array<{ node: ProseMirrorNode; pos: number }> = []
   doc.forEach((node, pos) => blocks.push({ node, pos }))
   const questions: SheetQuestion[] = []
   let context: string[] = []
   let afterQuestion = false
+  let part: string | null = null
+  let group: { id: string; from: number } | null = null
   let index = 0
   while (index < blocks.length) {
     const { node, pos } = blocks[index]
@@ -115,6 +122,8 @@ export function sheetQuestions(doc: ProseMirrorNode): SheetQuestion[] {
       if (isBoundary(node)) {
         context = node.attrs.examGroup ? [blockText(node)] : []
         afterQuestion = false
+        if (node.attrs.examPart) part = String(node.attrs.examPart)
+        group = node.attrs.examGroup ? { id: String(node.attrs.examGroup), from: pos } : null
       } else {
         if (afterQuestion) context = []
         afterQuestion = false
@@ -144,11 +153,34 @@ export function sheetQuestions(doc: ProseMirrorNode): SheetQuestion[] {
       itemId: node.attrs.examItem ? String(node.attrs.examItem) : null,
       text: lines.filter((line) => line.trim()).join('\n'),
       context: passage ? passage.slice(0, MAX_CONTEXT) : null,
+      ...placeOf(node.attrs.examItem ? String(node.attrs.examItem) : null, part, group, items),
     })
     afterQuestion = true
     index = end
   }
   return questions
+}
+
+/** Where the draft put a question: its part and the passage group it belongs to (null for none). */
+export interface DraftPlace {
+  part: string
+  group: string | null
+}
+
+/**
+ * The part and passage of a question: the draft's for one the AI wrote (a question written after a passage's questions
+ * stands under no heading of its own, yet is not part of that passage), else the headings above it on the sheet.
+ */
+function placeOf(
+  itemId: string | null,
+  part: string | null,
+  group: { id: string; from: number } | null,
+  items: ReadonlyMap<string, DraftPlace> | undefined
+): Pick<SheetQuestion, 'part' | 'group' | 'groupFrom'> {
+  const placed = itemId ? items?.get(itemId) : undefined
+  if (!placed) return { part, group: group?.id ?? null, groupFrom: group?.from ?? null }
+  const sameGroup = placed.group !== null && group?.id === placed.group
+  return { part: placed.part, group: placed.group, groupFrom: sameGroup ? (group?.from ?? null) : null }
 }
 
 /**
@@ -169,6 +201,115 @@ export function sheetDocument(doc: ProseMirrorNode): { outline: string; question
       text: question.context ? `${question.context}\n\n${question.text}` : question.text,
     })),
   }
+}
+
+/**
+ * The exam on the sheet for the assistant that changes it: each question by the number it prints, with its draft item,
+ * part and passage, so the assistant's changes name the questions the teacher sees.
+ */
+export function examSheet(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): AiExamSheet {
+  return {
+    outline: sheetOutline(doc),
+    questions: sheetQuestions(doc).map((question) => ({
+      number: question.number,
+      text: question.text,
+      ...(question.itemId ? { itemId: question.itemId } : {}),
+      ...(question.part ? { part: question.part } : {}),
+      ...(question.group ? { group: question.group } : {}),
+      ...(question.context ? { context: question.context } : {}),
+    })),
+    blocks: blocksForAssistant(doc, items),
+  }
+}
+
+/** The most lines outside the questions sent to the assistant, and the most of a line's words. */
+const MAX_BLOCKS = 80
+const MAX_BLOCK_TEXT = 300
+
+/** A line of the sheet outside its questions: a header line, a title, an instruction, a heading, a passage. */
+export interface SheetBlock {
+  /** `H<column>.<line>` for a header line, `B<n>` for the n-th block of the sheet; it holds while the sheet is unchanged. */
+  id: string
+  kind: 'header' | 'heading' | 'paragraph'
+  node: ProseMirrorNode
+  /** Where the line's node starts. */
+  pos: number
+  text: string
+  /** The draft part it stands in, or null. */
+  part: string | null
+}
+
+/**
+ * The lines of the sheet outside its questions and before its answer key, in sheet order: the header's lines, then each
+ * paragraph or heading no question or shared passage holds.
+ */
+export function sheetBlocks(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): SheetBlock[] {
+  const held = sheetQuestions(doc, items).map((question) => [question.from, question.to] as const)
+  const out: SheetBlock[] = []
+  let part: string | null = null
+  let passage = false
+  let ended = false
+  doc.forEach((node, pos, index) => {
+    if (ended || node.attrs.examKey) {
+      ended = true
+      return
+    }
+    if (node.attrs.examPart) part = String(node.attrs.examPart)
+    if (held.some(([from, to]) => pos >= from && pos < to)) {
+      passage = false
+      return
+    }
+    // A passage shared by a group of questions is the questions' own words, written with them.
+    if (node.attrs.examGroup) passage = true
+    else if (node.attrs.examPart || node.type.name === 'heading') passage = false
+    if (passage) return
+    if (node.type.name === 'examHeader') {
+      node.forEach((column, columnOffset, columnIndex) => {
+        column.forEach((line, lineOffset, lineIndex) => {
+          const text = inlineText(line).trim()
+          if (text) {
+            out.push({ id: `H${columnIndex + 1}.${lineIndex + 1}`, kind: 'header', node: line, pos: pos + 1 + columnOffset + 1 + lineOffset, text, part: null })
+          }
+        })
+      })
+      return
+    }
+    if (node.type.name !== 'paragraph' && node.type.name !== 'heading') return
+    const text = inlineText(node).trim()
+    if (!text) return
+    out.push({ id: `B${index + 1}`, kind: node.type.name === 'heading' ? 'heading' : 'paragraph', node, pos, text, part })
+  })
+  return out
+}
+
+/** Whether every word of the line carries the mark (`bold`, `italic`). */
+function allMarked(node: ProseMirrorNode, mark: string) {
+  let runs = 0
+  let marked = 0
+  node.forEach((child) => {
+    if (!child.isText) return
+    runs++
+    if (child.marks.some((entry) => entry.type.name === mark)) marked++
+  })
+  return runs > 0 && runs === marked
+}
+
+/** The sheet's lines as the assistant reads them: cut to a size, with their alignment and emphasis. */
+function blocksForAssistant(doc: ProseMirrorNode, items?: ReadonlyMap<string, DraftPlace>): NonNullable<AiExamSheet['blocks']> {
+  return sheetBlocks(doc, items).slice(0, MAX_BLOCKS).map((block) => {
+    const align = typeof block.node.attrs.textAlign === 'string' ? block.node.attrs.textAlign : null
+    return {
+      id: block.id,
+      kind: block.kind,
+      text: block.text.slice(0, MAX_BLOCK_TEXT),
+      ...(block.text.length > MAX_BLOCK_TEXT ? { cut: true } : {}),
+      ...(block.part ? { part: block.part } : {}),
+      ...(block.node.attrs.examPart ? { opensPart: true } : {}),
+      ...(align && align !== 'justify' ? { align } : {}),
+      ...(allMarked(block.node, 'bold') ? { bold: true } : {}),
+      ...(allMarked(block.node, 'italic') ? { italic: true } : {}),
+    }
+  })
 }
 
 /** The paper in a few lines: its headings and each question's first words, for the assistant to find its way. */

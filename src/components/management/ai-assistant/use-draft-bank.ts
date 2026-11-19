@@ -5,9 +5,11 @@ import {
   type AiBankItem,
   type AiBankLink,
 } from '../../../services/aiAssistantService'
+import { readSessionCache, writeSessionCache } from '../../../lib/session-cache'
 import { getBankScopes, type BankScopes } from '../../../services/questionBankService'
 
 const NO_SCOPES: BankScopes = { administrator: false, authorSubjectIds: [], reviewerSubjectIds: [] }
+const SCOPES_CACHE = 'question-bank.scopes'
 
 /**
  * Where the open exam's questions stand with the question bank, and which of them the viewer may save there: those of
@@ -16,7 +18,10 @@ const NO_SCOPES: BankScopes = { administrator: false, authorSubjectIds: [], revi
  * nothing is looked up and nothing is saveable.
  */
 export function useDraftBank(conversationId: string | null, refreshKey: string, enabled: boolean) {
-  const [scopes, setScopes] = useState<BankScopes | null>(null)
+  // After a reload this tab's last answer is used until the server's comes in.
+  const [scopes, setScopes] = useState<BankScopes | null>(() =>
+    enabled ? readSessionCache<BankScopes>(SCOPES_CACHE) : null
+  )
   const [links, setLinks] = useState<{ conversationId: string; byItem: Map<string, AiBankLink> } | null>(null)
   const [saving, setSaving] = useState<ReadonlySet<string>>(new Set())
 
@@ -25,7 +30,9 @@ export function useDraftBank(conversationId: string | null, refreshKey: string, 
     let active = true
     getBankScopes().then(
       (value) => {
-        if (active) setScopes(value)
+        if (!active) return
+        setScopes(value)
+        writeSessionCache(SCOPES_CACHE, value)
       },
       () => {
         if (active) setScopes(NO_SCOPES)

@@ -1,5 +1,5 @@
-import DateField from '../../console/date-field'
-import { useMemo, useState } from 'react'
+import DateRangeField from '../../console/date-range-field'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import Button from '../../console/button'
 import DataTable from '../../console/data-table'
@@ -30,10 +30,13 @@ export default function OrderManagement({
   readOnly = false,
   canConfirm = false,
   title,
+  navigation,
 }: {
   readOnly?: boolean
   canConfirm?: boolean
   title: string
+  /** Tab row of the page group, shown under the heading. */
+  navigation?: ReactNode
 }) {
   const [query, setQuery] = useState<OrderQuery>({ page: 0, size: 20 })
   const [search, setSearch] = useState('')
@@ -144,10 +147,11 @@ export default function OrderManagement({
   return (
     <section className="flex flex-col gap-5">
       <PageHeading title={title} readOnly={readOnly} />
+      {navigation}
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
-        <FilterToolbar>
+        <FilterToolbar className="xl:flex-nowrap">
           <form
-            className="w-full sm:max-w-md"
+            className="w-full sm:max-w-md xl:max-w-none xl:min-w-48 xl:flex-1"
             onSubmit={(event) => {
               event.preventDefault()
               setQuery((old) => ({ ...old, reference: search.trim() || undefined, page: 0 }))
@@ -155,16 +159,17 @@ export default function OrderManagement({
           >
             <SearchInput
               ariaLabel="Tìm mã đơn hoặc mã thanh toán"
-              placeholder="Mã đơn hoặc mã thanh toán... (Enter để tìm)"
+              placeholder="Mã đơn, mã thanh toán…"
               maxLength={50}
               value={search}
               onChange={setSearch}
               className="sm:max-w-none"
             />
           </form>
-          <FilterGroup>
+          <FilterGroup className="xl:shrink-0 xl:flex-nowrap">
             <FilterSelect
               ariaLabel="Trạng thái đơn lọc"
+              className="sm:w-44"
               value={query.status ?? 'ALL'}
               onChange={(value) =>
                 setQuery((old) => ({
@@ -180,6 +185,7 @@ export default function OrderManagement({
             />
             <FilterSelect
               ariaLabel="Khóa học lọc"
+              className="sm:w-44"
               value={query.courseId ?? 'ALL'}
               onChange={(value) =>
                 setQuery((old) => ({ ...old, courseId: value === 'ALL' ? undefined : value, page: 0 }))
@@ -190,8 +196,7 @@ export default function OrderManagement({
                 ...(courses.data?.content ?? []).map((course) => ({ id: course.id, label: course.title })),
               ]}
             />
-            <DateField label="Từ ngày tạo" hideLabel className="w-40" value={query.from ?? ''} onChange={(value) => setQuery((old) => ({ ...old, from: value || undefined, page: 0 }))} />
-            <DateField label="Đến ngày tạo" hideLabel className="w-40" value={query.to ?? ''} onChange={(value) => setQuery((old) => ({ ...old, to: value || undefined, page: 0 }))} />
+            <DateRangeField label="Ngày tạo đơn" hideLabel compact className="w-60" value={{ from: query.from ?? '', to: query.to ?? '' }} onChange={(range) => setQuery((old) => ({ ...old, from: range.from || undefined, to: range.to || undefined, page: 0 }))} />
           </FilterGroup>
         </FilterToolbar>
         {courses.status === 'error' && (

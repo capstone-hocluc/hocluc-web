@@ -35,7 +35,7 @@ function QuizQuestionCard({
   const saveState = saving
     ? { text: 'Đang lưu...', className: 'text-text-secondary' }
     : saveFailed
-      ? { text: 'Lưu chưa thành công, thử chọn lại', className: 'text-badge-danger-text' }
+      ? { text: 'Đáp án chưa lưu', className: 'text-badge-danger-text' }
       : selectedOptionId
         ? { text: 'Đã lưu', className: 'text-badge-success-text' }
         : null

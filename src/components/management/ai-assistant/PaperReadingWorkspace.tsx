@@ -1,4 +1,4 @@
-// A loaded paper in the exam workspace, shown the way a compose run is: the same header, outline, A4 sheet with the
+// A loaded paper in the exam workspace, shown the way a compose run is: the same header, list of exams, A4 sheet with the
 // words being written live, status bar, and the run's stages in the right column, here read-only.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { BankSource } from '../../../services/questionBankService'
@@ -11,19 +11,19 @@ import DocHeader from '../exam-doc/DocHeader'
 import DocSheet from '../exam-doc/DocSheet'
 import StatusBar from '../exam-doc/StatusBar'
 import { scrollToPos } from '../exam-doc/doc-outline'
+import { EditorOutlineTree } from '../exam-doc/doc-tree'
 import { draftToDoc } from '../exam-doc/draft-to-doc'
 import { ExamDocContext, type ExamDocContextValue } from '../exam-doc/exam-doc-context'
 import { findTagged } from '../exam-doc/exam-tags'
 import { liveDraftKey } from '../exam-doc/nodes/live-draft-widget'
 import { useFollowWriting } from '../exam-doc/use-follow-writing'
+import { useReadOnlyEditor } from '../exam-doc/use-read-only-editor'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
-import { useVariantEditor } from '../exam-doc/variants/use-variant-editor'
-import { PaperOutlineTree } from '../exam-doc/doc-tree'
 import type { ShownQuestion } from '../question-bank/ReadingPaper'
 import { readItemId, readingStages, readingToPaper } from '../question-bank/reading-to-paper'
 import { usePaperReading } from '../question-bank/use-paper-reading'
 import PaperReadingPanel from './PaperReadingPanel'
-import { questionNumbers } from './exam-format'
+import { ShowExamListButton } from './WorkspaceTree'
 import { DIVIDER_WIDTH, PANEL_LIMITS, usePanelWidths } from './use-panel-widths'
 
 const noop = () => undefined
@@ -34,11 +34,14 @@ interface PaperReadingWorkspaceProps {
   backHref: string
   backLabel?: string
   onNew: () => void
-  /** The left panel (every exam and paper) with this paper's outline under it. */
-  renderTree: (
-    outline: ReactNode,
-    chrome: { onCollapse?: () => void; onClose?: () => void; className: string; style?: CSSProperties }
-  ) => ReactNode
+  /** The left panel: every exam and paper. */
+  renderTree: (chrome: {
+    onCollapse?: () => void
+    onClose?: () => void
+    outline?: ReactNode
+    className: string
+    style?: CSSProperties
+  }) => ReactNode
   /** Given for a failed paper the viewer may load again. */
   onLoadAgain?: () => void
   /** Given for a finished paper with unlabelled questions the viewer may have labelled. */
@@ -74,8 +77,7 @@ export default function PaperReadingWorkspace({
   // The sheet is laid out again only when the questions on it change, not at every word being written.
   const paperJson = read ? JSON.stringify(read.paper) : null
   const doc = useMemo(() => (paperJson ? draftToDoc(JSON.parse(paperJson)) : null), [paperJson])
-  const { editor, pages } = useVariantEditor(doc, 'Đề đang đọc (chỉ đọc)')
-  const numberOf = useMemo(() => (read ? questionNumbers(read.paper) : new Map<string, number>()), [read])
+  const { editor, pages } = useReadOnlyEditor(doc, 'Đề đang đọc (chỉ đọc)')
   const stages = useMemo(() => readingStages(view), [view])
 
   // The question being written shows where it will land, word by word, as in a compose run.
@@ -134,12 +136,6 @@ export default function PaperReadingWorkspace({
   const docContext = useMemo<ExamDocContextValue>(
     () => ({
       editor,
-      sourceEditor: null,
-      variantsOpen: false,
-      setVariantsOpen: noop,
-      activeVariant: null,
-      setActiveVariant: noop,
-      variantDocs: [],
       mode: 'FREE',
       setMode: noop,
       saveState: 'saved',
@@ -153,6 +149,18 @@ export default function PaperReadingWorkspace({
       pages,
     }),
     [editor, reading, zoom, showRuler, pages]
+  )
+
+  // The paper's parts and questions, unfolded under its row in the list.
+  const outline = (
+    <EditorOutlineTree
+      editor={editor}
+      depth={2}
+      onJump={(pos) => {
+        setOutlineSheet(false)
+        if (editor) scrollToPos(editor, pos)
+      }}
+    />
   )
 
   const panelProps = {
@@ -169,15 +177,6 @@ export default function PaperReadingWorkspace({
     conversationsOpen: outlineOpen || outlineSheet,
     onOpenConversations: openTree,
   }
-  const outline = read ? (
-    <PaperOutlineTree
-      paper={read.paper}
-      numberOf={numberOf}
-      onJump={jumpTo}
-      current={current !== null ? readItemId(current) : null}
-      depth={1}
-    />
-  ) : null
 
   return (
     <ExamDocContext.Provider value={docContext}>
@@ -205,16 +204,18 @@ export default function PaperReadingWorkspace({
           }
         />
 
-        <div ref={row} className="flex min-h-0 min-w-0 flex-1">
+        <div ref={row} className="relative flex min-h-0 min-w-0 flex-1">
+          <ShowExamListButton listOpen={outlineOpen} onClick={toggleOutline} />
           {outlineOpen && (
             <>
-              {renderTree(outline, {
+              {renderTree({
                 onCollapse: () => setOutlineOpen(false),
+                outline,
                 style: { width: widths.outline },
                 className: 'hidden shrink-0 border-r border-card-border bg-card-background xl:flex',
               })}
               <ResizeHandle
-                label="Kéo để đổi độ rộng mục lục"
+                label="Kéo để đổi độ rộng danh sách đề"
                 value={widths.outline}
                 min={PANEL_LIMITS.outline.min}
                 max={max.outline}
@@ -283,9 +284,10 @@ export default function PaperReadingWorkspace({
               />
               <PaperReadingPanel
                 {...panelProps}
+                card
                 onCollapse={() => setPanelOpen(false)}
                 style={{ width: widths.chat }}
-                className="hidden shrink-0 border-l border-card-border lg:flex"
+                className="hidden shrink-0 lg:flex"
               />
             </>
           )}
@@ -308,8 +310,8 @@ export default function PaperReadingWorkspace({
             showCloseButton={false}
             className="w-[min(280px,85vw)]! min-w-0! max-w-[85vw]! gap-0 border-r border-card-border bg-card-background p-0 sm:max-w-[85vw]!"
           >
-            <SheetTitle className="sr-only">Mục lục đề thi</SheetTitle>
-            {renderTree(outline, { onClose: () => setOutlineSheet(false), className: 'flex h-full w-full' })}
+            <SheetTitle className="sr-only">Đề của tôi</SheetTitle>
+            {renderTree({ onClose: () => setOutlineSheet(false), outline, className: 'flex h-full w-full' })}
           </SheetContent>
         </SheetOverlay>
 

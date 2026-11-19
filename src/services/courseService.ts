@@ -133,6 +133,9 @@ export interface CourseDetail {
   price?: number
   /** Study time the author states, in minutes. */
   estimatedDurationMinutes?: number | null
+  /** FIXED_END_DATE: study until endDate (open-ended without one); DAYS_FROM_PURCHASE: accessDays from paying. */
+  accessMode?: 'FIXED_END_DATE' | 'DAYS_FROM_PURCHASE' | null
+  accessDays?: number | null
   purchased?: boolean
   inCart?: boolean
   phaseCount?: number
@@ -266,6 +269,10 @@ export interface CourseStudyLiveClass {
   meetingUrl?: string | null
   recordingUrl?: string | null
   joinable: boolean
+  /** The student holds a seat: only then do they get a join link and the replay. */
+  booked?: boolean
+  /** Null when the class has no seat limit. */
+  seatsLeft?: number | null
 }
 
 export interface CourseStudy {
@@ -315,6 +322,53 @@ export async function getCourseLiveClasses(courseId: string): Promise<CourseLive
   )
   if (!response.data) throw new Error('Không thể tải lịch học trực tuyến.')
   return response.data
+}
+
+export interface LiveClassBooking {
+  liveClassId: string
+  status: 'BOOKED' | 'CANCELLED'
+  seatsLeft?: number | null
+}
+
+export async function bookLiveClass(liveClassId: string): Promise<LiveClassBooking> {
+  const response = await request<LiveClassBooking>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/bookings`,
+    { method: 'POST', auth: true }
+  )
+  if (!response.data) throw new Error('Không giữ được chỗ.')
+  return response.data
+}
+
+export async function cancelLiveClassBooking(liveClassId: string): Promise<LiveClassBooking> {
+  const response = await request<LiveClassBooking>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/bookings/me`,
+    { method: 'DELETE', auth: true }
+  )
+  if (!response.data) throw new Error('Không hủy được chỗ.')
+  return response.data
+}
+
+/** The student's own Zoom link; the API opens it 15 minutes before the class starts. */
+export async function getLiveClassJoinLink(liveClassId: string): Promise<string | null> {
+  const response = await request<{ joinUrl?: string | null }>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/join-link`,
+    { auth: true }
+  )
+  return response.data?.joinUrl ?? null
+}
+
+export interface LiveClassRecording {
+  id: string
+  status?: string | null
+  recordingUrl?: string | null
+}
+
+export async function getLiveClassRecordings(liveClassId: string): Promise<LiveClassRecording[]> {
+  const response = await request<LiveClassRecording[]>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/recordings`,
+    { auth: true }
+  )
+  return response.data ?? []
 }
 
 export interface CatchUpRecording {
