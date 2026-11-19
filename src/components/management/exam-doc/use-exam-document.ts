@@ -118,6 +118,16 @@ class DocSaver {
     void this.flush()
   }
 
+  /** Saves what waits now instead of after the pause; resolves once it is saved (or saving stopped), at most after `limit` ms. */
+  saveNow(limit: number): Promise<void> {
+    if (this.timer !== null) {
+      window.clearTimeout(this.timer)
+      this.timer = null
+      void this.flush()
+    }
+    return this.settled(limit)
+  }
+
   /** Resolves once nothing is waiting or on its way (or saving has stopped), at most after `limit` ms. */
   settled(limit: number): Promise<void> {
     if (this.isSettled()) return Promise.resolve()
@@ -289,6 +299,13 @@ export function useExamDocument(
         const document = await getAiDocument(id)
         if (!live) return
         setLoadFailure(null)
+        // What was just read is the newest version: a save refused before it no longer stands between them.
+        setReports((previous) => {
+          if (previous[String(n)]?.state !== 'conflict') return previous
+          const next = { ...previous }
+          delete next[String(n)]
+          return next
+        })
         setFetched({
           visit: n,
           conversationId: id,
@@ -442,6 +459,28 @@ export function useExamDocument(
 
   const retryLoad = useCallback(() => setReload((value) => value + 1), [])
 
+  // Waiting on the document read again by `reloadFromServer`.
+  const reloadWaiters = useRef<Array<() => void>>([])
+  useEffect(() => {
+    if (!read) return
+    const waiters = reloadWaiters.current
+    reloadWaiters.current = []
+    for (const waiter of waiters) waiter()
+  }, [read])
+
+  /** Saves what waits, then reads the document again: the server changed it (it put a replaced exam back). */
+  const saveNow = useCallback(() => saver?.saveNow(SETTLE_WAIT_MS) ?? Promise.resolve(), [saver])
+  const reloadFromServer = useCallback((): Promise<void> => {
+    if (!conversationId) return Promise.resolve()
+    return new Promise((resolve) => {
+      reloadWaiters.current.push(resolve)
+      // Nothing is shown (and so nothing saved) until it is in. A new exam is read like any other from now on.
+      setFetched(null)
+      if (visit.startedNew) setVisit((current) => ({ ...current, startedNew: false }))
+      else setReload((value) => value + 1)
+    })
+  }, [conversationId, visit.startedNew])
+
   const resolveConflict = useCallback(
     (choice: 'reload' | 'keep') => {
       if (!conflict) return
@@ -471,6 +510,8 @@ export function useExamDocument(
     /** Why the document could not be read; it is read again by itself and by `retryLoad`. */
     loadError: failure,
     retryLoad,
+    saveNow,
+    reloadFromServer,
     mode,
     setMode,
     saveState,

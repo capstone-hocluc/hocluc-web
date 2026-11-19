@@ -32,17 +32,33 @@ export function creditEntryPurpose(refType: string | null): string | null {
   }
 }
 
+/**
+ * A pack just paid for, on its way into the balance. The wallet shows it arriving, then lands it; the top bar holds
+ * it back until then and counts it in.
+ */
+export interface CreditArrival {
+  orderId: string
+  amount: number
+  /** The balance in the store already includes the pack (a reload started after the payment has come back). */
+  ready: boolean
+  landed: boolean
+}
+
 interface CreditState {
   balance: CreditBalance | null
   streak: StreakView | null
   loading: boolean
   balanceError: boolean
+  arrival: CreditArrival | null
 }
 
-let state: CreditState = { balance: null, streak: null, loading: false, balanceError: false }
+let state: CreditState = { balance: null, streak: null, loading: false, balanceError: false, arrival: null }
 let loaded = false
 /** Only the latest refresh for the current account can update the store. */
 let generation = 0
+/** Counts reloads, so an arrival is only ready once a reload that started after the payment has finished. */
+let reloads = 0
+let arrivalAfter = 0
 const listeners = new Set<() => void>()
 
 function set(next: Partial<CreditState>) {
@@ -56,11 +72,14 @@ function set(next: Partial<CreditState>) {
  */
 export async function refreshCredits() {
   const started = ++generation
+  const reload = ++reloads
   set({ loading: true, balanceError: false })
   const [balance, streak] = await Promise.allSettled([creditService.balance(), creditService.streak()])
   if (started !== generation) return
   loaded = balance.status === 'fulfilled' && streak.status === 'fulfilled'
+  const { arrival } = state
   set({
+    arrival: balance.status === 'fulfilled' && arrival && !arrival.ready && reload > arrivalAfter ? { ...arrival, ready: true } : arrival,
     balance: balance.status === 'fulfilled' ? balance.value : state.balance,
     streak: streak.status === 'fulfilled' ? streak.value : state.streak,
     balanceError: balance.status === 'rejected',
@@ -70,6 +89,28 @@ export async function refreshCredits() {
 
 export function setStreak(streak: StreakView) {
   set({ streak })
+}
+
+/** A pack order was just paid: reload the balance and let the wallet show the stars arriving. */
+export function announcePurchase(orderId: string, amount: number) {
+  if (amount <= 0) {
+    void refreshCredits()
+    return
+  }
+  arrivalAfter = reloads
+  set({ arrival: { orderId, amount, ready: false, landed: false } })
+  void refreshCredits()
+}
+
+/** The stars reached the top bar; it counts them in. */
+export function landArrival(orderId: string) {
+  const { arrival } = state
+  if (arrival?.orderId === orderId && !arrival.landed) set({ arrival: { ...arrival, landed: true } })
+}
+
+/** The top bar has shown the new balance. */
+export function clearArrival(orderId: string) {
+  if (state.arrival?.orderId === orderId) set({ arrival: null })
 }
 
 /** The student's balance and streak, shared by the top bar, the dashboard and the wallet. Loads once. */
@@ -91,7 +132,7 @@ export function useCredits() {
 export function resetCredits() {
   generation++
   loaded = false
-  set({ balance: null, streak: null, loading: false, balanceError: false })
+  set({ balance: null, streak: null, loading: false, balanceError: false, arrival: null })
 }
 
 // Logout, an expired session, another account or another active role all start from an empty state.

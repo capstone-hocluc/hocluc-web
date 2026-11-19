@@ -4,6 +4,7 @@ import Button from '../../ui/Button'
 import Card, { CardTitle } from '../../ui/Card'
 import { Pencil } from '../../console/icons'
 import styles from './SavedLearningGoals.module.css'
+import { formatExamLabel } from '../../../lib/courseFormat'
 
 export default function SavedLearningGoals({ showEditAction = true }: { showEditAction?: boolean }) {
   const { profile, status, loadCurrentUser } = useCurrentUser()
@@ -23,7 +24,7 @@ export default function SavedLearningGoals({ showEditAction = true }: { showEdit
       {!profile ? <p role="status">{status === 'error' ? <Button appearance="outline" onClick={() => void loadCurrentUser().catch(() => {})}>Thử tải lại hồ sơ</Button> : 'Đang tải mục tiêu…'}</p> : <>
         <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ['Kỳ thi', saved?.targetExam === 'VNUHCM_DGNL' ? 'ĐGNL ĐHQG TP.HCM' : 'Chưa xác định'],
+            ['Kỳ thi', formatExamLabel(saved?.targetExam) || 'Chưa xác định'],
             ['Điểm mục tiêu', saved?.targetScore == null ? 'Chưa xác định' : `${saved.targetScore} / 1200`],
             ['Trường đại học mục tiêu', saved?.targetUniversity || 'Chưa xác định'],
             ['Ngành học mục tiêu', saved?.targetMajor || 'Chưa xác định'],

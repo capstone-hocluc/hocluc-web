@@ -69,7 +69,7 @@ export default function SearchBar({ sections, onSelect }: SearchBarProps) {
         contentClassName="fixed top-1/2 left-1/2 z-50 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-card-border bg-card-background text-text-primary shadow-2xl overflow-hidden outline-none max-sm:max-w-[calc(100%-2rem)]"
       >
         <div className="border-b border-card-border p-3.5">
-          <InputGroup className="h-10">
+          <InputGroup className="h-10 focus-within:border-input-primary-focus-border/40">
             <InputGroupAddon align="inline-start" className="pr-0 text-icon-tertiary">
               <SearchIcon />
             </InputGroupAddon>

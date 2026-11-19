@@ -110,7 +110,7 @@ function tokenIdentity(token: string | null): string | null {
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
     if (!payload.sub) return null
-    return JSON.stringify([payload.sub, payload.role ?? payload.roles ?? null])
+    return JSON.stringify([payload.sub, payload.role ?? null])
   } catch {
     return null
   }

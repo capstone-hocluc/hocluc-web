@@ -34,17 +34,17 @@ export default function LearningProfileBanner({ profile, result, resultStatus, o
     </div>
       <Button appearance="outline" shape="pill" disabled={!profile} className={`${styles.editButton} ml-auto`} onClick={onEdit}><Pencil size={16} />Chỉnh sửa hồ sơ</Button>
     </div>
-    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+    <div className={styles.metricGroups}>
       <section className="min-w-0 rounded-3xl bg-surface p-4" aria-labelledby="profile-goal-heading">
         <h3 id="profile-goal-heading" className="mb-2 text-base font-bold text-text-heading">Mục tiêu học tập của bạn</h3>
-        <dl className="grid gap-3 sm:grid-cols-2">
+        <dl className={styles.metrics}>
           <BannerMetric label="Kỳ thi" value={`${exam}${saved?.targetExamYear ? ` · ${saved.targetExamYear}` : ''}`} />
           <BannerMetric label="Điểm mục tiêu" value={saved?.targetScore == null ? 'Chưa có dữ liệu' : `${saved.targetScore} / 1200`} />
         </dl>
       </section>
       <section className="min-w-0 rounded-3xl bg-surface p-4" aria-labelledby="profile-entry-heading">
         <h3 id="profile-entry-heading" className="mb-2 text-base font-bold text-text-heading">Năng lực theo khóa đang chọn</h3>
-        <dl className="grid gap-3 sm:grid-cols-2">
+        <dl className={styles.metrics}>
           <BannerMetric label="Tỷ lệ điểm tổng hợp" value={resultStatus === 'ready' && result?.overallPercentage != null ? `${result.overallPercentage}%` : resultPlaceholder} />
           <BannerMetric label="Mức năng lực" value={resultStatus === 'ready' && result?.level ? levels[result.level] ?? result.level : resultPlaceholder} />
         </dl>
@@ -54,8 +54,8 @@ export default function LearningProfileBanner({ profile, result, resultStatus, o
 }
 
 function BannerMetric({ label, value }: { label: string; value: string }) {
-  return <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-xl bg-surface-hover px-3 py-2.5">
-    <dt className="text-sm text-text-body">{label}</dt>
-    <dd className="text-base font-bold break-words text-text-heading">{value}</dd>
+  return <div className={styles.metric}>
+    <dt>{label}</dt>
+    <dd>{value}</dd>
   </div>
 }

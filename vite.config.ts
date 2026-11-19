@@ -39,6 +39,8 @@ export function createAppConfig({ command, mode, isPreview }: ConfigEnv): UserCo
 
   return {
     plugins: [react(), tailwindcss(), mathliveFonts()],
+    // assistant-ui's components import each other from @/
+    resolve: { alias: { '@': resolve(process.cwd(), 'src') } },
     define: { 'import.meta.env.VITE_DEV_API_PROXY': JSON.stringify(String(useProxy)) },
     server: {
       // Playwright and the QA scripts write traces and screenshots inside the repo while a run

@@ -1,8 +1,7 @@
-import { ArrowUpRight, CalendarClock, MapPin } from '../console/icons'
+import { ArrowUpRight, CalendarClock } from '../console/icons'
 import type { ScheduleCalendarItem } from '../../types/scheduling'
 import {
   itemDateKey,
-  itemLocation,
   itemSubtitle,
   itemTimeLabel,
   itemTitle,
@@ -65,12 +64,6 @@ export default function ScheduleList({ items, onSelect, timezone }: Props) {
                   <p className="mt-0.5 truncate text-sm text-text-body">{itemSubtitle(item)}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary">
                     <time dateTime={item.item.startTime}>{itemTimeLabel(item, timezone)}</time>
-                    {itemLocation(item) && (
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin size={12} aria-hidden="true" />
-                        {itemLocation(item)}
-                      </span>
-                    )}
                     <span className="capitalize">
                       {item.kind === 'classSession'
                         ? 'Buổi trong chuỗi'

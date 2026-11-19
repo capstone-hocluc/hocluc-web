@@ -8,7 +8,10 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Notice from '../../components/ui/Notice'
 import Skeleton from '../../components/ui/Skeleton'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { CreditAmount, CreditIcon } from '../../components/credits/CreditIcon'
+import PurchaseArrival from '../../components/credits/PurchaseArrival'
+import { useShownBalance } from '../../components/credits/use-shown-balance'
 import { usePageResource } from '../../hooks/usePageResource'
 import { ApiError } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
@@ -40,12 +43,14 @@ export function StudentWalletContent({ onOpenPayment }: StudentWalletPageProps) 
       <BalanceCard />
       <Packs onOpenPayment={onOpenPayment} />
       <History />
+      <PurchaseArrival />
     </div>
   )
 }
 
 function BalanceCard() {
   const { balance, balanceError } = useCredits()
+  const shown = useShownBalance(balance?.available ?? null)
   if (!balance) {
     return balanceError ? <BalanceLoadError /> : <Skeleton className="h-[132px] rounded-2xl" />
   }
@@ -56,7 +61,7 @@ function BalanceCard() {
         <CreditIcon size={44} />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="text-[28px] leading-none font-bold text-text-heading tabular-nums">
-            {balance.available.toLocaleString('vi-VN')}
+            {(shown.value ?? balance.available).toLocaleString('vi-VN')}
             <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
           </p>
           <p className="text-sm text-text-body">
@@ -83,6 +88,12 @@ function BalanceLoadError({ hasPreviousBalance = false }: { hasPreviousBalance?:
   )
 }
 
+/** What one star costs in a pack, rounded to the đồng. */
+const perStar = (pack: CreditPack) => Math.round(pack.price / pack.credits)
+
+/** A pack's name when it says more than its size ("Gói 50" for 50 Sao says nothing new). */
+const packName = (pack: CreditPack) => (/^gói\s*\d+$/i.test(pack.name.trim()) ? null : pack.name)
+
 function Packs({ onOpenPayment }: StudentWalletPageProps) {
   const { data: packs, status, errorMessage, reload } = usePageResource(() => creditService.packs(), [], {
     forbidden: false,
@@ -106,6 +117,10 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
     }
   }
 
+  // Savings are measured against the dearest star on sale; the pack with the cheapest star is the best value.
+  const dearest = packs?.length ? Math.max(...packs.map(perStar)) : 0
+  const best = packs && packs.length > 1 ? packs.reduce((a, b) => (perStar(b) < perStar(a) ? b : a)) : null
+
   return (
     <section>
       <SectionHeader title={`Mua ${CREDIT_UNIT}`} titleClassName="text-lg max-[760px]:text-lg" />
@@ -127,36 +142,106 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
           loading={
             <div className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
               {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-[168px] rounded-2xl" />
+                <Skeleton key={i} className="h-[236px] rounded-2xl max-[760px]:h-[92px]" />
               ))}
             </div>
           }
           error={{ title: 'Không tải được các gói' }}
         />
-        {status === 'ready' && packs && packs.length === 0 && (
-          <MascotState title="Chưa có gói nào đang bán" />
-        )}
+        {status === 'ready' && packs && packs.length === 0 && <MascotState title="Chưa có gói nào đang bán" />}
         {status === 'ready' && packs && packs.length > 0 && (
-          <div className="grid max-h-[360px] grid-cols-3 gap-3 overflow-y-auto p-1 max-[1100px]:grid-cols-2 max-[560px]:grid-cols-1" role="region" aria-label="Các gói Sao" tabIndex={0}>
-            {packs.map((pack) => (
-              <Card key={pack.id} variant="elevated" radius="lg" padding="none" className="flex flex-col items-center gap-2 p-3 text-center">
-                <CreditIcon size={28} />
-                <p className="text-xl font-bold text-text-heading tabular-nums">
-                  {pack.credits.toLocaleString('vi-VN')} <span className="text-base font-semibold text-text-muted">{CREDIT_UNIT}</span>
-                </p>
-                <p className="text-sm text-text-muted">{pack.name}</p>
-                <Button size="sm" className="w-full" disabled={buying !== null} onClick={() => void buy(pack)}>
-                  {buying === pack.id ? 'Đang tạo đơn...' : vnd(pack.price)}
-                </Button>
-              </Card>
+          <ul className="grid max-h-[360px] grid-cols-3 gap-3 overflow-y-auto px-1 pt-3 pb-1 max-[1100px]:grid-cols-2 max-[760px]:grid-cols-1" aria-label="Các gói Sao" tabIndex={0}>
+            {packs.map((pack, index) => (
+              <PackCard
+                key={pack.id}
+                pack={pack}
+                tier={Math.min(index, 2) + 1}
+                saving={dearest > 0 ? Math.round((1 - perStar(pack) / dearest) * 100) : 0}
+                best={best?.id === pack.id}
+                buying={buying}
+                onBuy={() => void buy(pack)}
+              />
             ))}
-          </div>
+          </ul>
         )}
         <p className="text-xs text-text-muted">
           {CREDIT_UNIT} đã mua không hết hạn, không đổi lại thành tiền và không chuyển cho tài khoản khác.
         </p>
       </div>
     </section>
+  )
+}
+
+/** One star per tier of the pack, a little apart: its size at a glance. */
+function StarStack({ count }: { count: number }) {
+  return (
+    <span className="flex shrink-0 items-center gap-0.5 [&_svg]:size-7 max-[760px]:[&_svg]:size-6" aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <CreditIcon key={i} size={40} />
+      ))}
+    </span>
+  )
+}
+
+function PackCard({
+  pack,
+  tier,
+  saving,
+  best,
+  buying,
+  onBuy,
+}: {
+  pack: CreditPack
+  tier: number
+  saving: number
+  best: boolean
+  buying: string | null
+  onBuy: () => void
+}) {
+  const name = packName(pack)
+  return (
+    <li
+      className={cn(
+        'relative flex flex-col items-center gap-2 rounded-2xl border bg-surface p-3 pt-5 text-center transition-shadow hover:shadow-card',
+        'max-[760px]:flex-row max-[760px]:gap-3.5 max-[760px]:p-4 max-[760px]:text-left',
+        best ? 'border-live bg-linear-to-b from-live-tint to-surface shadow-card-soft' : 'border-line-card'
+      )}
+    >
+      {best && (
+        <StatusBadge
+          tone="live"
+          size="sm"
+          className="absolute -top-2.5 left-1/2 -translate-x-1/2 font-semibold whitespace-nowrap max-[760px]:right-3 max-[760px]:left-auto max-[760px]:translate-x-0"
+        >
+          Lợi nhất
+        </StatusBadge>
+      )}
+      <span className="grid h-14 place-items-center max-[760px]:h-auto max-[760px]:w-[76px] max-[760px]:justify-items-start">
+        <StarStack count={tier} />
+      </span>
+      <div className="flex min-w-0 flex-col items-center gap-1 max-[760px]:flex-1 max-[760px]:items-start">
+        <p className="text-xl leading-none font-bold text-text-heading tabular-nums max-[760px]:text-xl">
+          {pack.credits.toLocaleString('vi-VN')}
+          <span className="ml-1.5 text-base font-semibold text-text-muted">{CREDIT_UNIT}</span>
+        </p>
+        {name && <p className="text-sm text-text-body">{name}</p>}
+        <p className="flex flex-wrap justify-center gap-x-1.5 text-xs whitespace-nowrap text-text-muted max-[760px]:justify-start">
+          <span>
+            {perStar(pack).toLocaleString('vi-VN')}đ / {CREDIT_UNIT}
+          </span>
+          {saving > 0 && <span className="font-semibold text-success">−{saving}%</span>}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        className="w-full max-[760px]:w-auto max-[760px]:shrink-0"
+        appearance={best ? 'fill' : 'outline'}
+        disabled={buying !== null}
+        onClick={onBuy}
+      >
+        {buying === pack.id ? 'Đang tạo đơn...' : vnd(pack.price)}
+      </Button>
+    </li>
   )
 }
 

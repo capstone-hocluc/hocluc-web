@@ -3,7 +3,6 @@ import { useId, useState, type ReactNode } from 'react'
 import type { ScheduleCalendarItem } from '../../types/scheduling'
 import {
   itemDateKey,
-  itemLocation,
   itemMeetingUrl,
   itemTimeLabel,
   itemTimezone,
@@ -58,7 +57,6 @@ function facts(item: ScheduleCalendarItem, displayTimezone: string | undefined) 
     { label: 'Giáo viên', value: teacher },
     { label: 'Khóa học', value: item.kind === 'classSession' ? item.courseName : null },
     { label: item.kind === 'classSession' ? 'Phần học' : 'Khóa học', value: subject },
-    { label: 'Địa điểm', value: itemLocation(item) },
   ]
   return rows.filter((row) => row.value)
 }
@@ -129,9 +127,7 @@ function SheetContent({
 
       {showMeetingLink && joinable && !meetingUrl && (
         <p className="rounded-xl border border-dashed border-border-subtle px-3 py-3 text-sm text-text-muted">
-          {itemLocation(item)
-            ? 'Chưa có đường dẫn phòng học trực tuyến.'
-            : 'Địa điểm hoặc đường dẫn chưa được cung cấp.'}
+          Chưa có đường dẫn phòng học trực tuyến.
         </p>
       )}
 

@@ -13,6 +13,10 @@ export interface NotificationFeed {
   refreshCount: () => Promise<void>
   markRead: (notification: UserNotification) => Promise<void>
   markAllRead: () => Promise<void>
+  /** Marks it read and goes to its page, or shows it in the detail dialog when it has none for the active role. */
+  open: (notification: UserNotification, returnFocus?: HTMLElement | null) => void
+  /** Tells the feed whether a notification list is on screen, where a new one shows without a toast. */
+  setListOpen: (open: boolean) => void
 }
 
 export const NotificationContext = createContext<NotificationFeed | null>(null)

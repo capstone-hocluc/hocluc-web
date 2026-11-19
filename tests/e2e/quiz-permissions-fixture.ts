@@ -107,6 +107,8 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
       strongCategoryId: null, strongCategoryName: null, categories: [], exams: [], pendingExams: [],
     })
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
+    // No live notifications here: an empty answer stops the bell from following them.
+    if (path === '/api/v1/notifications/stream') return route.fulfill({ status: 204 })
     // Every student page shows the star balance and the streak in its top bar.
     if (path === '/api/v1/credits/me') {
       const earned = Number(state.studentEarnedToday)
@@ -122,12 +124,8 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
       return answer({ content, last: true })
     }
     if (path === '/api/v1/users/profiles') return answer({ id: QUIZ_IDS.user, role: activeRole,
-      roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER', 'STUDENT'], displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
+      displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
       email: 'quiz@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
-    if (path === '/api/v1/auth/switch-role') {
-      state.role = body.role as UserRole
-      return answer({ accessToken: quizToken(state.role) })
-    }
     if (activeRole === 'STUDENT' && method === 'GET') {
       if (path === `/api/v1/courses/${QUIZ_IDS.course}/study`) {
         const completed = state.completedLessons.size

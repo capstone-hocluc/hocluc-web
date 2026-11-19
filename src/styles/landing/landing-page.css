@@ -1145,6 +1145,9 @@
   font-weight: 800;
   text-align: left;
 }
+.landing-page .mobile-nav-account .is-danger {
+  color: #c2334d;
+}
 @media (max-width: 640px) {
   .landing-page .account-name {
     display: none;

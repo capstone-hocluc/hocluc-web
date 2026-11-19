@@ -179,6 +179,7 @@ function LandingHeader({ onLanding = true, onSelectCourseTab }: LandingHeaderPro
               ))}
               <button
                 type="button"
+                className="is-danger"
                 onClick={() => {
                   closeMenu()
                   requestLogout()

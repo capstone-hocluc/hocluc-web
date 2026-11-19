@@ -6,6 +6,7 @@ import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getProfileSubjects, updateStudentProfile, type ProfileSubject, type SubjectLevel } from '../../services/userService'
 import { getErrorMessage } from '../../lib/errors'
 import styles from './onboarding/LearningProfileForm.module.css'
+import { formatExamLabel } from '../../lib/courseFormat'
 
 const inputClass = 'mt-2 min-h-11 w-full rounded-xl border border-line bg-surface-input px-3 text-text-heading focus-visible:outline-2 focus-visible:outline-focus-ring aria-invalid:border-danger'
 const groups = [
@@ -138,7 +139,7 @@ export default function StudentOnboarding({ onClose, onComplete, restoreFocus, c
           <div ref={scrollBody} className="min-h-0 flex-1 app-scroll overflow-y-auto px-6 py-4 max-[760px]:px-4" aria-busy={saving}>
             {step === 1 ? (
               <div className="flex flex-col gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-brand px-4 py-3"><p className="text-sm text-text-body">Kỳ thi mục tiêu</p><strong className="text-sm">ĐGNL ĐHQG TP.HCM</strong></div>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface-brand px-4 py-3"><p className="text-sm text-text-body">Kỳ thi mục tiêu</p><strong className="text-sm">{formatExamLabel('VNUHCM_DGNL')}</strong></div>
                 <div className="rounded-2xl border border-line-card p-4">
                   <label htmlFor="learning-target-score" className="text-sm font-semibold">Điểm mục tiêu</label>
                   <p className="mt-1 text-xs text-text-body">Kéo thanh điểm hoặc nhập mục tiêu của bạn.</p>

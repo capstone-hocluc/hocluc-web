@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { PageTab } from '../../lib/console-nav'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs'
+import { Tabs, TabsContent } from '../ui/Tabs'
+import { ConsoleTabsList, ConsoleTabsTrigger } from './tabs'
 
 /**
  * Pages that share one sidebar entry. Each tab is its own route, so switching tabs navigates; the screen shows
@@ -23,12 +24,12 @@ export function PageTabs({ value, onNavigate, children }: {
 /** On a phone the row wraps instead of scrolling, so no tab is hidden off the edge. */
 export function PageTabsList({ tabs, label }: { tabs: PageTab[]; label: string }) {
   return (
-    <TabsList aria-label={label} className="w-full flex-wrap gap-x-4 gap-y-0 sm:flex-nowrap sm:gap-x-6">
+    <ConsoleTabsList aria-label={label} className="max-sm:flex-wrap max-sm:overflow-visible">
       {tabs.map((tab) => (
-        <TabsTrigger key={tab.page} value={tab.page}>
+        <ConsoleTabsTrigger key={tab.page} value={tab.page}>
           {tab.label}
-        </TabsTrigger>
+        </ConsoleTabsTrigger>
       ))}
-    </TabsList>
+    </ConsoleTabsList>
   )
 }

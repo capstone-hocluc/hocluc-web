@@ -139,7 +139,6 @@ const userProfile = (overrides: Partial<UserProfile> = {}): UserProfile => ({
   displayName: 'Giáo viên QA',
   phone: '0900000000',
   role: 'TEACHER',
-  roles: ['TEACHER'],
   status: 'ACTIVE',
   emailVerified: true,
   ...overrides,
@@ -174,8 +173,6 @@ const classSession = (overrides: Partial<ClassSessionResponse> = {}): ClassSessi
   sessionDate: fixtureDate,
   startTime: instantOnLocalDate(fixtureDate, 18),
   endTime: instantOnLocalDate(fixtureDate, 20),
-  mode: 'PHYSICAL',
-  classroom: 'Phòng 101',
   meetingProvider: 'ZOOM',
   meetingLink: null,
   status: 'SCHEDULED',
@@ -195,8 +192,6 @@ const recurringSeries = (overrides: Partial<RecurringClassResponse> = {}): Recur
   startTime: '18:00:00',
   endTime: '20:00:00',
   durationMinutes: 120,
-  defaultMode: 'PHYSICAL',
-  defaultLocation: 'Phòng 101',
   defaultMeetingProvider: 'ZOOM',
   defaultMeetingLink: null,
   startDate: '2026-09-28',
@@ -388,7 +383,6 @@ export async function installCrudFixture(
         firstName: 'QA',
         lastName: 'Local',
         role,
-        roles: [role],
         status: 'ACTIVE',
         emailVerified: true,
       })
@@ -399,7 +393,6 @@ export async function installCrudFixture(
             ? {
                 id: IDS.student,
                 role: 'STUDENT',
-                roles: ['STUDENT'],
                 status: 'ACTIVE',
                 firstName: 'Học viên',
                 lastName: 'QA',
@@ -410,7 +403,6 @@ export async function installCrudFixture(
             : {
                 id: IDS.teacher,
                 role: 'TEACHER',
-                roles: ['TEACHER'],
                 status: 'ACTIVE',
                 firstName: 'Giáo viên',
                 lastName: 'QA',
@@ -544,6 +536,10 @@ export async function installCrudFixture(
     if (path.startsWith('/api/v1/admin/users/') && path.endsWith('/scopes')) {
       if (method === 'GET') return answer({ scopes: [] })
       return answer({ scopes: (body.scopes as unknown[]) ?? [] })
+    }
+    // a teacher's Zoom account; this fixture runs with Zoom disabled, as dev does
+    if (path.startsWith('/api/v1/users/') && path.endsWith('/zoom-account')) {
+      return answer({ zoomEmail: method === 'PUT' ? (body.zoomEmail as string) || null : null, zoomEnabled: false })
     }
     const pageOf = (content: unknown[]) => ({
       content,

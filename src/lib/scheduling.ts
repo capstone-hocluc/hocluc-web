@@ -129,12 +129,6 @@ export function itemStatus(item: ScheduleCalendarItem) {
   return item.item.status
 }
 
-export function itemLocation(item: ScheduleCalendarItem) {
-  if (item.kind === 'schedule') return item.item.location
-  if (item.kind === 'classSession') return item.item.classroom
-  return null
-}
-
 export function itemMeetingUrl(item: ScheduleCalendarItem) {
   if (item.kind === 'schedule') return safeExternalUrl(item.item.meetingUrl)
   if (item.kind === 'classSession') return safeExternalUrl(item.item.meetingLink)

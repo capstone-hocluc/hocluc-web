@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  type AiAttachment,
   AiStreamUnavailable,
   addAiDraftItem,
   cancelAiRun,
@@ -14,6 +15,7 @@ import {
   renameAiConversation,
   reorderAiDraftItems,
   sendAiMessage,
+  uploadAiAttachment,
   setAiDraftItemKept,
   updateAiDraftQuestion,
   type AiAssistantMode,
@@ -26,10 +28,14 @@ import {
   type AiMessage,
   type AiPublishedAs,
   type AiRevisedItem,
+  type AiConfirmRequest,
+  type AiExamSheet,
   type AiSendConfig,
   type AiSheetDocument,
+  type AiSheetEdit,
   type AiSolutionStyle,
   type AiStreamEvent,
+  type AiAnswerKeyAsk,
 } from '../services/aiAssistantService'
 import { ApiError } from '../lib/api'
 import type { BankSource } from '../services/questionBankService'
@@ -47,7 +53,6 @@ import {
   type AiTraceStage,
 } from '../components/management/ai-assistant/exam-format'
 import {
-  liveDraftTail,
   liveDraftView,
   type LiveDraft,
   type LiveDraftView,
@@ -88,6 +93,17 @@ export interface SheetRewrite {
   question: AiDraftQuestion
 }
 
+/**
+ * What a compose request carries besides its words: the exam on the sheet (for the assistant that changes it) and
+ * whether the teacher agreed to replace that exam with a new one.
+ */
+export interface ComposeExtra {
+  sheet?: AiExamSheet
+  confirmed?: boolean
+  /** The paper a mock exam follows, as the assistant proposed it; the settings' paper otherwise. */
+  bankSourceId?: string
+}
+
 /** The unit the AI is writing, with its words read once into questions and options (the sheet and the chat show them). */
 export type LiveWriting = LiveDraft & { view: LiveDraftView }
 
@@ -101,6 +117,10 @@ export interface AiRun {
   knownAssistantIds: string[]
   /** The unit the AI is writing right now, as far as its words have come. */
   draft: LiveWriting | null
+  /** The words of an ask answer being written, until the answer itself arrives. */
+  answer?: string
+  /** The assistant changes the exam there is (it may still write new questions through the compose stages). */
+  agent?: boolean
 }
 
 /**
@@ -114,6 +134,7 @@ const NO_TRACE: string[] = []
 export const runStagesOf = (run: AiRun | null) => run?.stages ?? NO_STAGES
 export const runTraceOf = (run: AiRun | null) => run?.trace ?? NO_TRACE
 export const runWritingOf = (run: AiRun | null) => run?.draft ?? null
+export const runAnswerOf = (run: AiRun | null) => run?.answer ?? ''
 /** The question the run added last, for following the writing on the sheet. */
 export const runLastItemOf = (run: AiRun | null) => run?.itemIds.at(-1) ?? null
 const runGoingOn = (run: AiRun | null) => run !== null
@@ -141,6 +162,7 @@ const STAGE_TITLES: Record<string, string> = {
   lookup: 'Tra cứu',
   revise: 'Sửa câu hỏi',
   queue: 'Đang chờ đến lượt',
+  agent: 'Đọc đề và làm theo yêu cầu',
 }
 
 function errorMessage(error: unknown) {
@@ -203,7 +225,8 @@ function titleFromText(text: string) {
   return line.length > 60 ? `${line.slice(0, 59)}…` : line
 }
 
-function initialStages(mode: AiAssistantMode): AiTraceStage[] {
+function initialStages(mode: AiAssistantMode, agent = false): AiTraceStage[] {
+  if (agent) return [{ id: 'agent', title: STAGE_TITLES.agent, items: [], state: 'running' }]
   if (mode === 'ask') return [{ id: 'lookup', title: STAGE_TITLES.lookup, items: [], state: 'running' }]
   // A revise run reports its steps under the write stage, retitled.
   if (mode === 'revise') return [{ id: 'write', title: STAGE_TITLES.revise, items: [], state: 'running' }]
@@ -227,7 +250,7 @@ function withStage(
 
 /** A later stage starting means the ones before it finished. */
 function finishBefore(stages: AiTraceStage[], id: string): AiTraceStage[] {
-  const order = ['queue', 'explore', 'plan', 'write']
+  const order = ['queue', 'agent', 'explore', 'plan', 'write']
   const index = order.indexOf(id)
   if (index < 0) return stages
   return stages.map((stage) =>
@@ -263,6 +286,28 @@ const TOOL_LABELS: Record<string, string> = {
   get_document_question: 'Đọc câu trong đề',
   revise_question: 'Viết lại câu',
   check_question: 'Kiểm tra lại câu',
+  read_exam: 'Đọc đề',
+  read_questions: 'Đọc câu trong đề',
+  remove_questions: 'Bỏ câu',
+  move_questions: 'Đổi thứ tự câu',
+  rewrite_questions: 'Viết lại câu',
+  add_questions: 'Thêm câu',
+  compose_exam: 'Chuẩn bị soạn đề mới',
+  compose_mock_exam: 'Chuẩn bị soạn đề mô phỏng',
+  export_exam: 'Chuẩn bị file',
+  update_answer_key: 'Cập nhật đáp án',
+  remove_answer_key: 'Bỏ đáp án',
+  import_paper: 'Chuẩn bị nạp đề',
+  edit_text: 'Sửa chữ trên đề',
+  insert_text: 'Thêm dòng chữ',
+  remove_text: 'Bỏ dòng chữ',
+  add_exam_header: 'Thêm đầu đề',
+  replace_text: 'Tìm và thay chữ',
+}
+
+/** A file of the exam in the teacher's words: "Word không đáp án". */
+export function examFileName(file: { format?: unknown; answers?: unknown }) {
+  return `${file.format === 'pdf' ? 'PDF' : 'Word'} ${file.answers === false ? 'không đáp án' : 'có đáp án'}`
 }
 
 /** A tool call as one plain line: what it did, and at most a short readable hint (a difficulty, a query). */
@@ -271,7 +316,17 @@ function toolLine(data: { tool: string; arguments?: unknown }) {
   const label = TOOL_LABELS[data.tool] ?? (data.tool ? 'Tra cứu dữ liệu' : 'Công cụ')
   const difficulty = typeof args.difficulty === 'string' ? DIFFICULTY_LABELS[args.difficulty as AiDifficulty] : undefined
   const query = typeof args.query === 'string' ? args.query.trim() : ''
-  const number = typeof args.number === 'number' ? `câu ${args.number}` : undefined
+  const numbers = Array.isArray(args.numbers) ? args.numbers.filter((value): value is number => typeof value === 'number') : []
+  const number =
+    typeof args.number === 'number'
+      ? `câu ${args.number}`
+      : numbers.length > 0
+        ? `câu ${numbers.join(', ')}`
+        : typeof args.count === 'number'
+          ? `${args.count} câu`
+          : undefined
+  if (data.tool === 'export_exam') return { label, detail: examFileName(args) }
+  if (data.tool === 'remove_answer_key') return { label: args.part === 'all' ? 'Bỏ đáp án và lời giải' : 'Bỏ lời giải' }
   const detail =
     number ?? (difficulty ? `mức ${difficulty.toLowerCase()}` : query ? (query.length > 60 ? `${query.slice(0, 59)}…` : query) : undefined)
   return { label, detail }
@@ -280,11 +335,15 @@ function toolLine(data: { tool: string; arguments?: unknown }) {
 function mapMessage(message: AiMessage): AiChatMessage {
   return {
     id: message.id,
+    parentId: message.parentId ?? null,
     role: message.role === 'USER' ? 'user' : 'assistant',
     body: message.content ?? '',
     createdAt: message.createdAt,
     mode: normalizeMode(message.mode),
     trace: traceLines(message.trace),
+    ...(message.suggestions ? { suggestions: message.suggestions } : {}),
+    ...(message.attachments?.length ? { attachments: message.attachments } : {}),
+    ...(message.files?.length ? { files: message.files } : {}),
   }
 }
 
@@ -296,6 +355,33 @@ const LOCAL_ID = /^(local|subject|error|summary)-/
  * "Bạn muốn soạn môn nào?" and the words above it) is never stored, and a finished run's card is built here; a reload
  * of the thread keeps them where they were, after the message they followed.
  */
+/**
+ * The message each one follows: its parent, or, for a message older than versions, the one written before it.
+ * Takes the conversation in the order its messages were written.
+ */
+export function parentsOf(all: readonly AiChatMessage[]): Map<string, string | null> {
+  const parents = new Map<string, string | null>()
+  let before: string | null = null
+  for (const message of all) {
+    parents.set(message.id, message.parentId ?? before)
+    before = message.id
+  }
+  return parents
+}
+
+/** The branch of the conversation down to `head` (the newest message by default), from its first message. */
+function branchOf(all: readonly AiChatMessage[], head: string | null = all.at(-1)?.id ?? null): AiChatMessage[] {
+  const byId = new Map(all.map((message) => [message.id, message]))
+  const parents = parentsOf(all)
+  const path: AiChatMessage[] = []
+  const seen = new Set<string>()
+  for (let id = head; id && byId.has(id) && !seen.has(id); id = parents.get(id) ?? null) {
+    seen.add(id)
+    path.push(byId.get(id) as AiChatMessage)
+  }
+  return path.reverse()
+}
+
 function mergeServerMessages(server: AiChatMessage[], previous: AiChatMessage[]): AiChatMessage[] {
   const previousById = new Map(previous.map((message) => [message.id, message]))
   const merged = server.map((message) => {
@@ -356,8 +442,31 @@ export interface BankPaperList {
   refresh: () => void
 }
 
+/** The open exam's sheet, as the page lends it to the runs that replace its exam. */
+export interface ExamSheet {
+  /** Saves what waits to be saved, so the server keeps the exam a new run replaces as the teacher sees it. */
+  save: () => Promise<void>
+  /** Takes the replaced exam off the sheet, once the server took the run that writes the new one. */
+  clear: () => void
+  /** Reads the sheet again: the server put back the exam a stopped run replaced. */
+  reload: () => Promise<void>
+  /** The exam as the sheet prints it now, for the assistant to read; null while there is no sheet to read. */
+  read: () => AiExamSheet | null
+}
+
+/** How long a run's send waits for the sheet to be saved, or a stopped run for the sheet put back. */
+const SHEET_WAIT_MS = 10_000
+
+function atMost(promise: Promise<void>, ms: number) {
+  return Promise.race([promise, new Promise<void>((resolve) => window.setTimeout(resolve, ms))])
+}
+
 /** The AI assistant page: conversations, the live stream of a run, and the draft it writes into. */
 export function useAiAssistant(bank: BankPaperList) {
+  const sheetRef = useRef<ExamSheet | null>(null)
+  const attachSheet = useCallback((sheet: ExamSheet | null) => {
+    sheetRef.current = sheet
+  }, [])
   // After a reload the list this tab showed last is shown at once, while it is asked for again.
   const [cachedConversations] = useState(() => readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE))
   const [conversations, setConversations] = useState<AiConversation[]>(cachedConversations ?? [])
@@ -370,11 +479,17 @@ export function useAiAssistant(bank: BankPaperList) {
   const [draft, setDraft] = useState<AiDraftResponse | null>(null)
   const [draftLoading, setDraftLoading] = useState(false)
   const [mode, setMode] = useState<AiAssistantMode>('compose')
+  // Whether the assistant takes every message, as the server says with an exam's draft. It is the same for every exam,
+  // so once known it holds for a new exam too.
+  const [assistantOn, setAssistantOn] = useState(false)
+  const assistantOnRef = useRef(false)
   const [runStore] = useState<AiRunStore>(() => createValueStore<AiRun | null>(null))
   const [sending, setSending] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   // Counts the exam runs (compose, mock exam) the server took that have ended on the open exam, its draft read again.
   const [examRunsEnded, setExamRunsEnded] = useState(0)
+  // The assistant's runs that ended: they changed an exam, so only a key it already has is written again.
+  const [agentRunsEnded, setAgentRunsEnded] = useState(0)
   const [saving, setSaving] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [settings, setSettings] = useState<AiComposeSettings>(DEFAULT_SETTINGS)
@@ -402,6 +517,8 @@ export function useAiAssistant(bank: BankPaperList) {
   const generationRef = useRef(0)
   const conversationsRef = useRef<AiConversation[]>(cachedConversations ?? [])
   const messagesRef = useRef<AiChatMessage[]>([])
+  /** Every message of the open conversation the server holds, in every branch; `messages` is the one shown. */
+  const [allMessages, setAllMessages] = useState<AiChatMessage[]>([])
   const draftRef = useRef<AiDraftResponse | null>(null)
   const runRef = useRef<AiRun | null>(null)
   const sendingRef = useRef(false)
@@ -421,6 +538,17 @@ export function useAiAssistant(bank: BankPaperList) {
   const revisionRef = useRef(0)
   /** Questions only the sheet holds that the AI rewrote, in order; the page writes each once (by `seq`). */
   const [rewrites, setRewrites] = useState<SheetRewrite[]>([])
+  /** The assistant's changes to the exam's order, in order; the page makes each once on the sheet (by `editId`). */
+  const [sheetEdits, setSheetEdits] = useState<Array<AiSheetEdit & { conversationId: string }>>([])
+  /** A change the assistant left for the teacher to agree to, on the exam it is for. */
+  const [confirmRequest, setConfirmRequest] = useState<{ conversationId: string; request: AiConfirmRequest } | null>(null)
+  // What the teacher asked the assistant to do to the answer key, done once the run's questions are in; `seq` tells
+  // each request from the last.
+  const [answerKeyRequest, setAnswerKeyRequest] = useState<{
+    conversationId: string
+    seq: number
+    ask: AiAnswerKeyAsk
+  } | null>(null)
 
   /** The mode the teacher picks; an exam opened before the list arrived then keeps it. */
   const chooseMode = useCallback((next: AiAssistantMode) => {
@@ -457,6 +585,10 @@ export function useAiAssistant(bank: BankPaperList) {
   const updateDraft = useCallback((next: AiDraftResponse | null) => {
     draftRef.current = next
     setDraft(next)
+    if (next?.composeAgent && !assistantOnRef.current) {
+      assistantOnRef.current = true
+      setAssistantOn(true)
+    }
   }, [])
 
   const updateRun = useCallback((next: AiRun | null) => {
@@ -511,14 +643,21 @@ export function useAiAssistant(bank: BankPaperList) {
     handle.controller.abort()
   }, [])
 
-  const refreshMessages = useCallback(async (conversationId: string) => {
+  /**
+   * Reads the conversation's messages again. `then` runs in the same update that shows them (or once they cannot be
+   * read): an ended run's progress gives way to its reply there, so the thread never shows the turn without either.
+   */
+  const refreshMessages = useCallback(async (conversationId: string, then?: () => void) => {
     try {
-      const server = await getAiMessages(conversationId)
+      const server = (await getAiMessages(conversationId)).map(mapMessage)
       if (activeIdRef.current !== conversationId) return false
-      updateMessages(mergeServerMessages(server.map(mapMessage), messagesRef.current))
+      setAllMessages(server)
+      updateMessages(mergeServerMessages(branchOf(server), messagesRef.current))
       return true
     } catch {
       return false
+    } finally {
+      then?.()
     }
   }, [updateMessages])
 
@@ -534,9 +673,10 @@ export function useAiAssistant(bank: BankPaperList) {
   }, [updateDraft])
 
   /** An exam run the server took has ended and the exam's draft was read again: the answer key is due. */
-  const examRunEnded = useCallback((conversationId: string, runMode: AiAssistantMode) => {
+  const examRunEnded = useCallback((conversationId: string, runMode: AiAssistantMode, agent = false) => {
     if (runMode === 'ask' || runMode === 'revise' || activeIdRef.current !== conversationId) return
-    setExamRunsEnded((count) => count + 1)
+    if (agent) setAgentRunsEnded((count) => count + 1)
+    else setExamRunsEnded((count) => count + 1)
   }, [])
 
   const finishRun = useCallback(
@@ -549,11 +689,20 @@ export function useAiAssistant(bank: BankPaperList) {
       setSending(false)
       sendingRef.current = false
 
+      // The sheet is read again before the draft: it already holds the questions the draft gets back.
+      // A stopped exam run gets back the exam it replaced from the stop itself; a failed one says so on its end.
+      const examRun = finished !== null && finished.mode !== 'ask' && finished.mode !== 'revise'
+      const stoppedRun = event.type === 'end' && event.data.status === 'CANCELLED'
+      const restored = (event.type === 'end' || event.type === 'error') && event.data.restored === true
+      if (examRun && (stoppedRun || restored) && activeIdRef.current === conversationId && sheetRef.current) {
+        await atMost(sheetRef.current.reload(), SHEET_WAIT_MS)
+      }
+
       if (event.type === 'error') {
         updateRun(null)
         if (finished && finished.mode !== 'ask') {
           await refreshDraft(conversationId)
-          examRunEnded(conversationId, finished.mode)
+          examRunEnded(conversationId, finished.mode, finished.agent)
         }
         return
       }
@@ -561,19 +710,25 @@ export function useAiAssistant(bank: BankPaperList) {
 
       const endEvent = event
       const stopped = endEvent.data.status === 'CANCELLED'
-      updateRun(null)
-      if (!finished) return
+      if (!finished) {
+        updateRun(null)
+        return
+      }
+      // The run's progress stays in the thread until its reply is read, and leaves with it in one update.
+      const endRun = () => updateRun(null)
 
       if (finished.mode === 'ask') {
-        await refreshMessages(conversationId)
+        await refreshMessages(conversationId, endRun)
         return
       }
 
       const [messagesLoaded] = await Promise.all([
-        refreshMessages(conversationId),
+        refreshMessages(conversationId, endRun),
         refreshDraft(conversationId),
       ])
-      examRunEnded(conversationId, finished.mode)
+      examRunEnded(conversationId, finished.mode, finished.agent)
+      const ask = endEvent.data.answerKey
+      if (ask) setAnswerKeyRequest((previous) => ({ conversationId, seq: (previous?.seq ?? 0) + 1, ask }))
       if (!messagesLoaded || activeIdRef.current !== conversationId) return
 
       const known = new Set(finished.knownAssistantIds)
@@ -607,6 +762,7 @@ export function useAiAssistant(bank: BankPaperList) {
           mode: finished.mode,
           stages: markAllDone(finished.stages),
           addedItemIds: finished.itemIds,
+          ...(endEvent.data.files?.length ? { files: endEvent.data.files } : {}),
           ...(stopped ? { stopped } : {}),
         },
       ])
@@ -645,7 +801,8 @@ export function useAiAssistant(bank: BankPaperList) {
           }
           let detail: string | undefined
           let notes: string[] | undefined
-          if (stageId === 'explore') detail = event.data.summary ?? undefined
+          // The assistant's plan for the request ("Sẽ bỏ câu 3 rồi thêm 2 câu hình học") shows as its step's line.
+          if (stageId === 'explore' || stageId === 'agent') detail = event.data.summary ?? undefined
           if (stageId === 'plan' && event.data.status === 'done') {
             const cells = event.data.cells ?? 0
             detail = `${cells} câu${event.data.degraded ? ' · rút gọn' : ''}${event.data.mimic ? ' · theo đề mẫu' : ''}`
@@ -660,6 +817,10 @@ export function useAiAssistant(bank: BankPaperList) {
               ...(notes?.length ? { notes } : {}),
             }),
           })
+          return
+        }
+        case 'text': {
+          updateRun({ ...current, answer: event.data.text })
           return
         }
         case 'tool': {
@@ -677,6 +838,8 @@ export function useAiAssistant(bank: BankPaperList) {
                 ? [...current.trace, line.detail ? `${line.label} · ${line.detail}` : line.label]
                 : current.trace,
             stages: addTraceItem(current.stages, item),
+            // Words written before a tool call were the model thinking, not the answer.
+            answer: undefined,
           })
           return
         }
@@ -714,16 +877,12 @@ export function useAiAssistant(bank: BankPaperList) {
             text,
             view: liveDraftView(text),
           }
-          const tail = liveDraftTail(draft.view)
-          const stages = finishBefore(current.stages, 'write')
-          const items = (stages.find((stage) => stage.id === 'write')?.items ?? []).filter((entry) => entry.id !== 'draft')
+          // The words show on the sheet; the chat's steps change only when the writing stage starts, not with each word.
+          const writing = current.stages.some((stage) => stage.id === 'write' && stage.state === 'running')
           updateRun({
             ...current,
             draft,
-            stages: withStage(stages, 'write', {
-              state: 'running',
-              items: tail ? [...items, { id: 'draft', label: 'Đang viết', detail: tail, state: 'running' }] : items,
-            }),
+            ...(writing ? {} : { stages: withStage(finishBefore(current.stages, 'write'), 'write', { state: 'running' }) }),
           })
           return
         }
@@ -756,6 +915,14 @@ export function useAiAssistant(bank: BankPaperList) {
           updateRun({ ...current, itemIds: [...current.itemIds, `sheet-${event.data.number}`] })
           return
         }
+        case 'edit': {
+          const conversationId = activeIdRef.current
+          if (!conversationId) return
+          setSheetEdits((previous) =>
+            previous.some((edit) => edit.editId === event.data.editId) ? previous : [...previous, { ...event.data, conversationId }]
+          )
+          return
+        }
         case 'answer': {
           if (!messagesRef.current.some((message) => message.id === event.data.messageId)) {
             updateMessages([
@@ -770,11 +937,14 @@ export function useAiAssistant(bank: BankPaperList) {
               },
             ])
           }
-          updateRun({ ...current, stages: markAllDone(current.stages) })
+          // The reply now holds the words; the running turn stops showing them.
+          updateRun({ ...current, stages: markAllDone(current.stages), answer: undefined })
           return
         }
         case 'end': {
           updateRun({ ...current, stages: markAllDone(current.stages) })
+          const conversationId = activeIdRef.current
+          if (event.data.confirm && conversationId) setConfirmRequest({ conversationId, request: event.data.confirm })
           void finishRun(event, activeIdRef.current ?? '')
           return
         }
@@ -917,6 +1087,7 @@ export function useAiAssistant(bank: BankPaperList) {
       // Before the server's list is in, the mode shown is a guess (this tab's copy, or none) that the list corrects.
       modeFromListRef.current = conversation && listedRef.current ? null : conversationId
       if (conversationMode) setMode(conversationMode)
+      setAllMessages([])
       updateMessages([])
       updateDraft(null)
       setDraftLoading(true)
@@ -927,7 +1098,9 @@ export function useAiAssistant(bank: BankPaperList) {
           getAiDraft(conversationId),
         ])
         if (activeIdRef.current !== conversationId) return
-        updateMessages(serverMessages.map(mapMessage))
+        const all = serverMessages.map(mapMessage)
+        setAllMessages(all)
+        updateMessages(branchOf(all))
         updateDraft(draftResponse)
         // The config the exam was last asked with comes back to the settings (a reload would reset it).
         showSettings(settingsFromConfig(draftResponse.draft?.config, preferredSettingsRef.current))
@@ -935,11 +1108,14 @@ export function useAiAssistant(bank: BankPaperList) {
         // so its stages, tool calls and new questions keep showing and it can be stopped.
         const active = draftResponse.run
         if (active && !runRef.current) {
+          const agent = active.mode === 'agent'
+          const runMode: AiAssistantMode = active.mode === 'agent' ? 'compose' : active.mode
           updateRun({
-            mode: active.mode,
+            mode: runMode,
+            ...(agent ? { agent } : {}),
             messageId: null,
             jobId: null,
-            stages: initialStages(active.mode),
+            stages: initialStages(runMode, agent),
             trace: [],
             itemIds: [],
             knownAssistantIds: messagesRef.current
@@ -948,7 +1124,7 @@ export function useAiAssistant(bank: BankPaperList) {
             draft: null,
           })
           void beginStream(conversationId, active.afterEventId)
-          armRunTimer(conversationId, active.mode)
+          armRunTimer(conversationId, runMode)
         }
       } catch (error) {
         if (activeIdRef.current === conversationId) setNotice(errorMessage(error))
@@ -1040,24 +1216,34 @@ export function useAiAssistant(bank: BankPaperList) {
 
   const numberOf = useMemo(() => questionNumbers(paper), [paper])
 
+  const dismissConfirm = useCallback(() => setConfirmRequest(null), [])
+
   const buildConfig = useCallback(
-    (text: string, revise?: AiRevisedItem[], document?: AiSheetDocument): AiSendConfig | undefined => {
+    (
+      text: string,
+      runMode: AiAssistantMode,
+      revise?: AiRevisedItem[],
+      document?: AiSheetDocument,
+      compose?: ComposeExtra
+    ): AiSendConfig | undefined => {
       if (revise) {
         return { examFormat: settings.examFormat, solutionStyle: settings.solutionStyle, instruction: text, items: revise }
       }
-      if (mode === 'ask') return document ? { document } : undefined
+      if (runMode === 'ask') return document ? { document } : undefined
       return {
         examFormat: settings.examFormat,
         questionCount: settings.questionCount === 'full' ? 'full' : settings.questionCount,
         bankRatio: settings.bankRatio,
         solutionStyle: settings.solutionStyle,
         instruction: text,
-        ...(mode === 'mock-exam' && settings.bankSourceId
-          ? { bankSourceId: settings.bankSourceId }
+        ...(runMode === 'mock-exam' && (compose?.bankSourceId || settings.bankSourceId)
+          ? { bankSourceId: compose?.bankSourceId || settings.bankSourceId }
           : {}),
+        ...(compose?.sheet ? { sheet: compose.sheet } : {}),
+        ...(compose?.confirmed ? { confirmed: true } : {}),
       }
     },
-    [mode, settings]
+    [settings]
   )
 
   /**
@@ -1123,15 +1309,21 @@ export function useAiAssistant(bank: BankPaperList) {
   const startRun = useCallback(
     async (
       text: string,
-      runMode: AiAssistantMode = mode,
+      requestedMode: AiAssistantMode = mode,
       revise?: AiRevisedItem[],
-      document?: AiSheetDocument
+      document?: AiSheetDocument,
+      attachments?: AiAttachment[],
+      after?: string | null,
+      compose?: ComposeExtra
     ): Promise<boolean> => {
       if (sendingRef.current || runRef.current) return false
+      // Known for a new exam once its conversation is made (see below).
+      let runMode = requestedMode
       sendingRef.current = true
       cancelRequestedRef.current = false
       setSending(true)
       setNotice(null)
+      setConfirmRequest(null)
       const knownAssistantIds = messagesRef.current
         .filter((message) => message.role === 'assistant')
         .map((message) => message.id)
@@ -1151,6 +1343,19 @@ export function useAiAssistant(bank: BankPaperList) {
         )
       }
 
+      // Asked again: the page goes back to the message the first version followed, and the new one follows it.
+      if (after !== undefined) {
+        const at = after === null ? -1 : messagesRef.current.findIndex((message) => message.id === after)
+        if (after !== null && at < 0) {
+          sendingRef.current = false
+          setSending(false)
+          return false
+        }
+        updateMessages(messagesRef.current.slice(0, at + 1))
+      }
+      const parentId =
+        after !== undefined ? after : ([...messagesRef.current].reverse().find((message) => !LOCAL_ID.test(message.id))?.id ?? null)
+
       let conversationId = activeIdRef.current
       // Made for this send (not by an edit of the sheet): it is taken back when the send fails, leaving no empty exam.
       let createdHere = false
@@ -1168,29 +1373,49 @@ export function useAiAssistant(bank: BankPaperList) {
           }
           createdHere = !shared
         }
+        // Where the assistant takes every message, a question and a request alike go to it; only a revision, and a new
+        // or mock exam the teacher agreed to, keep their own mode.
+        if (assistantOnRef.current && runMode !== 'revise' && !compose?.confirmed) runMode = 'compose'
 
         updateMessages([
           ...messagesRef.current,
           {
             id: localUserId,
+            parentId,
             role: 'user',
             body: text,
             createdAt: new Date().toISOString(),
+            ...(attachments?.length ? { attachments } : {}),
           },
         ])
+        // A new compose run replaces the exam; a revise run rewrites some of its questions in place, and the assistant
+        // changes the exam there is (a request on an exam with questions, unless the teacher agreed to replace it). The
+        // server keeps the exam as it was (to give it back if the run is stopped), so the sheet is saved first.
+        const examRun = runMode !== 'ask' && runMode !== 'revise'
+        // The assistant reads the exam, empty or not, and decides what the words ask for; a new exam it starts or
+        // proposes comes back as a request the teacher agreed to.
+        const toAssistant = runMode === 'compose' && assistantOnRef.current && !compose?.confirmed
+        // The assistant reads the sheet with every message, also one sent again ("Tạo lại", "Thử lại"): without it an
+        // exam with questions would read as empty, and a new exam would start over it unasked.
+        if (toAssistant && !compose?.sheet) {
+          const sheet = sheetRef.current?.read()
+          if (sheet) compose = { ...compose, sheet }
+        }
+        const replacing = examRun && !toAssistant
         const initialRun: AiRun = {
           mode: runMode,
+          ...(toAssistant ? { agent: true } : {}),
           messageId: null,
           jobId: null,
-          stages: initialStages(runMode),
+          stages: initialStages(runMode, toAssistant),
           trace: [],
           itemIds: [],
           knownAssistantIds,
           draft: null,
         }
         updateRun(initialRun)
-        // A new compose run replaces the draft; a revise run rewrites some of its questions in place.
-        if (runMode !== 'ask' && runMode !== 'revise' && draftRef.current) {
+        if (examRun && sheetRef.current) await atMost(sheetRef.current.save(), SHEET_WAIT_MS)
+        if (replacing && draftRef.current) {
           replaced = { before: draftRef.current, cleared: { ...draftRef.current, items: [] } }
           updateDraft(replaced.cleared)
         }
@@ -1201,12 +1426,17 @@ export function useAiAssistant(bank: BankPaperList) {
         const sent = await sendAiMessage(conversationId, {
           content: text,
           mode: runMode,
-          config: buildConfig(text, runMode === 'revise' ? revise : undefined, document),
+          config: buildConfig(text, runMode, runMode === 'revise' ? revise : undefined, document, compose),
+          ...(attachments?.length ? { attachments } : {}),
+          ...(parentId ? { parentId } : {}),
         })
         const running = runRef.current
         if (running) {
           updateRun({ ...running, messageId: sent.messageId, jobId: sent.jobId })
         }
+        // The server says whether the run replaces the exam; one that does not leaves the sheet as it is.
+        if ((sent.replaced ?? replacing) && activeIdRef.current === conversationId) sheetRef.current?.clear()
+        else if (replaced && sent.replaced === false && draftRef.current === replaced.cleared) updateDraft(replaced.before)
         updateMessages(
           messagesRef.current.map((message) =>
             message.id === localUserId ? { ...message, id: sent.messageId } : message
@@ -1290,13 +1520,34 @@ export function useAiAssistant(bank: BankPaperList) {
    * reads what the teacher sees.
    */
   const send = useCallback(
-    (words: string, extra?: { revise?: AiRevisedItem[]; document?: AiSheetDocument }) => {
+    (
+      words: string,
+      extra?: {
+        revise?: AiRevisedItem[]
+        document?: AiSheetDocument
+        attachments?: AiAttachment[]
+        after?: string | null
+        compose?: ComposeExtra
+        /** A mode of the page's own choosing (a mock exam the teacher agreed to); the picked one otherwise. */
+        mode?: AiAssistantMode
+      }
+    ) => {
       const text = words.trim()
       if (!text) return Promise.resolve(false)
       const revise = extra?.revise
-      return startRun(text, revise?.length ? 'revise' : mode, revise, extra?.document)
+      return startRun(text, revise?.length ? 'revise' : (extra?.mode ?? mode), revise, extra?.document, extra?.attachments, extra?.after, extra?.compose)
     },
     [mode, startRun]
+  )
+
+  /** Stores an image or PDF for the next ask question, on the open exam (made now for a new one). */
+  const uploadAttachment = useCallback(
+    async (file: File) => {
+      const id = await ensureConversation(titleFromText(file.name))
+      if (!id) throw new Error('Không tạo được đề để đính kèm tệp.')
+      return uploadAiAttachment(id, file)
+    },
+    [ensureConversation]
   )
 
   /** A step the page took for the run going on (the answer key written again), shown with the run's own steps. */
@@ -1320,12 +1571,25 @@ export function useAiAssistant(bank: BankPaperList) {
     const lastMode = normalizeMode(lastAssistant?.mode) ?? mode
     // A request to rewrite numbered questions needs those questions looked up again; composing it anew would
     // replace the whole exam.
-    if (lastMode === 'revise' || revisedNumbers(lastUser.body)) {
+    if (lastMode === 'revise' || (!assistantOnRef.current && revisedNumbers(lastUser.body))) {
       setNotice('Hãy nhắn lại yêu cầu sửa câu để trợ lý sửa lại.')
       return
     }
-    void startRun(lastUser.body, lastMode)
+    const at = messagesRef.current.indexOf(lastUser)
+    const before = [...messagesRef.current.slice(0, at)].reverse().find((message) => !LOCAL_ID.test(message.id))
+    void startRun(lastUser.body, lastMode, undefined, undefined, lastUser.attachments, before?.id ?? null)
   }, [mode, startRun])
+
+  /** Shows another branch of the conversation: the messages the thread lists, by id. */
+  const showBranch = useCallback(
+    (ids: readonly string[]) => {
+      if (sendingRef.current || runRef.current) return
+      const known = new Map([...allMessages, ...messagesRef.current].map((message) => [message.id, message]))
+      const branch = ids.flatMap((id) => (known.has(id) ? [known.get(id) as AiChatMessage] : []))
+      if (branch.length === ids.length) updateMessages(branch)
+    },
+    [allMessages, updateMessages]
+  )
 
   /** Sends words the page wrote (not the composer's); resolves to them when they did not go, for the input. */
   const sendFor = useCallback(
@@ -1385,6 +1649,8 @@ export function useAiAssistant(bank: BankPaperList) {
     autoSelectRef.current = false
     activeIdRef.current = null
     setActiveId(null)
+    // The versions of the exam left behind go with it: its first question would count as one of the new one's.
+    setAllMessages([])
     updateMessages([])
     updateDraft(null)
     updateRun(null)
@@ -1646,10 +1912,14 @@ export function useAiAssistant(bank: BankPaperList) {
     activeId,
     activeConversation,
     messages,
+    /** Every message of the open conversation in every branch, for the thread's versions of a turn. */
+    allMessages,
+    showBranch,
     paper,
     numberOf,
     draftLoading,
-    mode,
+    // With the assistant taking every message there is one way to send, the compose settings beside it.
+    mode: assistantOn ? ('compose' as const) : mode,
     running,
     sending,
     creatingConversation,
@@ -1672,6 +1942,7 @@ export function useAiAssistant(bank: BankPaperList) {
     addRunStep,
     cancel,
     ensureConversation,
+    uploadAttachment,
     startNew,
     selectConversation,
     renameConversation,
@@ -1688,6 +1959,16 @@ export function useAiAssistant(bank: BankPaperList) {
     runStore,
     /** Grows by one each time an exam run the server took ends on the open exam (done, stopped, failed, given up). */
     examRunsEnded,
+    agentRunsEnded,
+    attachSheet,
     rewrites,
+    sheetEdits,
+    /** The change the assistant asks the teacher to agree to on the open exam, or null. */
+    confirmRequest: confirmRequest && confirmRequest.conversationId === activeId ? confirmRequest.request : null,
+    dismissConfirm,
+    /** Every message goes to the assistant, which reads the exam and answers or changes it; there is no mode to pick. */
+    composeAgent: assistantOn,
+    /** The answer key the teacher asked the assistant to write again on the open exam, or null. */
+    answerKeyRequest: answerKeyRequest && answerKeyRequest.conversationId === activeId ? answerKeyRequest : null,
   }
 }
