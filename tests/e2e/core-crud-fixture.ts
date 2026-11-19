@@ -537,6 +537,10 @@ export async function installCrudFixture(
       if (method === 'GET') return answer({ scopes: [] })
       return answer({ scopes: (body.scopes as unknown[]) ?? [] })
     }
+    // a teacher's Zoom account; this fixture runs with Zoom disabled, as dev does
+    if (path.startsWith('/api/v1/users/') && path.endsWith('/zoom-account')) {
+      return answer({ zoomEmail: method === 'PUT' ? (body.zoomEmail as string) || null : null, zoomEnabled: false })
+    }
     const pageOf = (content: unknown[]) => ({
       content,
       pageNumber: 0,

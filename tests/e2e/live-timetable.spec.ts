@@ -8,8 +8,15 @@ function answer(data: unknown, status = 200) {
   return { status, contentType: 'application/json', body: JSON.stringify({ success: status < 400, status, message: 'OK', data }) }
 }
 
+/** Real Zoom meetings are made, and the teacher holds this Zoom account (null: none given yet). */
+async function zoomAccountOfTeachers(page: Page, zoomEmail: string | null) {
+  await page.route((url) => /^\/api\/v1\/users\/[^/]+\/zoom-account$/.test(url.pathname),
+    (route) => route.fulfill(answer({ zoomEmail, zoomEnabled: true })))
+}
+
 /** The main course with a subject on its section and one named phase, as the timetable form needs. */
 async function courseWithSubject(page: Page) {
+  await zoomAccountOfTeachers(page, 'an@hocluc.test')
   await page.route(`**/api/v1/courses/${IDS.main}`, (route) => route.fulfill(answer({
     id: IDS.main,
     title: 'MAIN Toán',
@@ -97,9 +104,41 @@ test('a timetable whose outcome is unknown locks the form instead of inviting a 
   expect(calls).toBe(1)
 })
 
+test('staff are told a teacher without a Zoom account cannot be given live classes', async ({ page }) => {
+  test.setTimeout(120_000)
+  await installCrudFixture(page)
+  await courseWithSubject(page)
+  await zoomAccountOfTeachers(page, null)
+  await page.goto('/staff/schedules')
+  const panel = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Thời khóa biểu trực tuyến', exact: true }) })
+  await expect(panel).toBeVisible({ timeout: 90_000 })
+
+  await panel.getByRole('button', { name: /Giáo viên/ }).click()
+  await page.getByRole('option').first().click()
+
+  await expect(panel.getByRole('alert')).toHaveText(
+    'Giáo viên này chưa được cấp tài khoản Zoom. Vui lòng liên hệ quản trị viên để được cấp.')
+  await expect(panel.getByRole('button', { name: 'Tạo lớp trực tuyến', exact: true })).toBeDisabled()
+  expect(fixtureProblems(page)).toMatchObject({ unmatchedRequests: [], pageErrors: [] })
+})
+
+test('a teacher without a Zoom account is asked to contact an administrator', async ({ page }) => {
+  test.setTimeout(120_000)
+  const state = await installQuizFixture(page, 'TEACHER')
+  await zoomAccountOfTeachers(page, null)
+  await page.route('**/api/v1/schedules/teaching**', (route) => route.fulfill(answer([])))
+  await page.route('**/api/v1/teachers/*/class-sessions**', (route) => route.fulfill(answer([])))
+  await page.route('**/api/v1/live-classes**', (route) => route.fulfill(answer([])))
+  await page.goto('/console/teacher/schedule')
+
+  await expect(page.getByText(/Bạn chưa được cấp tài khoản Zoom.*liên hệ quản trị viên/)).toBeVisible({ timeout: 90_000 })
+  expect(state.pageErrors).toEqual([])
+})
+
 test('a teacher fills in the title and description of a coming live class', async ({ page }) => {
   test.setTimeout(120_000)
   const state = await installQuizFixture(page, 'TEACHER')
+  await zoomAccountOfTeachers(page, 'an@hocluc.test')
   const start = Date.now() + 3 * 24 * 60 * 60 * 1000
   const liveClass = {
     id: 'lc-teacher',

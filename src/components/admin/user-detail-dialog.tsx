@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../tailgrids/core/avatar'
 import SubjectScopeEditor from './subject-scope-editor'
 import FactGrid from './fact-grid'
 import MentorProfilePanel from './mentor-profile-panel'
+import TeacherZoomPanel from './teacher-zoom-panel'
 import {
   ROLE_LABELS,
   STATUS_LABELS,
@@ -43,7 +44,7 @@ interface UserDetailDialogProps {
 
 const LISTED_COURSES = 3
 
-type UserTab = 'overview' | 'learning' | 'profile' | 'mentor' | 'roles' | 'subjects' | 'system'
+type UserTab = 'overview' | 'learning' | 'profile' | 'mentor' | 'zoom' | 'roles' | 'subjects' | 'system'
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' }
 const TRACK_LABELS: Record<string, string> = {
@@ -75,6 +76,9 @@ function UserDetail({
   // Subject permissions are granted by administrators and managers, to staff-side accounts only.
   const showSubjectTab = !!user && !isStudent && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER')
   // The back office reads a mentor's profile; only administrators change it.
+  // A teacher's live classes are hosted on the Zoom user the center gives them; only administrators change it.
+  const showZoomTab =
+    user?.role === 'TEACHER' && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
   const showMentorTab =
     user?.role === 'MENTOR' && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
   const [tab, setTab] = useState<UserTab>('overview')
@@ -254,6 +258,7 @@ function UserDetail({
                   {isStudent && <ConsoleTabsTrigger value="learning">Học tập</ConsoleTabsTrigger>}
                   {isStudent && <ConsoleTabsTrigger value="profile">Hồ sơ</ConsoleTabsTrigger>}
                   {showMentorTab && <ConsoleTabsTrigger value="mentor">Hồ sơ Mentor</ConsoleTabsTrigger>}
+                  {showZoomTab && <ConsoleTabsTrigger value="zoom">Zoom</ConsoleTabsTrigger>}
                   {showRoleTab && <ConsoleTabsTrigger value="roles">Vai trò</ConsoleTabsTrigger>}
                   {showSubjectTab && <ConsoleTabsTrigger value="subjects">Quyền theo môn</ConsoleTabsTrigger>}
                   <ConsoleTabsTrigger value="system">Hệ thống</ConsoleTabsTrigger>
@@ -304,6 +309,12 @@ function UserDetail({
                           { label: 'Năm tốt nghiệp', value: student?.graduationYear },
                         ]}
                       />
+                    </ConsoleTabsContent>
+                  )}
+
+                  {showZoomTab && (
+                    <ConsoleTabsContent value="zoom">
+                      <TeacherZoomPanel userId={user.id} canEdit={viewer?.role === 'ADMINISTRATOR'} />
                     </ConsoleTabsContent>
                   )}
 
