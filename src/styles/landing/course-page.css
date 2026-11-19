@@ -620,3 +620,10 @@
   font-size: var(--small);
   font-weight: 700;
 }
+.course-page .cd-buy-cover video,
+.course-page .cd-buy-cover iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}

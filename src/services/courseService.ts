@@ -133,6 +133,9 @@ export interface CourseDetail {
   price?: number
   /** Study time the author states, in minutes. */
   estimatedDurationMinutes?: number | null
+  /** FIXED_END_DATE: study until endDate (open-ended without one); DAYS_FROM_PURCHASE: accessDays from paying. */
+  accessMode?: 'FIXED_END_DATE' | 'DAYS_FROM_PURCHASE' | null
+  accessDays?: number | null
   purchased?: boolean
   inCart?: boolean
   phaseCount?: number

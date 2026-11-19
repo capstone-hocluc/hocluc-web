@@ -5,6 +5,7 @@ import Button from '../ui/Button'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { getProfileSubjects, updateStudentProfile, type ProfileSubject, type SubjectLevel } from '../../services/userService'
 import { getErrorMessage } from '../../lib/errors'
+import { formatExamLabel } from '../../lib/courseFormat'
 
 const inputClass = 'mt-2 min-h-11 w-full rounded-xl border border-line bg-surface-input px-3 text-text-heading focus-visible:outline-2 focus-visible:outline-focus-ring aria-invalid:border-danger'
 const groups = [
@@ -126,7 +127,7 @@ export default function StudentOnboarding({ onClose, onComplete, restoreFocus }:
           <div className="min-h-0 flex-1 app-scroll overflow-y-auto px-6 py-5 max-[760px]:px-4" aria-busy={saving}>
             {step === 1 ? (
               <div className="flex flex-col gap-5">
-                <div className="rounded-xl border border-line-brand bg-surface-brand p-4"><p className="text-sm text-text-body">Kỳ thi</p><strong>ĐGNL ĐHQG TP.HCM</strong><p className="text-xs text-text-muted">VNUHCM_DGNL</p></div>
+                <div className="rounded-xl border border-line-brand bg-surface-brand p-4"><p className="text-sm text-text-body">Kỳ thi</p><strong>{formatExamLabel('VNUHCM_DGNL')}</strong></div>
                 <div>
                   <label htmlFor="learning-target-score" className="text-sm font-semibold">Điểm mục tiêu</label>
                   <input aria-label="Thanh điểm mục tiêu" className="mt-3 w-full accent-primary" type="range" min={0} max={1200} step={1} value={scoreError || score === '' ? 0 : Number(score)} onChange={(event) => setScore(event.target.value)} />

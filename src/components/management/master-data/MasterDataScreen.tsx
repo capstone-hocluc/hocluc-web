@@ -149,6 +149,14 @@ export default function MasterDataScreen({ readOnly = false }: { readOnly?: bool
       )}
       {error && <Notice tone="danger">{error}</Notice>}
 
+      {!readOnly && (
+        <div className="flex justify-end">
+          <Button onClick={() => setImporting(true)} disabled={!categoryId}>
+            <FilePlus2 size={17} />
+            Nhập file Excel
+          </Button>
+        </div>
+      )}
       <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
         <FilterToolbar>
           <SelectField
@@ -165,12 +173,6 @@ export default function MasterDataScreen({ readOnly = false }: { readOnly?: bool
               setError('')
             }}
           />
-          {!readOnly && (
-            <Button onClick={() => setImporting(true)} disabled={!categoryId}>
-              <FilePlus2 size={17} />
-              Nhập file Excel
-            </Button>
-          )}
         </FilterToolbar>
         <ScheduleResourceState
           skeleton="table"

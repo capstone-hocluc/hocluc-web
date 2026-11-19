@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
-import { fieldControlClass } from '../../console/form-field'
+import { fieldControlClass, RequiredMark } from '../../console/form-field'
 import { imageFileProblem, uploadPublicImage } from '../../../services/fileService'
 import { courseImageSrc } from './course-image-src'
 
@@ -12,6 +12,10 @@ interface Props {
   disabled?: boolean
   /** Tells the form to hold its save button while a file is on its way. */
   onUploadingChange?: (uploading: boolean) => void
+  /** Called with the address whenever it changes, for forms that check what is still missing. */
+  onChange?: (value: string) => void
+  /** Shows the required star. */
+  required?: boolean
 }
 
 // Image picker with two ways in on one row: paste an address, or upload a file from the computer.
@@ -21,6 +25,8 @@ export default function CourseImageField({
   defaultValue,
   disabled,
   onUploadingChange,
+  onChange,
+  required,
 }: Props) {
   const [value, setValue] = useState(defaultValue)
   const [uploading, setUploading] = useState(false)
@@ -30,6 +36,7 @@ export default function CourseImageField({
 
   function change(next: string) {
     setValue(next)
+    onChange?.(next)
     setPreviewFailed(false)
     setError('')
   }
@@ -63,7 +70,10 @@ export default function CourseImageField({
       aria-label="Ảnh khóa học"
       className="flex flex-col gap-2 text-sm font-medium text-text-primary"
     >
-      <span>Ảnh khóa học</span>
+      <span>
+        Ảnh khóa học
+        {required && <RequiredMark />}
+      </span>
       <input type="hidden" name={name} value={value} />
       <div className="flex items-center gap-2">
         <input

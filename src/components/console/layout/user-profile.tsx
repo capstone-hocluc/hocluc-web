@@ -91,12 +91,12 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
         <DropdownMenuItem
           onAction={onLogout}
           isDisabled={logoutLoading}
-          className="m-1.5 w-auto cursor-pointer px-3 py-2.5"
+          className="m-1.5 w-auto cursor-pointer px-3 py-2.5 text-input-error"
         >
-          <span className="text-icon-secondary group-hover:text-text-primary">
+          <span className="text-input-error">
             <LogoutIcon />
           </span>
-          <span className="leading-5">{logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
+          <span className="leading-5 text-input-error">{logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

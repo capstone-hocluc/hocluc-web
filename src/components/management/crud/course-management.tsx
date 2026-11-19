@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { ColumnDef } from '@tanstack/react-table'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import PageHeading from '../../console/page-heading'
 import Button from '../../console/button'
 import Card from '../../console/card'
-import DataTable from '../../console/data-table'
 import Field from '../../console/form-field'
 import SelectField from '../../console/select-field'
 import { FilterGroup, FilterSelect, FilterToolbar, SearchInput } from '../../console/filter-toolbar'
@@ -25,10 +23,11 @@ import {
   type CourseQuery,
 } from '../../../services/courseAdminService'
 import { crudError, unknownMutation } from './crud-errors'
-import CourseEditorDialog from './course-editor-dialog'
+import CourseEditorPage from './course-editor-page'
+import { leaveCourseView, pushCourseView, readCourseView, replaceCourseView, type CourseView } from './course-view-url'
 import CategoryEditorDialog from './category-editor-dialog'
 import CourseDetailScreen from './course-detail-screen'
-import CourseCover from './course-cover'
+import CourseCard from './course-card'
 import CourseRejectDialog from './course-reject-dialog'
 import CourseRowActions, { type CourseRowHandlers } from './course-row-actions'
 import { ACTION_COPY, runReviewAction, type ReviewAction } from './course-review-actions'
@@ -40,7 +39,6 @@ import SubjectRail, {
 import {
   COURSE_STATUS_LABELS,
   COURSE_TYPE_LABELS,
-  courseDisplayStatus,
   REVIEW_STATE_LABELS,
 } from './course-labels'
 // Backend field when present (it knows per-subject reviewers); otherwise the roles that always review.
@@ -49,14 +47,6 @@ const canReviewCourse = (course: CourseAdmin, role?: string) =>
 // The old subject page was limited to these roles; teachers only read courses.
 const canManageSubjects = (role?: string) =>
   role === 'ADMINISTRATOR' || role === 'STAFF' || role === 'MANAGER'
-const price = (course: CourseAdmin) =>
-  !course.paid
-    ? 'Miễn phí'
-    : new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-        maximumFractionDigits: 0,
-      }).format(course.price ?? 0)
 const byOrder = (a: Category, b: Category) =>
   Number(!a.active) - Number(!b.active) ||
   a.sortOrder - b.sortOrder ||
@@ -119,13 +109,12 @@ export default function CourseManagement({
     return () => window.clearTimeout(timer)
   }, [search, query.query])
   const [subjectId, setSubjectId] = useState('ALL')
-  const [editor, setEditor] = useState<{ course: CourseAdmin | null } | null>(null)
+  // List, detail or form, read from and written to the query string so reload and Back keep the screen.
+  const [view, setView] = useState<CourseView>(() => readCourseView())
   const [categoryEditor, setCategoryEditor] = useState<{
     category: Category | null
     parentId?: string
   } | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('courseId'))
-  const [openOnContent, setOpenOnContent] = useState(() => Boolean(new URLSearchParams(window.location.search).get('courseId')))
   const [deleting, setDeleting] = useState<CourseAdmin | null>(null)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
   const [reviewing, setReviewing] = useState<{ course: CourseAdmin; action: ReviewAction } | null>(
@@ -175,10 +164,36 @@ export default function CourseManagement({
   )
   const selectedSubject = subjectId === 'ALL' ? null : findSubject(groups, subjectId)
   const selectedRoot = groups.find((group) => group.root.id === subjectId)
-  const openDetail = (id: string) => {
-    setOpenOnContent(false)
-    setSelectedId(id)
+  const reloadList = resource.reload
+  const reloadPending = pending.reload
+  const applyView = useCallback(
+    (next: CourseView) => {
+      setView(next)
+      // Back on the list after a detail or the form: what was done there may change the cards.
+      if (next.kind === 'list') {
+        reloadList()
+        reloadPending()
+      }
+    },
+    [reloadList, reloadPending]
+  )
+  useEffect(() => {
+    const onPopState = () => applyView(readCourseView())
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [applyView])
+  const go = useCallback((next: CourseView) => {
+    pushCourseView(next)
+    setView(next)
+  }, [])
+  const leave = (fallback: CourseView) => {
+    if (!leaveCourseView(fallback)) applyView(fallback)
   }
+  const showInPlace = (next: CourseView) => {
+    replaceCourseView(next)
+    applyView(next)
+  }
+  const openDetail = (id: string) => go({ kind: 'detail', id, content: false })
   const selectSubject = (id: string) => {
     setSubjectId(id)
     setQuery((old) => ({ ...old, page: 0 }))
@@ -186,11 +201,8 @@ export default function CourseManagement({
   const clearError = () => setError('')
   const rowHandlers = useMemo<CourseRowHandlers>(
     () => ({
-      onContent: (course) => {
-        setOpenOnContent(true)
-        setSelectedId(course.id)
-      },
-      onEdit: (course) => setEditor({ course }),
+      onContent: (course) => go({ kind: 'detail', id: course.id, content: true }),
+      onEdit: (course) => go({ kind: 'edit', id: course.id }),
       onReview: (course, action) => {
         clearError()
         setReviewing({ course, action })
@@ -204,96 +216,7 @@ export default function CourseManagement({
         setDeleting(course)
       },
     }),
-    []
-  )
-  const columns = useMemo<ColumnDef<CourseAdmin>[]>(
-    () => [
-      {
-        accessorKey: 'title',
-        header: 'Khóa học',
-        enableSorting: false,
-        meta: { className: 'px-2!' },
-        cell: ({ row }) => (
-          <div className="flex min-w-0 items-center gap-2">
-            <CourseCover
-              imageUrl={row.original.imageUrl}
-              title={row.original.title}
-              categoryName={row.original.categoryName}
-              loading="lazy"
-              className="w-10 shrink-0 text-xs"
-            />
-            <button
-              type="button"
-              className="line-clamp-2 min-w-0 flex-1 text-left font-medium leading-5 hover:text-primary focus-visible:underline"
-              title={row.original.title}
-              onClick={() => openDetail(row.original.id)}
-            >
-              {row.original.title}
-            </button>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'courseType',
-        header: 'Loại',
-        enableSorting: false,
-        meta: { className: 'w-[4.75rem] px-1.5! whitespace-nowrap' },
-        cell: ({ row }) => COURSE_TYPE_LABELS[row.original.courseType],
-      },
-      ...(subjectId === 'ALL'
-        ? [
-            {
-              accessorKey: 'categoryName',
-              header: 'Môn học',
-              enableSorting: false,
-              meta: { className: 'w-22 px-2!' },
-              cell: ({ row }: { row: { original: CourseAdmin } }) => (
-                <span
-                  className="block truncate"
-                  title={row.original.categoryName ?? 'Chưa phân loại'}
-                >
-                  {row.original.categoryName ?? 'Chưa phân loại'}
-                </span>
-              ),
-            } satisfies ColumnDef<CourseAdmin>,
-          ]
-        : []),
-      {
-        id: 'price',
-        header: 'Học phí',
-        meta: { className: 'w-24 px-2! text-right' },
-        cell: ({ row }) => (
-          <span className="block truncate" title={price(row.original)}>
-            {price(row.original)}
-          </span>
-        ),
-      },
-      {
-        id: 'status',
-        header: 'Trạng thái',
-        meta: { className: 'w-32 px-1.5!' },
-        cell: ({ row }) => (
-          <Status tone={courseDisplayStatus(row.original).tone}>
-            {courseDisplayStatus(row.original).label}
-          </Status>
-        ),
-      },
-      {
-        id: 'actions',
-        header: 'Thao tác',
-        meta: { className: 'w-41 px-2! text-right' },
-        cell: ({ row }) => (
-          <CourseRowActions
-            course={row.original}
-            canReview={canReviewCourse(row.original, role)}
-            readOnly={readOnly}
-            busy={busy}
-            handlers={rowHandlers}
-          />
-        ),
-      },
-    ],
-    [readOnly, busy, role, rowHandlers, subjectId]
+    [go]
   )
   // One status filter over the two backend fields (status, reviewState).
   const statusFilter =
@@ -371,16 +294,31 @@ export default function CourseManagement({
     subjectCounts.reload()
     resource.reload()
   }
-  if (selectedId)
+  if (view.kind === 'detail')
     return (
       <CourseDetailScreen
-        id={selectedId}
+        key={view.id}
+        id={view.id}
         readOnly={readOnly}
-        initialTab={openOnContent ? 'content' : 'overview'}
-        onBack={() => {
-          setSelectedId(null)
-          resource.reload()
-          pending.reload()
+        initialTab={view.content ? 'content' : 'overview'}
+        initialNotice={notice}
+        onEdit={() => go({ kind: 'edit', id: view.id })}
+        onBack={() => leave({ kind: 'list' })}
+      />
+    )
+  if (view.kind === 'edit')
+    return (
+      <CourseEditorPage
+        key={view.id ?? 'new'}
+        courseId={view.id}
+        initialCategoryId={subjectId === 'ALL' ? undefined : subjectId}
+        onClose={() => leave(view.id ? { kind: 'detail', id: view.id, content: false } : { kind: 'list' })}
+        onSaved={(saved) => {
+          setNotice('Đã lưu khóa học.')
+          subjectCounts.reload()
+          // A new course goes on to its page, where its content is added next; an edit returns to where it began.
+          if (view.id) leave({ kind: 'detail', id: saved.id, content: false })
+          else showInPlace({ kind: 'detail', id: saved.id, content: false })
         }}
       />
     )
@@ -432,22 +370,36 @@ export default function CourseManagement({
         </FilterGroup>
       </FilterToolbar>
       <ScheduleResourceState
-        skeleton="table"
+        skeleton="cards"
         inset
         status={resource.status}
         errorMessage={resource.errorMessage}
         onRetry={resource.reload}
       >
-        {/* Floor for the fixed layout: on mobile the title column would collapse, so the table scrolls instead. */}
-        <div className="[&_table]:w-full [&_table]:min-w-[40rem] [&_table]:table-fixed">
-          <DataTable
-            columns={columns}
-            data={resource.data?.content ?? []}
-            getRowKey={(course) => course.id}
-            onRowClick={(course) => openDetail(course.id)}
-            emptyMessage="Chưa có khóa học phù hợp."
-          />
-        </div>
+        {(resource.data?.content ?? []).length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-text-tertiary">Chưa có khóa học phù hợp.</p>
+        ) : (
+          <ul className="grid list-none gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {(resource.data?.content ?? []).map((course) => (
+              <li key={course.id} className="min-w-0">
+                <CourseCard
+                  course={course}
+                  showSubject={subjectId === 'ALL'}
+                  onOpen={() => openDetail(course.id)}
+                  actions={
+                    <CourseRowActions
+                      course={course}
+                      canReview={canReviewCourse(course, role)}
+                      readOnly={readOnly}
+                      busy={busy}
+                      handlers={rowHandlers}
+                    />
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex flex-col gap-3 border-t border-card-border px-5 py-4">
           <p className="text-sm text-text-tertiary">
             {resource.data?.totalElements ?? 0} khóa học
@@ -490,7 +442,7 @@ export default function CourseManagement({
             )}
             {!readOnly && (
               <Button
-                onClick={() => setEditor({ course: null })}
+                onClick={() => go({ kind: 'edit', id: null })}
                 disabled={busy || categories.status !== 'ready' || resource.status !== 'ready'}
               >
                 <Plus size={16} />
@@ -586,24 +538,6 @@ export default function CourseManagement({
           {courseList}
         </Card>
       </div>
-      {editor && categories.data && (
-        <CourseEditorDialog
-          key={editor.course?.id ?? `new-${subjectId}`}
-          course={editor.course}
-          categories={categories.data}
-          initialCategoryId={subjectId === 'ALL' ? undefined : subjectId}
-          onClose={() => {
-            setEditor(null)
-            resource.reload()
-          }}
-          onSaved={() => {
-            setEditor(null)
-            setNotice('Đã lưu khóa học.')
-            resource.reload()
-            subjectCounts.reload()
-          }}
-        />
-      )}
       {categoryEditor && categories.data && (
         <CategoryEditorDialog
           key={categoryEditor.category?.id ?? `new-${categoryEditor.parentId ?? ''}`}

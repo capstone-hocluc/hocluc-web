@@ -25,10 +25,17 @@ function readStoredTheme(): Theme {
   }
 }
 
+// Components carry their own color transitions (150-300ms), so a theme flip would repaint them at different
+// moments. Transitions are switched off for the frame the theme changes in, and every surface flips at once.
 function applyTheme(theme: Theme) {
   const root = document.documentElement
+  if (root.dataset.theme === theme) return
+  root.classList.add('theme-switching')
   root.dataset.theme = theme
   root.style.colorScheme = theme
+  // Commit the new colors while transitions are off, then let hover and focus animate again.
+  void window.getComputedStyle(root).color
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-switching')))
 }
 
 function ThemeProvider({ children }: { children: ReactNode }) {

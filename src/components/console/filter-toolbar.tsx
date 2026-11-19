@@ -43,7 +43,7 @@ export function SearchInput({
   className,
 }: SearchInputProps) {
   return (
-    <InputGroup className={cn('h-9 w-full sm:max-w-md', className)}>
+    <InputGroup className={cn('h-9 w-full focus-within:border-input-primary-focus-border/40 sm:max-w-md', className)}>
       <InputGroupAddon align="inline-start" className="pr-0 text-icon-tertiary">
         <Search size={17} aria-hidden="true" />
       </InputGroupAddon>
@@ -91,6 +91,6 @@ export function FilterSelect({
 }
 
 /** Filters laid out together on the right of the search box. */
-export function FilterGroup({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2 max-sm:w-full">{children}</div>
+export function FilterGroup({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('flex flex-wrap items-center gap-2 max-sm:w-full', className)}>{children}</div>
 }

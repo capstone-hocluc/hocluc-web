@@ -1,6 +1,7 @@
 import { useCurrentUser } from '../../../hooks/useCurrentUser'
 import { useLearningProfileDialog } from '../../../hooks/useLearningProfileDialog'
 import Button from '../../ui/Button'
+import { formatExamLabel } from '../../../lib/courseFormat'
 
 export default function SavedLearningGoals() {
   const { profile, status, loadCurrentUser } = useCurrentUser()
@@ -15,7 +16,7 @@ export default function SavedLearningGoals() {
       {!profile ? <p role="status">{status === 'error' ? <Button appearance="outline" onClick={() => void loadCurrentUser().catch(() => {})}>Thử tải lại hồ sơ</Button> : 'Đang tải mục tiêu…'}</p> : <>
         <dl className="grid grid-cols-2 gap-4 text-sm max-[760px]:grid-cols-1">
           {[
-            ['Kỳ thi', saved?.targetExam === 'VNUHCM_DGNL' ? 'ĐGNL ĐHQG TP.HCM' : 'Chưa xác định'],
+            ['Kỳ thi', formatExamLabel(saved?.targetExam) || 'Chưa xác định'],
             ['Điểm mục tiêu', saved?.targetScore == null ? 'Chưa xác định' : `${saved.targetScore} / 1200`],
             ['Trường đại học mục tiêu', saved?.targetUniversity || 'Chưa xác định'],
             ['Ngành học mục tiêu', saved?.targetMajor || 'Chưa xác định'],

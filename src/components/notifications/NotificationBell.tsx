@@ -123,10 +123,19 @@ function NotificationControl({ variant }: { variant: 'console' | 'student' }) {
         </Notice>}
         <div className="flex shrink-0 items-center justify-between gap-3 border-t border-line pt-3">
           <span className="text-xs text-text-tertiary" role="status">{feed.busy === detail.id ? 'Đang đánh dấu đã đọc...' : detail.read ? 'Đã đọc' : 'Chưa đọc'}</span>
-          <Button size="sm" appearance="outline" onClick={() => {
-            setSelected(null)
-            requestAnimationFrame(() => bellRef.current?.focus())
-          }}>Đóng thông báo</Button>
+          <span className="flex flex-wrap gap-2">
+            {detail.entityType === 'CHAT_CONVERSATION' && detail.entityId && <Button size="sm" onClick={() => {
+              setSelected(null)
+              // Sent to the mentor who answers it, so it opens in the mentor's chat page.
+              window.dispatchEvent(new CustomEvent('hl-navigate', {
+                detail: { path: `/mentor/chat?conversationId=${encodeURIComponent(detail.entityId!)}` },
+              }))
+            }}>Mở cuộc trò chuyện</Button>}
+            <Button size="sm" appearance="outline" onClick={() => {
+              setSelected(null)
+              requestAnimationFrame(() => bellRef.current?.focus())
+            }}>Đóng thông báo</Button>
+          </span>
         </div>
       </>}
     </Modal>

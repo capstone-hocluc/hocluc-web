@@ -27,6 +27,7 @@ function PageHeading({ title, parent, subtitle, action, readOnly = false, onBack
     <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
       <div className="flex min-w-0 flex-col gap-1">
         <Breadcrumbs
+          className="mb-2"
           dividerType="chevron"
           items={[
             { href: homeHref, label: 'Trang chủ' },
