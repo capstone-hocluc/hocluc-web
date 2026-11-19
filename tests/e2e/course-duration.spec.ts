@@ -20,14 +20,15 @@ test('the course editor sends 1.5 hours as 90 minutes and null once cleared', as
   await page.goto('/staff/courses')
 
   await page.getByRole('button', { name: 'Tạo khóa học', exact: true }).click()
-  const create = page.getByRole('dialog', { name: 'Tạo khóa học', exact: true })
-  await selectOption(create, page, 'Loại khóa', 'Khóa nhỏ')
-  await create.getByLabel('Tên khóa học', { exact: true }).fill('SECTION Thời lượng')
-  await create.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-  await create.getByLabel('Thời lượng dự kiến (giờ)').fill('1.5')
-  await create.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-  await create.getByRole('button', { name: 'Lưu khóa học', exact: true }).click()
-  await expect(create).toBeHidden()
+  await selectOption(page, page, 'Loại khóa', 'Khóa nhỏ')
+  await page.getByRole('textbox', { name: 'Tên khóa học', exact: true }).fill('SECTION Thời lượng')
+  // Hours are asked on the last step, with the price.
+  const next = page.getByRole('button', { name: 'Tiếp tục', exact: true })
+  await next.click()
+  await next.click()
+  await page.getByLabel('Thời lượng học (giờ)').fill('1.5')
+  await page.getByRole('button', { name: 'Lưu khóa học', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'SECTION Thời lượng', exact: true })).toBeVisible()
 
   expect(
     state.requests.find((request) => request.method === 'POST' && request.path === '/api/v1/admin/courses')!
@@ -35,19 +36,16 @@ test('the course editor sends 1.5 hours as 90 minutes and null once cleared', as
   ).toMatchObject({ title: 'SECTION Thời lượng', estimatedDurationMinutes: 90 })
   const created = state.courses.find((course) => course.title === 'SECTION Thời lượng')!
 
-  await page
-    .getByRole('row', { name: /SECTION Thời lượng/ })
-    .getByRole('button', { name: 'Thao tác khác với SECTION Thời lượng', exact: true })
-    .click()
-  await page.getByRole('menuitem', { name: 'Sửa thông tin', exact: true }).click()
-  const edit = page.getByRole('dialog', { name: 'Sửa khóa học', exact: true })
-  await edit.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-  await expect(edit.getByLabel('Thời lượng dự kiến (giờ)')).toHaveValue('1.5')
+  await page.getByRole('button', { name: 'Sửa thông tin', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Sửa khóa học', exact: true })).toBeVisible()
+  await next.click()
+  await next.click()
+  await expect(page.getByLabel('Thời lượng học (giờ)')).toHaveValue('1.5')
 
-  await edit.getByLabel('Thời lượng dự kiến (giờ)').fill('')
-  await edit.getByRole('button', { name: 'Tiếp tục', exact: true }).click()
-  await edit.getByRole('button', { name: 'Lưu khóa học', exact: true }).click()
-  await expect(edit).toBeHidden()
+  await page.getByLabel('Thời lượng học (giờ)').fill('')
+  await page.getByRole('button', { name: 'Lưu khóa học', exact: true }).click()
+  // Saving an edit goes back to where it was opened from.
+  await expect(page.getByRole('heading', { name: 'SECTION Thời lượng', exact: true })).toBeVisible()
 
   expect(
     state.requests.find(
