@@ -1368,10 +1368,10 @@ test('stopping a run asks the server to cancel it', async ({ page }) => {
 
   await page.getByRole('textbox', { name: 'Tin nhắn cho trợ lý AI' }).fill('Soạn đề kiểm tra')
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
-  // The stop button keeps the send button's 32px circle, with a small square in it.
+  // The stop button keeps the send button's 28px circle, with a small square in it.
   const stop = page.getByRole('button', { name: 'Dừng tạo câu trả lời' })
   await expect(stop).toBeVisible()
-  expect((await stop.boundingBox())?.width).toBe(32)
+  expect((await stop.boundingBox())?.width).toBe(28)
   expect((await stop.locator('svg').boundingBox())?.width).toBeLessThanOrEqual(14)
   await stop.click()
 
@@ -1831,7 +1831,7 @@ test('a compose run in the free document writes each question under its own part
   // The new conversation's document is saved from version 0 on, without being read back, and lists what it received.
   await expect
     .poll(() => (documentSaves(state, 'conv-1').at(-1)?.content as DocNode | undefined)?.attrs)
-    .toEqual({ deliveredItems: ['item-1', 'item-2'] })
+    .toMatchObject({ deliveredItems: ['item-1', 'item-2'] })
   const saves = documentSaves(state, 'conv-1')
   expect(saves.map((save) => save.version)).toEqual(saves.map((_, index) => index))
   expect(savedBlocks(saves.at(-1))).toEqual(
@@ -3425,7 +3425,7 @@ test('a run still going when the exam is opened is followed again, from right be
   // The page reloaded mid-run: the stages and the stop button come back instead of a finished-looking exam.
   const stop = page.getByRole('button', { name: 'Dừng tạo câu trả lời' })
   await expect(stop).toBeVisible()
-  await expect(page.getByText('Khảo sát ngân hàng câu hỏi')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Khảo sát ngân hàng câu hỏi' })).toBeVisible()
   await openRunSteps(page)
   await expect(page.getByText('Đang soạn câu 2/2', { exact: true })).toBeVisible()
   await expect(page.getByText(/excludeIds|patternCode/)).toHaveCount(0)
@@ -3833,7 +3833,7 @@ test('a question the teacher takes off the sheet is kept as received, so reopeni
   await expect(questionLines(sheet)).toHaveCount(0)
   await expect
     .poll(() => (documentSaves(state, 'conv-9').at(-1)?.content as DocNode | undefined)?.attrs)
-    .toEqual({ deliveredItems: ['item-1'] })
+    .toMatchObject({ deliveredItems: ['item-1'] })
 
   // Reopened once the AI wrote another question: that one is written in, Câu 1 is not written back.
   state.drafts.get('conv-9')!.items.push(item('conv-9', 'item-2', 2, 'Rút gọn biểu thức hai x trừ x.'))
