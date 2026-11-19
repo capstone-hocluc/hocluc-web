@@ -153,7 +153,7 @@ function LabelPanel({
           {lessons.status === 'ready' && lessons.data?.length === 0 && <span className="text-text-tertiary">Chưa có bài học</span>}
           {lessons.data && [...new Map(lessons.data.map((lesson) => [lesson.lessonId, lesson])).values()].map((lesson) => (
             <a key={lesson.lessonId} className="break-words text-sm text-brand-500 hover:underline"
-              href={consoleTracePath('courses', { courseId: lesson.courseId })}>
+              href={consoleTracePath('courses', { courseId: lesson.courseId, tab: 'content' })}>
               {lesson.courseTitle} › {lesson.chapterTitle} › {lesson.lessonTitle}
             </a>
           ))}
