@@ -7,7 +7,7 @@ import './elements.css'
 
 export function EmptyState({ className, ...props }: ComponentProps<'div'>) {
   return (
-    <div data-slot="empty-state" className={cn('flex w-full max-w-md flex-col items-center gap-7', className)} {...props} />
+    <div data-slot="empty-state" className={cn('mx-auto flex w-full max-w-md flex-col items-center gap-7', className)} {...props} />
   )
 }
 
