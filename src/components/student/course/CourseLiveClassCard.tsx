@@ -1,8 +1,8 @@
-import { CalendarDays, Clock3, Video, ArrowRight, UserRound } from '../../console/icons'
-import Button from '../../ui/Button'
+import { CalendarDays, Clock3, Video, UserRound } from '../../console/icons'
 import StatusBadge from '../../ui/StatusBadge'
 import type { CourseStudyLiveClass } from '../../../services/courseService'
-import { safeExternalUrl, SCHEDULING_TIMEZONE } from '../../../lib/scheduling'
+import { SCHEDULING_TIMEZONE } from '../../../lib/scheduling'
+import LiveClassActions from './LiveClassActions'
 import styles from './CourseExams.module.css'
 import liveStyles from './CourseLiveClasses.module.css'
 
@@ -35,10 +35,6 @@ function getClassTime(item: CourseStudyLiveClass) {
 }
 
 function CourseLiveClassCard({ item, past, next }: { item: CourseStudyLiveClass; past: boolean; next: boolean }) {
-  const joinUrl = item.joinable ? safeExternalUrl(item.meetingUrl) : null
-  const urls = [safeExternalUrl(item.recordingUrl), ...(item.recordings ?? []).map(recording => safeExternalUrl(recording.recordingUrl))]
-    .filter((value): value is string => Boolean(value))
-  const recordings = [...new Set(urls)]
   const time = getClassTime(item)
   const teacher = item.instructorName || item.teacherName
 
@@ -70,15 +66,9 @@ function CourseLiveClassCard({ item, past, next }: { item: CourseStudyLiveClass;
           <StatusBadge size="sm" tone={past ? 'success' : 'primary'}>{statusLabels[item.status] || 'Chưa rõ trạng thái'}</StatusBadge>
           {next && !past && item.status !== 'LIVE' && <StatusBadge size="sm" tone="primary">Gần nhất</StatusBadge>}
         </div>
-        {joinUrl ? (
-          <Button asChild size="sm" shape="pill"><a href={joinUrl} target="_blank" rel="noopener noreferrer" aria-label={`Tham gia ${item.title}`}>Tham gia<ArrowRight size={14} /></a></Button>
-        ) : recordings.length === 0 && !past ? (
-          <Button size="sm" shape="pill" appearance="outline" disabled>{item.joinable ? 'Chưa có liên kết' : 'Chưa thể tham gia'}</Button>
-        ) : null}
+        {/* A student joins with their own link once booked, so seats, joining and replays come from the booking. */}
+        <LiveClassActions liveClass={item} />
       </div>
-      {recordings.length === 1 && <Button asChild size="sm" shape="pill" appearance="outline" className="self-start"><a href={recordings[0]} target="_blank" rel="noopener noreferrer" aria-label={`Xem bản ghi ${item.title}`}>Xem bản ghi<ArrowRight size={14} /></a></Button>}
-      {recordings.length > 1 && <details className={liveStyles.recordings}><summary>Xem bản ghi ({recordings.length})</summary><div>{recordings.map((url, index) => <a key={url} href={url} target="_blank" rel="noopener noreferrer">Bản ghi {index + 1}<ArrowRight size={13} /></a>)}</div></details>}
-      {past && recordings.length === 0 && <p className={styles.availability}>Chưa có bản ghi cho buổi học này.</p>}
     </article>
   )
 }
