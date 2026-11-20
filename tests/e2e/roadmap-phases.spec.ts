@@ -263,22 +263,17 @@ test('study page shows phase percentages, gift progress and opens phase 2 at the
   await expect(page.getByRole('button', { name: /Giai đoạn 1/ })).toContainText('50%')
   await expect(page.getByRole('button', { name: /Giai đoạn 2/ })).toContainText('33%')
 
-  // Phase 2 holds the continue lesson, so it starts open while phase 1 stays collapsed.
-  const giftBHeading = page.getByRole('heading', { name: 'Quà giai đoạn 2 · B', exact: true })
-  await expect(giftBHeading).toBeVisible()
+  // Phase 2 holds the continue lesson, so it starts open with that gift unfolded, while phase 1 stays collapsed.
+  const giftB = page.getByRole('button', { name: /^Quà giai đoạn 2 · B/ })
+  await expect(giftB).toHaveAttribute('aria-expanded', 'true')
   await expect(page.getByText('Phần nền tảng', { exact: true })).toHaveCount(0)
-
-  const giftB = giftBHeading.locator('..').locator('..')
   await expect(giftB).toContainText('2/6 bài học')
-  await expect(giftB).toContainText('33%')
-  await expect(giftB).toHaveClass(/bg-surface-brand/)
-  await expect(giftB.getByRole('link', { name: 'Vào học', exact: true })).toHaveAttribute(
-    'href',
-    studentRoutes.courseStudy(ROADMAP_IDS.giftB)
-  )
+  await expect(giftB).toContainText('Đang học')
+  // The gift lists its own lessons in place.
+  await expect(page.getByText('Chương Quà giai đoạn 2 · B', { exact: true })).toBeVisible()
 
   await expect(page.getByRole('heading', { name: 'Xuyên suốt lộ trình', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Quà xuyên suốt', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Quà xuyên suốt/ })).toBeVisible()
 
   await page.getByRole('button', { name: /Tiếp tục học/ }).click()
   await expect(page).toHaveURL(studentRoutes.lesson(ROADMAP_IDS.giftB, ROADMAP_IDS.lessonB))
@@ -295,7 +290,7 @@ test('a course with only unphased content has no "Xuyên suốt lộ trình" hea
   await expect(page.getByRole('heading', { name: 'Xuyên suốt lộ trình', exact: true })).toHaveCount(0)
   await expect(page.locator('b').filter({ hasText: /^01$/ })).toHaveCount(0)
   await expect(page.getByText('Phần chung', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Quà xuyên suốt', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Quà xuyên suốt/ })).toBeVisible()
 })
 
 test('study and public course pages fit a 390px viewport without horizontal scroll', async ({ page }) => {

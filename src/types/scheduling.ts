@@ -297,5 +297,5 @@ export interface UpdateSessionRecordingRequest {
 
 export type ScheduleCalendarItem =
   | { kind: 'schedule'; sourceId: string; item: ScheduleResponse }
-  | { kind: 'classSession'; sourceId: string; item: ClassSessionResponse }
+  | { kind: 'classSession'; sourceId: string; item: ClassSessionResponse; courseName?: string }
   | { kind: 'liveClass'; sourceId: string; item: import('../services/courseService').CourseStudyLiveClass }

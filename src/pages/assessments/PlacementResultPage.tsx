@@ -1,4 +1,5 @@
 import { Eye } from '../../components/console/icons'
+import BackLink from '../../components/student/common/BackLink'
 import PlacementResultSummary from '../../components/assessment/PlacementResultSummary'
 import CourseCard from '../../components/landing/CourseCard'
 import ResourceState from '../../components/student/common/ResourceState'
@@ -11,11 +12,12 @@ import { getPlacementAttemptHistory, getPlacementResult } from '../../services/a
 import { getSuggestedCourses, type Course } from '../../services/courseService'
 
 interface PlacementResultPageProps {
+  onBack?: () => void
   onOpenReview: (attemptId: string) => void
   onOpenCourse: (course: Course) => void
 }
 
-function PlacementResultPage({ onOpenReview, onOpenCourse }: PlacementResultPageProps) {
+function PlacementResultPage({ onBack, onOpenReview, onOpenCourse }: PlacementResultPageProps) {
   const { data, status, errorMessage, reload } = usePageResource(
     async () => {
       const [result, history, suggestedResponse] = await Promise.all([
@@ -46,6 +48,7 @@ function PlacementResultPage({ onOpenReview, onOpenCourse }: PlacementResultPage
 
   return (
     <StudentPageContainer width="reading" spacing="stack">
+      {onBack && <BackLink onClick={onBack}>Quay lại hồ sơ năng lực</BackLink>}
       <ResourceState
         status={status}
         errorMessage={errorMessage}

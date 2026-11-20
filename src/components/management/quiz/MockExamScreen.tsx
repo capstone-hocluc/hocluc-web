@@ -510,7 +510,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
       <PageHeading title={navigation ? 'Bài kiểm tra' : placement ? 'Đánh giá đầu vào' : 'Bài thi thử'} readOnly={readOnly}
         action={!readOnly && <Button onClick={() => setCreating(true)}><Plus size={16} />{placement ? 'Tạo đánh giá đầu vào' : 'Tạo đề thi thử'}</Button>} />
       {navigation}
-      {placement && <Notice tone="info">Student sẽ nhận bài đã xuất bản được tạo mới nhất. Xuất bản lại bài cũ không thay đổi thời điểm tạo bài. Khi ẩn bài đang dùng, bài đã xuất bản mới nhất còn lại sẽ được chọn.</Notice>}
+      {placement && <Notice tone="info">Tất cả đề đã xuất bản đều hiển thị trong mục đề thi thử miễn phí, đề xuất bản mới nhất lên trước. Học sinh chọn đề để thi; lần thi chính thức đầu tiên đã chấm được dùng để đánh giá năng lực theo khóa được gắn.</Notice>}
       <QuizCatalog items={examItems} status={quizzes.status}
         errorMessage={quizzes.errorMessage} onRetry={refresh} readOnly={readOnly} exam placement={placement}
         renderActions={(exam) => <RowActions>

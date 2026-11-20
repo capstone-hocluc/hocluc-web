@@ -35,7 +35,14 @@ export default function LearningProfileFlow({ currentPath, onNavigate, children 
       )}
       {children}
       {student && (manualOpen || autoOpen) && (
-        <StudentOnboarding key={profile.id} restoreFocus={restoreFocus} onClose={close} onComplete={() => { close(); onNavigate('/student/assessments/placement') }} />
+        <StudentOnboarding key={profile.id} restoreFocus={restoreFocus} onClose={close}
+          continueToAssessment={!(manualOpen && currentPath.split('?')[0] === '/student/learning-profile')}
+          onComplete={() => {
+            close()
+            if (!(manualOpen && currentPath.split('?')[0] === '/student/learning-profile')) {
+              onNavigate('/student/assessments?tab=free')
+            }
+          }} />
       )}
     </LearningProfileDialogContext.Provider>
   )

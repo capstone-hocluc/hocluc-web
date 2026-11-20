@@ -14,9 +14,13 @@ const PNG = Buffer.from(
 async function install(page: Page, role = 'STUDENT') {
   const state = {
     balance: { available: 42, bonus: 12, paid: 30, held: 0 },
+    balanceFailures: 0,
+    streakFailures: 0,
     solvePolls: 0,
     freezeBought: 0,
     freezes: 1,
+    ordersFailures: 0,
+    ordersEmpty: false,
     /** The pack order is paid (the bank transfer arrived). */
     paid: false,
     checkout: [] as string[],
@@ -55,11 +59,16 @@ async function install(page: Page, role = 'STUDENT') {
     if (path === '/api/v1/users/profiles')
       return answer({ id: USER, role, displayName: 'Học sinh', firstName: 'Học', lastName: 'Sinh',
         email: 'student@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
-    if (path === '/api/v1/credits/me') return answer(state.balance)
-    if (path === '/api/v1/credits/streak')
+    if (path === '/api/v1/credits/me') {
+      if (state.balanceFailures > 0) { state.balanceFailures--; return answer(null, 503) }
+      return answer(state.balance)
+    }
+    if (path === '/api/v1/credits/streak') {
+      if (state.streakFailures > 0) { state.streakFailures--; return answer(null, 503) }
       return answer({ current: 5, longest: 9, doneToday: true, freezesAvailable: state.freezes, maxFreezes: 2, freezePrice: 10,
         today: '2026-11-05', days: [{ date: '2026-11-05', qualified: true, frozen: false, lessonsCompleted: 1, quizzesPassed: 0 },
           { date: '2026-11-04', qualified: false, frozen: true, lessonsCompleted: 0, quizzesPassed: 0 }] })
+    }
     if (path === '/api/v1/credits/me/history')
       return answer({ content: [
         { id: 'h1', type: 'PURCHASE', amount: 30, balanceAfter: 42, refType: 'ORDER', refId: ORDER, expiresAt: null, note: 'Gói 50', createdAt: stamp },
@@ -77,6 +86,10 @@ async function install(page: Page, role = 'STUDENT') {
       items: [{ courseId: null, courseTitle: 'Gói 120', unitPrice: 99000, creditPackId: 'p2', credits: 120 }] }
     const payment = { order, paymentCode: 'HLABCD1234', bankCode: 'MB', accountNumber: '0123456789', accountName: 'HOCLUC',
       amount: 99000, qrUrl: 'data:image/png;base64,' + PNG.toString('base64') }
+    if (path === '/api/v1/orders/me') {
+      if (state.ordersFailures > 0) { state.ordersFailures--; return answer(null, 503, { message: 'Không tải được đơn hàng kiểm thử' }) }
+      return answer(state.ordersEmpty ? [] : [order])
+    }
     if (path === '/api/v1/credits/packs/p2/checkout' && method === 'POST') {
       state.checkout.push(request.headers()['idempotency-key'] ?? '')
       return answer(payment)
@@ -134,8 +147,7 @@ test('wallet shows the balance, the packs and the history, and a pack opens its 
   await page.goto('/student/wallet')
   await expect(page.getByRole('heading', { name: 'Ví Sao' })).toBeVisible()
   await expect(page.getByRole('button', { name: '42 Sao' })).toBeVisible()
-  await expect(page.getByRole('listitem').filter({ hasText: 'thưởng' })).toHaveText('12 Sao thưởng')
-  await expect(page.getByRole('listitem').filter({ hasText: 'đã mua' })).toHaveText('30 Sao đã mua')
+  await expect(page.getByText('12 Sao thưởng · 30 Sao đã mua')).toBeVisible()
   await expect(page.getByText('Tạm giữ · Hỏi mentor')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Xem thêm' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: '99.000đ' })).toBeVisible()
@@ -148,6 +160,20 @@ test('wallet shows the balance, the packs and the history, and a pack opens its 
   expect(state.pageErrors).toEqual([])
 })
 
+test('the wallet retries a failed balance load independently of the streak', async ({ page }) => {
+  const state = await install(page)
+  state.balanceFailures = 1
+  await page.goto('/student/wallet')
+  await expect(page.getByText('Không tải được số dư Ví Sao.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Chuỗi 5 ngày' })).toBeVisible()
+
+  state.streakFailures = 1
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click()
+  await expect(page.getByText('12 Sao thưởng · 30 Sao đã mua')).toBeVisible()
+  await expect(page.getByRole('button', { name: '42 Sao' })).toBeVisible()
+  await expect(page.getByText('Không tải được số dư Ví Sao.')).toHaveCount(0)
+})
+
 test('a pack paid while the student waits lands in the wallet and the top bar counts it in', async ({ page }) => {
   const state = await install(page)
   await page.goto('/student/wallet')
@@ -156,6 +182,8 @@ test('a pack paid while the student waits lands in the wallet and the top bar co
   await expect(page.getByText('Thanh toán gói Sao')).toBeVisible()
 
   // The transfer arrives; the payment page checks again when the window regains focus.
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
   state.paid = true
   state.balance = { available: 162, bonus: 12, paid: 150, held: 0 }
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
@@ -167,11 +195,17 @@ test('a pack paid while the student waits lands in the wallet and the top bar co
   // While the card is up the top bar still shows the old number; the label already tells the truth.
   await expect(page.locator('[data-credit-pill] strong')).toHaveText('42')
   await expect(page.getByRole('button', { name: '162 Sao' })).toBeVisible()
-  await page.waitForTimeout(700)
+  await page.clock.runFor(700)
   await page.screenshot({ path: 'test-results/credits-arrival-card.png' })
-  await page.waitForTimeout(1250)
+  await page.clock.runFor(1250)
   await page.screenshot({ path: 'test-results/credits-arrival-landing.png' })
 
+  // The flight uses Web Animations, whose timeline is separate from the mocked JS clock.
+  await page.evaluate(() => document.getAnimations().forEach(animation => {
+    const effect = animation.effect
+    if (effect instanceof KeyframeEffect && effect.target instanceof HTMLElement && effect.target.classList.contains('credit-chip')) animation.finish()
+  }))
+  await page.clock.runFor(2000)
   await expect(page.locator('[data-credit-pill] strong')).toHaveText('162')
   await expect(card).toHaveCount(0)
   expect(state.pageErrors).toEqual([])
@@ -229,6 +263,86 @@ test('the dashboard shows the streak and buys a freeze with stars', async ({ pag
   await expect(page.getByRole('button', { name: 'Đã đủ lượt đóng băng' })).toBeDisabled()
   await expect(page.getByRole('button', { name: '32 Sao' })).toBeVisible()
   expect(state.freezeBought).toBe(1)
+  expect(state.pageErrors).toEqual([])
+})
+
+test('the learning profile manages the shared streak and freeze balance on desktop and mobile', async ({ page }, testInfo) => {
+  const state = await install(page)
+  await page.goto('/student/learning-profile')
+  const streak = page.getByRole('region', { name: 'Chuỗi học tập', exact: true })
+  await expect(streak.getByText('5 ngày', { exact: true })).toBeVisible()
+  await expect(streak.getByText('Dài nhất 9 ngày')).toBeVisible()
+  await expect(streak.getByLabel('7 ngày gần nhất').locator('li')).toHaveCount(7)
+  await page.screenshot({ path: testInfo.outputPath('profile-streak-desktop.png'), fullPage: true })
+  await streak.getByRole('button', { name: 'Mua đóng băng chuỗi' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Mua', exact: true }).click()
+  await expect(streak.getByRole('button', { name: 'Đã đủ lượt đóng băng' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: '32 Sao' })).toBeVisible()
+  expect(state.freezeBought).toBe(1)
+  await page.getByRole('tab', { name: 'Học tập', exact: true }).click()
+  await page.getByRole('tab', { name: 'Tổng quan', exact: true }).click()
+  await expect(streak).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(streak).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: testInfo.outputPath('profile-streak-mobile.png'), fullPage: true })
+  expect(state.pageErrors).toEqual([])
+})
+
+test('Student account groups profile, wallet and orders and preserves sections on reload and back', async ({ page }, testInfo) => {
+  const state = await install(page)
+  await page.goto('/student/profile')
+  const sidebar = page.getByRole('navigation', { name: 'Điều hướng học sinh' })
+  await expect(sidebar.getByRole('button', { name: 'Tài khoản', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(sidebar.getByRole('button', { name: 'Ví Sao', exact: true })).toHaveCount(0)
+  await expect(sidebar.getByRole('button', { name: 'Đơn hàng', exact: true })).toHaveCount(0)
+  const account = page.getByRole('navigation', { name: 'Cài đặt tài khoản' })
+  await account.getByRole('button', { name: 'Ví Sao', exact: true }).click()
+  await expect(page).toHaveURL('/student/profile?section=wallet')
+  await expect(page.getByText('12 Sao thưởng · 30 Sao đã mua')).toBeVisible()
+  await page.reload()
+  await expect(account.getByRole('button', { name: 'Ví Sao', exact: true })).toHaveAttribute('aria-current', 'page')
+  await account.getByRole('button', { name: 'Đơn hàng', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Đơn hàng của tôi' })).toBeVisible()
+  await page.getByRole('button', { name: /#HL20261105100000/ }).click()
+  await expect(page).toHaveURL(`/orders/${ORDER}`)
+  await page.getByRole('button', { name: /Đơn hàng của tôi/ }).click()
+  await expect(page).toHaveURL('/student/profile?section=orders')
+  await account.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click()
+  await expect(page).toHaveURL('/student/profile?section=security')
+  await page.reload()
+  await expect(account.getByRole('button', { name: 'Đổi mật khẩu', exact: true })).toHaveAttribute('aria-current', 'page')
+  await page.goBack()
+  await expect(account.getByRole('button', { name: 'Đơn hàng', exact: true })).toHaveAttribute('aria-current', 'page')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.getByRole('button', { name: /#HL20261105100000/ })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: testInfo.outputPath('account-orders-mobile.png'), fullPage: true })
+  expect(state.pageErrors).toEqual([])
+})
+
+test('legacy Student wallet and public order-list URLs remain accessible', async ({ page }) => {
+  const state = await install(page)
+  await page.goto('/student/wallet')
+  await expect(page.getByRole('heading', { name: 'Ví Sao', exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Cài đặt tài khoản' }).getByRole('button', { name: 'Ví Sao', exact: true })).toHaveAttribute('aria-current', 'page')
+  await page.goto('/orders', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('heading', { name: 'Đơn hàng của tôi' })).toBeVisible()
+  expect(state.pageErrors).toEqual([])
+})
+
+test('Student account orders recover from errors and display an empty list', async ({ page }) => {
+  const state = await install(page)
+  state.ordersFailures = 2 // React StrictMode mounts the resource twice in development.
+  await page.goto('/student/profile?section=orders')
+  await expect(page.getByRole('alert')).toContainText('Không tải được đơn hàng kiểm thử')
+  await page.getByRole('button', { name: 'Thử lại', exact: true }).click()
+  await expect(page.getByRole('button', { name: /#HL20261105100000/ })).toBeVisible()
+  state.ordersEmpty = true
+  await page.reload()
+  await expect(page.getByText('Bạn chưa có đơn hàng nào', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Khám phá khóa học', exact: true }).click()
+  await expect(page).toHaveURL('/courses')
   expect(state.pageErrors).toEqual([])
 })
 

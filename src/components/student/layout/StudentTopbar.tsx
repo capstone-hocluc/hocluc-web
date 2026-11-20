@@ -1,4 +1,4 @@
-import { Flame, LogOut, Menu, Settings, User, UserRound } from '../../console/icons'
+import { Flame, LogOut, Menu, User, UserRound } from '../../console/icons'
 import Logo from '../../common/Logo'
 import Avatar from '../../ui/Avatar'
 import Skeleton from '../../ui/Skeleton'
@@ -52,7 +52,6 @@ function StudentTopbar({
   onOpenNavigation,
   mobileNavigationOpen = false,
   onNavigateHome,
-  onNavigateLearningProfile,
   onNavigateProfile,
   onLogout,
   logoutLoading = false,
@@ -174,17 +173,7 @@ function StudentTopbar({
             )}
             <DropdownMenuItem onSelect={() => onNavigateProfile?.()}>
               <UserRound size={16} />
-              Hồ sơ cá nhân
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onNavigateLearningProfile?.()}>
-              <User size={16} />
-              Hồ sơ học tập
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => onNotify?.('Tính năng Cài đặt đang được phát triển.')}
-            >
-              <Settings size={16} />
-              Cài đặt
+              Tài khoản
             </DropdownMenuItem>
             <div role="separator" className="my-1 h-px bg-line-blue" />
             <DropdownMenuItem disabled={logoutLoading} onSelect={() => onLogout?.()} className="text-danger data-[highlighted]:text-danger">

@@ -1,4 +1,3 @@
-import { Star } from '../../console/icons'
 import MascotState from '../../common/MascotState'
 import ResourceState from '../common/ResourceState'
 import CourseCard from '../../landing/CourseCard'
@@ -6,7 +5,6 @@ import Button from '../../ui/Button'
 import Card, { CardEyebrow, CardTitle } from '../../ui/Card'
 import Progress from '../../ui/Progress'
 import Skeleton from '../../ui/Skeleton'
-import StatusBadge from '../../ui/StatusBadge'
 import CourseListRow from './CourseListRow'
 import { usePageResource } from '../../../hooks/usePageResource'
 import { getCourseEnrollmentPlan, type Course } from '../../../services/courseService'
@@ -19,9 +17,10 @@ import {
 interface CourseEnrollmentPlanTabProps {
   courseId: string
   onOpenCourse: (course: Course) => void
+  compact?: boolean
 }
 
-function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPlanTabProps) {
+function CourseEnrollmentPlanTab({ courseId, onOpenCourse, compact = false }: CourseEnrollmentPlanTabProps) {
   const {
     data: plan,
     status,
@@ -58,20 +57,20 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
     sortedSections.length > 0
 
   return (
-    <div className="flex flex-col gap-5">
-      <Card as="section" padding="lg" radius="xl">
+    <div className={`flex min-w-0 flex-col ${compact ? 'gap-3' : 'gap-5'}`}>
+      <Card as="section" padding="lg" radius="xl" className={compact ? 'border-0 bg-surface-brand p-3' : undefined}>
         <CardEyebrow>{formatEnrollmentBranch(plan.branch)}</CardEyebrow>
-        {planMessage && <p className="mb-3 text-[15px] text-text-body">{planMessage}</p>}
+        {planMessage && <p className={`mb-3 text-text-body ${compact ? 'text-sm' : 'text-[15px]'}`}>{planMessage}</p>}
         <div className="mt-3 mb-2 flex items-center justify-between text-sm font-semibold text-text-secondary">
           {/* Course-timeline-elapsed, NOT lesson/learning progress. */}
           <span>Tiến trình thời gian khóa học</span>
-          <strong className="font-bold text-primary-text">{elapsed}%</strong>
+          <strong className="font-bold text-primary-text">{plan.elapsedPercentage == null ? 'Chưa xác định' : `${elapsed}%`}</strong>
         </div>
-        <Progress value={elapsed} aria-label="Tiến trình thời gian khóa học" />
+        {plan.elapsedPercentage != null && <Progress value={elapsed} aria-label="Tiến trình thời gian khóa học" />}
       </Card>
 
       {plan.recommendedCourse && (
-        <Card as="section" padding="lg" radius="xl">
+        <Card as="section" padding="lg" radius="xl" className={compact ? 'p-3' : undefined}>
           <CardTitle className="text-xl">Khóa học đề xuất</CardTitle>
           <div className="grid grid-cols-[minmax(0,320px)]">
             <CourseCard course={plan.recommendedCourse} onOpen={onOpenCourse} />
@@ -80,7 +79,7 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
       )}
 
       {plan.catchUpRecordings.length > 0 && (
-        <Card as="section" padding="lg" radius="xl">
+        <Card as="section" padding="lg" radius="xl" className={compact ? 'p-3' : undefined}>
           <CardTitle className="text-xl">Buổi học cần xem lại</CardTitle>
           <div className="flex flex-col">
             {plan.catchUpRecordings.map((item) => (
@@ -108,27 +107,21 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse }: CourseEnrollmentPla
       )}
 
       {sortedSections.length > 0 && (
-        <Card as="section" padding="lg" radius="xl">
-          <CardTitle className="text-xl">Lộ trình học đề xuất</CardTitle>
+        <Card as="section" padding="lg" radius="xl" className={compact ? 'p-3' : undefined}>
+          <CardTitle className={compact ? 'text-base' : 'text-xl'}>Lộ trình học đề xuất</CardTitle>
           <div className="flex flex-col">
-            {sortedSections.map((item) => (
+            {sortedSections.map((item, index) => (
               <div
                 className="flex items-center gap-3 border-t border-line py-3.5 first:border-t-0"
-                key={item.sectionCourseId}
+                key={item.contentSectionId}
               >
-                {item.priority && (
-                  <StatusBadge tone="live" size="sm" className="shrink-0 text-xs">
-                    <Star size={12} />
-                    Ưu tiên
-                  </StatusBadge>
-                )}
+                {compact && <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary-text">{index + 1}</span>}
                 <div className="flex min-w-0 flex-col gap-[3px]">
-                  <strong className="text-base font-semibold text-text-heading">
-                    {item.sectionCourseTitle}
+                  <strong className="text-base font-semibold break-words text-text-heading">
+                    {item.title}
                   </strong>
                   <span className="text-sm font-semibold text-text-secondary">
                     {item.phaseName}
-                    {item.categoryName ? ` · ${item.categoryName}` : ''}
                   </span>
                 </div>
               </div>

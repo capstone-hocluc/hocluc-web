@@ -44,11 +44,12 @@ function LessonRow({ lesson, isCurrent, onOpen, onOpenQuiz }: LessonRowProps) {
         }
         meta={duration}
         current={isCurrent}
+        learningState={isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'not-started'}
         onClick={() => onOpen(lesson.id)}
         side={
           isCompleted ? (
             <LearningStatus status="completed" className={statusText}>Đã hoàn thành</LearningStatus>
-          ) : isInProgress || isCurrent ? (
+          ) : isInProgress ? (
             <LearningStatus status="current" className={statusText}>Đang học</LearningStatus>
           ) : (
             <LearningStatus status="idle" className={statusText}>

@@ -9,8 +9,9 @@ import StudentToast from '../common/StudentToast'
 import { useCredits } from '../../../lib/credits'
 import { getAccessToken } from '../../../lib/api'
 import { getStudentNavKeyForPath } from '../../../lib/studentNav'
-import { studentRoutes } from '../../../lib/studentRoutes'
+import { isStudentAssessmentsPath, studentRoutes } from '../../../lib/studentRoutes'
 import { cn } from '../../../lib/cn'
+import styles from './StudentLayout.module.css'
 
 interface StudentLayoutProps {
   currentPath: string
@@ -33,6 +34,11 @@ function StudentLayout({
   logoutLoading = false,
   children,
 }: StudentLayoutProps) {
+  const workspacePath = currentPath.split('?')[0]
+  const isAccount = /^\/student\/(profile|wallet)\/?$/.test(workspacePath)
+  const isLesson = /^\/student\/courses\/[^/]+\/study\/lessons\/[^/]+\/?$/.test(workspacePath)
+    || /^\/student\/assessments\/quizzes\/[^/]+\/attempts\/[^/]+\/?$/.test(workspacePath)
+    || /^\/student\/assessments\/attempts\/[^/]+\/review\/?$/.test(workspacePath)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false)
   useEffect(() => {
@@ -56,7 +62,8 @@ function StudentLayout({
       className={cn(
         'dashboard-layout student-layout grid min-h-screen grid-rows-[72px_minmax(0,1fr)] bg-app-bg text-text-heading transition-[grid-template-columns] duration-250',
         sidebarCollapsed ? 'grid-cols-[80px_minmax(0,1fr)]' : 'grid-cols-[248px_minmax(0,1fr)]',
-        'max-[1180px]:grid-cols-[80px_minmax(0,1fr)] max-[760px]:block'
+        'max-[1180px]:grid-cols-[80px_minmax(0,1fr)] max-[760px]:block',
+        (isLesson || isAccount) && styles.lessonLayout
       )}
     >
       <a
@@ -69,7 +76,7 @@ function StudentLayout({
         profile={profile}
         streak={credits.streak?.current ?? 0}
         balance={credits.balance?.available ?? null}
-        onOpenWallet={() => onNavigate(studentRoutes.wallet())}
+        onOpenWallet={() => onNavigate(studentRoutes.profile('wallet'))}
         profileLoading={status === 'loading' || (status === 'idle' && Boolean(getAccessToken()))}
         onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
         sidebarCollapsed={sidebarCollapsed}
@@ -83,7 +90,7 @@ function StudentLayout({
         onNotify={notify}
       />
       <StudentSidebar
-        activeKey={getStudentNavKeyForPath(currentPath)}
+        activeKey={isStudentAssessmentsPath(window.history.state?.quizReturnTo) && /^\/student\/assessments\/(quizzes|attempts)\//.test(currentPath) ? 'assessments' : getStudentNavKeyForPath(currentPath)}
         onNavigate={onNavigate}
         collapsed={sidebarCollapsed}
         mobileOpen={mobileNavigationOpen}
@@ -92,7 +99,7 @@ function StudentLayout({
       <main
         id="student-content"
         tabIndex={-1}
-        className="col-start-2 row-start-2 min-w-0 px-8 pt-8 pb-12 max-[760px]:px-4 max-[760px]:pt-6 max-[760px]:pb-8"
+        className={cn('col-start-2 row-start-2 min-w-0 px-8 pt-8 pb-12 max-[760px]:px-4 max-[760px]:pt-6 max-[760px]:pb-8', isLesson && styles.lessonMain, isAccount && styles.accountMain)}
       >
         <LearningProfileFlow currentPath={currentPath} onNavigate={onNavigate}>{children}</LearningProfileFlow>
       </main>

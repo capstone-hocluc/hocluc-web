@@ -16,7 +16,7 @@ import { usePageResource } from '../../hooks/usePageResource'
 import { ApiError } from '../../lib/api'
 import { getErrorMessage } from '../../lib/errors'
 import { formatDateTime } from '../../lib/courseFormat'
-import { CREDIT_ENTRY_LABELS, CREDIT_UNIT, creditEntryPurpose, useCredits } from '../../lib/credits'
+import { CREDIT_ENTRY_LABELS, CREDIT_UNIT, creditEntryPurpose, refreshCredits, useCredits } from '../../lib/credits'
 import { creditService, type CreditEntry, type CreditPack } from '../../services/creditService'
 import { cn } from '../../lib/cn'
 
@@ -32,58 +32,59 @@ function StudentWalletPage({ onOpenPayment }: StudentWalletPageProps) {
   return (
     <StudentPageContainer width="narrow" className="pb-10">
       <StudentPageHeader title={`Ví ${CREDIT_UNIT}`} />
-      <div className="flex flex-col gap-8">
-        <BalanceCard />
-        <Packs onOpenPayment={onOpenPayment} />
-        <History />
-      </div>
-      <PurchaseArrival />
+      <StudentWalletContent onOpenPayment={onOpenPayment} />
     </StudentPageContainer>
   )
 }
 
-function BalanceCard() {
-  const { balance } = useCredits()
-  // A pack just bought is counted in here together with the top bar.
-  const shown = useShownBalance(balance?.available ?? null)
-  if (!balance) return <Skeleton className="h-[148px] rounded-2xl" />
+export function StudentWalletContent({ onOpenPayment }: StudentWalletPageProps) {
   return (
-    <Card
-      radius="lg"
-      padding="lg"
-      className="relative flex flex-wrap items-center gap-5 overflow-hidden border-live-line bg-linear-to-br from-live-tint via-surface to-surface"
-    >
-      {/* A large star behind the balance, faint, so the card reads as the wallet without more words. */}
-      <CreditIcon size={180} className="pointer-events-none absolute -top-10 -right-8 opacity-15" />
-      <span className="grid size-[72px] shrink-0 place-items-center rounded-2xl bg-live-soft">
-        <CreditIcon size={48} />
-      </span>
-      <div className="relative flex min-w-0 flex-1 flex-col gap-2.5">
-        <p className="text-[40px] leading-none font-bold text-text-heading tabular-nums">
-          {(shown.value ?? balance.available).toLocaleString('vi-VN')}
-          <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
-        </p>
-        <ul className="flex flex-wrap gap-2 text-[13px]">
-          <BalancePart value={balance.bonus} label="thưởng" />
-          <BalancePart value={balance.paid} label="đã mua" />
-          {balance.held > 0 && <BalancePart value={balance.held} label="đang tạm giữ" muted />}
-        </ul>
-      </div>
-    </Card>
+    <div className="flex flex-col gap-5">
+      <BalanceCard />
+      <Packs onOpenPayment={onOpenPayment} />
+      <History />
+      <PurchaseArrival />
+    </div>
   )
 }
 
-function BalancePart({ value, label, muted = false }: { value: number; label: string; muted?: boolean }) {
+function BalanceCard() {
+  const { balance, balanceError } = useCredits()
+  const shown = useShownBalance(balance?.available ?? null)
+  if (!balance) {
+    return balanceError ? <BalanceLoadError /> : <Skeleton className="h-[132px] rounded-2xl" />
+  }
   return (
-    <li
-      className={cn(
-        'rounded-full border px-3 py-1',
-        muted ? 'border-line bg-surface text-text-muted' : 'border-live-line bg-surface text-text-body'
-      )}
-    >
-      <span className="font-semibold text-text-heading tabular-nums">{value.toLocaleString('vi-VN')}</span> {CREDIT_UNIT}{' '}
-      {label}
-    </li>
+    <>
+      {balanceError && <BalanceLoadError hasPreviousBalance />}
+      <Card variant="panel" radius="lg" padding="none" className="flex flex-wrap items-center gap-4 p-4">
+        <CreditIcon size={44} />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-[28px] leading-none font-bold text-text-heading tabular-nums">
+            {(shown.value ?? balance.available).toLocaleString('vi-VN')}
+            <span className="ml-2 text-lg font-semibold text-text-muted">{CREDIT_UNIT}</span>
+          </p>
+          <p className="text-sm text-text-body">
+            {balance.bonus.toLocaleString('vi-VN')} {CREDIT_UNIT} thưởng · {balance.paid.toLocaleString('vi-VN')}{' '}
+            {CREDIT_UNIT} đã mua
+          </p>
+          {balance.held > 0 && (
+            <p className="text-sm text-text-muted">
+              {balance.held.toLocaleString('vi-VN')} {CREDIT_UNIT} đang tạm giữ cho câu hỏi chưa có lời giải.
+            </p>
+          )}
+        </div>
+      </Card>
+    </>
+  )
+}
+
+function BalanceLoadError({ hasPreviousBalance = false }: { hasPreviousBalance?: boolean }) {
+  return (
+    <Notice tone="danger" className="flex-wrap justify-between gap-3">
+      <span>{hasPreviousBalance ? 'Không thể cập nhật số dư. Bạn đang xem số dư lần tải trước.' : 'Không tải được số dư Ví Sao.'}</span>
+      <Button appearance="outline" size="sm" onClick={() => void refreshCredits()}>Thử lại</Button>
+    </Notice>
   )
 }
 
@@ -122,8 +123,8 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
 
   return (
     <section>
-      <SectionHeader title={`Mua ${CREDIT_UNIT}`} />
-      <div className="mt-4 flex flex-col gap-4">
+      <SectionHeader title={`Mua ${CREDIT_UNIT}`} titleClassName="text-lg max-[760px]:text-lg" />
+      <div className="mt-3 flex flex-col gap-3">
         {error && (
           <Notice tone="warning" className="flex flex-wrap items-center gap-3">
             <span>{error.message}</span>
@@ -149,7 +150,7 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
         />
         {status === 'ready' && packs && packs.length === 0 && <MascotState title="Chưa có gói nào đang bán" />}
         {status === 'ready' && packs && packs.length > 0 && (
-          <ul className="grid grid-cols-3 gap-4 max-[760px]:grid-cols-1">
+          <ul className="grid max-h-[360px] grid-cols-3 gap-3 overflow-y-auto px-1 pt-3 pb-1 max-[1100px]:grid-cols-2 max-[760px]:grid-cols-1" aria-label="Các gói Sao" tabIndex={0}>
             {packs.map((pack, index) => (
               <PackCard
                 key={pack.id}
@@ -174,7 +175,7 @@ function Packs({ onOpenPayment }: StudentWalletPageProps) {
 /** One star per tier of the pack, a little apart: its size at a glance. */
 function StarStack({ count }: { count: number }) {
   return (
-    <span className="flex shrink-0 items-center gap-0.5 [&_svg]:size-10 max-[760px]:[&_svg]:size-6" aria-hidden="true">
+    <span className="flex shrink-0 items-center gap-0.5 [&_svg]:size-7 max-[760px]:[&_svg]:size-6" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
         <CreditIcon key={i} size={40} />
       ))}
@@ -201,7 +202,7 @@ function PackCard({
   return (
     <li
       className={cn(
-        'relative flex flex-col items-center gap-4 rounded-2xl border bg-surface p-5 pt-7 text-center transition-shadow hover:shadow-card',
+        'relative flex flex-col items-center gap-2 rounded-2xl border bg-surface p-3 pt-5 text-center transition-shadow hover:shadow-card',
         'max-[760px]:flex-row max-[760px]:gap-3.5 max-[760px]:p-4 max-[760px]:text-left',
         best ? 'border-live bg-linear-to-b from-live-tint to-surface shadow-card-soft' : 'border-line-card'
       )}
@@ -219,7 +220,7 @@ function PackCard({
         <StarStack count={tier} />
       </span>
       <div className="flex min-w-0 flex-col items-center gap-1 max-[760px]:flex-1 max-[760px]:items-start">
-        <p className="text-[28px] leading-none font-bold text-text-heading tabular-nums max-[760px]:text-2xl">
+        <p className="text-xl leading-none font-bold text-text-heading tabular-nums max-[760px]:text-xl">
           {pack.credits.toLocaleString('vi-VN')}
           <span className="ml-1.5 text-base font-semibold text-text-muted">{CREDIT_UNIT}</span>
         </p>
@@ -232,6 +233,7 @@ function PackCard({
         </p>
       </div>
       <Button
+        size="sm"
         className="w-full max-[760px]:w-auto max-[760px]:shrink-0"
         appearance={best ? 'fill' : 'outline'}
         disabled={buying !== null}
@@ -255,10 +257,10 @@ function History() {
   useEffect(() => {
     let cancelled = false
     creditService
-      .history(0, 20)
+      .history(0, 5)
       .then((result) => {
         if (cancelled) return
-        setRows(result.content)
+        setRows([...result.content].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)))
         setPage(0)
         setLast(result.last)
         setError(null)
@@ -272,8 +274,8 @@ function History() {
   const loadMore = async () => {
     setLoadingMore(true)
     try {
-      const result = await creditService.history(page + 1, 20)
-      setRows((current) => [...(current ?? []), ...result.content])
+      const result = await creditService.history(page + 1, 5)
+      setRows((current) => [...new Map([...(current ?? []), ...result.content].map(row => [row.id, row])).values()].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)))
       setPage(page + 1)
       setLast(result.last)
     } catch (e) {
@@ -285,14 +287,15 @@ function History() {
 
   return (
     <section>
-      <SectionHeader title="Lịch sử" />
-      <div className="mt-4">
+      <SectionHeader title="Lịch sử giao dịch" titleClassName="text-lg max-[760px]:text-lg" />
+      <p className="mt-1 text-xs text-text-secondary">Mới nhất trước · Tải thêm 5 giao dịch mỗi lần</p>
+      <div className="mt-3">
         {error && <Notice tone="danger">{error}</Notice>}
         {rows === null && !error && <Skeleton className="h-[240px] rounded-2xl" />}
         {rows !== null && rows.length === 0 && <MascotState title={`Chưa có giao dịch ${CREDIT_UNIT}`} />}
         {rows !== null && rows.length > 0 && (
           <Card radius="lg" padding="none">
-            <ul className="divide-y divide-line">
+            <ul className="max-h-[300px] divide-y divide-line overflow-y-auto" aria-label="Lịch sử giao dịch Sao" tabIndex={0}>
               {rows.map((row) => (
                 <HistoryRow key={row.id} row={row} />
               ))}
@@ -315,7 +318,7 @@ function HistoryRow({ row }: { row: CreditEntry }) {
   const purpose = creditEntryPurpose(row.refType)
   const label = CREDIT_ENTRY_LABELS[row.type] ?? row.type
   return (
-    <li className="flex items-center justify-between gap-4 px-5 py-3.5">
+    <li className="flex items-center justify-between gap-3 px-4 py-2.5">
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-text-heading">
           {purpose ? `${label} · ${purpose}` : row.note ? `${label} · ${row.note}` : label}

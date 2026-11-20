@@ -6,11 +6,12 @@ import { cn } from '../../../lib/cn'
 const list = cva('', {
   variants: {
     variant: {
-      // Main page tabs (Tổng quan / Học tập / Luyện đề).
+      // Main page tabs.
       page: 'inline-flex max-w-full gap-6 overflow-x-auto border-b border-line max-[760px]:w-full',
       // Source switch inside a card (AI phân tích / Nhận xét giáo viên).
       source:
         'inline-flex gap-1.5 rounded-xl border border-line bg-surface-brand p-1 max-[760px]:grid max-[760px]:w-full max-[760px]:grid-cols-1',
+      profile: 'inline-flex max-w-full gap-1 rounded-full border border-line bg-surface p-1 max-[640px]:w-full',
       // Round filter chips.
       chip: 'mb-3 flex flex-wrap gap-2',
     },
@@ -25,11 +26,17 @@ const tab = cva(
         page: 'min-h-12 shrink-0 border-b-2 border-transparent px-1 py-3 text-sm text-text-body transition-colors hover:border-line-brand hover:text-primary-text',
         source:
           'inline-flex min-h-10 items-center justify-center gap-[7px] rounded-xl border border-transparent px-3.5 text-sm whitespace-nowrap text-text-body transition hover:bg-surface',
+        profile: 'inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-5 text-sm whitespace-nowrap text-text-body transition-colors hover:bg-surface-brand max-[640px]:px-3',
         chip: 'min-h-10 rounded-full border border-line bg-surface px-4 text-sm text-text-body hover:bg-surface-brand',
       },
       active: { true: '', false: '' },
     },
     compoundVariants: [
+      {
+        variant: 'profile',
+        active: true,
+        className: 'bg-primary text-white hover:bg-primary',
+      },
       {
         variant: 'page',
         active: true,
@@ -50,7 +57,7 @@ const tab = cva(
 )
 
 interface SegmentedTabsProps {
-  variant: 'page' | 'source' | 'chip'
+  variant: 'page' | 'source' | 'chip' | 'profile'
   ariaLabel: string
   tabs: { key: string; label: ReactNode; icon?: ReactNode }[]
   active: string

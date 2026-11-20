@@ -1,0 +1,20 @@
+.summary { overflow: hidden; flex-shrink: 0; border: 1px solid var(--color-line-card); border-radius: 20px; background: var(--color-surface); }
+.banner { padding: 18px; background-color: #def6ff; background-image: linear-gradient(#218cff12 1px, transparent 1px), linear-gradient(90deg, #218cff12 1px, transparent 1px); background-size: 40px 40px; }
+.banner > span { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 12px; color: var(--color-text-secondary); }
+.banner p { font-size: 13px; color: var(--color-text-secondary); }
+.banner strong { display: block; margin-block: 6px; font-size: 38px; line-height: 1.2; color: var(--color-primary-text); }
+.summaryBody { display: grid; gap: 8px; padding: 16px; font-size: 12px; line-height: 1.6; color: var(--color-text-secondary); }
+.stats { display: grid; gap: 6px; border-top: 1px solid var(--color-line-card); padding-top: 10px; }
+.stats b { color: var(--color-text-heading); }
+.numbers { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.numbers button { display: grid; place-items: center; aspect-ratio: 1; border: 1px solid var(--color-line-card); border-radius: 10px; background: var(--color-surface-hover); font-size: 13px; cursor: pointer; }
+.numbers button[data-verdict='correct'] { background: var(--color-badge-success-bg); border-color: var(--color-badge-success-text); color: var(--color-badge-success-text); }
+.numbers button[data-verdict='incorrect'] { background: var(--color-badge-danger-bg); border-color: var(--color-danger-line); color: var(--color-badge-danger-text); }
+.numbers button[aria-current] { outline: 2px solid var(--color-primary-text); outline-offset: 2px; }
+.numbers button:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.detailsHeader { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; padding: 8px 12px; background: var(--color-surface-brand); color: var(--color-text-secondary); font-size: 12px; cursor: pointer; }
+.filters button[aria-pressed='true'] { background: var(--color-primary); color: white; }
+.filters span { font-weight: 700; }
+.unavailable { display: grid; justify-items: center; align-content: center; gap: 16px; min-height: 260px; padding: 16px; color: var(--color-primary-text); text-align: center; }

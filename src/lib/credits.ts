@@ -48,12 +48,13 @@ interface CreditState {
   balance: CreditBalance | null
   streak: StreakView | null
   loading: boolean
+  balanceError: boolean
   arrival: CreditArrival | null
 }
 
-let state: CreditState = { balance: null, streak: null, loading: false, arrival: null }
+let state: CreditState = { balance: null, streak: null, loading: false, balanceError: false, arrival: null }
 let loaded = false
-/** Bumped on reset so a request that started for the previous account cannot fill the next one's state. */
+/** Only the latest refresh for the current account can update the store. */
 let generation = 0
 /** Counts reloads, so an arrival is only ready once a reload that started after the payment has finished. */
 let reloads = 0
@@ -70,23 +71,20 @@ function set(next: Partial<CreditState>) {
  * a photo, a freeze); every view of the balance updates together.
  */
 export async function refreshCredits() {
-  const started = generation
+  const started = ++generation
   const reload = ++reloads
-  set({ loading: true })
-  try {
-    const [balance, streak] = await Promise.all([creditService.balance(), creditService.streak()])
-    if (started !== generation) return
-    loaded = true
-    const { arrival } = state
-    set({
-      balance,
-      streak,
-      loading: false,
-      arrival: arrival && !arrival.ready && reload > arrivalAfter ? { ...arrival, ready: true } : arrival,
-    })
-  } catch {
-    if (started === generation) set({ loading: false })
-  }
+  set({ loading: true, balanceError: false })
+  const [balance, streak] = await Promise.allSettled([creditService.balance(), creditService.streak()])
+  if (started !== generation) return
+  loaded = balance.status === 'fulfilled' && streak.status === 'fulfilled'
+  const { arrival } = state
+  set({
+    arrival: balance.status === 'fulfilled' && arrival && !arrival.ready && reload > arrivalAfter ? { ...arrival, ready: true } : arrival,
+    balance: balance.status === 'fulfilled' ? balance.value : state.balance,
+    streak: streak.status === 'fulfilled' ? streak.value : state.streak,
+    balanceError: balance.status === 'rejected',
+    loading: false,
+  })
 }
 
 export function setStreak(streak: StreakView) {
@@ -134,7 +132,7 @@ export function useCredits() {
 export function resetCredits() {
   generation++
   loaded = false
-  set({ balance: null, streak: null, loading: false, arrival: null })
+  set({ balance: null, streak: null, loading: false, balanceError: false, arrival: null })
 }
 
 // Logout, an expired session, another account or another active role all start from an empty state.

@@ -27,6 +27,8 @@ export interface LessonProgress {
   sectionCourseId: string | null
   sectionProgressPercentage: number
   chapterCompleted: boolean
+  lastVideoId?: string | null
+  videos?: { videoId: string; title: string; watchedSeconds: number; durationSeconds: number | null; percentage: number; completed: boolean }[]
 }
 
 export interface LessonVideo {
@@ -69,6 +71,7 @@ export interface LessonDetail {
 export interface UpdateLessonProgressRequest {
   completed: boolean
   watchDurationSeconds: number
+  videoId?: string
 }
 
 // GET already includes `progress` - never follow this with a GET progress

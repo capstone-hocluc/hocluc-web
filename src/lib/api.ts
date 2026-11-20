@@ -325,7 +325,7 @@ function getSessionLoginPath() {
   const pathname = window.location.pathname.replace(/\/$/, '') || '/'
   if (isConsolePath(pathname)) return CONSOLE_LOGIN_PATH
   if (safePurchaseReturnTo(pathname + window.location.search)) return purchaseLoginPath()
-  return loginPathFor(pathname)
+  return loginPathFor(pathname + window.location.search)
 }
 
 function handleSessionExpired() {

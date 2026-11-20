@@ -4,7 +4,7 @@ import {
   type CourseStudy,
   type MyCourseEnrollment,
 } from './courseService'
-import { getPlacementResult, type PlacementResult } from './assessmentService'
+import { getCompetencyCourses, getCourseCompetency, type CourseCompetency } from './freeExamService'
 
 // Composition of existing, real endpoints for the Student dashboard and
 // Learning Profile - no new endpoint and no client-side data of its own.
@@ -15,17 +15,16 @@ export interface StudentApiSnapshot {
   enrollments: MyCourseEnrollment[]
   /** GET /courses/{id}/study per enrollment, keyed by course id (failed ones are omitted). */
   studies: Record<string, CourseStudy>
-  /** GET /assessments/results/me; null when the student has no result yet. */
-  placement: PlacementResult | null
+  /** Aggregate for the first available MAIN course, never the latest single sitting. */
+  placement: CourseCompetency | null
 }
 
 export async function loadStudentSnapshot(): Promise<StudentApiSnapshot> {
-  const [coursesResponse, placement] = await Promise.all([
-    getMyCourses(),
-    // No placement result yet is an expected state, not an error.
-    getPlacementResult().catch(() => null),
-  ])
+  const coursesResponse = await getMyCourses()
   const enrollments = coursesResponse.data || []
+  const courseId = enrollments.find(item => item.course.courseType === 'MAIN')?.course.id
+    ?? (await getCompetencyCourses().catch(() => []))[0]?.id
+  const placement = courseId ? await getCourseCompetency(courseId).catch(() => null) : null
   const loaded = await Promise.all(
     enrollments.map((item) =>
       getCourseStudy(item.course.id)
