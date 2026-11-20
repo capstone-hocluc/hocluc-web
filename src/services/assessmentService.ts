@@ -1,4 +1,4 @@
-import { request } from '../lib/api'
+import { ApiError, request } from '../lib/api'
 
 export interface QuizOption {
   id: string
@@ -14,6 +14,8 @@ export interface QuizQuestion {
   imageUrl: string | null
   categoryId: string | null
   categoryName: string | null
+  /** Layout section the question belongs to; null for plain quizzes. */
+  sectionId?: string | null
   options: QuizOption[]
 }
 
@@ -89,6 +91,12 @@ export interface QuizAttemptDetail {
   quizTitle: string
   status: string
   attemptNumber: number
+  mode?: 'EXAM' | 'PRACTICE' | null
+  /** A practice run on chosen sections covers only their questions; empty means the whole paper. */
+  sectionIds?: string[] | null
+  /** A paused practice run refuses answers until it is resumed. */
+  paused?: boolean
+  pausedAt?: string | null
   startedAt: string
   deadlineAt: string
   remainingSeconds: number
@@ -164,6 +172,37 @@ export async function getAttempt(attemptId: string): Promise<QuizAttemptDetail> 
   )
   if (!response.data) throw new Error('Không thể tải bài làm.')
   return response.data
+}
+
+/** Restarts a paused practice run; its deadline moves out by the time spent paused. */
+export async function resumeAttempt(attemptId: string): Promise<QuizAttemptDetail> {
+  const response = await request<QuizAttemptDetail>(
+    `/api/v1/assessments/attempts/${encodeURIComponent(attemptId)}/resume`,
+    { method: 'POST', auth: true, guardIdentity: true }
+  )
+  if (!response.data) throw new Error('Không thể tiếp tục bài làm.')
+  return response.data
+}
+
+/**
+ * Loads an attempt to sit it. Opening a paused practice run is continuing it, so it is resumed
+ * first; if another tab resumed it meanwhile, the attempt is simply read again.
+ */
+export async function openAttempt(attemptId: string): Promise<QuizAttemptDetail> {
+  const attempt = await getAttempt(attemptId)
+  if (!attempt.paused || attempt.status !== 'IN_PROGRESS') return attempt
+  try {
+    return await resumeAttempt(attemptId)
+  } catch (error) {
+    if (error instanceof ApiError && error.code === 'ATTEMPT_NOT_PAUSED') return getAttempt(attemptId)
+    throw error
+  }
+}
+
+/** The questions an attempt covers: a practice run on chosen sections leaves the others out. */
+export function questionsInAttempt<T extends { sectionId?: string | null }>(questions: T[], attempt: Pick<QuizAttemptDetail, 'sectionIds'>): T[] {
+  const scope = new Set(attempt.sectionIds ?? [])
+  return scope.size ? questions.filter((question) => question.sectionId != null && scope.has(question.sectionId)) : questions
 }
 
 // Response data is an opaque string per the confirmed contract - callers
