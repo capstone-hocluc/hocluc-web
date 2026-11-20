@@ -4,7 +4,8 @@ import { loadKatex } from '../../../ui/katex-loader'
 
 type OnEdit = (pos: number, value: { latex: string; display: boolean }) => void
 
-const SELECTED = ['ring-2', 'ring-input-primary-focus-border']
+/** Tints only the formula (exam-doc.css); a ring around the inline box covered the words beside it. */
+const SELECTED = 'exam-doc-math-selected'
 
 /**
  * A formula set by KaTeX straight into the DOM. A React node view per formula made a long exam slow to fill: every
@@ -75,11 +76,11 @@ export class MathView implements NodeView {
   }
 
   selectNode() {
-    this.dom.classList.add(...SELECTED)
+    this.dom.classList.add(SELECTED)
   }
 
   deselectNode() {
-    this.dom.classList.remove(...SELECTED)
+    this.dom.classList.remove(SELECTED)
   }
 
   /** KaTeX rewrites the inside; that is not an edit of the document. */
