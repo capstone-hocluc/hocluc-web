@@ -2,6 +2,7 @@ import { roleHome } from './lib/role-home'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import LandingPage from './pages/LandingPage'
 import CourseCatalogPage from './pages/CourseCatalogPage'
+import FreeExamsPage from './pages/FreeExamsPage'
 import LessonVideosMockPage from './pages/mock/LessonVideosMockPage'
 import AlertsMockPage from './pages/mock/AlertsMockPage'
 import CourseDetailPage from './pages/course/CourseDetailPage'
@@ -23,6 +24,7 @@ import TeacherDashboard from './components/teacher/TeacherDashboard'
 import { useCurrentUser } from './hooks/useCurrentUser'
 import { logout } from './services/authService.ts'
 import { getErrorMessage } from './lib/errors'
+import { accessTokenRole } from './lib/api'
 import { showErrorToast } from './lib/toastBus'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
@@ -122,6 +124,7 @@ function App() {
     if (path === '/forgot-password') return 'forgot-password'
     if (path === '/reset-password') return 'reset-password'
     if (path === '/courses') return 'courses'
+    if (path === '/free-exams') return 'free-exams'
     if (import.meta.env.DEV && path === '/mock/lesson-videos') return 'mock-lesson-videos'
     if (import.meta.env.DEV && path === '/mock/alerts') return 'mock-alerts'
     if (path === '/cart') return 'cart'
@@ -197,14 +200,16 @@ function App() {
   // `state` is optional history state - used to hand data (e.g. SePay payment
   // instructions) to the next page without a prop path, since it's not
   // returned by GET endpoints and would otherwise be lost on navigation.
-  const navigateTo = useCallback((rawPath, state = {}) => {
+  // `replace` swaps the current entry instead, for a redirect that Back must skip.
+  const navigateTo = useCallback((rawPath, state = {}, { replace = false } = {}) => {
     const path = toConsolePath(toStudentPath(rawPath === '/onboarding' ? '/student/dashboard' : rawPath))
     runWithUnsavedActionGuard(() => {
-      pushHistoryEntry(state, path)
+      if (replace) replaceCurrentHistoryEntry(state, path)
+      else pushHistoryEntry(state, path)
       setAuthMode(getAuthMode())
       setCurrentPath(path.replace(/\/$/, '') || '/')
     })
-  }, [getAuthMode, pushHistoryEntry])
+  }, [getAuthMode, pushHistoryEntry, replaceCurrentHistoryEntry])
 
   const backToLanding = () => {
     runWithUnsavedActionGuard(() => {
@@ -521,7 +526,7 @@ function App() {
   const studentRoute = parseStudentRoute(currentPath)
   if (studentRoute)
     return (
-      <StudentRouteGuard onLogin={() => navigateTo(loginPathFor(currentPath))} onGoToRole={navigateTo}>
+      <StudentRouteGuard onLogin={() => navigateTo(loginPathFor(window.location.pathname + window.location.search))} onGoToRole={navigateTo}>
         <StudentRoutes
           route={studentRoute}
           currentPath={currentPath}
@@ -558,7 +563,7 @@ function App() {
       <OrderDetailPage
         key={orderDetailId}
         orderId={orderDetailId}
-        onBackToOrders={() => navigateTo('/orders')}
+        onBackToOrders={() => navigateTo(accessTokenRole() === 'STUDENT' ? studentRoutes.profile('orders') : '/orders')}
         onGoToMyCourses={() => navigateTo(studentRoutes.courses())}
         onGoToWallet={() => navigateTo(studentRoutes.wallet())}
         onPaymentReady={(paymentData) =>
@@ -573,6 +578,8 @@ function App() {
     return <AlertsMockPage />
   if (authMode === 'courses')
     return <CourseCatalogPage />
+  if (authMode === 'free-exams')
+    return <FreeExamsPage />
   if (authMode === 'cart')
     return purchase(
       <CartPage

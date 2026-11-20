@@ -4,58 +4,15 @@ import type { TeacherQuizRecord } from '../../src/services/teacherQuizService'
 
 const createdId = '50000000-0000-0000-0000-000000000004'
 
-test('landing free assessment resumes placement after login, retry and auth mode changes', async ({ page }) => {
-  const state = await installQuizFixture(page, 'STUDENT')
-  state.quizzes[0] = seedPlacement(state.quizzes[0], createdId, 'Đầu vào từ landing', '2026-10-20T00:00:00Z')
-  await page.addInitScript(() => localStorage.clear())
-  await page.route('**/api/v1/courses/main', route => route.fulfill({ json: { success: true, data: [] } }))
-  let rejectLogin = true
-  await page.route('**/api/v1/auth/login', route => route.fulfill({ status: rejectLogin ? 401 : 200,
-    json: rejectLogin ? { success: false, message: 'Thông tin đăng nhập không đúng.' }
-      : { success: true, data: { accessToken: quizToken('STUDENT') } } }))
-  await page.goto('/')
-  const cta = page.locator('.hero-buttons').getByRole('link', { name: 'Làm bài đánh giá miễn phí' })
-  await expect(cta).toHaveAttribute('href', '/student/assessments/placement')
-  await cta.click()
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Fstudent%2Fassessments%2Fplacement$/)
-  await page.reload()
-  await page.getByRole('button', { name: 'Đăng ký', exact: true }).click()
-  await expect(page).toHaveURL(/\/signup\?returnTo=%2Fstudent%2Fassessments%2Fplacement$/)
-  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
-  const dialog = page.getByRole('dialog')
-  await dialog.getByRole('textbox', { name: 'Email', exact: true }).fill('student@example.invalid')
-  await dialog.getByPlaceholder('Nhập mật khẩu', { exact: true }).fill('fixture-password')
-  await dialog.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('Thông tin đăng nhập không đúng.')
-  await expect(page).toHaveURL(/returnTo=%2Fstudent%2Fassessments%2Fplacement$/)
-  rejectLogin = false
-  await dialog.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
-  await expect(page).toHaveURL('/student/assessments/placement')
-  await expect(page.getByRole('heading', { name: 'Đầu vào từ landing', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true })).toBeVisible()
-  expect(state.pageErrors).toEqual([]); expect(state.unmatched).toEqual([])
-})
-
-test('signed-in Student enters placement directly from the landing assessment action', async ({ page }) => {
-  const state = await installQuizFixture(page, 'STUDENT')
-  state.quizzes[0] = seedPlacement(state.quizzes[0], createdId, 'Đầu vào từ landing', '2026-10-20T00:00:00Z')
-  await page.route('**/api/v1/courses/main', route => route.fulfill({ json: { success: true, data: [] } }))
-  await page.goto('/')
-  await page.locator('.hero-buttons').getByRole('link', { name: 'Làm bài đánh giá miễn phí' }).click()
-  await expect(page).toHaveURL('/student/assessments/placement')
-  await expect(page.getByRole('heading', { name: 'Đầu vào từ landing', exact: true })).toBeVisible()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  expect(state.pageErrors).toEqual([]); expect(state.unmatched).toEqual([])
-})
-
-test('landing assessment action does not grant Student access to active Staff', async ({ page }) => {
+// Guest login, registration and selected-paper coverage lives in free-exams.spec.ts.
+test('Staff can browse free papers but cannot enter a Student sitting', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
-  await page.route('**/api/v1/courses/main', route => route.fulfill({ json: { success: true, data: [] } }))
-  await page.goto('/')
-  await page.locator('.hero-buttons').getByRole('link', { name: 'Làm bài đánh giá miễn phí' }).click()
+  state.quizzes[0] = seedPlacement(state.quizzes[0], createdId, 'Đề miễn phí QA', '2026-10-20T00:00:00Z')
+  await page.goto('/free-exams')
+  await expect(page.getByRole('heading', { name: 'Đề miễn phí QA', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Làm bài miễn phí' }).click()
   await expect(page.getByRole('heading', { name: 'Trang này dành cho học viên', exact: true })).toBeVisible()
   expect(state.requests.some(request => request.path.startsWith('/api/v1/assessments/'))).toBe(false)
-  expect(state.pageErrors).toEqual([]); expect(state.unmatched).toEqual([])
 })
 
 for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINISTRATOR', 'admin']] as const) {
@@ -156,7 +113,7 @@ for (const [role, area] of [['STAFF','staff'], ['MANAGER','manager'], ['ADMINIST
     for (const key of ['courseId','chapterId','lessonId','practiceAllowed','availableFrom','availableUntil','passingPercentage']) expect(created).not.toHaveProperty(key)
     expect(state.requests.some(r => r.path === '/api/v1/admin/courses')).toBe(false)
     expect(state.requests.find(r => r.path.endsWith('/questions') && r.method === 'POST')?.body.questions).toMatchObject([{ questionType: 'SINGLE_CHOICE', categoryId: 'category-1' }])
-    await expect(page.getByText('Đang dùng cho Student', { exact: true })).toBeVisible()
+    await expect(page.getByText('Hiển thị trong đề thi miễn phí', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Thao tác khác với Đầu vào QA', exact: true }).click()
     await page.getByRole('menuitem', { name: 'Sao chép thành bản nháp' }).click()
     const copy = page.getByRole('row').filter({ has: page.getByRole('heading', { name: 'Đầu vào QA bản sao', exact: true }) })
@@ -168,7 +125,7 @@ for (const [role, area] of [['STAFF','staff'], ['MANAGER','manager'], ['ADMINIST
   })
 }
 
-test('Staff publication becomes the Student placement and supports submit, result and review', async ({ page }) => {
+test('Staff publication appears in the free catalog and starts the selected paper', async ({ page }) => {
   test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'STAFF')
   await createPlacement(page, 'staff')
@@ -176,21 +133,13 @@ test('Staff publication becomes the Student placement and supports submit, resul
     localStorage.setItem('hocluc.accessToken', token)
     window.dispatchEvent(new Event('hocluc:tokens-changed'))
   }, quizToken('STUDENT'))
-  await page.goto('/student/assessments/placement')
+  await page.goto('/free-exams')
   await expect(page.getByRole('heading', { name: 'Đầu vào QA', exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Làm bài miễn phí' }).click()
   await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
+  await expect(page).toHaveURL('/student/assessments/quizzes/' + createdId + '/attempts/' + QUIZ_IDS.attempt)
   expect(state.activeStudentQuizId).toBe(createdId)
-  await page.getByRole('radio', { name: '4', exact: true }).click()
-  await expect(page.getByText('Đã lưu', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Nộp bài', exact: true }).first().click()
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Nộp bài', exact: true }).click()
-  await expect(page).toHaveURL(/\/placement\/result$/)
-  await expect(page.getByRole('heading', { name: 'Chi tiết theo chủ đề', exact: true })).toBeVisible()
-  await expect(page.getByText('Toán', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Xem lại đáp án', exact: true }).click()
-  await expect(page).toHaveURL(new RegExp(`/placement/attempts/${QUIZ_IDS.attempt}/review$`))
-  await expect(page.getByRole('heading', { name: 'Xem lại đáp án', exact: true })).toBeVisible()
-  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
+  expect(state.requests.some(request => request.path === '/api/v1/assessments/placement')).toBe(false)
 })
 
 for (const [role, area] of [['TEACHER','teacher'],['MENTOR','mentor']] as const) {
@@ -208,7 +157,7 @@ for (const [role, area] of [['TEACHER','teacher'],['MENTOR','mentor']] as const)
 test('Student without published placement sees an empty state', async ({ page }) => {
   await installQuizFixture(page, 'STUDENT')
   await page.goto('/student/assessments/placement')
-  await expect(page.getByText('Chưa có bài đánh giá đầu vào', { exact: true })).toBeVisible()
+  await expect(page.getByText('Chưa có đề thi miễn phí', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true })).toHaveCount(0)
 })
 
@@ -225,17 +174,17 @@ test('placement create 409 keeps the draft and does not retry or publish', async
   expect(state.requests.some(r => r.path.endsWith('/publish'))).toBe(false)
 })
 
-test('newest published placement is selected; hiding it falls back to the earlier published one', async ({ page }) => {
+test('all published papers are visible to Student; hiding one keeps the others available', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
   state.quizzes.push(seedPlacement(state.quizzes[0], createdId, 'Bài cũ', '2026-10-18T00:00:00Z'),
     seedPlacement(state.quizzes[0], '50000000-0000-0000-0000-000000000009', 'Bài mới', '2026-10-20T00:00:00Z'))
   await page.goto('/console/staff/placements')
   const row = (title: string) => page.getByRole('row').filter({ has: page.getByRole('heading', { name: title, exact: true }) })
-  await expect(row('Bài mới').getByText('Đang dùng cho Student', { exact: true })).toBeVisible()
+  await expect(row('Bài mới').getByText('Hiển thị trong đề thi miễn phí', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Quiz được giao', exact: true })).toHaveCount(0)
   await row('Bài mới').getByRole('button', { name: 'Ẩn bài', exact: true }).click()
-  await expect(row('Bài cũ').getByText('Đang dùng cho Student', { exact: true })).toBeVisible()
-  await expect(row('Bài mới').getByText('Đang dùng cho Student', { exact: true })).toHaveCount(0)
+  await expect(row('Bài cũ').getByText('Hiển thị trong đề thi miễn phí', { exact: true })).toBeVisible()
+  await expect(row('Bài mới').getByText('Hiển thị trong đề thi miễn phí', { exact: true })).toHaveCount(0)
   expect(state.unmatched).toEqual([])
 })
 

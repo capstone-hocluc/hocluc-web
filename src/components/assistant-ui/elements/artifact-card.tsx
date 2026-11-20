@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '../../../lib/cn'
-import { paper } from './surfaces'
+import { paper } from './console-surfaces'
 import './elements.css'
 
 /**

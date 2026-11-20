@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import { cn } from '../../../lib/cn'
 import { ArrowUp, Square } from '../../console/icons'
-import { inkButton } from './surfaces'
+import { inkButton } from './console-surfaces'
 
 /**
  * Sends the words, or stops the run going on (Elements' `ComposerSend`): ink once there is something to send, quiet

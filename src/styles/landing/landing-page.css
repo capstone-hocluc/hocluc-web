@@ -1025,11 +1025,30 @@
   border-color: var(--blue);
   color: var(--blue-hover);
 }
+.landing-page .nav-actions > .nav-start-button {
+  flex-shrink: 0;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #218bff;
+  border-radius: 14px;
+  background: #218bff;
+  color: #fff;
+  box-shadow: none;
+}
+.landing-page .nav-actions > .nav-start-button:hover,
+.landing-page .nav-actions > .nav-start-button:active {
+  background: #0879ef;
+  border-color: #0879ef;
+  color: #fff;
+  transform: none;
+}
 .landing-page .account-menu {
   position: relative;
 }
 .landing-page .account-trigger {
   display: flex;
+  height: 44px;
   min-height: 44px;
   align-items: center;
   gap: 8px;
@@ -1125,6 +1144,9 @@
   font-size: var(--body);
   font-weight: 800;
   text-align: left;
+}
+.landing-page .mobile-nav-account .is-danger {
+  color: #c2334d;
 }
 @media (max-width: 640px) {
   .landing-page .account-name {

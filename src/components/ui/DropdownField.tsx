@@ -223,6 +223,7 @@ export function DropdownField({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          data-dropdown-content="true"
           side="bottom"
           align="start"
           sideOffset={6}
@@ -294,7 +295,7 @@ export function DropdownField({
                     renderOption(option, { isSelected })
                   ) : (
                     <span className="flex min-w-0 flex-col">
-                      <span className="truncate text-text-heading">{option.label}</span>
+                      <span data-dropdown-option-label="true" className="truncate text-text-heading">{option.label}</span>
                       {option.description && (
                         <span className="truncate text-xs text-text-muted">{option.description}</span>
                       )}

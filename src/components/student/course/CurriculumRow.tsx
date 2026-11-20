@@ -12,6 +12,7 @@ interface CurriculumRowProps {
   /** Right-hand status / score / attempts. */
   side?: ReactNode
   current?: boolean
+  learningState?: 'completed' | 'in-progress' | 'not-started'
   locked?: boolean
   /** Explains why a locked row can't be opened. */
   lockNote?: ReactNode
@@ -27,6 +28,7 @@ function CurriculumRow({
   meta,
   side,
   current = false,
+  learningState,
   locked = false,
   lockNote,
   onClick,
@@ -72,14 +74,14 @@ function CurriculumRow({
 
   if (locked) {
     return (
-      <div className={className} title={typeof lockNote === 'string' ? lockNote : undefined}>
+      <div data-curriculum-row="" data-learning-state={learningState} className={className} title={typeof lockNote === 'string' ? lockNote : undefined}>
         {content}
       </div>
     )
   }
 
   return (
-    <button type="button" className={className} onClick={onClick}>
+    <button type="button" data-curriculum-row="" data-learning-state={learningState} className={className} onClick={onClick}>
       {content}
     </button>
   )

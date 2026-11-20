@@ -24,11 +24,26 @@ html[data-learner]:not([data-theme='dark']) {
   --color-sky: #1e88ff;
   --color-lock: #60758f;
   --color-lock-soft: #f0f4fa;
-  --color-streak: #965600;
-  --color-streak-soft: #fff6e8;
+  --color-streak: #fd8945;
+  --color-streak-soft: #fff2e9;
   --color-skeleton-highlight: #f8faff;
   --color-scrollbar-track: #f6f9ff;
   --color-scrollbar-thumb: #c4d6ec;
+}
+
+/* Student actions use the logo's .com blue. Scope on html for portals too,
+   without changing the public learner pages or the management console. */
+html[data-learner]:has(.student-layout):not([data-theme='dark']),
+html[data-learner][data-theme='dark']:has(.student-layout) {
+  --color-primary: var(--hocluc-blue);
+  --color-primary-dark: #0875e8;
+}
+
+html[data-learner]:has(.student-layout):not([data-theme='dark']) {
+  --color-app-bg: #f6fbff;
+  --color-primary-text: var(--hocluc-blue);
+  --color-link: var(--hocluc-blue);
+  --color-accent-dark: #0875e8;
 }
 
 html[data-learner][data-theme='dark'] {
@@ -73,6 +88,10 @@ html[data-learner][data-theme='dark'] {
 html[data-learner] body {
   background: var(--color-app-bg);
 }
+
+html[data-learner]:not([data-theme='dark']) .student-layout #student-content {
+  background-color: #f6fbff;
+}
 html[data-learner] :where(h1, h2, h3) {
   text-wrap: balance;
 }
@@ -108,10 +127,54 @@ html[data-learner] :where(input:not([type='checkbox']):not([type='radio']), text
 .student-layout .hl-scheduling {
   --color-scheduling-primary-text: var(--color-primary-text);
 }
+
+/* Scope rounded Student controls to the shell, including its portalled dialogs. */
+html[data-learner]:has(.student-layout) {
+  --learner-control-radius: 9999px;
+  --learner-panel-radius: 24px;
+}
+html[data-learner]:has(.student-layout) [data-ui-button],
+html[data-learner]:has(.student-layout) [data-pill-tabs],
+html[data-learner]:has(.student-layout) [data-pill-tabs] [role='tab'],
+html[data-learner]:has(.student-layout) :is(
+  input:not([type]), input[type='text'], input[type='search'], input[type='email'],
+  input[type='password'], input[type='tel'], input[type='url'], input[type='number'],
+  input[type='date'], input[type='time'], input[type='datetime-local'],
+  select, [role='combobox'], [data-dropdown-trigger], .dropdown-field-trigger
+) {
+  border-radius: var(--learner-control-radius);
+}
+html[data-learner]:has(.student-layout) :is([role='dialog'], [role='alertdialog']) {
+  border-radius: 28px;
+}
+html[data-learner]:has(.student-layout) :is(textarea, [role='listbox'], [role='menu']) {
+  border-radius: 20px;
+}
 html[data-learner] .dropdown-field-trigger {
   min-height: 44px;
   border-radius: var(--learner-control-radius);
   font-weight: 500;
+}
+
+html[data-learner]:has(.student-layout) [data-dropdown-content] {
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px #14385818;
+}
+html[data-learner]:has(.student-layout) [data-dropdown-content] [role='listbox'] {
+  max-height: min(256px, calc(var(--radix-popover-content-available-height, 320px) - 64px));
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  border-radius: 12px;
+}
+html[data-learner]:has(.student-layout) [data-dropdown-content] [role='option'] {
+  min-height: 40px;
+  border-radius: 10px;
+}
+html[data-learner]:has(.student-layout) [data-dropdown-option-label] {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 360px) {

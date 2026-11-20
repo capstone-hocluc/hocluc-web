@@ -19,8 +19,8 @@ import type { UserRole } from '../../services/userService'
 const CAPABILITIES = Object.keys(CAPABILITY_ROLES) as SubjectCapability[]
 const key = (categoryId: string, capability: SubjectCapability) => `${categoryId}:${capability}`
 
-export default function SubjectScopeEditor({ userId, roles }: { userId: string; roles: UserRole[] }) {
-  const capabilities = CAPABILITIES.filter((capability) => CAPABILITY_ROLES[capability].some((role) => roles.includes(role)))
+export default function SubjectScopeEditor({ userId, role }: { userId: string; role: UserRole }) {
+  const capabilities = CAPABILITIES.filter((capability) => CAPABILITY_ROLES[capability].includes(role))
   const resource = useScheduleResource(`subject-scopes:${userId}`, async () => {
     const [scopes, categories] = await Promise.all([getUserSubjectScopes(userId), getCategories()])
     return { granted: scopes.scopes.map((scope) => key(scope.categoryId, scope.capability)), rows: subjectRows(categories) }
@@ -29,7 +29,7 @@ export default function SubjectScopeEditor({ userId, roles }: { userId: string; 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  if (roles.includes('ADMINISTRATOR') && capabilities.length === 0) {
+  if (role === 'ADMINISTRATOR' && capabilities.length === 0) {
     return <p className="text-sm text-text-tertiary">Quản trị viên có mọi quyền ở mọi môn.</p>
   }
   if (capabilities.length === 0) {
@@ -69,7 +69,7 @@ export default function SubjectScopeEditor({ userId, roles }: { userId: string; 
 
   return (
     <fieldset disabled={saving} className="flex min-w-0 flex-col gap-3">
-      <legend className="sr-only">Quyền theo môn</legend>
+      <legend className="sr-only">Chuyên môn</legend>
       <div className="overflow-x-auto rounded-lg border border-card-border">
         <table className="w-full text-sm">
           <thead className="bg-background-gray-secondary text-left text-xs text-text-tertiary">

@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import Button from '../console/button'
+import DateField from '../console/date-field'
+import MentorStatsTiles from '../console/mentor-stats-tiles'
 import DateTime from '../console/detail/date-time'
 import DetailSection from '../console/detail/detail-section'
 import FormField, { fieldControlClass, textareaControlClass } from '../console/form-field'
@@ -54,26 +56,9 @@ export default function MentorProfilePanel({ userId, canEdit }: { userId: string
     )
   }
 
-  const { stats } = profile
-  const tiles = [
-    { label: 'Đang phụ trách', value: stats.assigned },
-    { label: 'Đang hỗ trợ', value: stats.inProgress },
-    { label: 'Đã trả lời', value: stats.answered },
-    { label: 'Đã hoàn tất', value: stats.resolved },
-    { label: 'Nhận hôm nay', value: profile.dailyQuestionLimit ? `${stats.assignedToday}/${profile.dailyQuestionLimit}` : stats.assignedToday },
-    { label: 'Từ lúc hỏi đến lần trả lời đầu', value: stats.averageFirstReplyMinutes === null ? '—' : `${stats.averageFirstReplyMinutes} phút` },
-  ]
-
   return (
     <div className="flex flex-col gap-5">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="rounded-lg border border-card-border px-3 py-2.5">
-            <dt className="text-xs text-text-tertiary">{tile.label}</dt>
-            <dd className="mt-1 text-lg font-semibold text-text-primary">{tile.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <MentorStatsTiles stats={profile.stats} dailyLimit={profile.dailyQuestionLimit} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <DetailSection title="Nội bộ">
@@ -101,7 +86,7 @@ export default function MentorProfilePanel({ userId, canEdit }: { userId: string
                 label: 'Năm học',
                 value: profile.yearOfStudy && `Năm ${profile.yearOfStudy} (nhập học ${profile.enrollmentYear})`,
               },
-              { label: 'Môn phụ trách', value: profile.subjects.join(', ') },
+              { label: 'Chuyên môn', value: profile.subjects.join(', ') },
               { label: 'Thành tích', value: profile.achievements, wide: true },
               { label: 'Kinh nghiệm', value: profile.experience, wide: true },
             ]}
@@ -267,12 +252,8 @@ function MentorProfileForm({
             onChange={(value) => set('collaborationStatus')(value)}
           />
         </div>
-        <FormField label="Ngày bắt đầu">
-          <input type="date" value={draft.startedOn} className={fieldControlClass} onChange={(event) => set('startedOn')(event.target.value)} />
-        </FormField>
-        <FormField label="Ngày sinh">
-          <input type="date" value={draft.dateOfBirth} max={today} className={fieldControlClass} onChange={(event) => set('dateOfBirth')(event.target.value)} />
-        </FormField>
+        <DateField label="Ngày bắt đầu" value={draft.startedOn} disabled={saving} onChange={set('startedOn')} />
+        <DateField label="Ngày sinh" value={draft.dateOfBirth} max={today} disabled={saving} onChange={set('dateOfBirth')} />
         <FormField label="MSSV">
           <input value={draft.studentCode} maxLength={30} className={fieldControlClass} onChange={(event) => set('studentCode')(event.target.value)} />
         </FormField>

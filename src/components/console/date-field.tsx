@@ -15,10 +15,10 @@ import {
   I18nProvider,
   Label,
 } from 'react-aria-components'
-import { parseDate } from '@internationalized/date'
 import { Popover } from '../tailgrids/core/popover'
 import { cn } from '../../lib/cn'
 import { CalendarDays, ChevronLeft, ChevronRight } from './icons'
+import { calendarNavButtonClass as navButtonClass, dateGroupClass, dateSegmentClass, parseDateValue as parseValue } from './date-parts'
 
 interface DateFieldProps {
   label: string
@@ -32,23 +32,14 @@ interface DateFieldProps {
   hint?: string
   invalid?: boolean
   min?: string
+  max?: string
   hideLabel?: boolean
+  /** Toolbar height, matching the search box and select filters beside it. */
+  compact?: boolean
   student?: boolean
 }
 
-function parseValue(text: string) {
-  if (!text) return null
-  try {
-    return parseDate(text)
-  } catch {
-    return null
-  }
-}
-
-const navButtonClass =
-  'grid size-8 cursor-pointer place-items-center rounded-lg border-0 bg-transparent text-icon-primary outline-none hover:bg-background-gray-secondary focus-visible:outline-none! data-[focus-visible]:bg-background-gray-secondary'
-
-function DateField({ label, name, value, onChange, disabled, required, className, hint, invalid, min, hideLabel, student }: DateFieldProps) {
+function DateField({ label, name, value, onChange, disabled, required, className, hint, invalid, min, max, hideLabel, compact, student }: DateFieldProps) {
   const parsed = parseValue(value)
   return (
     <I18nProvider locale="vi-VN">
@@ -60,16 +51,17 @@ function DateField({ label, name, value, onChange, disabled, required, className
         isRequired={required}
         isInvalid={invalid || undefined}
         validationBehavior="native"
-        minValue={min ? parseValue(min) ?? undefined : undefined}
+        minValue={parseValue(min) ?? undefined}
+        maxValue={parseValue(max) ?? undefined}
         className={cn('group flex flex-col gap-1.5 text-sm font-medium text-text-primary', className)}
       >
         <Label className={hideLabel ? "sr-only" : undefined}>{label}</Label>
-        <Group className={cn(student ? "flex h-11 w-full items-center rounded-xl border border-line bg-surface pr-1 pl-3.5 text-[15px] font-semibold text-text-heading focus-within:border-primary" : "flex h-10 w-full items-center rounded-lg border border-card-border bg-input-background pr-1 pl-4 text-sm font-normal text-text-primary focus-within:border-input-primary-focus-border data-[disabled]:cursor-not-allowed data-[disabled]:border-input-disabled-border data-[disabled]:bg-input-disabled-background data-[disabled]:text-input-disabled-text")}>
+        <Group className={cn(student ? "flex h-11 w-full items-center rounded-xl border border-line bg-surface pr-1 pl-3.5 text-[15px] font-semibold text-text-heading focus-within:border-primary" : dateGroupClass(compact))}>
           <DateInput className="flex min-w-0 flex-1 items-center gap-px">
             {(segment) => (
               <DateSegment
                 segment={segment}
-                className="rounded px-0.5 tabular-nums outline-none focus-visible:outline-none! data-[focused]:bg-primary data-[focused]:text-white data-[placeholder]:text-input-placeholder-text"
+                className={dateSegmentClass}
               />
             )}
           </DateInput>

@@ -9,7 +9,7 @@ export function chatIdentity() {
     const raw = getAccessToken()?.split('.')[1]
     if (!raw) return ''
     const payload = JSON.parse(atob(raw.replace(/-/g, '+').replace(/_/g, '/')))
-    return `${payload.sub ?? ''}:${payload.role ?? payload.roles ?? ''}`
+    return `${payload.sub ?? ''}:${payload.role ?? ''}`
   } catch { return getAccessToken() ?? '' }
 }
 export function chatError(error: unknown) {

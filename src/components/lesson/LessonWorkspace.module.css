@@ -1,0 +1,223 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 20px;
+}
+
+.workspace[data-collapsed] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sidebar {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--color-line-card);
+  border-radius: 20px;
+  background: var(--color-surface);
+}
+
+.navigation {
+  padding: 16px 10px;
+}
+
+.navHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 8px 14px;
+  border-bottom: 1px solid var(--color-line-soft);
+  color: var(--color-text-heading);
+  font-size: 14px;
+}
+
+.chapter {
+  margin-top: 16px;
+}
+
+.chapter h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px 8px;
+  color: var(--color-text-heading);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chapter h2 span {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.chapter ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lessonItem,
+.videoItem {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  padding: 10px;
+  color: #344054;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lessonItem svg,
+.videoItem svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.lessonItem small,
+.videoItem small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.completedIcon {
+  color: #00b83f;
+}
+
+.lessonItem[aria-current],
+.videoItem[aria-current],
+.lessonItem:hover,
+.videoItem:hover {
+  background: var(--color-surface-brand);
+  color: var(--color-primary-text);
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lessonItem:focus-visible,
+.videoItem:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.videos {
+  margin: 4px 0 8px 18px;
+  padding-left: 6px;
+  border-left: 1px solid var(--color-line);
+}
+
+.videoItem {
+  font-size: 12px;
+  padding: 8px;
+}
+
+.navNotice {
+  display: grid;
+  gap: 10px;
+  padding: 12px 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.viewer {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 16px;
+  padding: 0 4px 16px 0;
+}
+
+.toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* Keep the reading frame fixed while the lesson inside it scrolls. */
+.viewer[data-reading] {
+  border: 1px solid var(--color-line-card);
+  border-radius: 20px;
+  background: var(--color-surface);
+  padding: 0;
+}
+
+.viewer[data-reading] > :first-child {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.toolbar button {
+  border-color: var(--color-primary-text);
+  background: var(--color-surface);
+  color: var(--color-primary-text);
+  border-radius: 14px;
+}
+
+.toolbar button:hover:not(:disabled) {
+  background: var(--color-surface-brand);
+}
+
+.viewer video {
+  max-height: min(64dvh, 720px);
+  object-fit: contain;
+}
+
+@media (max-width: 1050px) {
+  .workspace {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  .workspace[data-collapsed] {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .viewer video {
+    max-height: 50dvh;
+  }
+}

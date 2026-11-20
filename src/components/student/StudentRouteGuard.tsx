@@ -4,7 +4,6 @@ import { getAccessToken } from '../../lib/api'
 import { useSessionRestore } from '../../hooks/useSessionRestore'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Button from '../ui/Button'
-import { useActiveRole } from '../../hooks/useActiveRole'
 import { roleHome } from '../../lib/role-home'
 
 interface Props {
@@ -30,7 +29,6 @@ function Waiting({ children }: { children: string }) {
 export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Props) {
   const { profile, status, loadCurrentUser } = useCurrentUser()
   const session = useSessionRestore()
-  const { activeRole } = useActiveRole()
   const redirecting = useRef(false)
 
   useEffect(() => {
@@ -77,8 +75,7 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
 
   if (status === 'idle' || status === 'loading' || !profile) return <Waiting>Đang xác thực quyền học viên</Waiting>
 
-  const effectiveRole = activeRole ?? profile.role
-  if (effectiveRole !== 'STUDENT') {
+  if (profile.role !== 'STUDENT') {
     return (
       <main className="grid min-h-screen place-items-center bg-surface-soft px-4 py-8">
         <section className="w-full max-w-[460px] rounded-2xl border border-line-card bg-surface p-8 text-center shadow-card">
@@ -92,7 +89,7 @@ export default function StudentRouteGuard({ children, onLogin, onGoToRole }: Pro
           <Button
             variant="primary"
             className="mt-5"
-            onClick={() => onGoToRole(roleHome(effectiveRole))}
+            onClick={() => onGoToRole(roleHome(profile.role))}
           >
             Về khu vực của tôi
           </Button>

@@ -26,7 +26,7 @@ function lastWeek(today: string, days: StreakDay[]) {
 }
 
 /** Daily learning streak: this week at a glance, and streak freezes bought with credits. */
-function StreakCard() {
+function StreakCard({ className }: { className?: string }) {
   const { streak, balance } = useCredits()
   const [confirming, setConfirming] = useState(false)
   const [buying, setBuying] = useState(false)
@@ -34,7 +34,7 @@ function StreakCard() {
   const week = useMemo(() => (streak ? lastWeek(streak.today, streak.days) : []), [streak])
 
   if (!streak) {
-    return <Skeleton className="h-[188px] rounded-2xl" />
+    return <Skeleton className={cn('h-[188px] rounded-2xl', className)} />
   }
 
   const atLimit = streak.freezesAvailable >= streak.maxFreezes
@@ -55,7 +55,7 @@ function StreakCard() {
   }
 
   return (
-    <Card variant="panel" radius="lg" className="flex flex-col gap-4">
+    <Card variant="panel" radius="lg" className={cn('flex flex-col gap-4', className)}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="grid size-10 place-items-center rounded-xl bg-streak-soft text-streak">
@@ -106,6 +106,7 @@ function StreakCard() {
       <Button
         appearance="outline"
         size="sm"
+        className="border-primary-text text-primary-text not-disabled:hover:bg-primary/6"
         disabled={atLimit}
         onClick={() => {
           setError(null)

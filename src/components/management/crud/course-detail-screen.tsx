@@ -8,6 +8,8 @@ import ConfirmDialog from '../../console/confirm-dialog'
 import DetailHeader from '../../console/detail/detail-header'
 import {
   ConsoleTabs,
+  ConsoleSubTabsList,
+  ConsoleSubTabsTrigger,
   ConsoleTabsContent,
   ConsoleTabsList,
   ConsoleTabsTrigger,
@@ -24,7 +26,6 @@ import {
   rejectCourseReview,
   type CourseAdmin,
 } from '../../../services/courseAdminService'
-import { getCategories } from '../../../services/categoryService'
 import { getContentSections } from '../../../services/contentSectionService'
 import type { ChapterAdmin } from '../../../services/chapterAdminService'
 import CoursePhasesPanel from './course-phases-panel'
@@ -34,7 +35,6 @@ import CourseInstructorsPanel from './course-instructors-panel'
 import CourseContentPanel from './course-content-panel'
 import CourseOutcomesPanel from './course-outcomes-panel'
 import ContentSectionsPanel from './content-sections-panel'
-import CourseEditorDialog from './course-editor-dialog'
 import CourseCover from './course-cover'
 import CourseRejectDialog from './course-reject-dialog'
 import CourseStepper from './course-stepper'
@@ -112,28 +112,32 @@ export default function CourseDetailScreen({
   id,
   readOnly,
   onBack,
+  onEdit,
   initialTab = 'overview',
+  initialNotice = '',
 }: {
   id: string
   readOnly: boolean
   onBack: () => void
+  /** Opens the course form for this course. */
+  onEdit: () => void
   initialTab?: CourseStepTab
+  /** Result of what was done just before arriving, e.g. the form that saved this course. */
+  initialNotice?: string
 }) {
   const { profile } = useCurrentUser()
   const resource = useScheduleResource(`course-detail:${id}`, () => getAdminCourse(id))
   const sectionsResource = useScheduleResource(`content-sections:${id}`, () =>
     getContentSections(id)
   )
-  const categories = useScheduleResource('course-categories', getCategories)
   const [tab, setTab] = useState<CourseStepTab | 'instructors'>(initialTab)
   const [chapters, setChapters] = useState<ChapterAdmin[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useState(initialNotice)
   const [removing, setRemoving] = useState<{ resource: string; label: string } | null>(null)
   const [action, setAction] = useState<ReviewAction | null>(null)
   const [rejecting, setRejecting] = useState(false)
-  const [editing, setEditing] = useState(false)
 
   const course = resource.data
   const onChapters = useCallback((items: ChapterAdmin[]) => setChapters(items), [])
@@ -315,11 +319,7 @@ export default function CourseDetailScreen({
                   actions={
                     <>
                       {!readOnly && (
-                        <Button
-                          appearance="outline"
-                          onClick={() => setEditing(true)}
-                          disabled={busy || !categories.data}
-                        >
+                        <Button appearance="outline" onClick={onEdit} disabled={busy}>
                           <Pencil size={16} />
                           Sửa thông tin
                         </Button>
@@ -364,47 +364,59 @@ export default function CourseDetailScreen({
               </ConsoleTabsList>
 
               <ConsoleTabsContent value="overview">
-                <Panel title="Thông tin khóa">
-                  <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
-                    <div>
-                      <dt className="text-text-tertiary">Thời lượng dự kiến</dt>
-                      <dd className="mt-1 font-medium text-text-primary">
-                        {course.estimatedDurationMinutes
-                          ? formatDuration(course.estimatedDurationMinutes * 60)
-                          : 'Chưa nhập'}
-                      </dd>
-                    </div>
-                    {(course.examSession || course.examSessionDate) && (
-                      <div>
-                        <dt className="text-text-tertiary">Đợt thi</dt>
-                        <dd className="mt-1 font-medium text-text-primary">
-                          {course.examSession
-                            ? examSessionLabel(course.examSession)
-                            : formatExamDate(course.examSessionDate)}
-                        </dd>
-                      </div>
-                    )}
-                    {course.accessMode === 'DAYS_FROM_PURCHASE' && (
-                      <div>
-                        <dt className="text-text-tertiary">Hạn dùng</dt>
-                        <dd className="mt-1 font-medium text-text-primary">
-                          {course.accessDays} ngày kể từ khi mua
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                  {course.shortIntroduction && (
-                    <p className="mt-4 max-w-prose text-sm text-text-secondary">
-                      {course.shortIntroduction}
-                    </p>
-                  )}
-                  {course.description && course.description !== course.shortIntroduction && (
-                    <p className="mt-3 max-w-prose whitespace-pre-line text-sm text-text-secondary">
-                      {course.description}
-                    </p>
-                  )}
-                </Panel>
-                <CourseOutcomesPanel courseId={course.id} readOnly={readOnly} />
+                <ConsoleTabs defaultValue="info" className="flex flex-col">
+                  <ConsoleSubTabsList aria-label="Tổng quan khóa học">
+                    <ConsoleSubTabsTrigger value="info">Thông tin khóa</ConsoleSubTabsTrigger>
+                    <ConsoleSubTabsTrigger value="outcomes">
+                      Chuẩn đầu ra (CLO)
+                    </ConsoleSubTabsTrigger>
+                  </ConsoleSubTabsList>
+                  <ConsoleTabsContent value="info">
+                    <Panel>
+                      <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
+                        <div>
+                          <dt className="text-text-tertiary">Thời lượng dự kiến</dt>
+                          <dd className="mt-1 font-medium text-text-primary">
+                            {course.estimatedDurationMinutes
+                              ? formatDuration(course.estimatedDurationMinutes * 60)
+                              : 'Chưa nhập'}
+                          </dd>
+                        </div>
+                        {(course.examSession || course.examSessionDate) && (
+                          <div>
+                            <dt className="text-text-tertiary">Đợt thi</dt>
+                            <dd className="mt-1 font-medium text-text-primary">
+                              {course.examSession
+                                ? examSessionLabel(course.examSession)
+                                : formatExamDate(course.examSessionDate)}
+                            </dd>
+                          </div>
+                        )}
+                        {course.accessMode === 'DAYS_FROM_PURCHASE' && (
+                          <div>
+                            <dt className="text-text-tertiary">Hạn dùng</dt>
+                            <dd className="mt-1 font-medium text-text-primary">
+                              {course.accessDays} ngày kể từ khi mua
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                      {course.shortIntroduction && (
+                        <p className="mt-4 max-w-prose text-sm text-text-secondary">
+                          {course.shortIntroduction}
+                        </p>
+                      )}
+                      {course.description && course.description !== course.shortIntroduction && (
+                        <p className="mt-3 max-w-prose whitespace-pre-line text-sm text-text-secondary">
+                          {course.description}
+                        </p>
+                      )}
+                    </Panel>
+                  </ConsoleTabsContent>
+                  <ConsoleTabsContent value="outcomes">
+                    <CourseOutcomesPanel courseId={course.id} readOnly={readOnly} />
+                  </ConsoleTabsContent>
+                </ConsoleTabs>
               </ConsoleTabsContent>
 
               <ConsoleTabsContent value="content">
@@ -451,7 +463,9 @@ export default function CourseDetailScreen({
               {isMain && (
                 <ConsoleTabsContent value="gifts">
                   <CourseSectionsPanel
-                    assignPhase={(linkId, phaseId) => run(() => assignSectionPhase(id, linkId, phaseId), 'Đã lưu thay đổi.')}
+                    assignPhase={(linkId, phaseId) =>
+                      run(() => assignSectionPhase(id, linkId, phaseId), 'Đã lưu thay đổi.')
+                    }
                     course={course}
                     readOnly={readOnly}
                     busy={busy}
@@ -475,21 +489,6 @@ export default function CourseDetailScreen({
         )}
       </ScheduleResourceState>
 
-      {editing && course && categories.data && (
-        <CourseEditorDialog
-          course={course}
-          categories={categories.data}
-          onClose={() => {
-            setEditing(false)
-            resource.reload()
-          }}
-          onSaved={() => {
-            setEditing(false)
-            setNotice('Đã lưu khóa học.')
-            resource.reload()
-          }}
-        />
-      )}
       {action && course && (
         <ConfirmDialog
           title={ACTION_COPY[action].title}

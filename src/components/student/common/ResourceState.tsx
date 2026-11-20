@@ -18,6 +18,7 @@ interface ResourceStateProps {
   notFound?: StateCopy
   error: { title: string }
   onRetry: () => void
+  imageSrc?: string
 }
 
 // Renders the non-ready states of a usePageResource() request; renders
@@ -30,13 +31,15 @@ function ResourceState({
   notFound,
   error,
   onRetry,
+  imageSrc,
 }: ResourceStateProps) {
   if (status === 'loading') return <>{loading}</>
-  if (status === 'forbidden' && forbidden) return <MascotState {...forbidden} />
-  if (status === 'not-found' && notFound) return <MascotState {...notFound} />
+  if (status === 'forbidden' && forbidden) return <MascotState imageSrc={imageSrc} {...forbidden} />
+  if (status === 'not-found' && notFound) return <MascotState imageSrc={imageSrc} {...notFound} />
   if (status === 'error' || status === 'forbidden' || status === 'not-found')
     return (
       <MascotState
+        imageSrc={imageSrc}
         title={error.title}
         message={errorMessage}
         actionLabel="Thử lại"

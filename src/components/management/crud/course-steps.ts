@@ -12,6 +12,38 @@ export interface CourseStep {
   tab?: CourseStepTab
 }
 
+/** The course fields the sale check reads; the course form passes what is typed so far. */
+export type CourseSaleFields = Pick<
+  CourseAdmin,
+  'courseType' | 'categoryId' | 'imageUrl' | 'shortIntroduction' | 'description' | 'startDate' | 'endDate'
+> & { examSessionId: string | null }
+
+const blank = (value: string | null | undefined) => !value?.trim()
+
+/**
+ * Names of the course fields still empty that the backend requires before the course is sent for
+ * review or sold (CourseAdminServiceImpl.requireReady). Saving a draft never needs them.
+ */
+export function courseSaleGaps(course: CourseSaleFields): CourseSaleGap[] {
+  const gaps: CourseSaleGap[] = []
+  if (!course.categoryId) gaps.push({ field: 'categoryId', label: 'môn học' })
+  if (blank(course.imageUrl)) gaps.push({ field: 'imageUrl', label: 'ảnh khóa học' })
+  if (blank(course.shortIntroduction)) gaps.push({ field: 'shortIntroduction', label: 'giới thiệu ngắn' })
+  if (blank(course.description)) gaps.push({ field: 'description', label: 'mô tả' })
+  if (course.courseType === 'MAIN') {
+    if (!course.examSessionId) gaps.push({ field: 'examSessionId', label: 'đợt thi' })
+    if (!course.startDate) gaps.push({ field: 'startDate', label: 'ngày bắt đầu' })
+    if (!course.endDate) gaps.push({ field: 'endDate', label: 'ngày kết thúc' })
+  }
+  return gaps
+}
+
+export interface CourseSaleGap {
+  /** The save request field, as the backend names it in its errors. */
+  field: 'categoryId' | 'imageUrl' | 'shortIntroduction' | 'description' | 'examSessionId' | 'startDate' | 'endDate'
+  label: string
+}
+
 // The route from an empty course to one on sale. The first three steps mirror what the backend
 // requires (CourseAdminServiceImpl.requireReady); the backend stays the judge, this only tells staff early.
 export function courseSteps(
@@ -24,9 +56,10 @@ export function courseSteps(
   const published = chapters?.filter((chapter) => chapter.published).length ?? 0
   const titled = course.title.trim().length > 0
   const priced = !course.paid || (course.price ?? 0) > 0
+  const gaps = courseSaleGaps({ ...course, examSessionId: course.examSession?.id ?? null })
   const loading = chapters === null
 
-  const infoDone = titled && priced
+  const infoDone = titled && priced && gaps.length === 0
   const contentDone = (chapters?.length ?? 0) > 0 || gifts.length > 0
   const publishDone = (published > 0 || gifts.length > 0) && unfinishedGifts === 0
   const live = course.status === 'PUBLISHED'
@@ -41,8 +74,8 @@ export function courseSteps(
         ? 'Khóa cần có tên.'
         : !priced
           ? 'Khóa thu phí cần học phí lớn hơn 0.'
-          : !course.categoryId
-            ? 'Nên chọn môn học để trưởng bộ môn duyệt khóa này.'
+          : gaps.length > 0
+            ? `Còn thiếu: ${gaps.map((gap) => gap.label).join(', ')}. Bấm “Sửa thông tin” để điền.`
             : undefined,
     },
     {

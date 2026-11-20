@@ -38,6 +38,8 @@ test('NextAdmin mentor filters and mobile back navigation remain functional', as
   await statusTrigger.click()
   await page.getByRole('option', { name: 'Đang hỗ trợ', exact: true }).click()
   await expect(statusTrigger).toContainText('Đang hỗ trợ')
+  // The status list fades out in a layer of its own; measure the page once it has gone.
+  await expect(page.getByRole('listbox')).toHaveCount(0)
   await page.setViewportSize({ width: 375, height: 812 })
   await expect(page.getByLabel('Danh sách hội thoại', { exact: true })).toBeHidden()
   await expect(page.getByLabel('Tin nhắn', { exact: true })).toBeVisible()

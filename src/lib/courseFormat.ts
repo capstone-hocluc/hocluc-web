@@ -14,6 +14,17 @@ export function prettifyEnum(value?: string) {
     .join(' ')
 }
 
+const COURSE_TRACK_LABELS: Record<string, string> = {
+  LONG: 'Dài hạn',
+  STANDARD: 'Tiêu chuẩn',
+  SPRINT_ROUND2: 'Nước rút đợt 2',
+}
+
+export function formatCourseTrack(value?: string | null) {
+  if (!value) return ''
+  return COURSE_TRACK_LABELS[value] || 'Lộ trình học'
+}
+
 export function formatExamLabel(value?: string) {
   if (!value) return ''
   return EXAM_LABELS[value] || prettifyEnum(value)

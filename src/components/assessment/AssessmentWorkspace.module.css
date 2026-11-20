@@ -1,0 +1,79 @@
+.overview { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 20px; }
+.overviewMain { display: grid; gap: 20px; }
+.intro { display: grid; min-width: 0; overflow: hidden; border: 1px solid var(--color-line-card); border-radius: 22px; background: var(--color-surface); }
+.introBanner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 20px;
+  padding: 18px 22px;
+  background-color: #def6ff;
+  background-image:
+    linear-gradient(rgb(43 162 255 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(43 162 255 / 8%) 1px, transparent 1px),
+    linear-gradient(120deg, #ceebff, #e1faff);
+  background-size: 64px 64px, 64px 64px, 100% 100%;
+}
+.introBanner > header, .introBanner > p, .introBanner > .metadata { grid-column: 1; }
+.introAction { grid-column: 2; grid-row: 1 / span 3; align-self: center; max-width: 240px; }
+.intro > .history { border-top: 0; padding: 24px; }
+.introTitle { display: flex; align-items: flex-start; gap: 12px; }
+.introIcon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; color: var(--color-primary-text); background: var(--color-surface); border-radius: 14px; }
+.intro h1 { font-size: 22px; line-height: 1.45; font-weight: 700; color: var(--color-text-heading); }
+.type { margin-bottom: 4px; font-size: 12px; color: var(--color-text-secondary); }
+.metadata { display: flex; flex-wrap: wrap; gap: 10px 20px; color: var(--color-text-secondary); font-size: 13px; }
+.metadata span { display: inline-flex; align-items: center; gap: 6px; }
+.history { border-top: 1px solid var(--color-line-soft); padding-top: 16px; }
+.history h2 { margin-bottom: 4px; font-size: 16px; font-weight: 700; }
+.attemptRow { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--color-line-soft); }
+.attemptRow:last-child { border-bottom: 0; }
+.attemptScore { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%; background: var(--color-surface-hover); color: var(--color-text-secondary); font-size: 15px; font-weight: 700; }
+.attemptScore[data-graded] { background: var(--color-badge-success-bg); color: var(--color-badge-success-text); }
+.attemptMeta { min-width: 0; flex: 1; }
+.attemptMeta h3 { font-size: 14px; font-weight: 600; }
+.attemptMeta p { margin-top: 4px; font-size: 12px; line-height: 1.6; color: var(--color-text-secondary); }
+.showAll { display: flex; justify-content: center; padding-top: 10px; }
+.scoreAside { display: grid; gap: 14px; padding-top: 0; }
+.scoreHighlight { display: grid; gap: 0; }
+.scoreNote { display: grid; grid-template-columns: minmax(0, 1fr) 148px; align-items: end; gap: 8px; color: var(--color-text-heading); font-size: 12px; line-height: 1.6; }
+.scoreNote p { position: relative; align-self: start; margin-bottom: 12px; padding: 10px; border: 1px solid #ebcc72; border-radius: 16px; background: #fffbef; }
+.scoreNote p::after { position: absolute; top: calc(50% - 6px); right: -7px; width: 12px; height: 12px; border-top: 1px solid #ebcc72; border-right: 1px solid #ebcc72; background: inherit; transform: rotate(45deg); content: ''; }
+.scoreNote img { position: relative; z-index: 1; width: 148px; height: 112px; margin-bottom: -16px; object-fit: contain; object-position: bottom; }
+.scoreCard { display: grid; gap: 8px; padding: 12px; border: 2px solid #8bd0ff; border-radius: 22px; background: #dff6ff; }
+.scoreCard h2 { font-size: 16px; font-weight: 700; }
+.scoreValue { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-radius: 14px; background: var(--color-surface); padding: 10px 12px; color: var(--color-text-secondary); font-size: 14px; }
+.scoreValue strong { color: var(--color-text-heading); font-size: 18px; font-weight: 750; }
+.page { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.attempt { display: flex; flex: 1; flex-direction: column; min-height: 0; gap: 16px; }
+.attemptHeader { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.attemptHeader h1 { font-size: 18px; font-weight: 700; line-height: 1.5; color: var(--color-text-heading); }
+.attemptGrid { display: grid; flex: 1; min-height: 0; gap: 20px; grid-template-columns: 260px minmax(0, 1fr); }
+.controls { display: flex; min-height: 0; flex-direction: column; gap: 14px; overflow-y: auto; overscroll-behavior: contain; padding: 1px 4px 1px 1px; }
+.navigator { display: grid; gap: 14px; padding: 18px; border: 1px solid var(--color-line-card); border-radius: 20px; background: var(--color-surface); }
+.questions { display: grid; grid-auto-rows: max-content; align-content: start; min-height: 0; min-width: 0; gap: 16px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; border: 1px solid var(--color-line-card); border-radius: 22px; background: var(--color-surface); padding: 20px; }
+.question { min-width: 0; scroll-margin-block: 12px; border-radius: 20px; }
+.question:focus { outline: none; }
+.question:focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+.endAction { display: flex; justify-content: flex-end; padding: 4px 0; }
+@media (max-width: 1000px) {
+  .overview { grid-template-columns: minmax(0, 1fr) 250px; }
+  .introBanner { grid-template-columns: minmax(0, 1fr); }
+  .introAction { grid-column: 1; grid-row: auto; }
+  .scoreNote { grid-template-columns: minmax(0, 1fr) 116px; }
+  .scoreNote img { width: 116px; height: 94px; }
+  .attemptGrid { grid-template-columns: 230px minmax(0, 1fr); gap: 14px; }
+}
+@media (max-width: 760px) {
+  .overview { grid-template-columns: minmax(0, 1fr); }
+  .scoreAside { grid-row: 1; padding-top: 0; }
+  .scoreNote { grid-template-columns: minmax(0, 1fr) 128px; }
+  .scoreNote img { width: 128px; height: 100px; }
+  .scoreCard { grid-template-columns: 1fr; gap: 8px; padding: 12px; }
+  .scoreValue { padding: 10px 12px; }
+  .introBanner, .intro > .history { padding: 16px; }
+  .attemptRow { flex-wrap: wrap; gap: 10px; }
+  .attemptGrid { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(120px, 32%) minmax(0, 1fr); }
+  .controls { gap: 10px; }
+  .questions { padding: 12px; }
+  .navigator { padding: 12px; }
+  .attemptHeader h1 { font-size: 16px; }
+}

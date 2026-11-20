@@ -381,21 +381,7 @@ test('BE write 403 is displayed; the client does not retry it or report success'
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('switch active role through the menu: old editor cannot be reopened as Teacher', async ({ page }) => {
-  const state = await installQuizFixture(page, 'STAFF')
-  await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
-  await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: /Quiz QA.*Đang dùng:/ }).click()
-  await page.getByRole('menuitem', { name: 'Giáo viên', exact: true }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Chuyển vai trò', exact: true }).click()
-  await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
-  await page.goto(`/console/teacher/quizzes/${QUIZ_IDS.quiz}/edit`)
-  await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toBeVisible()
-  expect(writes(state)).toEqual([])
-  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
-})
-
-test('late save after role switch is discarded and sends no follow-up question writes', async ({ page }) => {
+test('a late save after the role changed is discarded and sends no follow-up question writes', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
   await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
   await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill('Đang lưu')
@@ -408,7 +394,7 @@ test('late save after role switch is discarded and sends no follow-up question w
     window.dispatchEvent(new Event('hocluc:tokens-changed'))
   }, quizToken('TEACHER'))
   // Profile invalidation now lets the outer management guard block the old role's URL.
-  await expect(page.getByRole('heading', { name: 'Chuyển vai trò để tiếp tục', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bạn không có quyền truy cập' })).toBeVisible()
   await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toHaveCount(0)
   const lateResponse = page.waitForResponse(response => response.request().method() === 'PUT'
     && new URL(response.url()).pathname === `/api/v1/teacher/quizzes/${QUIZ_IDS.quiz}`)
@@ -427,35 +413,20 @@ test('Mentor cannot open quiz screens even with direct console URLs', async ({ p
   expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/'))).toEqual([])
 })
 
-test('Student quiz detail fills the available width as the sidebar and viewport change', async ({ page }) => {
+test('Student quiz detail adapts its history and score columns as the sidebar and viewport change', async ({ page }) => {
   const state = await installQuizFixture(page, 'STUDENT')
   state.studentStatus = 'GRADED'
   await page.setViewportSize({ width: 1600, height: 950 })
-  await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}`)
-
-  const main = page.getByRole('main')
-  const details = main.locator('section').filter({ has: page.getByRole('heading', { name: 'Quiz Student' }) }).last()
-  const history = main.locator('section').filter({ has: page.getByRole('heading', { name: 'Lịch sử làm bài' }) }).last()
-  const facts = details.getByRole('listitem')
-  await expect(history).toBeVisible()
-
-  const contentWidth = () => main.evaluate(element => {
-    const { paddingLeft, paddingRight } = getComputedStyle(element)
-    return element.clientWidth - parseFloat(paddingLeft) - parseFloat(paddingRight)
-  })
-  const panelWidth = (panel: Locator) => panel.evaluate(element => element.getBoundingClientRect().width)
-  const expandedWidth = await contentWidth()
-  expect(await panelWidth(details)).toBe(expandedWidth)
-  expect(await panelWidth(history)).toBe(expandedWidth)
-  expect((await facts.first().boundingBox())?.y).toBe((await facts.last().boundingBox())?.y)
-
+  await page.goto('/student/assessments/quizzes/' + QUIZ_IDS.quiz)
+  const details = page.getByRole('region', { name: 'Thông tin bài thi', exact: true })
+  const score = page.getByRole('complementary', { name: 'Điểm số bài thi', exact: true })
+  await expect(page.getByRole('region', { name: 'Lịch sử làm bài', exact: true })).toBeVisible()
+  const expandedWidth = (await details.boundingBox())!.width
+  expect((await score.boundingBox())!.x).toBeGreaterThan((await details.boundingBox())!.x + expandedWidth)
   await page.getByRole('button', { name: 'Thu gọn thanh điều hướng' }).click()
-  await expect.poll(() => panelWidth(details)).toBe(expandedWidth + 168)
-  expect(await panelWidth(history)).toBe(await contentWidth())
-
+  await expect.poll(async () => (await details.boundingBox())!.width).toBe(expandedWidth + 168)
   await page.setViewportSize({ width: 390, height: 844 })
-  expect(await panelWidth(details)).toBe(await contentWidth())
-  expect((await facts.last().boundingBox())?.y).toBeGreaterThan((await facts.first().boundingBox())?.y ?? 0)
+  expect((await score.boundingBox())!.y).toBeLessThan((await details.boundingBox())!.y)
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   await expect(details.getByRole('button', { name: 'Bắt đầu làm bài' })).toBeVisible()
 })
@@ -466,7 +437,7 @@ test('Student returns to the course exam tab after submitting and reloading the 
   const studyPath = `/student/courses/${QUIZ_IDS.course}/study`
   await page.goto(studyPath)
   await page.getByRole('tab', { name: 'Bài thi', exact: true }).click()
-  await page.getByRole('button', { name: 'Xem bài thi Đề thi được giao' }).click()
+  await page.getByRole('button', { name: 'Xem đề Đề thi được giao' }).click()
   await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
   await page.getByRole('radio', { name: 'Đáp án Student' }).click()
   await page.getByRole('button', { name: 'Nộp bài', exact: true }).first().click()
@@ -501,7 +472,7 @@ test('Student exits a quiz to its course content or lesson and can return from a
   await page.getByRole('button', { name: /Quiz được giao/ }).click()
   await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
   await expect(page).toHaveURL(lessonPath)
-  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'Khóa học', exact: true }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true }).click()
   await expect(page).toHaveURL(studyPath)
 
   await page.goto(quizPath)
@@ -510,9 +481,56 @@ test('Student exits a quiz to its course content or lesson and can return from a
   await expect(page).toHaveURL(lessonPath)
 })
 
+test('Student resumes lessons, unlocks the lesson and chapter quizzes, and sees the daily star', async ({ page }) => {
+  test.setTimeout(60_000)
+  const state = await installQuizFixture(page, 'STUDENT', { trackLessonProgress: true })
+  const studyPath = `/student/courses/${QUIZ_IDS.course}/study`
+  const lessonPath = `/student/courses/${QUIZ_IDS.otherCourse}/study/lessons`
+  const resume = page.getByRole('button', { name: 'Tiếp tục học', exact: true })
+  const lessonQuiz = page.getByRole('button', { name: /Quiz được giao/ })
+  const chapterQuiz = page.getByRole('button', { name: /Quiz cuối chương/ })
+  const complete = page.getByRole('button', { name: 'Đánh dấu hoàn thành' })
+
+  await page.goto(studyPath)
+  await expect(page.getByText('Quiz cuối chương', { exact: true })).toBeVisible()
+  await expect(chapterQuiz).toHaveCount(0)
+  await resume.click()
+  await expect(page).toHaveURL(`${lessonPath}/${QUIZ_IDS.lesson}`)
+  await expect(page.getByText('Quiz được giao', { exact: true })).toBeVisible()
+  await expect(lessonQuiz).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '0 Sao', exact: true })).toBeVisible()
+
+  await complete.click()
+  await expect(page.getByText('Tiến độ bài học: 100%')).toBeVisible()
+  await expect(lessonQuiz).toBeVisible()
+  await expect(page.getByRole('button', { name: '1 Sao', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Chuỗi 1 ngày', exact: true })).toBeVisible()
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByText('Tiến độ bài học: 100%')).toBeVisible()
+  await expect(lessonQuiz).toBeVisible()
+
+  const backToCourse = page.getByRole('main').getByRole('button', { name: 'Khóa học', exact: true })
+  await backToCourse.click()
+  await expect(page).toHaveURL(studyPath)
+  await expect(page.getByText('1/2 bài học', { exact: true }).first()).toBeVisible()
+  await expect(chapterQuiz).toHaveCount(0)
+  await resume.click()
+  await expect(page).toHaveURL(`${lessonPath}/${QUIZ_IDS.nextLesson}`)
+  await complete.click()
+  await expect(page.getByText('Chương đã hoàn thành')).toBeVisible()
+  await backToCourse.click()
+  await page.getByRole('button', { name: 'Chương học 2/2', exact: true }).click()
+  await expect(chapterQuiz).toBeVisible()
+  await page.getByRole('button', { name: '1 Sao', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Ví Sao', exact: true })).toBeVisible()
+  await expect(page.getByText('Học trong ngày', { exact: true })).toHaveCount(1)
+  expect(state.completedLessons.size).toBe(2)
+})
+
 test('Student quiz start, answer, submit and review still use the assessment API', async ({ page }) => {
   const state = await installQuizFixture(page, 'STUDENT')
   await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}`)
+  await expect(page.getByRole('button', { name: '0 Sao', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
   await page.getByRole('radio', { name: 'Đáp án Student' }).click()
   await expect(page.getByText('Đã lưu', { exact: true })).toBeVisible()
@@ -520,6 +538,7 @@ test('Student quiz start, answer, submit and review still use the assessment API
   await page.getByRole('alertdialog').getByRole('button', { name: 'Nộp bài', exact: true }).click()
   await expect(page).toHaveURL(/\/review$/)
   await expect(page.getByText('Giải thích đáp án Student', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '1 Sao', exact: true })).toBeVisible()
   expect(state.requests.some(r => r.path.endsWith('/answers'))).toBe(true)
   expect(state.requests.some(r => r.path.endsWith('/submit'))).toBe(true)
   expect(state.requests.some(r => r.path.startsWith('/api/v1/teacher/'))).toBe(false)

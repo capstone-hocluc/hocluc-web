@@ -1,7 +1,7 @@
 import SelectField from '../../components/console/select-field'
 import { useState, type FormEvent } from 'react'
 import { instantToLocalDateTimeInput, localDateTimeToInstant, SCHEDULING_TIMEZONE } from '../../lib/scheduling'
-import type { ClassSessionResponse, DeliveryMode, ScheduleStatus, UpdateClassSessionRequest } from '../../types/scheduling'
+import type { ClassSessionResponse, ScheduleStatus, UpdateClassSessionRequest } from '../../types/scheduling'
 import Button from '../../components/console/button'
 import ConfirmDialog from '../../components/console/confirm-dialog'
 import Notice from '../../components/console/notice'
@@ -23,9 +23,7 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
     title: session.title,
     startDateTime: instantToLocalDateTimeInput(session.startTime),
     endDateTime: instantToLocalDateTimeInput(session.endTime),
-    mode: session.mode,
     status: session.status,
-    classroom: session.classroom ?? '',
     meetingProvider: session.meetingProvider ?? 'ZOOM',
     meetingLink: session.meetingLink ?? '',
   }
@@ -38,7 +36,7 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
   const updateFieldDraft = (event: FormEvent<HTMLFormElement>) => {
     const form = new FormData(event.currentTarget)
     setFieldsDirty(
-      (['title', 'startDateTime', 'endDateTime', 'mode', 'status', 'classroom', 'meetingProvider', 'meetingLink'] as const)
+      (['title', 'startDateTime', 'endDateTime', 'status', 'meetingProvider', 'meetingLink'] as const)
         .some((name) => String(form.get(name) ?? '') !== baseline[name])
     )
   }
@@ -68,8 +66,6 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
       sessionDate: start.slice(0, 10),
       startTime: localDateTimeToInstant(start.slice(0, 10), Number(start.slice(11, 13)), Number(start.slice(14, 16))),
       endTime: localDateTimeToInstant(end.slice(0, 10), Number(end.slice(11, 13)), Number(end.slice(14, 16))),
-      mode: String(form.get('mode') || session.mode) as DeliveryMode,
-      classroom: String(form.get('classroom') || ''),
       meetingProvider: String(form.get('meetingProvider') || 'ZOOM') as UpdateClassSessionRequest['meetingProvider'],
       meetingLink: String(form.get('meetingLink') || ''),
       status: String(form.get('status') || session.status) as ScheduleStatus,
@@ -89,40 +85,20 @@ export default function ClassSessionEditor({ session, busy = false, errorMessage
             <DateTimeField label="Bắt đầu" name="startDateTime" required disabled={busy} value={start} onChange={setStart} />
             <DateTimeField label="Kết thúc" name="endDateTime" required disabled={busy} value={end} onChange={setEnd} />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Hình thức">
-              <SelectField
-                ariaLabel="Hình thức"
-                name="mode"
-                disabled={busy}
-                defaultValue={session.mode}
-                triggerClassName={fieldControlClass}
-                options={[
-                  { id: 'PHYSICAL', label: 'Trực tiếp' },
-                  { id: 'ONLINE', label: 'Trực tuyến' },
-                  { id: 'HYBRID', label: 'Kết hợp' },
-                  { id: 'OFFLINE', label: 'Ngoại tuyến' },
-                ]}
-              />
-            </Field>
-            <Field label="Trạng thái">
-              <SelectField
-                ariaLabel="Trạng thái"
-                name="status"
-                disabled={busy}
-                defaultValue={session.status}
-                triggerClassName={fieldControlClass}
-                options={[
-                  { id: 'SCHEDULED', label: 'Sắp diễn ra' },
-                  { id: 'ONGOING', label: 'Đang diễn ra' },
-                  { id: 'COMPLETED', label: 'Đã hoàn thành' },
-                  { id: 'CANCELLED', label: 'Đã hủy' },
-                ]}
-              />
-            </Field>
-          </div>
-          <Field label="Phòng học">
-            <input name="classroom" autoComplete="off" disabled={busy} defaultValue={session.classroom ?? ''} className={fieldControlClass} />
+          <Field label="Trạng thái">
+            <SelectField
+              ariaLabel="Trạng thái"
+              name="status"
+              disabled={busy}
+              defaultValue={session.status}
+              triggerClassName={fieldControlClass}
+              options={[
+                { id: 'SCHEDULED', label: 'Sắp diễn ra' },
+                { id: 'ONGOING', label: 'Đang diễn ra' },
+                { id: 'COMPLETED', label: 'Đã hoàn thành' },
+                { id: 'CANCELLED', label: 'Đã hủy' },
+              ]}
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nền tảng họp">

@@ -102,7 +102,9 @@ export function itemTitle(item: ScheduleCalendarItem) {
 
 export function itemSubtitle(item: ScheduleCalendarItem) {
   if (item.kind === 'schedule') return item.item.courseName
-  if (item.kind === 'classSession') return item.item.sectionTitle || item.item.teacherName
+  if (item.kind === 'classSession') {
+    return [item.courseName, item.item.sectionTitle || item.item.teacherName].filter(Boolean).join(' · ')
+  }
   return item.item.instructorName || 'Lớp trực tuyến'
 }
 
@@ -125,12 +127,6 @@ export function itemTimeLabel(item: ScheduleCalendarItem, timezone?: string) {
 
 export function itemStatus(item: ScheduleCalendarItem) {
   return item.item.status
-}
-
-export function itemLocation(item: ScheduleCalendarItem) {
-  if (item.kind === 'schedule') return item.item.location
-  if (item.kind === 'classSession') return item.item.classroom
-  return null
 }
 
 export function itemMeetingUrl(item: ScheduleCalendarItem) {

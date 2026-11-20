@@ -6,16 +6,30 @@ export const fieldControlClass =
 
 export const textareaControlClass = `${fieldControlClass} h-auto min-h-24 py-2.5`
 
+/** The red star after a label whose field must be filled. */
+export function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="ml-0.5 text-danger">
+      *
+    </span>
+  )
+}
+
 interface FieldProps {
   label: string
-  hint?: string
+  hint?: ReactNode
+  /** Shows the star; the control itself decides whether the browser enforces it. */
+  required?: boolean
   children: ReactNode
 }
 
-function Field({ label, hint, children }: FieldProps) {
+function Field({ label, hint, required, children }: FieldProps) {
   return (
     <label className="flex flex-col gap-2 text-sm font-medium text-text-primary">
-      {label}
+      <span>
+        {label}
+        {required && <RequiredMark />}
+      </span>
       {children}
       {hint && <span className="text-xs font-normal text-text-tertiary">{hint}</span>}
     </label>

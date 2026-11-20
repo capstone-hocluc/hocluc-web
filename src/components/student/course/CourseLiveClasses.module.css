@@ -1,0 +1,71 @@
+.description {
+  margin: 0;
+  color: var(--color-text-body);
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-line-soft);
+  font-size: 12px;
+}
+
+.details dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text-secondary);
+}
+
+.details dt svg {
+  flex-shrink: 0;
+}
+
+.details dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text-heading);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.recordings {
+  color: var(--color-primary-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recordings summary {
+  cursor: pointer;
+  padding-block: 8px;
+}
+
+.recordings > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recordings a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--color-line-card);
+  border-radius: 10px;
+  padding: 8px 12px;
+}

@@ -81,7 +81,7 @@ function CourseCatalogPage() {
                 <p>Làm bài đánh giá miễn phí để biết phần nào cần ôn trước, rồi chọn lộ trình vừa sức.</p>
               </div>
               <div className="closing-cta-actions grid-cols-1!">
-                <AuthLink className="btn btn-primary">
+                <AuthLink className="btn btn-primary" destination="/free-exams">
                   {landingHero.assessmentCta} <Icon name="arrow-right" />
                 </AuthLink>
               </div>

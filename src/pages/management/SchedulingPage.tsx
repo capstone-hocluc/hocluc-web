@@ -45,6 +45,7 @@ import ClassSessionEditor from './ClassSessionEditor'
 import RecurringClassEditor from './RecurringClassEditor'
 import ScheduleEditor from './ScheduleEditor'
 import TimetableProposalPanel from './TimetableProposalPanel'
+import LiveTimetablePanel from './LiveTimetablePanel'
 import { getErrorMessage } from '../../lib/errors'
 import type { ManagementRole } from '../../components/management/ManagementRouteGuard'
 
@@ -477,6 +478,15 @@ export default function SchedulingPage({ role, navigation }: Props) {
             }}
             onConfirmed={calendar.reload}
           />
+          {role === 'STAFF' && courseDetails.status === 'ready' && (
+            <LiveTimetablePanel
+              key={'live-' + activeCourseId}
+              courseId={activeCourseId}
+              phases={courseDetails.data?.phases ?? []}
+              teachers={teachers}
+              onCreated={calendar.reload}
+            />
+          )}
         </>
       )}
 
@@ -596,9 +606,7 @@ export default function SchedulingPage({ role, navigation }: Props) {
       {deleteSchedule && (
         <ConfirmDialog
           title="Hủy lịch học?"
-          description={deleteSchedule.deliveryMode === 'ONLINE'
-            ? 'Chỉ lịch này bị hủy. Phòng Zoom và lớp trực tuyến đã tạo cho lịch này không tự động bị hủy; hãy xử lý riêng để học viên không vào nhầm phòng.'
-            : 'Chỉ lịch này bị hủy.'}
+          description="Chỉ lịch này bị hủy. Phòng Zoom và lớp trực tuyến đã tạo cho lịch này không tự động bị hủy; hãy xử lý riêng để học viên không vào nhầm phòng."
           cancelLabel="Quay lại"
           confirmLabel="Hủy lịch"
           variant="danger"

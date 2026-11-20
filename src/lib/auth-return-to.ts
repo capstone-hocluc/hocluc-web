@@ -1,9 +1,17 @@
 import { safePurchaseReturnTo } from './purchaseSession'
-import { studentRoutes } from './studentRoutes'
+import { isStudentAssessmentsPath, studentRoutes } from './studentRoutes'
 
-/** Keep the existing purchase allowlist and the explicit placement entry only. */
+/** Only local purchase, free-exam and competency destinations can survive authentication. */
 export function safeAuthReturnTo(value: string | null): string | null {
-  return value === studentRoutes.placement() ? value : safePurchaseReturnTo(value)
+  if (!value || value.includes('\\') || value.startsWith('//')) return null
+  if (isStudentAssessmentsPath(value)) return value
+  if (value === studentRoutes.placement() || value === '/student/assessments/placement') return value
+  if (/^\/student\/assessments\/quizzes\/[a-zA-Z0-9-]+(?:\/attempts\/[a-zA-Z0-9-]+)?(?:\?from=free-exams)?$/.test(value)) return value
+  if (/^\/student\/assessments\/attempts\/[a-zA-Z0-9-]+\/review$/.test(value)) return value
+  if (value === '/student/learning-profile') return value
+  if (/^\/free-exams(?:\?courseId=[a-zA-Z0-9-]+)?$/.test(value)) return value
+  if (/^\/student\/learning-profile\?tab=learning&courseId=[a-zA-Z0-9-]+$/.test(value)) return value
+  return safePurchaseReturnTo(value)
 }
 
 export function loginPathFor(returnTo: string | null): string {

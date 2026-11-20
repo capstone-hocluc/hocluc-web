@@ -29,6 +29,16 @@ export interface QuizAttemptSummary {
   percentage: number
   passed: boolean
   timeSpentSeconds: number
+  /** Missing only when served by an older backend. Never infer a missing mode. */
+  mode?: 'EXAM' | 'PRACTICE' | null
+}
+
+export async function getQuizAttemptHistory(quizId: string): Promise<QuizAttemptSummary[]> {
+  const response = await request<QuizAttemptSummary[]>(
+    `/api/v1/assessments/quizzes/${encodeURIComponent(quizId)}/attempts/me`, { auth: true }
+  )
+  if (!Array.isArray(response.data)) throw new Error('Không thể tải lịch sử làm bài kiểm tra.')
+  return response.data
 }
 
 export interface QuizDetail {

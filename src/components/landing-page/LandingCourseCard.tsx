@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Course } from '../../services/courseService'
 import { fitFor, prepWeeks } from '../course-catalog/roadmap-compare'
+import { formatExamLabel } from '../../lib/courseFormat'
 import Icon from './Icon'
 import LandingLink from './LandingLink'
 import { courseDate, formatCoursePrice, parseCourseDate } from './landing-course-format'
@@ -14,7 +15,7 @@ function CourseCover({ course }: { course: Course }) {
       ) : (
         <div className="course-cover-fallback">
           <Icon name="book-open" />
-          <span>{course.targetExam || 'Hocluc'}</span>
+          <span>{formatExamLabel(course.targetExam) || 'Hocluc'}</span>
         </div>
       )}
       {course.purchased ? (

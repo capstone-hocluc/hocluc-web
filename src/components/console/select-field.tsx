@@ -82,7 +82,10 @@ export default function SelectField({
         ref={captureTrigger}
         id={id}
         size="sm"
-        className={cn('h-10 w-full min-w-0 text-left font-normal shadow-none', triggerClassName)}
+        className={cn(
+          'h-10 w-full min-w-0 text-left font-normal shadow-none group-data-open:border-input-primary-focus-border/40',
+          triggerClassName
+        )}
       >
         <SelectValue />
         <SelectIndicator />
@@ -97,7 +100,7 @@ export default function SelectField({
             key={option.id}
             id={option.id}
             textValue={option.label}
-            className="min-h-10 px-3 py-2 pr-8"
+            className="min-h-9 py-2 pr-8 pl-2"
           >
             {option.label}
           </SelectItem>

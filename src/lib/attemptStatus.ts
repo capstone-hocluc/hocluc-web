@@ -5,6 +5,8 @@
 const STATUS_LABELS: Record<string, string> = {
   IN_PROGRESS: 'Đang làm',
   SUBMITTED: 'Đã nộp bài',
+  GRADED: 'Đã chấm',
+  ABANDONED: 'Đã bỏ dở',
   COMPLETED: 'Đã hoàn thành',
 }
 

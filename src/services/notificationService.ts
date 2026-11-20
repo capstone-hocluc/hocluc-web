@@ -1,4 +1,5 @@
 import { request } from '../lib/api'
+import type { UserRole } from './userService'
 
 export interface UserNotification {
   id: string
@@ -7,6 +8,8 @@ export interface UserNotification {
   message: string | null
   entityType: string | null
   entityId: string | null
+  /** The role it was sent to; null for one meant for the person whatever their role. */
+  audience?: UserRole | null
   read: boolean
   readAt: string | null
   createdAt: string

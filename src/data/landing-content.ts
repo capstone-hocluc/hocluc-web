@@ -122,6 +122,7 @@ export interface AppScreen {
 
 export const landingNav: LandingLink[] = [
   { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
+  { label: 'Đề thi thử miễn phí', href: '#de-thi-mien-phi', pageHref: '/free-exams' },
   { label: 'Ứng dụng', href: '#ung-dung' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'ĐGNL', href: '#ky-thi' },
@@ -129,6 +130,7 @@ export const landingNav: LandingLink[] = [
 
 export const landingFooterNav: LandingLink[] = [
   { label: 'Khóa học', href: '#khoa-hoc', pageHref: '/courses' },
+  { label: 'Đề thi thử miễn phí', href: '#de-thi-mien-phi', pageHref: '/free-exams' },
   { label: 'Ứng dụng', href: '#ung-dung' },
   { label: 'Cách học', href: '#lo-trinh' },
   { label: 'Tìm hiểu ĐGNL', href: '#ky-thi' },
@@ -141,7 +143,7 @@ export const landingHero: LandingHero = {
   titleLines: ['Luyện thi ĐGNL', 'theo từng môn.'],
   description: 'Chọn lộ trình trọn gói cho cả bài thi, hoặc học riêng môn bạn còn yếu.',
   coursesCta: 'Xem khóa học',
-  assessmentCta: 'Làm bài đánh giá miễn phí',
+  assessmentCta: 'Đề thi thử miễn phí',
   slides: [
     {
       id: 'hero-slide-0',

@@ -1,10 +1,5 @@
-import { useState } from 'react';
-import { useActiveRole } from '../../../hooks/useActiveRole';
 import { useTheme } from '../../common/useTheme';
-import type { UserRole } from '../../../services/userService';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
-import { Check } from '../icons';
-import ConfirmDialog from '../confirm-dialog';
 import RoleBadge from '../role-badge';
 import { ROLE_LABELS } from '../../../lib/role-home';
 import { Avatar, AvatarFallback, AvatarImage } from '../../tailgrids/core/avatar';
@@ -27,14 +22,10 @@ interface UserProfileButtonProps {
   logoutLoading?: boolean;
 }
 
-// NextAdmin header profile dropdown. Order: who you are, your profile, switching role (only with
-// several roles), theme, and Đăng xuất last.
+// NextAdmin header profile dropdown. Order: who you are, your profile, theme, and Đăng xuất last.
 export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = false }: UserProfileButtonProps) {
   const { profile } = useCurrentUser();
-  const { roles, activeRole, switchRole, switching, error } = useActiveRole();
   const { theme, toggleTheme } = useTheme();
-  // The menu closes as soon as an item fires, so the confirmation lives outside it.
-  const [pendingRole, setPendingRole] = useState<UserRole | null>(null);
   if (!profile) return null;
 
   const name = getDisplayName(profile);
@@ -53,7 +44,7 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
 
         <span className="flex min-w-0 flex-col text-left">
           <span className="max-w-40 truncate text-sm leading-5 font-medium text-text-primary">{name}</span>
-          <span className="text-xs text-text-tertiary">{switching ? 'Đang chuyển vai trò...' : `Đang dùng: ${ROLE_LABELS[profile.role]}`}</span>
+          <span className="text-xs text-text-tertiary">{ROLE_LABELS[profile.role]}</span>
         </span>
 
         <AltArrowDownIcon className="text-icon-tertiary transition-transform duration-200 group-aria-expanded:-rotate-180" />
@@ -85,25 +76,6 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
           </DropdownMenuItem>
         </DropdownMenuSection>
 
-        {roles.length > 1 && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuHeader className="px-4 pt-3 pb-1 text-xs text-text-tertiary">Chuyển vai trò</DropdownMenuHeader>
-            <DropdownMenuSection className="p-1.5" items={roles.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}>
-              {(item) => (
-                <DropdownMenuItem id={item.id} textValue={item.label}
-                  className="cursor-pointer px-3 py-2.5"
-                  isDisabled={switching || item.id === activeRole}
-                  onAction={() => setPendingRole(item.id)}>
-                  <span className="flex-1 leading-5 font-medium">{item.label}</span>
-                  {item.id === activeRole && <Check size={16} aria-label="Đang dùng" className="text-brand-500" />}
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuSection>
-          </>
-        )}
-
-        {switching && <DropdownMenuHeader role="status" className="px-4 py-2 text-xs text-text-tertiary">Đang chuyển vai trò...</DropdownMenuHeader>}
         <DropdownMenuSeparator />
 
         <DropdownMenuSection className="p-1.5">
@@ -118,30 +90,16 @@ export function UserProfileButton({ onOpenProfile, onLogout, logoutLoading = fal
 
         <DropdownMenuItem
           onAction={onLogout}
-          isDisabled={logoutLoading || switching}
-          className="m-1.5 w-auto cursor-pointer px-3 py-2.5"
+          isDisabled={logoutLoading}
+          className="m-1.5 w-auto cursor-pointer px-3 py-2.5 text-input-error"
         >
-          <span className="text-icon-secondary group-hover:text-text-primary">
+          <span className="text-input-error">
             <LogoutIcon />
           </span>
-          <span className="leading-5">{logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
+          <span className="leading-5 text-input-error">{logoutLoading ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-    {pendingRole && (
-      <ConfirmDialog
-        title="Chuyển vai trò?"
-        description={`Chuyển sang ${ROLE_LABELS[pendingRole]} sẽ kết thúc các phiên đăng nhập khác của tài khoản này.`}
-        cancelLabel="Ở lại"
-        confirmLabel="Chuyển vai trò"
-        onCancel={() => setPendingRole(null)}
-        onConfirm={() => {
-          switchRole(pendingRole);
-          setPendingRole(null);
-        }}
-      />
-    )}
-    {error && <p role="alert" className="absolute top-full right-0 mt-2 w-70 rounded-lg border border-card-border bg-card-background p-3 text-xs text-red-500">{error}</p>}
     </div>
   );
 }

@@ -304,6 +304,13 @@ html[data-theme='dark'] [class~='text-primary'] {
   color: var(--color-primary-text) !important;
 }
 
+/* Set by ThemeProvider for the frame the theme flips in, so every surface changes color together. */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

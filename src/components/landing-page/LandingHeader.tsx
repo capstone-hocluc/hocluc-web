@@ -8,6 +8,7 @@ import { CoursesNavGroup, CoursesNavMenu } from './CoursesNav'
 import Icon from './Icon'
 import LandingLogo from './LandingLogo'
 import AuthLink from './AuthLink'
+import { roleHome } from '../../lib/role-home'
 
 // Matches the breakpoint where the CSS switches from the inline nav to the menu button.
 const DESKTOP_QUERY = '(min-width: 1181px)'
@@ -21,6 +22,7 @@ interface NavItemProps {
 // On the landing page every item is an in-page anchor. Elsewhere an item either has its own page
 // (opened in place) or points back at the anchor on the landing page.
 function NavItem({ link, onLanding, onClick }: NavItemProps) {
+  if (link.pageHref === '/free-exams') return <AppLink href={link.pageHref} onClick={onClick}>{link.label}</AppLink>
   if (onLanding) {
     return (
       <a href={link.href} onClick={onClick}>
@@ -131,6 +133,7 @@ function LandingHeader({ onLanding = true, onSelectCourseTab }: LandingHeaderPro
                 <AppLink className="nav-icon-button" href="/cart" aria-label="Giỏ hàng">
                   <Icon name="shopping-cart" />
                 </AppLink>
+                <AppLink className="btn btn-small nav-start-button" href={roleHome(profile.role)}>Bắt đầu</AppLink>
                 <AccountMenu profile={profile} />
               </>
             ) : (
@@ -176,6 +179,7 @@ function LandingHeader({ onLanding = true, onSelectCourseTab }: LandingHeaderPro
               ))}
               <button
                 type="button"
+                className="is-danger"
                 onClick={() => {
                   closeMenu()
                   requestLogout()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { RefObject } from 'react'
+import type { ReactNode, RefObject } from 'react'
 import { RefreshCw } from '../console/icons'
 import MascotState from '../common/MascotState'
 import type { LessonDetail } from '../../services/lessonService'
@@ -8,12 +8,18 @@ import { getErrorMessage } from '../../lib/errors'
 import Button from '../ui/Button'
 import Notice from '../ui/Notice'
 import Skeleton from '../ui/Skeleton'
+import { bySequence } from '../../lib/sequence'
+import { safeExternalUrl } from '../../lib/scheduling'
 
 interface LessonContentProps {
   lesson: LessonDetail
   videoRef: RefObject<HTMLVideoElement | null>
   onTimeUpdate: () => void
   onPause: () => void
+  activeVideoId?: string
+  onSelectVideo?: (videoId: string) => void
+  hideVideoChooser?: boolean
+  textFooter?: ReactNode
 }
 
 type StreamState =
@@ -24,23 +30,25 @@ type StreamState =
 const surface = 'overflow-hidden rounded-2xl border border-line-card bg-surface shadow-card'
 const MAX_STREAM_RETRIES = 2
 
-function EmptyContent({ title, message }: { title: string; message: string }) {
+function EmptyContent({ title, message, footer, heading }: { title: string; message: string; footer?: ReactNode; heading?: ReactNode }) {
   return (
-    <div className={`${surface} flex min-h-[220px] items-center justify-center p-[30px]`}>
+    <div className={`${surface} flex min-h-[220px] flex-col justify-center gap-4 p-[30px]`}>
+      {heading}
       <MascotState title={title} message={message} />
+      {footer}
     </div>
   )
 }
 
-function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonContentProps) {
+function LessonContent({ lesson, videoRef, onTimeUpdate, onPause, activeVideoId, onSelectVideo, hideVideoChooser = false, textFooter }: LessonContentProps) {
   const hasAccess = lesson.owned || lesson.preview
-  const videos = lesson.videos ?? []
+  const videos = bySequence(lesson.videos ?? [])
   const [selectedVideoId, setSelectedVideoId] = useState('')
   const [requestKey, setRequestKey] = useState(0)
   const [retryCounts, setRetryCounts] = useState<Record<string, number>>({})
   const [streamState, setStreamState] = useState<StreamState>({ streamKey: '', status: 'loading' })
   const refreshedAfterPlayerError = useRef(new Set<string>())
-  const selectedVideo = videos.find((video) => video.id === selectedVideoId) ?? videos[0]
+  const selectedVideo = videos.find((video) => video.id === (activeVideoId ?? selectedVideoId)) ?? videos[0]
   const selectedVideoIdForStream = selectedVideo?.id ?? ''
   const selectedStreamKey = selectedVideo ? `${lesson.id}:${selectedVideo.id}` : ''
   const retryCount = retryCounts[selectedStreamKey] ?? 0
@@ -130,7 +138,7 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
 
     return (
       <section className="flex flex-col gap-3" aria-label="Video bài học">
-        {videos.length > 1 && (
+        {videos.length > 1 && !hideVideoChooser && (
           <div className="flex flex-wrap gap-2" aria-label="Chọn video bài học">
             {videos.map((video, index) => {
               const isSelected = video.id === selectedVideo.id
@@ -141,7 +149,7 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
                   variant="primary"
                   appearance={isSelected ? 'fill' : 'outline'}
                   aria-pressed={isSelected}
-                  onClick={() => setSelectedVideoId(video.id)}
+                  onClick={() => onSelectVideo ? onSelectVideo(video.id) : setSelectedVideoId(video.id)}
                 >
                   {video.title || `Video ${index + 1}`}
                 </Button>
@@ -157,6 +165,12 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
               ref={videoRef}
               src={currentStream.streamUrl}
               controls
+              onLoadedMetadata={() => {
+                const position = lesson.progress?.videos?.find(item => item.videoId === selectedVideo.id)?.watchedSeconds ?? 0
+                if (videoRef.current && position > 0 && Number.isFinite(videoRef.current.duration)) {
+                  videoRef.current.currentTime = Math.min(position, videoRef.current.duration)
+                }
+              }}
               onError={handlePlayerError}
               onTimeUpdate={onTimeUpdate}
               onPause={onPause}
@@ -194,22 +208,38 @@ function LessonContent({ lesson, videoRef, onTimeUpdate, onPause }: LessonConten
     )
   }
 
-  if (lesson.contentType === 'TEXT') {
+  if (lesson.contentType === 'TEXT' || lesson.contentType === 'ARTICLE') {
+    const heading = <h1 className="text-xl font-bold leading-snug text-text-heading">{lesson.title}</h1>
     if (!lesson.content) {
       return (
         <EmptyContent
           title="Nội dung chưa sẵn sàng"
           message="Nội dung của bài học này hiện chưa sẵn sàng."
+          footer={textFooter}
+          heading={heading}
         />
       )
+    }
+    const documentUrl = safeExternalUrl(lesson.content.trim())
+    if (documentUrl && /\.pdf$/i.test(new URL(documentUrl).pathname)) {
+      return <section className={surface} aria-label="Tài liệu bài học">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-soft px-6 py-4 max-[640px]:px-4">
+          {heading}
+          <Button asChild size="sm" appearance="outline"><a href={documentUrl} target="_blank" rel="noopener noreferrer">Mở tài liệu</a></Button>
+        </div>
+        <iframe src={documentUrl} title={`Tài liệu: ${lesson.title}`} className="h-[65dvh] min-h-80 w-full border-0" />
+        {textFooter && <div className="px-6 pb-5 max-[640px]:px-4">{textFooter}</div>}
+      </section>
     }
     return (
       <div
         className={`${surface} flex flex-col gap-3.5 p-6 text-base leading-[1.75] text-text-body max-[640px]:p-4`}
       >
+        <header className="border-b border-line-soft pb-4">{heading}</header>
         {lesson.content
           .split('\n')
           .map((paragraph, index) => (paragraph.trim() ? <p key={index}>{paragraph}</p> : null))}
+        {textFooter}
       </div>
     )
   }

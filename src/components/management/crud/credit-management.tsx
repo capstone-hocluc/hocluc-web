@@ -111,18 +111,20 @@ function PackTable({ canEdit }: { canEdit: boolean }) {
   )
 
   return (
-    <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+    <section className="flex flex-col gap-3">
       {canEdit && (
-        <div className="flex justify-end border-b border-card-border px-5 py-3">
+        <div className="flex justify-end">
           <Button size="sm" onClick={() => setEditing('new')}>
             <Plus size={16} />
             Thêm gói
           </Button>
         </div>
       )}
-      <ScheduleResourceState skeleton="table" inset status={resource.status} errorMessage={resource.errorMessage} onRetry={resource.reload}>
-        <DataTable columns={columns} data={resource.data ?? []} getRowKey={(pack) => pack.id} emptyMessage="Chưa có gói nào." />
-      </ScheduleResourceState>
+      <div className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+        <ScheduleResourceState skeleton="table" inset status={resource.status} errorMessage={resource.errorMessage} onRetry={resource.reload}>
+          <DataTable columns={columns} data={resource.data ?? []} getRowKey={(pack) => pack.id} emptyMessage="Chưa có gói nào." />
+        </ScheduleResourceState>
+      </div>
       {editing && (
         <PackDialog
           pack={editing === 'new' ? null : editing}

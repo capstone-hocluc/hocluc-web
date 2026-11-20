@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import { cn } from '../../../lib/cn'
-import { paper } from './surfaces'
+import { paper } from './console-surfaces'
 import './elements.css'
 
 // assistant-ui Elements' empty state: a greeting, and a few suggestions under it that come in one after another.

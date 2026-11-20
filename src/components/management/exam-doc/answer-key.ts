@@ -142,9 +142,14 @@ function guideBlocks(entry: KeyEntry, style: AiSolutionStyle): JSONContent[] {
  * (a table of ten per row for each part, and the questions the teacher should check), then a page break and
  * HƯỚNG DẪN GIẢI (each question's answer and solution). Empty when the document holds no AI question.
  */
-export function answerKeyBlocks(doc: ProseMirrorNode, paper: ExamPaper, style: AiSolutionStyle): JSONContent[] {
+export function answerKeyBlocks(
+  doc: ProseMirrorNode,
+  paper: ExamPaper,
+  style: AiSolutionStyle,
+  parts: KeyParts = BOTH_PARTS
+): JSONContent[] {
   const sections = keySections(doc, paper)
-  if (sections.length === 0) return []
+  if (sections.length === 0 || (!parts.table && !parts.guide)) return []
   const many = sections.length > 1
   const entries = sections.flatMap((section) => section.entries)
   const review = entries.filter((entry) => entry.question.needsReview)
@@ -159,8 +164,12 @@ export function answerKeyBlocks(doc: ProseMirrorNode, paper: ExamPaper, style: A
     ['Câu AI ước lượng dễ hơn mức yêu cầu', off(-1)],
     ['Câu AI ước lượng khó hơn mức yêu cầu', off(1)],
   ]
-  const blocks: JSONContent[] = [{ type: 'pageBreak', attrs: { examKey: 'table' } }, title('BẢNG ĐÁP ÁN', 'table')]
-  for (const section of sections) blocks.push(...sectionTitle(section, 'table', many), answerTable(section.entries))
+  const blocks: JSONContent[] = []
+  if (parts.table) {
+    blocks.push({ type: 'pageBreak', attrs: { examKey: 'table' } }, title('BẢNG ĐÁP ÁN', 'table'))
+    for (const section of sections) blocks.push(...sectionTitle(section, 'table', many), answerTable(section.entries))
+  }
+  if (!parts.guide) return blocks
   for (const [lead, listed] of notes) {
     if (listed.length === 0) continue
     blocks.push(paragraph([text(`${lead}: ${listed.map((entry) => entry.number).join(', ')}.`, ['italic'])], 'guide'))
@@ -173,14 +182,50 @@ export function answerKeyBlocks(doc: ProseMirrorNode, paper: ExamPaper, style: A
   return blocks
 }
 
+/** Which parts of the answer key are written: BẢNG ĐÁP ÁN (`table`) and HƯỚNG DẪN GIẢI (`guide`). */
+export interface KeyParts {
+  table: boolean
+  guide: boolean
+}
+
+const BOTH_PARTS: KeyParts = { table: true, guide: true }
+
+/** The parts of the answer key the document holds now, so writing it again keeps out a part the teacher took off. */
+export function keyParts(doc: ProseMirrorNode): KeyParts {
+  const parts = { table: false, guide: false }
+  doc.forEach((node) => {
+    if (node.attrs.examKey === 'table') parts.table = true
+    if (node.attrs.examKey === 'guide') parts.guide = true
+  })
+  return parts
+}
+
+/**
+ * Takes the solutions (`guide`) or the whole answer key (`all`) off the end of the exam, the way the key is written:
+ * not an undo step. Returns whether the document changed.
+ */
+export function removeAnswerKey(editor: Editor, part: 'guide' | 'all'): boolean {
+  const { state } = editor
+  const ranges: Array<{ from: number; to: number }> = []
+  state.doc.forEach((node, pos) => {
+    const kind = node.attrs.examKey
+    if (kind && (part === 'all' || kind === 'guide')) ranges.push({ from: pos, to: pos + node.nodeSize })
+  })
+  if (ranges.length === 0) return false
+  const tr = state.tr
+  for (const range of ranges.reverse()) tr.delete(range.from, range.to)
+  editor.view.dispatch(tr.setMeta('addToHistory', false))
+  return true
+}
+
 /**
  * Writes the answer key again from the draft: the old key's blocks go, the new ones follow the end line (or end the
  * document when it has none). Not an edit: the caret stays and Ctrl+Z does not undo it; the document saves it like an
  * edit, once. Returns whether the document changed.
  */
-export function replaceAnswerKey(editor: Editor, paper: ExamPaper, style: AiSolutionStyle): boolean {
+export function replaceAnswerKey(editor: Editor, paper: ExamPaper, style: AiSolutionStyle, parts: KeyParts = BOTH_PARTS): boolean {
   const { state } = editor
-  const blocks = answerKeyBlocks(state.doc, paper, style)
+  const blocks = answerKeyBlocks(state.doc, paper, style, parts)
   const old: Array<{ from: number; to: number; json: unknown }> = []
   state.doc.forEach((node, pos) => {
     if (node.attrs.examKey) old.push({ from: pos, to: pos + node.nodeSize, json: node.toJSON() })

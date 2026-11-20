@@ -24,8 +24,16 @@ function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="hl-toast-viewport" role="region" aria-label="Thông báo">
         {toasts.map((toast) => (
-          <div key={toast.id} className={`hl-toast hl-toast--${toast.variant}`} role="alert">
-            <span>{toast.message}</span>
+          <div key={toast.id} className={`hl-toast hl-toast--${toast.variant}`}
+            role={toast.variant === 'info' ? 'status' : 'alert'}>
+            {toast.action ? (
+              <button type="button" className="hl-toast__action" aria-label={toast.action.label} onClick={() => {
+                dismiss(toast.id)
+                toast.action?.onClick()
+              }}>
+                {toast.message}
+              </button>
+            ) : <span>{toast.message}</span>}
             <button type="button" onClick={() => dismiss(toast.id)} aria-label="Đóng thông báo">
               ×
             </button>

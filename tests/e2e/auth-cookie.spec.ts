@@ -42,8 +42,7 @@ async function installAuthFixture(page: Page, role: UserRole = 'STUDENT') {
       }
       if (state.loginGate) await state.loginGate
       const body = request.postDataJSON() ?? {}
-      if (path.endsWith('/switch-role')) state.role = body.role
-      else state.role = path.endsWith('/google/console') || body.audience === 'CONSOLE' ? 'STAFF' : 'STUDENT'
+      state.role = path.endsWith('/google/console') || body.audience === 'CONSOLE' ? 'STAFF' : 'STUDENT'
       state.activeCookie = `session-${++state.revision}`
       state.access = token(state.role, state.revision)
       return respond(route, { accessToken: state.access }, 200, cookie(state.activeCookie))
@@ -108,9 +107,9 @@ for (const role of ['STUDENT', 'STAFF'] as const) {
   test(`${role}: cookie-only session is restored before a protected direct URL and survives F5`, async ({ page }) => {
     const { state, seedCookie } = await installAuthFixture(page, role)
     await seedCookie()
-    const destination = role === 'STUDENT' ? '/student/assessments/placement' : '/console/staff/quizzes'
+    const destination = role === 'STUDENT' ? '/student/assessments?tab=free' : '/console/staff/quizzes'
     await page.goto(destination)
-    const heading = role === 'STUDENT' ? 'Chưa có bài đánh giá đầu vào' : 'Bài kiểm tra'
+    const heading = role === 'STUDENT' ? 'Chưa có đề thi miễn phí' : 'Bài kiểm tra'
     await expect(page.getByText(heading, { exact: true }).first()).toBeVisible()
     await expect(page).toHaveURL(destination)
     expect(refreshes(state)).toHaveLength(1)
@@ -134,12 +133,12 @@ test('cookie restore 5xx remains retryable and does not clear an existing access
   await seedCookie()
   state.refreshStatus = 503
   await page.addInitScript(access => localStorage.setItem('hocluc.accessToken', access), token('STUDENT', 0, 1))
-  await page.goto('/student/assessments/placement')
+  await page.goto('/student/assessments?tab=free')
   await expect(page.getByRole('heading', { name: 'Không thể xác thực phiên đăng nhập' })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('hocluc.accessToken'))).toBe(token('STUDENT', 0, 1))
   state.refreshStatus = 200
   await page.getByRole('button', { name: 'Thử lại', exact: true }).click()
-  await expect(page.getByText('Chưa có bài đánh giá đầu vào', { exact: true })).toBeVisible()
+  await expect(page.getByText('Chưa có đề thi miễn phí', { exact: true })).toBeVisible()
   expect(refreshes(state)).toHaveLength(2)
 })
 
@@ -195,21 +194,6 @@ test('invalid cookie ends the local session without an infinite refresh loop', a
   })
   expect(value).toEqual([null, null])
   expect(refreshes(state)).toHaveLength(1)
-})
-
-test('role switch uses access-only JSON, rotates the cookie and does not store a refresh credential', async ({ page }) => {
-  const { state, seedCookie } = await installAuthFixture(page, 'STAFF')
-  await seedCookie()
-  await page.goto('/login')
-  await page.evaluate(async accessToken => {
-    const path = '/src/lib/api.ts', api = await import(path)
-    api.setTokens({ accessToken }, true)
-    const authPath = '/src/services/authService.ts', auth = await import(authPath)
-    await auth.switchRole('TEACHER')
-  }, state.access)
-  expect(await page.evaluate(() => localStorage.getItem('hocluc.refreshToken'))).toBeNull()
-  expect(state.role).toBe('TEACHER')
-  expect(state.requests.find(request => request.path.endsWith('/switch-role'))?.cookie).toBe('session-1')
 })
 
 test('logout works with cookie only and prevents automatic restoration after F5', async ({ page }) => {
@@ -348,8 +332,8 @@ test('logout in one tab closes the other protected tab without restoring the coo
   await signIn(page)
   const sibling = await page.context().newPage()
   await attach(sibling)
-  await sibling.goto('/student/assessments/placement')
-  await expect(sibling.getByText('Chưa có bài đánh giá đầu vào', { exact: true })).toBeVisible()
+  await sibling.goto('/student/assessments?tab=free')
+  await expect(sibling.getByText('Chưa có đề thi miễn phí', { exact: true })).toBeVisible()
   await page.evaluate(async () => { const path = '/src/services/authService.ts'; await (await import(path)).logout() })
   await expect(sibling).toHaveURL(/\/login\?returnTo=/)
   expect(refreshes(state)).toHaveLength(0)
@@ -373,7 +357,7 @@ test('console profile network failure retains the new session and allows deliber
 test('a rejected console role is logged out on BE instead of leaving its refresh cookie behind', async ({ page }) => {
   const { state } = await installAuthFixture(page)
   await page.route('**/api/v1/users/profiles', route => route.fulfill({ json: { success: true,
-    data: { id: QUIZ_IDS.user, role: 'STUDENT', roles: ['STUDENT'], displayName: 'Rejected learner' } } }))
+    data: { id: QUIZ_IDS.user, role: 'STUDENT', displayName: 'Rejected learner' } } }))
   await page.goto('/console/login')
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill('student@example.invalid')
   await page.getByPlaceholder('Nhập mật khẩu', { exact: true }).fill('fixture-password')
@@ -393,17 +377,17 @@ test('same-account login does not reuse a profile request from the previous sess
     if (profiles === 1) await gate
     return route.fallback()
   })
-  await page.goto('/student/assessments/placement')
+  await page.goto('/student/assessments?tab=free')
   await expect.poll(() => profiles).toBe(1)
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('hl-navigate', {
-    detail: { path: '/login?returnTo=%2Fstudent%2Fassessments%2Fplacement' },
+    detail: { path: '/login?returnTo=%2Fstudent%2Fassessments%3Ftab%3Dfree' },
   })))
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill('student@example.invalid')
   await page.getByPlaceholder('Nhập mật khẩu', { exact: true }).fill('fixture-password')
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
   try {
-    await expect(page.getByText('Chưa có bài đánh giá đầu vào', { exact: true })).toBeVisible()
+    await expect(page.getByText('Chưa có đề thi miễn phí', { exact: true })).toBeVisible()
     expect(profiles).toBe(2)
   } finally { release() }
-  await expect(page).toHaveURL('/student/assessments/placement')
+  await expect(page).toHaveURL('/student/assessments?tab=free')
 })
