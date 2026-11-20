@@ -200,14 +200,16 @@ function App() {
   // `state` is optional history state - used to hand data (e.g. SePay payment
   // instructions) to the next page without a prop path, since it's not
   // returned by GET endpoints and would otherwise be lost on navigation.
-  const navigateTo = useCallback((rawPath, state = {}) => {
+  // `replace` swaps the current entry instead, for a redirect that Back must skip.
+  const navigateTo = useCallback((rawPath, state = {}, { replace = false } = {}) => {
     const path = toConsolePath(toStudentPath(rawPath === '/onboarding' ? '/student/dashboard' : rawPath))
     runWithUnsavedActionGuard(() => {
-      pushHistoryEntry(state, path)
+      if (replace) replaceCurrentHistoryEntry(state, path)
+      else pushHistoryEntry(state, path)
       setAuthMode(getAuthMode())
       setCurrentPath(path.replace(/\/$/, '') || '/')
     })
-  }, [getAuthMode, pushHistoryEntry])
+  }, [getAuthMode, pushHistoryEntry, replaceCurrentHistoryEntry])
 
   const backToLanding = () => {
     runWithUnsavedActionGuard(() => {

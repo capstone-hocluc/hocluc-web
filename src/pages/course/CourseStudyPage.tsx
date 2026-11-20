@@ -13,6 +13,7 @@ import { BookOpen, CalendarDays, FileQuestion } from '../../components/console/i
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getCourseStudy } from '../../services/courseService'
+import AppLink from '../../components/landing-page/AppLink'
 import styles from '../../components/student/course/CourseStudyAppearance.module.css'
 
 interface CourseStudyPageProps {
@@ -126,7 +127,7 @@ function CourseStudyPage({
           <CourseOverview study={study} onBack={onBackToMyCourses} onOpenLesson={onOpenLesson} />
           {study.showPlacementReminder && !reminderDismissed && <aside className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-card bg-surface p-4" aria-label="Nhắc thi thử miễn phí">
             <div><h2 className="font-semibold">Thử sức trước khi bắt đầu học</h2><p className="mt-1 text-sm text-text-secondary">Làm đề miễn phí của khóa để xem đánh giá năng lực. Bạn vẫn có thể tiếp tục học ngay.</p></div>
-            <div className="flex flex-wrap gap-2"><Button size="sm" appearance="outline" onClick={() => setReminderDismissed(true)}>Để sau</Button><Button asChild size="sm"><a href={`/student/assessments?tab=free&course=${encodeURIComponent(courseId)}`}>Xem đề miễn phí</a></Button></div>
+            <div className="flex flex-wrap gap-2"><Button size="sm" appearance="outline" onClick={() => setReminderDismissed(true)}>Để sau</Button><Button asChild size="sm"><AppLink href={`/student/assessments?tab=free&course=${encodeURIComponent(courseId)}`}>Xem đề miễn phí</AppLink></Button></div>
           </aside>}
 
           <div>

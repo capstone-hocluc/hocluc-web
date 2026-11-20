@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
 import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
 import { isStudentAssessmentsPath, parseStudentRoute, studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
@@ -36,7 +36,7 @@ interface StudentRoutesProps {
   route: StudentRoute
   currentPath: string
   /** Navigate to any app path (student or public, e.g. /courses/:id). */
-  navigate: (path: string, state?: StudentNavigationState) => void
+  navigate: (path: string, state?: StudentNavigationState, options?: { replace?: boolean }) => void
   onLogout: () => void
   logoutLoading: boolean
 }
@@ -66,6 +66,8 @@ function StudentRoutes({
   const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn || returnPath === '/free-exams' || isStudentAssessmentsPath(returnPath))
     ? returnPath : new URLSearchParams(window.location.search).get('from') === 'free-exams' ? '/free-exams' : undefined
   const lessonStudyCourseId = typeof studyCourseId === 'string' ? studyCourseId : undefined
+  // An old address shows its new page in its place, so Back does not land on it and get sent forward again.
+  const redirect = useCallback((path: string) => navigate(path, {}, { replace: true }), [navigate])
   const navigateQuiz = (path: string, returnTo = quizReturnTo) =>
     navigate(path, { quizReturnTo: returnTo, lessonStudyCourseId })
   const tutorOrigin: unknown = window.history.state?.tutorReturnTo
@@ -230,13 +232,13 @@ function StudentRoutes({
           />
         )
       case 'placement':
-        return <FreeExamRedirect navigate={navigate} />
+        return <FreeExamRedirect redirect={redirect} />
       case 'placement-attempt':
-        return <LegacyAssessmentRedirect key={route.attemptId} attemptId={route.attemptId} navigate={navigate} />
+        return <LegacyAssessmentRedirect key={route.attemptId} attemptId={route.attemptId} redirect={redirect} />
       case 'placement-result':
-        return <LegacyAssessmentRedirect navigate={navigate} />
+        return <LegacyAssessmentRedirect redirect={redirect} />
       case 'placement-review':
-        return <LegacyAssessmentRedirect key={route.attemptId} attemptId={route.attemptId} review navigate={navigate} />
+        return <LegacyAssessmentRedirect key={route.attemptId} attemptId={route.attemptId} review redirect={redirect} />
     }
   }
 
@@ -247,19 +249,19 @@ function StudentRoutes({
   )
 }
 
-function FreeExamRedirect({ navigate }: { navigate: (path: string) => void }) {
-  useEffect(() => { navigate(studentRoutes.assessments('free')) }, [navigate])
+function FreeExamRedirect({ redirect }: { redirect: (path: string) => void }) {
+  useEffect(() => { redirect(studentRoutes.assessments('free')) }, [redirect])
   return <p role="status">Đang mở danh sách đề thi thử miễn phí…</p>
 }
 
-function LegacyAssessmentRedirect({ attemptId, review = false, navigate }: { attemptId?: string; review?: boolean; navigate: (path: string) => void }) {
+function LegacyAssessmentRedirect({ attemptId, review = false, redirect }: { attemptId?: string; review?: boolean; redirect: (path: string) => void }) {
   const resource = usePageResource(() => attemptId ? getAttempt(attemptId) : Promise.resolve(null), [attemptId])
   useEffect(() => {
     if (resource.status !== 'ready') return
-    if (!attemptId) navigate('/student/learning-profile?tab=learning')
-    else if (resource.data) navigate(review || resource.data.status === 'GRADED'
+    if (!attemptId) redirect('/student/learning-profile?tab=learning')
+    else if (resource.data) redirect(review || resource.data.status === 'GRADED'
       ? studentRoutes.attemptReview(attemptId) : studentRoutes.quizAttempt(resource.data.quizId, attemptId))
-  }, [attemptId, review, navigate, resource.data, resource.status])
+  }, [attemptId, review, redirect, resource.data, resource.status])
   return <ResourceState status={resource.status} errorMessage={resource.errorMessage} onRetry={resource.reload}
     loading={<p role="status">Đang mở bài thi…</p>} error={{ title: 'Không thể mở bài thi cũ' }} />
 }
