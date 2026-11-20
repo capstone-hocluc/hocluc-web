@@ -604,3 +604,55 @@ test('assessment workspace shows every question, jumps from the left panel and r
   await expect(page).toHaveURL(`/student/assessments/attempts/${QUIZ_IDS.attempt}/review`)
   expect(state.pageErrors).toEqual([])
 })
+
+test('a practice run on chosen sections shows only their questions and a paused run resumes on opening', async ({ page }) => {
+  await setup(page)
+  const questions = Array.from({ length: 4 }, (_, index) => ({ id: `question-${index + 1}`, sequence: index + 1, sectionId: index < 2 ? 'section-a' : 'section-b',
+    questionText: `Nội dung câu hỏi số ${index + 1}`, questionType: 'SINGLE_CHOICE', imageUrl: null,
+    options: ['A', 'B'].map((letter, optionIndex) => ({ id: `option-${index}-${letter}`, sequence: optionIndex + 1, optionText: `Đáp án ${letter} câu ${index + 1}` })),
+  }))
+  let paused = true
+  let resumes = 0
+  const saved: string[] = []
+  const attempt = () => ({
+    attemptId: QUIZ_IDS.attempt, quizId: QUIZ_IDS.quiz, quizType: 'PLACEMENT', quizTitle: 'Đề luyện theo phần', status: 'IN_PROGRESS',
+    mode: 'PRACTICE', sectionIds: ['section-a'], paused, pausedAt: paused ? new Date().toISOString() : null,
+    deadlineAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(), startedAt: new Date().toISOString(), remainingSeconds: 1200,
+    attemptNumber: 1, totalQuestions: 2, answeredCount: 0, answers: [],
+  })
+  await page.route(url => url.pathname === `/api/v1/assessments/quizzes/${QUIZ_IDS.quiz}`, route => route.fulfill({ json: { success: true, data: {
+    id: QUIZ_IDS.quiz, type: 'PLACEMENT', title: 'Đề luyện theo phần', description: null, questionCount: questions.length,
+    durationMinutes: 30, maxAttempts: 10, attemptsUsed: 0, showAnswers: true, passingPercentage: null, bestPercentage: null, passed: false,
+    locked: false, lockReason: null, inProgressAttemptId: QUIZ_IDS.attempt, sectionCourseId: QUIZ_IDS.course, questions, attempts: [],
+  } } }))
+  await page.route(url => url.pathname === `/api/v1/assessments/attempts/${QUIZ_IDS.attempt}`, route => route.fulfill({ json: { success: true, data: attempt() } }))
+  await page.route(url => url.pathname === `/api/v1/assessments/attempts/${QUIZ_IDS.attempt}/resume`, route => {
+    // A second resume, say from another tab, finds the run already going.
+    if (!paused) return route.fulfill({ status: 409, json: { success: false, code: 'ATTEMPT_NOT_PAUSED', message: 'Bài làm không tạm dừng.' } })
+    resumes++
+    paused = false
+    return route.fulfill({ json: { success: true, data: attempt() } })
+  })
+  await page.route(url => url.pathname === `/api/v1/assessments/attempts/${QUIZ_IDS.attempt}/answers`, route => {
+    // The server refuses answers while paused and to questions outside the chosen sections.
+    const body = route.request().postDataJSON() as { questionId: string }
+    if (paused) return route.fulfill({ status: 409, json: { success: false, code: 'ATTEMPT_PAUSED', message: 'Bài làm đang tạm dừng.' } })
+    if (!['question-1', 'question-2'].includes(body.questionId)) return route.fulfill({ status: 400, json: { success: false, code: 'QUESTION_NOT_IN_QUIZ', message: 'Câu hỏi không thuộc bài làm.' } })
+    saved.push(body.questionId)
+    return route.fulfill({ json: { success: true } })
+  })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto(`/student/assessments/quizzes/${QUIZ_IDS.quiz}/attempts/${QUIZ_IDS.attempt}`)
+  const paper = page.getByRole('region', { name: 'Nội dung đề thi', exact: true })
+  const controls = page.getByRole('complementary', { name: 'Thời gian và tiến độ làm bài', exact: true })
+  await expect(paper.getByRole('article')).toHaveCount(2)
+  await expect(paper.getByText('Nội dung câu hỏi số 3', { exact: true })).toHaveCount(0)
+  expect(resumes).toBe(1)
+  await paper.getByRole('radio', { name: 'Đáp án A câu 1', exact: true }).click()
+  await paper.getByRole('radio', { name: 'Đáp án B câu 2', exact: true }).click()
+  await expect(controls.getByText('Đã trả lời 2/2 câu', { exact: true })).toBeVisible()
+  await expect.poll(() => saved).toEqual(['question-1', 'question-2'])
+  await controls.getByRole('button', { name: 'Nộp bài', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Nộp bài', exact: true }).click()
+  await expect(page).toHaveURL(`/student/assessments/attempts/${QUIZ_IDS.attempt}/review`)
+})

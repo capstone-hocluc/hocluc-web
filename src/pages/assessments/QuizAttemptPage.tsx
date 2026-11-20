@@ -4,7 +4,7 @@ import StudentPageContainer from '../../components/student/layout/StudentPageCon
 import Skeleton from '../../components/ui/Skeleton'
 import { useAttemptSession } from '../../hooks/useAttemptSession'
 import { usePageResource } from '../../hooks/usePageResource'
-import { getAttempt, getQuiz } from '../../services/assessmentService'
+import { getQuiz, openAttempt, questionsInAttempt } from '../../services/assessmentService'
 import { getAssessmentLockMessage } from '../../lib/quizLock'
 import { refreshCredits } from '../../lib/credits'
 import { bySequence } from '../../lib/sequence'
@@ -26,7 +26,7 @@ function QuizAttemptPage({ quizId, attemptId, onExit, onSubmitted }: QuizAttempt
   })
   const { data, status, errorMessage, reload } = usePageResource(
     async () => {
-      const [quiz, attempt] = await Promise.all([getQuiz(quizId), getAttempt(attemptId)])
+      const [quiz, attempt] = await Promise.all([getQuiz(quizId), openAttempt(attemptId)])
       return { quiz, attempt }
     },
     [quizId, attemptId],
@@ -64,7 +64,7 @@ function QuizAttemptPage({ quizId, attemptId, onExit, onSubmitted }: QuizAttempt
         <AttemptWorkspace
           session={session}
           title={data.quiz.title}
-          questions={bySequence(data.quiz.questions)}
+          questions={bySequence(questionsInAttempt(data.quiz.questions, data.attempt))}
           onExit={backToQuiz}
           onViewResult={() => session.attempt && onSubmitted(session.attempt.attemptId)}
         />
