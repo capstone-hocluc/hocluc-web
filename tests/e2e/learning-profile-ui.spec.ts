@@ -4,6 +4,9 @@ import type { StudentProfile } from '../../src/services/userService'
 import type { CourseExamSummary, CourseStudyLiveClass } from '../../src/services/courseService'
 import type { LessonDetail, LessonProgress, UpdateLessonProgressRequest } from '../../src/services/lessonService'
 
+// The practice panel on the same tab reads its free exam's history; the course analytics never ask for it.
+const FREE_EXAM_ID = 'placement-qa'
+
 const profilePath = '/student/learning-profile'
 
 test('Lesson workspace lists chapters and videos, saves the selected video and keeps course navigation', async ({ page }, testInfo) => {
@@ -193,26 +196,39 @@ test('Course live cards respect joinability, timezone, recordings, filters and p
   await installProfile(page)
   const base: CourseStudyLiveClass = { id: 'session-next', title: 'Buổi học gần nhất', startTime: '2026-11-17T03:00:00Z',
     endTime: '2026-11-17T04:00:00Z', timezone: 'Asia/Ho_Chi_Minh', status: 'SCHEDULED',
-    provider: 'ZOOM', instructorName: 'Giảng viên QA', joinable: false, meetingUrl: 'https://example.invalid/next',
+    provider: 'ZOOM', instructorName: 'Giảng viên QA', joinable: false, meetingUrl: null, booked: true,
     type: 'COURSE', seriesName: 'Luyện đề tổng hợp', dayNumber: 1 }
   let joinNext = false
   let status = 200
+  // A student never gets the class's own link: a booked student asks for theirs, and replays come from the class.
+  const ownLinks: Record<string, string | null> = {
+    'session-next': 'https://example.invalid/next',
+    'session-live': 'https://example.invalid/join',
+    'session-no-url': null,
+    'session-invalid-url': 'javascript:alert(1)',
+  }
+  const replays: Record<string, string[]> = {
+    'past-with-recording': ['https://example.invalid/recording'],
+    'past-multiple': ['https://example.invalid/recording-one', 'https://example.invalid/recording-two'],
+  }
+  await page.route(url => /^\/api\/v1\/live-classes\/[^/]+\/(join-link|recordings)$/.test(url.pathname), route => {
+    const [, , , , id, action] = new URL(route.request().url()).pathname.split('/')
+    const data = action === 'join-link' ? { liveClassId: id, joinUrl: ownLinks[id] ?? null }
+      : (replays[id] ?? []).map((recordingUrl, index) => ({ id: `${id}-${index}`, status: 'READY', recordingUrl }))
+    return route.fulfill({ json: { success: true, data } })
+  })
   await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/live-classes`, route => route.fulfill({
     status, json: status === 200 ? { success: true, data: { courseId: QUIZ_IDS.course, courseTitle: 'Khóa QA',
       next: { ...base, joinable: joinNext }, upcoming: [
         { ...base, joinable: joinNext },
-        { ...base, id: 'session-live', title: 'Buổi đang diễn ra', status: 'LIVE', joinable: true, meetingUrl: 'https://example.invalid/join' },
-        { ...base, id: 'session-later', title: 'Buổi chưa được tham gia', meetingUrl: 'https://example.invalid/locked' },
-        { ...base, id: 'session-no-url', title: 'Buổi chưa có liên kết', joinable: true, meetingUrl: null },
-        { ...base, id: 'session-invalid-url', title: 'Buổi có liên kết không hợp lệ', joinable: true, meetingUrl: 'javascript:alert(1)' },
+        { ...base, id: 'session-live', title: 'Buổi đang diễn ra', status: 'LIVE', joinable: true },
+        { ...base, id: 'session-later', title: 'Buổi chưa được tham gia' },
+        { ...base, id: 'session-no-url', title: 'Buổi chưa có liên kết', joinable: true },
+        { ...base, id: 'session-invalid-url', title: 'Buổi có liên kết không hợp lệ', joinable: true },
       ], past: [
-        { ...base, id: 'past-with-recording', title: 'Buổi có bản ghi', status: 'COMPLETED', recordingUrl: 'https://example.invalid/recording', meetingUrl: null },
-        { ...base, id: 'past-no-recording', title: 'Buổi chưa có bản ghi', status: 'COMPLETED', meetingUrl: null },
-        { ...base, id: 'past-multiple', title: 'Buổi có nhiều bản ghi', status: 'COMPLETED', meetingUrl: null,
-          recordingUrl: 'https://example.invalid/recording-one', recordings: [
-            { id: 'rec-a', recordingUrl: 'https://example.invalid/recording-one' },
-            { id: 'rec-b', recordingUrl: 'https://example.invalid/recording-two' },
-          ] },
+        { ...base, id: 'past-with-recording', title: 'Buổi có bản ghi', status: 'COMPLETED' },
+        { ...base, id: 'past-no-recording', title: 'Buổi chưa có bản ghi', status: 'COMPLETED' },
+        { ...base, id: 'past-multiple', title: 'Buổi có nhiều bản ghi', status: 'COMPLETED' },
       ] } } : { success: false, message: 'Không lấy được lịch kiểm thử' },
   }))
   await page.setViewportSize({ width: 1440, height: 1000 })
@@ -226,20 +242,21 @@ test('Course live cards respect joinability, timezone, recordings, filters and p
   await expect(cards.nth(0).getByText('Giờ học · GMT+7', { exact: true })).toBeVisible()
   await expect(cards.nth(0).getByText('Giảng viên QA', { exact: true })).toBeVisible()
   await expect(cards.nth(0).getByRole('link')).toHaveCount(0)
-  await expect(cards.nth(1).getByRole('link', { name: 'Tham gia Buổi đang diễn ra', exact: true })).toHaveAttribute('href', 'https://example.invalid/join')
+  await expect(cards.nth(1).getByRole('link', { name: 'Tham gia', exact: true })).toHaveAttribute('href', 'https://example.invalid/join')
   await expect(cards.nth(2).getByRole('link')).toHaveCount(0)
-  await expect(cards.nth(3).getByRole('button', { name: 'Chưa có liên kết' })).toBeDisabled()
+  await expect(cards.nth(3).getByRole('button', { name: 'Tham gia', exact: true })).toBeDisabled()
+  await expect(cards.nth(4).getByRole('button', { name: 'Tham gia', exact: true })).toBeDisabled()
   await expect(cards.nth(4).getByRole('link')).toHaveCount(0)
-  await expect(cards.nth(5).getByRole('link', { name: 'Xem bản ghi Buổi có bản ghi', exact: true })).toHaveAttribute('href', 'https://example.invalid/recording')
+  await expect(cards.nth(5).getByRole('link', { name: 'Xem bản ghi', exact: true })).toHaveAttribute('href', 'https://example.invalid/recording')
   await page.screenshot({ path: testInfo.outputPath('course-live-cards-desktop.png'), fullPage: true })
   await page.getByRole('button', { name: 'Trang lớp học sau', exact: true }).click()
   await expect(cards).toHaveCount(2)
   await expect(page.getByRole('button', { name: 'Trang lớp học sau', exact: true })).toBeDisabled()
   await page.getByRole('tab', { name: /^Đã qua/ }).click()
   await expect(cards).toHaveCount(3)
-  await expect(cards.nth(1).getByText('Chưa có bản ghi cho buổi học này.', { exact: true })).toBeVisible()
-  await cards.nth(2).getByText('Xem bản ghi (2)', { exact: true }).click()
-  await expect(cards.nth(2).getByRole('link')).toHaveCount(2)
+  await expect(cards.nth(1).getByRole('link')).toHaveCount(0)
+  // A class with several recordings replays the first one ready.
+  await expect(cards.nth(2).getByRole('link', { name: 'Xem bản ghi', exact: true })).toHaveAttribute('href', 'https://example.invalid/recording-one')
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByRole('tab', { name: /^Đã qua/ })).toHaveAttribute('aria-selected', 'true')
   await page.setViewportSize({ width: 390, height: 844 })
@@ -248,7 +265,7 @@ test('Course live cards respect joinability, timezone, recordings, filters and p
   await page.getByRole('tab', { name: /^Sắp tới/ }).click()
   joinNext = true
   await page.getByRole('button', { name: 'Tải lại lịch học trực tuyến', exact: true }).click()
-  await expect(cards.nth(0).getByRole('link', { name: 'Tham gia Buổi học gần nhất', exact: true })).toHaveAttribute('href', 'https://example.invalid/next')
+  await expect(cards.nth(0).getByRole('link', { name: 'Tham gia', exact: true })).toHaveAttribute('href', 'https://example.invalid/next')
   status = 403
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Bạn chưa có quyền tham gia lớp học của khóa này', { exact: true })).toBeVisible()
@@ -300,7 +317,7 @@ test('Course exam cards preserve backend states, zero scores and the return to e
   await expect(cards).toHaveCount(1)
   await expect(cards.nth(0).getByText('Chưa mở', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Trang bài thi sau', exact: true })).toBeDisabled()
-  await cards.nth(0).getByRole('button', { name: 'Xem bài thi Đề chưa mở', exact: true }).click()
+  await cards.nth(0).getByRole('button', { name: 'Xem chi tiết Đề chưa mở', exact: true }).click()
   await expect(page).toHaveURL('/student/assessments/quizzes/exam-future')
   await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
   await expect(page).toHaveURL(`${studyPath}&examPage=2`)
@@ -316,7 +333,7 @@ test('Course exam cards preserve backend states, zero scores and the return to e
   await expect(cards).toHaveCount(4)
   await expect(cards.nth(1).getByText('Đang làm', { exact: true })).toBeVisible()
   await page.getByRole('tab', { name: /^Tất cả/ }).click()
-  await cards.nth(1).getByRole('button', { name: 'Tiếp tục bài thi Đề đang làm', exact: true }).click()
+  await cards.nth(1).getByRole('button', { name: 'Tiếp tục Đề đang làm', exact: true }).click()
   await expect(page).toHaveURL('/student/assessments/quizzes/exam-progress')
   await page.getByRole('button', { name: 'Quay lại', exact: true }).click()
   await expect(page).toHaveURL(studyPath)
@@ -463,6 +480,7 @@ test('Course analytics compares all chapter tests, keeps partial data and shows 
   const requests: string[] = []
   await page.route(url => /^\/api\/v1\/assessments\/quizzes\/[^/]+\/attempts\/me$/.test(url.pathname), route => {
     const id = new URL(route.request().url()).pathname.split('/').at(-3)!
+    if (id === FREE_EXAM_ID) return route.fallback()
     requests.push(id)
     if (failure && id === 'chapter-b') return route.fulfill({ status: 403, json: { success: false, message: 'Không được xem bài kiểm thử' } })
     if (empty) return route.fulfill({ json: { success: true, data: [] } })
@@ -524,6 +542,7 @@ test('Course analytics batches the selected type with no more than four simultan
   let maximum = 0
   const ids = new Set<string>()
   await page.route(url => /^\/api\/v1\/assessments\/quizzes\/[^/]+\/attempts\/me$/.test(url.pathname), async route => {
+    if (route.request().url().includes(FREE_EXAM_ID)) return route.fallback()
     concurrent++
     maximum = Math.max(maximum, concurrent)
     ids.add(new URL(route.request().url()).pathname.split('/').at(-3)!)
@@ -568,6 +587,7 @@ test('Course analytics filters course and quiz types without a mode filter and r
   const requests: string[] = []
   await page.route((url) => /^\/api\/v1\/assessments\/quizzes\/[^/]+\/attempts\/me$/.test(url.pathname), route => {
     const path = new URL(route.request().url()).pathname
+    if (path.includes(FREE_EXAM_ID)) return route.fallback()
     requests.push(path)
     const values = path.includes(QUIZ_IDS.quiz) ? [
       { attemptId: 'first-grade', attemptNumber: 1, mode: 'EXAM', status: 'GRADED', percentage: 40, score: 2, maxScore: 5, submittedAt: '2026-11-01T02:00:00Z', timeSpentSeconds: 90 },
@@ -899,7 +919,8 @@ test('Learning profile uses real categories and progress and restores the select
   await expect(mascot).toHaveAttribute('src', '/mascot/01.png')
   await expect.poll(() => mascot.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true)
   const banner = mascot.locator('xpath=ancestor::section[1]')
-  expect((await banner.boundingBox())!.height).toBeLessThan(300)
+  // Under a 1160px-wide banner the goal and competency groups stack.
+  expect((await banner.boundingBox())!.height).toBeLessThan(360)
   await expect(page.getByText('Mức năng lực', { exact: true })).toBeVisible()
   await expect(page.getByText('3/5', { exact: true }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Phân tích AI', exact: true })).toHaveCount(0)

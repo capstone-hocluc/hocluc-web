@@ -157,7 +157,7 @@ for (const [role, area] of [['TEACHER','teacher'],['MENTOR','mentor']] as const)
 test('Student without published placement sees an empty state', async ({ page }) => {
   await installQuizFixture(page, 'STUDENT')
   await page.goto('/student/assessments/placement')
-  await expect(page.getByText('Chưa có đề thi phù hợp', { exact: true })).toBeVisible()
+  await expect(page.getByText('Chưa có đề thi miễn phí', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true })).toHaveCount(0)
 })
 

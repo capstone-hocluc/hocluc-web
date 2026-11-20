@@ -236,6 +236,23 @@ export function roadmapStudy(): CourseStudy {
 }
 
 /** A course whose content is entirely unphased: no "Xuyên suốt lộ trình" heading. */
+/** The study of a gift course a seeded study lists: the gift opens on its own lessons, so it answers with one section. */
+function giftStudy(courseId: string, title: string): CourseStudy {
+  return {
+    courseId,
+    title,
+    courseType: 'SECTION',
+    totalLessons: 1,
+    completedLessons: 0,
+    progressPercentage: 0,
+    continueLessonId: null,
+    continueLessonTitle: null,
+    continueSectionCourseId: null,
+    nextLiveClass: null,
+    phases: [studyPhase({ id: `${courseId}-phase`, name: title, sections: [studySection(courseId, title, [studyLesson(`${courseId}-lesson`, `Bài của ${title}`, 1)])] })],
+  }
+}
+
 export function unphasedStudy(): CourseStudy {
   return {
     courseId: ROADMAP_IDS.unphased,
@@ -390,7 +407,9 @@ export async function installRoadmapFixture(page: Page, seed: RoadmapSeed = {}) 
       })
     if (path.startsWith('/api/v1/courses/') && path.endsWith('/study') && method === 'GET') {
       const id = decodeURIComponent(path.split('/')[4] ?? '')
-      const study = state.studies[id]
+      const gift = Object.values(state.studies).flatMap((study) => study.phases.flatMap((phase) => phase.gifts))
+        .find((item) => item.courseId === id)
+      const study = state.studies[id] ?? (gift && giftStudy(id, gift.title))
       return study ? answer(study) : answer(null, 404, 'Study not found.')
     }
     if (path.startsWith('/api/v1/courses/') && method === 'GET') {
