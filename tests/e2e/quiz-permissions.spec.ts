@@ -437,7 +437,7 @@ test('Student returns to the course exam tab after submitting and reloading the 
   const studyPath = `/student/courses/${QUIZ_IDS.course}/study`
   await page.goto(studyPath)
   await page.getByRole('tab', { name: 'Bài thi', exact: true }).click()
-  await page.getByRole('button', { name: 'Xem bài thi Đề thi được giao' }).click()
+  await page.getByRole('button', { name: 'Xem đề Đề thi được giao' }).click()
   await page.getByRole('button', { name: 'Bắt đầu làm bài', exact: true }).click()
   await page.getByRole('radio', { name: 'Đáp án Student' }).click()
   await page.getByRole('button', { name: 'Nộp bài', exact: true }).first().click()

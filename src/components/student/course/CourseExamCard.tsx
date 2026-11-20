@@ -64,9 +64,9 @@ function CourseExamCard({ exam, onOpenQuiz, contextLabel }: { exam: ExamCardData
           <StatusBadge tone={exam.locked ? 'locked' : completed && !exam.inProgressAttemptId ? 'success' : 'primary'} size="sm">{stateLabel}</StatusBadge>
           {completed && !exam.locked && exam.inProgressAttemptId && <StatusBadge tone="success" size="sm">Đã làm</StatusBadge>}
         </div>
-        <Button size="sm" shape="pill" appearance={exam.locked ? 'outline' : 'fill'}
-          aria-label={`${!exam.locked && exam.inProgressAttemptId ? 'Tiếp tục' : 'Xem'} bài thi ${exam.title}`} onClick={() => onOpenQuiz(exam.id)}>
-          {actionLabel}<ArrowRight size={14} aria-hidden="true" />
+        {/* Read as the words on the button, then which exam it opens. */}
+        <Button size="sm" shape="pill" appearance={exam.locked ? 'outline' : 'fill'} onClick={() => onOpenQuiz(exam.id)}>
+          {actionLabel}<span className="sr-only"> {exam.title}</span><ArrowRight size={14} aria-hidden="true" />
         </Button>
       </div>
     </article>
