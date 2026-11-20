@@ -167,6 +167,8 @@ const taskAwareGroupBy = (
 export type ThreadProps = {
   components?: ThreadComponents | undefined;
   autoFocus?: boolean | undefined;
+  /** The composer's hint, e.g. for the mode the teacher picked. */
+  placeholder?: string | undefined;
 };
 
 const EMPTY_COMPONENTS: ThreadComponents = {};
@@ -211,20 +213,22 @@ const ThreadHistorySkeleton: FC = () => (
 export const Thread: FC<ThreadProps> = ({
   components = EMPTY_COMPONENTS,
   autoFocus = true,
+  placeholder,
 }) => {
   const isEmpty = useAuiState(isNewChatView);
 
   return (
     <ThreadComponentsContext.Provider value={components}>
-      <ThreadRoot isEmpty={isEmpty} autoFocus={autoFocus} />
+      <ThreadRoot isEmpty={isEmpty} autoFocus={autoFocus} placeholder={placeholder} />
     </ThreadComponentsContext.Provider>
   );
 };
 
-const ThreadRoot: FC<{ isEmpty: boolean; autoFocus: boolean }> = ({
-  isEmpty,
-  autoFocus,
-}) => {
+const ThreadRoot: FC<{
+  isEmpty: boolean;
+  autoFocus: boolean;
+  placeholder: string | undefined;
+}> = ({ isEmpty, autoFocus, placeholder }) => {
   const { Welcome = ThreadWelcome, ComposerTop } = useContext(ThreadComponentsContext);
 
   return (
@@ -277,7 +281,7 @@ const ThreadRoot: FC<{ isEmpty: boolean; autoFocus: boolean }> = ({
             <ThreadScrollToBottom />
             <ThreadFollowupSuggestions />
             {ComposerTop && <ComposerTop />}
-            <Composer autoFocus={autoFocus} />
+            <Composer autoFocus={autoFocus} placeholder={placeholder} />
             <AuiIf condition={(s) => isNewChatView(s) && s.composer.isEmpty}>
               <ThreadSuggestions />
             </AuiIf>
@@ -541,7 +545,10 @@ const ThreadSuggestionItem: FC = () => {
   );
 };
 
-const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
+const Composer: FC<{ autoFocus: boolean; placeholder: string | undefined }> = ({
+  autoFocus,
+  placeholder = "Nhập yêu cầu tạo, sửa, giải đề thi…",
+}) => {
   return (
     <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
       <ComposerPrimitive.AttachmentDropzone asChild>
@@ -551,7 +558,7 @@ const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
         >
           <ComposerAttachments />
           <ComposerPrimitive.Input
-            placeholder="Nhập yêu cầu tạo, sửa, giải đề thi…"
+            placeholder={placeholder}
             className="aui-composer-input caret-primary placeholder:text-muted-foreground/60 max-h-48 min-h-10 w-full resize-none bg-transparent px-2.5 py-1 text-base leading-6 outline-none"
             rows={1}
             autoFocus={autoFocus}
@@ -699,7 +706,8 @@ const MessageError: FC = () => {
             Tiếp tục
           </Button>
         </ActionBarPrimitive.Resume>
-        <ActionBarPrimitive.RefreshRun asChild>
+        {/* Sends the failed turn again through the runtime's onReload (RefreshRun only refreshes a cloud run). */}
+        <ActionBarPrimitive.Reload asChild>
           <Button
             variant="ghost"
             size="sm"
@@ -708,7 +716,7 @@ const MessageError: FC = () => {
             <RefreshCwIcon className="size-3.5" />
             Thử lại
           </Button>
-        </ActionBarPrimitive.RefreshRun>
+        </ActionBarPrimitive.Reload>
       </ErrorPrimitive.Root>
     </MessagePrimitive.Error>
   );

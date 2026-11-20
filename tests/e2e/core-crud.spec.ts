@@ -6,6 +6,13 @@ async function selectOption(scope: Page | Locator, page: Page, label: string, op
   await page.getByRole('option', { name: option, exact: true }).click()
 }
 
+/** One course card in the console list, found by the title button that opens it. */
+function courseCard(page: Page, title: string) {
+  return page
+    .getByRole('article')
+    .filter({ has: page.getByRole('button', { name: title, exact: true }) })
+}
+
 test.afterEach(async ({ page }) => {
   expect(fixtureProblems(page)).toMatchObject({
     unmatchedRequests: [],
@@ -93,27 +100,32 @@ test('SECTION metadata create works without MAIN calendar fields', async ({ page
   const state = await installCrudFixture(page)
   await page.goto('/staff/courses')
   await page.getByRole('button', { name: 'Tạo khóa học', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'Tạo khóa học', exact: true })
-  await selectOption(dialog, page, 'Loại khóa', 'Khóa nhỏ')
-  await dialog.getByLabel('Tên khóa học', { exact: true }).fill('SECTION Hình học')
-  const next = dialog.getByRole('button', { name: 'Tiếp tục', exact: true })
+  // The course form is its own page with steps across the top.
+  await expect(page.getByRole('heading', { name: 'Tạo khóa học', exact: true })).toBeVisible()
+  await selectOption(page, page, 'Loại khóa', 'Khóa nhỏ')
+  await page.getByRole('textbox', { name: 'Tên khóa học', exact: true }).fill('SECTION Hình học')
+  // SECTION courses have no schedule step: info, media, then price and access.
+  const steps = page.getByRole('list', { name: 'Các bước', exact: true })
+  await expect(steps.getByRole('listitem')).toHaveCount(3)
+  await expect(steps.getByText('Lịch học', { exact: true })).toHaveCount(0)
+  const next = page.getByRole('button', { name: 'Tiếp tục', exact: true })
   await next.click()
-  await dialog.getByText('Khóa có học phí', { exact: true }).click()
-  await expect(dialog.getByRole('checkbox', { name: 'Khóa có học phí', exact: true })).toBeChecked()
-  await dialog.getByLabel('Học phí (VND)', { exact: true }).fill('150000')
   await next.click()
-  // SECTION courses have no calendar step, so the next stop is the access window.
-  await expect(dialog.getByLabel('Ngày bắt đầu', { exact: true })).toHaveCount(0)
-  await selectOption(dialog, page, 'Hạn dùng khóa', 'N ngày kể từ khi mua')
-  await dialog.getByLabel('Số ngày truy cập').fill('120')
+  await expect(next).toHaveCount(0)
+  // One price field: an amount above zero is a paid course.
+  await page.getByLabel('Học phí (VND)').fill('150000')
+  await selectOption(page, page, 'Hạn dùng khóa', 'N ngày kể từ khi mua')
+  await page.getByLabel('Số ngày truy cập').fill('120')
+  // The access list fades out in a layer of its own; measure the page once it has gone.
+  await expect(page.getByRole('listbox')).toHaveCount(0)
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true
   )
   await page.screenshot({ path: testInfo.outputPath('section-mobile-editor.png'), fullPage: true })
-  await dialog.getByRole('button', { name: 'Lưu khóa học', exact: true }).click()
-  await expect(dialog).toBeHidden()
-  await expect(page.getByRole('row', { name: /SECTION Hình học/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Lưu khóa học', exact: true }).click()
+  // A new course opens on its own detail page.
+  await expect(page.getByRole('heading', { name: 'SECTION Hình học', exact: true })).toBeVisible()
   expect(
     state.requests.find((r) => r.method === 'POST' && r.path === '/api/v1/admin/courses')!.body
   ).toMatchObject({
@@ -132,10 +144,7 @@ test('SECTION metadata create works without MAIN calendar fields', async ({ page
 test('review submission rejection remains visible and uses current edit token', async ({ page }) => {
   const state = await installCrudFixture(page)
   await page.goto('/staff/courses')
-  await page
-    .getByRole('row', { name: /MAIN Toán/ })
-    .getByRole('button', { name: 'Gửi duyệt', exact: true })
-    .click()
+  await courseCard(page, 'MAIN Toán').getByRole('button', { name: 'Gửi duyệt', exact: true }).click()
   const confirmation = page
     .getByRole('dialog')
     .filter({ has: page.getByRole('heading', { name: 'Gửi duyệt khóa học?', exact: true }) })
@@ -148,9 +157,7 @@ test('review submission rejection remains visible and uses current edit token', 
     state.requests.find((r) => r.method === 'POST' && r.path.endsWith('/review'))!.body
   ).toMatchObject({ expectedUpdatedAt: STAMP })
   await confirmation.getByRole('button', { name: 'Hủy', exact: true }).click()
-  await expect(
-    page.getByRole('row', { name: /MAIN Toán/ }).getByText('Nháp', { exact: true })
-  ).toBeVisible()
+  await expect(courseCard(page, 'MAIN Toán').getByText('Nháp', { exact: true })).toBeVisible()
 })
 
 test('MAIN structure uses parent-scoped phase, gift and teacher IDs', async ({ page }) => {
@@ -210,8 +217,7 @@ test('category delete confirms the chosen leaf and keeps its parent', async ({ p
 test('draft course delete targets the selected course only', async ({ page }) => {
   const state = await installCrudFixture(page)
   await page.goto('/staff/courses')
-  await page
-    .getByRole('row', { name: /SECTION Đại số/ })
+  await courseCard(page, 'SECTION Đại số')
     .getByRole('button', { name: 'Thao tác khác với SECTION Đại số', exact: true })
     .click()
   await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click()
@@ -220,8 +226,8 @@ test('draft course delete targets the selected course only', async ({ page }) =>
     .filter({ has: page.getByRole('heading', { name: 'Xóa khóa nháp?', exact: true }) })
   await confirmation.getByRole('button', { name: 'Xóa khóa', exact: true }).click()
   await expect(confirmation).toBeHidden()
-  await expect(page.getByRole('row', { name: /MAIN Toán/ })).toBeVisible()
-  await expect(page.getByRole('row', { name: /SECTION Đại số/ })).toHaveCount(0)
+  await expect(courseCard(page, 'MAIN Toán')).toBeVisible()
+  await expect(courseCard(page, 'SECTION Đại số')).toHaveCount(0)
   expect(state.requests.filter((r) => r.method === 'DELETE')).toEqual([
     { path: `/api/v1/admin/courses/${IDS.section}`, method: 'DELETE', body: {} },
   ])
