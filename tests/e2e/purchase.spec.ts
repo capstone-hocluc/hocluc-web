@@ -108,7 +108,7 @@ test('purchase hydrates user once and cart uses learner brand on desktop/mobile'
     expect(
       await page.locator('.hl-purchase').evaluate((el) => getComputedStyle(el).fontFamily)
     ).toContain('Be Vietnam Pro')
-    await page.screenshot({ path: '.pi/qa/purchase/cart-' + width + '.png', fullPage: true })
+    await page.screenshot({ path: 'test-results/screens/purchase/cart-' + width + '.png', fullPage: true })
   }
 })
 test('guest purchase preserves internal returnTo', async ({ page }) => {
@@ -300,7 +300,7 @@ test('checkout, payment and order detail are readable on desktop and mobile', as
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
       ).toBeTruthy()
       await page.screenshot({
-        path: '.pi/qa/purchase/' + name + '-' + width + '.png',
+        path: 'test-results/screens/purchase/' + name + '-' + width + '.png',
         fullPage: true,
       })
     }

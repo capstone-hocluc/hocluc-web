@@ -3,13 +3,13 @@ import { defineConfig, devices } from '@playwright/test'
 // These tests never call the live API: the browser routes every API request to a fixture.
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: ['core-crud.spec.ts', 'chat.spec.ts', 'landing.spec.ts', 'course-catalog.spec.ts', 'quiz-permissions.spec.ts', 'placement.spec.ts', 'free-exams.spec.ts', 'purchase.spec.ts', 'lesson-labels.spec.ts', 'notifications.spec.ts', 'quiz-import.spec.ts', 'auth-cookie.spec.ts', 'question-bank.spec.ts', 'question-bank-authoring.spec.ts', 'question-bank-review.spec.ts', 'master-data.spec.ts', 'master-data-validation.spec.ts', 'quiz-paper.spec.ts', 'console-nav.spec.ts', 'roadmap-phases.spec.ts', 'labels-trace.spec.ts', 'course-duration.spec.ts', 'category-tree.spec.ts', 'subject-scopes.spec.ts', 'bank-rounds.spec.ts', 'ai-assistant.spec.ts', 'exam-doc-charts.spec.ts', 'exam-doc-figures.spec.ts', 'credits.spec.ts', 'student-schedule.spec.ts', 'learning-profile-ui.spec.ts', 'live-class-booking.spec.ts', 'live-timetable.spec.ts', 'teacher-zoom.spec.ts'],
+  testMatch: ['core-crud.spec.ts', 'chat.spec.ts', 'landing.spec.ts', 'course-catalog.spec.ts', 'quiz-permissions.spec.ts', 'placement.spec.ts', 'free-exams.spec.ts', 'purchase.spec.ts', 'lesson-labels.spec.ts', 'notifications.spec.ts', 'quiz-import.spec.ts', 'auth-cookie.spec.ts', 'question-bank.spec.ts', 'question-bank-authoring.spec.ts', 'question-bank-review.spec.ts', 'master-data.spec.ts', 'master-data-validation.spec.ts', 'quiz-paper.spec.ts', 'console-nav.spec.ts', 'roadmap-phases.spec.ts', 'labels-trace.spec.ts', 'course-duration.spec.ts', 'category-tree.spec.ts', 'subject-scopes.spec.ts', 'bank-rounds.spec.ts', 'ai-assistant.spec.ts', 'exam-doc-charts.spec.ts', 'exam-doc-figures.spec.ts', 'credits.spec.ts', 'student-schedule.spec.ts', 'learning-profile-ui.spec.ts', 'live-class-booking.spec.ts', 'live-timetable.spec.ts', 'teacher-zoom.spec.ts', 'auth-design.spec.ts'],
   fullyParallel: false,
   workers: 1,
   retries: 0,
   timeout: 30_000,
-  outputDir: '.pi/qa/core-crud/results',
-  reporter: [['list'], ['html', { outputFolder: '.pi/qa/core-crud/report', open: 'never' }]],
+  outputDir: 'test-results',
+  reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:5192',
     ...devices['Desktop Chrome'],

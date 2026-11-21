@@ -45,7 +45,7 @@ export function createAppConfig({ command, mode, isPreview }: ConfigEnv): UserCo
     server: {
       // Playwright and the QA scripts write traces and screenshots inside the repo while a run
       // is going; watching them makes the dev server churn on files no page imports.
-      watch: { ignored: ['**/.pi/**', '**/test-results/**', '**/playwright-report/**', '**/.playwright-mcp/**'] },
+      watch: { ignored: ['**/test-results/**', '**/playwright-report/**', '**/.playwright-mcp/**'] },
       // Keep the browser on the FE origin so the BE's SameSite=Lax cookie works locally.
       // changeOrigin changes Host only; do not rewrite Origin or disable TLS verification.
       ...(useProxy && {
