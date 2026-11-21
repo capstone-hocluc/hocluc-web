@@ -22,6 +22,9 @@ export interface Course {
   elapsedPercentage?: number
   recommended?: boolean
   purchased?: boolean
+  /** Average stars over visible reviews (one decimal); null while the course has none. */
+  averageRating?: number | null
+  reviewCount?: number
 }
 
 export interface MyCourseEnrollment {

@@ -5,6 +5,7 @@ import StudyCurriculum from '../../components/student/course/StudyCurriculum'
 import CourseLiveClassesTab from '../../components/student/course/CourseLiveClassesTab'
 import CourseTutorMascot from '../../components/student/course/CourseTutorMascot'
 import CourseExamsTab from '../../components/student/course/CourseExamsTab'
+import StudyReviewButton from '../../components/course/reviews/StudyReviewButton'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Skeleton from '../../components/ui/Skeleton'
@@ -131,14 +132,17 @@ function CourseStudyPage({
           </aside>}
 
           <div>
-            <TabsList className={styles.studyTabs} aria-label="Nội dung khóa học">
-              {visibleTabs.map((tab) => (
-                <TabsTrigger key={tab.key} value={tab.key}>
-                  {tab.key === 'content' ? <BookOpen size={18} /> : tab.key === 'exams' ? <FileQuestion size={18} /> : <CalendarDays size={18} />}
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <TabsList className={styles.studyTabs} aria-label="Nội dung khóa học">
+                {visibleTabs.map((tab) => (
+                  <TabsTrigger key={tab.key} value={tab.key}>
+                    {tab.key === 'content' ? <BookOpen size={18} /> : tab.key === 'exams' ? <FileQuestion size={18} /> : <CalendarDays size={18} />}
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <StudyReviewButton courseId={courseId} />
+            </div>
 
             <div className={styles.tabPanel}>
               <TabsContent value="content" className="flex flex-col gap-5">

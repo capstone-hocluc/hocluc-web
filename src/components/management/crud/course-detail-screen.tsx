@@ -32,6 +32,7 @@ import CoursePhasesPanel from './course-phases-panel'
 import CourseSectionsPanel from './course-sections-panel'
 import { assignSectionPhase } from '../../../services/courseAdminService'
 import CourseInstructorsPanel from './course-instructors-panel'
+import CourseReviewsPanel from './course-reviews-panel'
 import CourseContentPanel from './course-content-panel'
 import CourseOutcomesPanel from './course-outcomes-panel'
 import ContentSectionsPanel from './content-sections-panel'
@@ -130,7 +131,9 @@ export default function CourseDetailScreen({
   const sectionsResource = useScheduleResource(`content-sections:${id}`, () =>
     getContentSections(id)
   )
-  const [tab, setTab] = useState<CourseStepTab | 'instructors'>(initialTab)
+  const [tab, setTab] = useState<CourseStepTab | 'instructors' | 'reviews'>(initialTab)
+  // Teachers teach; moderating what students wrote is for staff, managers and administrators.
+  const canModerateReviews = profile?.role !== undefined && profile.role !== 'TEACHER'
   const [chapters, setChapters] = useState<ChapterAdmin[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -361,6 +364,7 @@ export default function CourseDetailScreen({
                 <ConsoleTabsTrigger value="content">Nội dung</ConsoleTabsTrigger>
                 {isMain && <ConsoleTabsTrigger value="gifts">Khóa tặng kèm</ConsoleTabsTrigger>}
                 <ConsoleTabsTrigger value="instructors">Giảng viên</ConsoleTabsTrigger>
+                {canModerateReviews && <ConsoleTabsTrigger value="reviews">Đánh giá</ConsoleTabsTrigger>}
               </ConsoleTabsList>
 
               <ConsoleTabsContent value="overview">
@@ -484,6 +488,13 @@ export default function CourseDetailScreen({
                   remove={remove}
                 />
               </ConsoleTabsContent>
+
+              {canModerateReviews && (
+                <ConsoleTabsContent value="reviews">
+                  {/* Loaded only once opened: most visits to a course never look at its reviews. */}
+                  {tab === 'reviews' && <CourseReviewsPanel courseId={course.id} />}
+                </ConsoleTabsContent>
+              )}
             </ConsoleTabs>
           </>
         )}

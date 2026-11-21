@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import BundleCourses from '../../components/course/BundleCourses'
 import ChapterList from '../../components/course/ChapterList'
 import CourseAbout from '../../components/course/CourseAbout'
+import CourseReviews from '../../components/course/reviews/CourseReviews'
 import IntroVideo from '../../components/course/IntroVideo'
 import {
   ownChapters,
@@ -391,6 +392,8 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                     {view.chapters.length > 0 && (
                       <Chapters chapters={view.chapters} purchased={Boolean(course.purchased)} />
                     )}
+
+                    <CourseReviews courseId={course.id} />
                   </div>
 
                   <aside className="cd-aside" aria-label="Đăng ký khóa học">
