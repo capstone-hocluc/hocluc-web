@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Button from '../../ui/Button'
-import { Star } from '../../console/icons'
+import { Star3D } from './RatingStars'
 import { useCourseReviewSummary } from './use-course-review-summary'
 import ReviewFormDialog from './ReviewFormDialog'
 
@@ -12,7 +12,7 @@ function StudyReviewButton({ courseId }: { courseId: string }) {
   return (
     <>
       <Button type="button" size="sm" appearance="outline" onClick={() => setOpen(true)}>
-        <Star aria-hidden="true" className={summary.mine ? 'fill-accent text-accent' : undefined} />
+        <Star3D size={16} />
         {summary.mine ? 'Sửa đánh giá' : 'Đánh giá khóa học'}
       </Button>
       <ReviewFormDialog

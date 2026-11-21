@@ -5,7 +5,8 @@ import ConsoleDialog from '../../console/dialog'
 import DataTable from '../../console/data-table'
 import Field, { textareaControlClass } from '../../console/form-field'
 import { FilterGroup, FilterSelect, FilterToolbar } from '../../console/filter-toolbar'
-import { Eye, EyeOff, Star } from '../../console/icons'
+import { Eye, EyeOff } from '../../console/icons'
+import { Star3D } from '../../course/reviews/RatingStars'
 import { IconAction, RowActions } from '../../console/icon-action'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
 import Status from '../../console/status'
@@ -34,7 +35,7 @@ const VISIBILITY_OPTIONS = [
 function Stars({ value }: { value: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-medium text-text-primary" aria-label={`${value} sao`}>
-      <Star size={15} aria-hidden="true" className="fill-warning text-warning" />
+      <Star3D size={15} />
       {value}
     </span>
   )
