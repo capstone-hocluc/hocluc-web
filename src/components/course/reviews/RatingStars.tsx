@@ -13,7 +13,7 @@ const layer = 'absolute inset-0 [&_path]:[fill:var(--star-fill)]'
 
 /**
  * The kit's star drawn in relief: the same shape three times, a rim pushed down for depth, the face in a
- * top-to-bottom gradient, and a shine over its upper half.
+ * top-to-bottom gradient with a thin edge, and a small shine inside the face.
  */
 export function Star3D({ size = 16, empty = false, className }: { size?: number; empty?: boolean; className?: string }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
@@ -32,8 +32,8 @@ export function Star3D({ size = 16, empty = false, className }: { size?: number;
             <stop offset="1" stopColor={tone.bottom} />
           </linearGradient>
           <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={SHINE} stopOpacity={empty ? 0.7 : 0.95} />
-            <stop offset="0.5" stopColor={SHINE} stopOpacity="0" />
+            <stop offset="0" stopColor={SHINE} stopOpacity={empty ? 0.8 : 0.9} />
+            <stop offset="1" stopColor={SHINE} stopOpacity="0" />
           </linearGradient>
         </defs>
       </svg>
@@ -43,7 +43,12 @@ export function Star3D({ size = 16, empty = false, className }: { size?: number;
         className={cn(layer, '[&_path]:[stroke-width:0.5] [&_path]:[stroke:var(--star-edge)]')}
         style={{ '--star-fill': `url(#${id}f)`, '--star-edge': tone.edge } as CSSProperties}
       />
-      <Star size={size} className={layer} style={{ '--star-fill': `url(#${id}s)` } as CSSProperties} />
+      {/* The shine sits inside the face, clear of the points, so every tip keeps its gold edge. */}
+      <Star
+        size={size}
+        className={layer}
+        style={{ '--star-fill': `url(#${id}s)`, transform: 'scale(0.55)', transformOrigin: '50% 42%' } as CSSProperties}
+      />
     </span>
   )
 }
@@ -63,7 +68,7 @@ export function RatingStars({ value, size = 16, className }: { value: number; si
           <span key={star} className="relative inline-flex">
             <Star3D size={size} empty />
             {fill > 0 && (
-              <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
+              <span className="absolute inset-y-0 left-0 flex overflow-hidden" style={{ width: `${fill * 100}%` }}>
                 <Star3D size={size} />
               </span>
             )}
