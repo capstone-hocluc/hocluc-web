@@ -100,6 +100,10 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
         lockReason: null, inProgressAttemptId: null,
       })))
     if (path === '/api/v1/courses/main') return answer([])
+    // The study page asks whether the student may review the course; not yet in these tests.
+    if (/^\/api\/v1\/courses\/[^/]+\/reviews\/summary$/.test(path)) return answer({
+      averageRating: null, reviewCount: 0, distribution: [0, 0, 0, 0, 0], eligibility: 'NO_LESSON_COMPLETED', mine: null,
+    })
     if (/^\/api\/v1\/courses\/[^/]+\/competency$/.test(path)) return answer({
       courseId: path.split('/').at(-2), courseTitle: 'Khóa Student', studentId: QUIZ_IDS.user,
       examCount: 0, totalQuestions: 0, correctCount: 0, wrongCount: 0, score: null, maxScore: null,

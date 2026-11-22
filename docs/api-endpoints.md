@@ -72,6 +72,21 @@ Tổng hợp toàn bộ API backend mà frontend đang gọi tới, trích xuấ
 ses` | ✓ | Lịch học trực tuyến (next/upcoming/past) của khóa học |
 | GET | `/api/v1/courses/{courseId}/enrollment-plan` | ✓ | Lộ trình ghi danh / đề xuất khóa học tiếp theo |
 
+Catalog (`/courses/main`) trả thêm `averageRating` (1 số lẻ, `null` khi chưa có đánh giá) và `reviewCount` cho mỗi khóa.
+
+## 5b. Đánh giá khóa học — `src/services/courseReviewService.ts`
+
+Học viên đang sở hữu khóa và đã hoàn thành ít nhất 1 bài học thì được đánh giá (1–5 sao, nhận xét tối đa 2000 ký tự). Mỗi học viên có 1 đánh giá cho mỗi khóa. Đánh giá hiện ngay; staff ẩn được, kèm lý do. Đánh giá bị ẩn không hiện trong danh sách và không tính vào điểm trung bình, nhưng tác giả vẫn thấy đánh giá của mình kèm lý do.
+
+| Method | Endpoint | Auth | Mô tả |
+|---|---|---|---|
+| GET | `/api/v1/courses/{courseId}/reviews/summary` | optionalAuth | Điểm trung bình, số đánh giá, phân bố 1–5 sao, `eligibility` (`CAN_REVIEW`/`GUEST`/`NOT_OWNED`/`NO_LESSON_COMPLETED`) và `mine` |
+| GET | `/api/v1/courses/{courseId}/reviews?page&size` | — | Đánh giá đang hiện, mới nhất trước (tối đa 50 mỗi trang) |
+| PUT | `/api/v1/courses/{courseId}/reviews/mine` | ✓ STUDENT | Tạo mới hoặc sửa `{rating, comment}` |
+| DELETE | `/api/v1/courses/{courseId}/reviews/mine` | ✓ STUDENT | Xóa đánh giá của mình |
+| GET | `/api/v1/admin/courses/{courseId}/reviews?rating&hidden&page&size` | ✓ STAFF/MANAGER/ADMINISTRATOR | Mọi đánh giá của khóa, kể cả đã ẩn |
+| PATCH | `/api/v1/admin/course-reviews/{reviewId}/visibility` | ✓ STAFF/MANAGER/ADMINISTRATOR | `{hidden, reason}`; ẩn thì bắt buộc có lý do |
+
 ## 6. Lesson — `src/services/lessonService.ts`
 
 | Method | Endpoint | Auth | Mô tả |

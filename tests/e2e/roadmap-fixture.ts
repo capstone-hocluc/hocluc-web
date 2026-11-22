@@ -8,6 +8,7 @@ import type {
   CourseStudySection,
   GiftCourse,
 } from '../../src/services/courseService'
+import type { CourseReviewSummary } from '../../src/services/courseReviewService'
 import type { LessonDetail } from '../../src/services/lessonService'
 
 // Mutable copies live inside installRoadmapFixture; these helpers only build the NEW API shape
@@ -336,6 +337,8 @@ export interface RoadmapSeed {
   courses?: Record<string, CourseDetail>
   studies?: Record<string, CourseStudy>
   lessons?: Record<string, LessonDetail>
+  /** What /reviews/summary answers for every course. */
+  reviewSummary?: CourseReviewSummary
 }
 
 // Fail-closed API boundary: every /api/ call is answered here; anything else is either the local
@@ -345,6 +348,13 @@ export async function installRoadmapFixture(page: Page, seed: RoadmapSeed = {}) 
     courses: seed.courses ?? {},
     studies: seed.studies ?? {},
     lessons: seed.lessons ?? {},
+    reviewSummary: seed.reviewSummary ?? {
+      averageRating: null,
+      reviewCount: 0,
+      distribution: [0, 0, 0, 0, 0],
+      eligibility: 'NO_LESSON_COMPLETED',
+      mine: null,
+    },
     requests: [] as CapturedRequest[],
     unmatchedRequests: [] as string[],
     pageErrors: [] as string[],
@@ -413,6 +423,11 @@ export async function installRoadmapFixture(page: Page, seed: RoadmapSeed = {}) 
         totalPages: 0,
         last: true,
       })
+    // Course pages and the study page ask for the course's reviews; none in these tests.
+    if (path.startsWith('/api/v1/courses/') && path.endsWith('/reviews/summary') && method === 'GET')
+      return answer(state.reviewSummary)
+    if (path.startsWith('/api/v1/courses/') && path.endsWith('/reviews') && method === 'GET')
+      return answer({ content: [], pageNumber: 0, pageSize: 10, totalElements: 0, totalPages: 0, last: true })
     if (path.startsWith('/api/v1/courses/') && path.endsWith('/study') && method === 'GET') {
       const id = decodeURIComponent(path.split('/')[4] ?? '')
       const parent = Object.values(state.studies).find((study) => study.phases.some((phase) => phase.gifts.some((item) => item.courseId === id)))

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Course } from '../../services/courseService'
 import { fitFor, prepWeeks } from '../course-catalog/roadmap-compare'
 import { formatExamLabel } from '../../lib/courseFormat'
+import { Star3D } from '../course/reviews/RatingStars'
 import Icon from './Icon'
 import LandingLink from './LandingLink'
 import { courseDate, formatCoursePrice, parseCourseDate } from './landing-course-format'
@@ -45,6 +46,15 @@ export default function LandingCourseCard({ course, preview = false }: { course:
         <h3>{preview ? course.title : <LandingLink href={href}>{course.title}</LandingLink>}</h3>
         {summary && <p className="course-description">{summary}</p>}
         {date && <p className="course-date">Khai giảng {courseDate.format(date)}</p>}
+        {course.reviewCount ? (
+          <p className="m-0 flex items-center gap-1 text-sm text-(--muted)">
+            <Star3D size={15} />
+            <strong className="text-(--ink)">
+              {course.averageRating?.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+            </strong>
+            <span>({course.reviewCount} đánh giá)</span>
+          </p>
+        ) : null}
         <div className="course-bottom">
           <div>
             {price && (
