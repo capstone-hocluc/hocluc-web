@@ -142,9 +142,12 @@ function Other({ block }: { block: DescriptionBlock }) {
   )
 }
 
-// "Giới thiệu khóa học" as a bento: who it is for (beside a photo of a student), what you learn as
-// numbered steps, what you get on a dark tile, and the timing as a strip with a countdown to the
-// start date. `includedCount` is the number of courses a bundle is made of (0 for a single course).
+const isParagraph = (block: DescriptionBlock) => !block.heading && block.bullets.length === 0
+
+// "Giới thiệu khóa học" of a bundle, as a bento: who it is for (beside a photo of a student), what
+// you learn as numbered steps, what you get on a dark tile, and the timing as a strip with a
+// countdown to the start date. Paragraphs before the first part introduce the section; later ones
+// stay where the description puts them. `includedCount` is the number of courses in the bundle.
 export default function CourseAbout({
   blocks,
   startDate,
@@ -154,14 +157,30 @@ export default function CourseAbout({
   startDate?: string
   includedCount?: number
 }) {
-  const lead = blocks.filter((block) => !block.heading).flatMap((block) => block.lines)
-  const tiles = blocks.filter((block) => block.heading)
+  const first = blocks.findIndex((block) => !isParagraph(block))
+  const lead = (first === -1 ? blocks : blocks.slice(0, first)).flatMap((block) => block.lines)
+  const parts = first === -1 ? [] : blocks.slice(first)
   return (
     <section className="cd-block" aria-labelledby="cd-about-title">
       <h2 id="cd-about-title">Giới thiệu khóa học</h2>
-      {lead.length > 0 && <p className="ab-lead">{lead.join(' ')}</p>}
+      {lead.length > 0 && (
+        <div className="ab-lead">
+          {lead.map((line, index) => (
+            <p key={index}>{line}</p>
+          ))}
+        </div>
+      )}
       <div className="ab-bento">
-        {tiles.map((block, index) => {
+        {parts.map((block, index) => {
+          if (isParagraph(block)) {
+            return (
+              <div key={index} className="ab-note">
+                {block.lines.map((line, lineIndex) => (
+                  <p key={lineIndex}>{line}</p>
+                ))}
+              </div>
+            )
+          }
           switch (kindOf(block.heading)) {
             case 'audience':
               return <Audience key={index} block={block} />

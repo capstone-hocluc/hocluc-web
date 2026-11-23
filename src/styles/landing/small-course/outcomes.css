@@ -1,0 +1,69 @@
+/* What a student can do after the course, on the dark panel the landing uses for what you get. */
+.course-page .sc-outcomes {
+  padding: 28px;
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 90% 0%, rgb(28 176 246 / 26%), transparent 45%),
+    linear-gradient(160deg, #0f2f4a, #123f63 60%, #0d5a86);
+  color: #e8f4ff;
+}
+.course-page .sc-outcome-highlights {
+  display: grid;
+  grid-template-columns: repeat(var(--sc-columns, 3), minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.course-page .sc-outcome-highlights li {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 7%);
+  color: #f1f8ff;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+/* The learning outcomes, numbered in two columns. */
+.course-page .sc-goals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+.course-page .sc-outcome-highlights + .sc-goals {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(255 255 255 / 14%);
+}
+.course-page .sc-goals li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 8px;
+  color: #d6e7f5;
+  line-height: 1.6;
+}
+.course-page .sc-goal-number {
+  color: #7dd3fc;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+@container sc-part (max-width: 640px) {
+  .course-page .sc-outcomes {
+    padding: 22px;
+  }
+  .course-page .sc-outcome-highlights,
+  .course-page .sc-goals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .course-page .sc-outcome-highlights li {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+}

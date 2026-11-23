@@ -1,0 +1,93 @@
+/* A shorter scene, the usual laptop: tickets and the picked course take less room, and the card
+   at the finish is narrower so the whole cover still shows. */
+@container cj-scene (max-height: 780px) {
+  .course-page .cj-head p {
+    -webkit-line-clamp: 3;
+  }
+  .course-page .cj-tickets {
+    gap: 7px;
+  }
+  .course-page .cj-ticket {
+    min-height: 58px;
+  }
+  .course-page .cj-ticket-stub {
+    flex-basis: 48px;
+  }
+  .course-page .cj-ticket-main {
+    padding: 4px 10px;
+  }
+  .course-page .cj-ticket-main strong {
+    -webkit-line-clamp: 2;
+    font-size: 13px;
+  }
+  .course-page .cj-peek {
+    margin-top: 10px;
+    padding: 12px 16px 6px;
+  }
+  .course-page .cj-peek h4 {
+    -webkit-line-clamp: 1;
+  }
+  .course-page .cj-peek h5 {
+    margin-top: 8px;
+  }
+  .course-page .cj-peek li:nth-child(n + 3) {
+    display: none;
+  }
+  .course-page .cj-peek .text-link {
+    min-height: 30px;
+    padding-block: 4px;
+  }
+  .course-page .cj-side.is-offer {
+    width: min(400px, 32cqw);
+  }
+}
+@container cj-scene (max-height: 620px) {
+  .course-page .cj-hud {
+    top: 14px;
+  }
+  .course-page .cj-skip {
+    top: 9px;
+  }
+  .course-page .cj-intro {
+    top: 68px;
+  }
+  .course-page .cj-head,
+  .course-page .cj-side {
+    top: calc(50% + 24px);
+  }
+  .course-page .cj-head p {
+    -webkit-line-clamp: 2;
+    margin-top: 10px;
+    font-size: 15px;
+  }
+  .course-page .cj-stats {
+    margin-top: 14px;
+  }
+  .course-page .cj-stats dd {
+    font-size: 26px;
+  }
+  .course-page .cj-companions {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+  .course-page .cj-ticket {
+    min-height: 56px;
+  }
+  .course-page .cj-peek {
+    margin-top: 10px;
+    padding-top: 12px;
+  }
+  .course-page .cj-peek h5,
+  .course-page .cj-peek ul {
+    display: none;
+  }
+  .course-page .cj-side.is-offer {
+    width: min(340px, 30cqw);
+  }
+  .course-page .cj-buy-cover {
+    margin-bottom: 12px;
+  }
+  .course-page .cj-buy .btn {
+    margin-top: 12px;
+  }
+}

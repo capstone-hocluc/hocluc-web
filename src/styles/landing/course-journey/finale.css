@@ -1,0 +1,67 @@
+/* The finish: the exam date on the left, the course to buy on the right. */
+.course-page .cj-buy {
+  display: grid;
+  padding: 14px 14px 12px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 26px 50px -32px rgb(11 35 72 / 55%);
+}
+.course-page .cj-buy-cover {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  margin-bottom: 16px;
+  border: 0;
+  border-radius: 14px;
+  object-fit: cover;
+  background: #e7f0fc;
+}
+.course-page .cj-buy h4,
+.course-page .cj-buy-price,
+.course-page .cj-buy-note {
+  padding: 0 8px;
+}
+.course-page .cj-buy h4 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.course-page .cj-buy-price {
+  margin-top: 8px;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.course-page .cj-buy .btn {
+  margin: 16px 8px 0;
+}
+.course-page .cj-buy-note {
+  margin-top: 10px;
+  font-size: var(--small);
+  text-align: center;
+  color: var(--good);
+}
+.course-page .cj-buy .text-link {
+  justify-self: center;
+  margin-top: 2px;
+}
+.course-page .cj-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+.course-page .cj-burst i {
+  position: absolute;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+}
+.course-page .cj-stage.is-on .cj-burst i {
+  animation: cj-pop 1.6s cubic-bezier(0.15, 0.7, 0.3, 1) 300ms backwards;
+}

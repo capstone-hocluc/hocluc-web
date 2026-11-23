@@ -121,7 +121,15 @@ function IncludedCourse({ gift, purchased }: { gift: GiftCourse; purchased: bool
 
 // A course sold as a set of smaller courses: how many it includes, then each phase with the
 // courses studied in it. Each course opens into its own chapters.
-export default function BundleCourses({ phases, purchased }: { phases: CoursePhase[]; purchased: boolean }) {
+export default function BundleCourses({
+  id,
+  phases,
+  purchased,
+}: {
+  id?: string
+  phases: CoursePhase[]
+  purchased: boolean
+}) {
   const groups = phases.filter((phase) => phase.gifts.length > 0)
   const gifts = groups.flatMap((phase) => phase.gifts)
   const stageCount = groups.filter((phase) => phase.id).length
@@ -135,7 +143,7 @@ export default function BundleCourses({ phases, purchased }: { phases: CoursePha
   const stageNumbers = new Map(groups.filter((phase) => phase.id).map((phase, index) => [phase.id, index + 1]))
 
   return (
-    <section className="cd-block" aria-labelledby="cd-bundle-title">
+    <section id={id} className="cd-block" aria-labelledby="cd-bundle-title">
       <h2 id="cd-bundle-title" className="mb-2!">
         Gồm {gifts.length} khóa học
       </h2>

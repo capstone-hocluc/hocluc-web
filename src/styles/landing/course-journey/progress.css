@@ -1,0 +1,89 @@
+/* Progress along the road */
+.course-page .cj-hud {
+  position: absolute;
+  z-index: 6;
+  top: 26px;
+  left: 50%;
+  width: min(600px, calc(100% - 340px));
+  height: 50px;
+  transform: translateX(-50%);
+}
+.course-page .cj-hud-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 4px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.course-page .cj-hud-rest {
+  position: absolute;
+  inset: 0;
+  background: #d1deef;
+  transform-origin: 100% 50%;
+  will-change: transform;
+}
+.course-page .cj-hud-step {
+  position: absolute;
+  top: 0;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  transform: translateX(-50%);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #7d90a9;
+  transition: color 200ms;
+}
+.course-page .cj-hud-step i {
+  width: 13px;
+  height: 13px;
+  margin-top: 4px;
+  border-radius: 50%;
+  border: 2.5px solid #c1d1e6;
+  background: #fff;
+  transition:
+    background 200ms,
+    border-color 200ms,
+    box-shadow 200ms;
+}
+.course-page .cj-hud-step.is-done i {
+  border-color: var(--cj-c);
+  background: var(--cj-c);
+}
+.course-page .cj-hud-step.is-now i {
+  border-color: var(--cj-c);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--cj-c) 20%, transparent);
+}
+.course-page .cj-hud-step.is-now,
+.course-page .cj-hud-step:hover {
+  color: var(--ink);
+}
+.course-page .cj-skip {
+  position: absolute;
+  z-index: 6;
+  top: 21px;
+  right: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #d3e0f1;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.course-page .cj-skip:hover {
+  border-color: #b9cce6;
+  color: var(--ink);
+}
+.course-page .cj-skip .ui-icon {
+  width: 14px;
+  height: 14px;
+}

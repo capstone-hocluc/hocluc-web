@@ -1,0 +1,138 @@
+/* The road's sky and ground colours. They are set on the page, not on the road, so the sections
+   before and after it can fade into them. */
+.course-page {
+  --cj-sky: #d7e8fd;
+  --cj-air: #f3f8ff;
+}
+
+/* The tall strip the page scrolls through, the scene pinned inside it, and the scenery. */
+.course-page .cj-trip {
+  /* Height of the site header above the pinned scene; the scene's script keeps it in step. */
+  --cj-top: 84px;
+  --cj-c: #e5484d;
+  --cj-k: #cf3338;
+  --cj-on: #fff;
+  position: relative;
+  height: calc((100vh - var(--cj-top)) * var(--cj-screens, 6));
+  /* A jump to the road stops with the scene pinned right under the header. */
+  scroll-margin-top: var(--cj-top);
+  line-height: 1.6;
+  color: var(--ink);
+}
+.course-page .cj-scene {
+  position: sticky;
+  top: var(--cj-top);
+  height: calc(100vh - var(--cj-top));
+  overflow: hidden;
+  background: var(--cj-air);
+  container: cj-scene / size;
+}
+.course-page .cj-trip :where(h4, dl, dd) {
+  margin: 0;
+}
+
+/* Scenery */
+.course-page .cj-sky {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 32%;
+  background: linear-gradient(var(--cj-sky), var(--cj-air));
+}
+.course-page .cj-glow {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 1200px;
+  height: 460px;
+  margin: -230px 0 0 -600px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(255 190 64 / 30%), transparent);
+  /* Faded out towards its top, so the scene's top edge is the plain sky the page fades into. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 40px, #000 170px);
+  mask-image: linear-gradient(to bottom, transparent 40px, #000 170px);
+}
+.course-page .cj-far {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 30%;
+  overflow: hidden;
+}
+.course-page .cj-sun {
+  position: absolute;
+  left: 50%;
+  bottom: -4cqh;
+  width: 10cqh;
+  height: 10cqh;
+  margin-left: -5cqh;
+  border-radius: 50%;
+  background: linear-gradient(#ffe37e, #ffb412);
+}
+.course-page .cj-hill {
+  position: absolute;
+  border-radius: 50%;
+}
+.course-page .cj-hill.is-a {
+  left: 3%;
+  bottom: -10cqh;
+  width: 40%;
+  height: 20cqh;
+  background: #dae6f7;
+}
+.course-page .cj-hill.is-b {
+  right: 1%;
+  bottom: -13cqh;
+  width: 43%;
+  height: 26cqh;
+  background: #dbeee6;
+}
+.course-page .cj-hill.is-c {
+  left: 27%;
+  bottom: -6cqh;
+  width: 20%;
+  height: 12cqh;
+  background: #d2e0f5;
+}
+.course-page .cj-cloud {
+  position: absolute;
+  height: 26px;
+  border-radius: 999px;
+  background: #fff;
+  animation: cj-drift 46s ease-in-out infinite alternate;
+}
+.course-page .cj-cloud::before {
+  content: '';
+  position: absolute;
+  left: 22%;
+  bottom: 40%;
+  width: 44%;
+  height: 130%;
+  border-radius: 999px;
+  background: inherit;
+}
+.course-page .cj-cloud.is-a {
+  left: 14%;
+  top: 13%;
+  width: 120px;
+}
+.course-page .cj-cloud.is-b {
+  right: 17%;
+  top: 9%;
+  width: 92px;
+  height: 20px;
+  animation-duration: 58s;
+  animation-direction: alternate-reverse;
+}
+.course-page .cj-floor {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Haze along the horizon, over the far end of the floor. */
+.course-page .cj-fog {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgb(243 248 255 / 0%) 24%, var(--cj-air) 30%, rgb(243 248 255 / 0%) 52%);
+}
