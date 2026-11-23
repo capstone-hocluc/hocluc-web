@@ -1,3 +1,6 @@
+import QuizLabelRun from './QuizLabelRun'
+import QuizQuestionSkill from './QuizQuestionSkill'
+import { useQuizLabels } from './useQuizLabels'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { ForbiddenPage } from '../../console/access-states'
 import QuizDetails from './QuizDetails'
@@ -354,6 +357,7 @@ function TeacherQuizEditorForm({
   const initialQuiz = initial?.quiz
   const initialQuestionsRef = useRef<TeacherQuizEditor | null>(initial)
   const [serverQuizId, setServerQuizId] = useState<string | null>(initialQuiz?.id ?? null)
+  const quizLabels = useQuizLabels(serverQuizId)
   const [title, setTitle] = useState(initialQuiz?.title ?? '')
   const [duration, setDuration] = useState(String(initialQuiz?.durationMinutes ?? 30))
   const [attempts, setAttempts] = useState(String(initialQuiz?.maxAttempts ?? 1))
@@ -700,6 +704,7 @@ function TeacherQuizEditorForm({
       <Card as="section" padding="lg" aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <CardTitle id="quiz-questions-title" className="text-base">Câu hỏi ({questions.length})</CardTitle>
+          {serverQuizId && <QuizLabelRun quizId={serverQuizId} resource={quizLabels} />}
           <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={onReload}
             onBusyChange={setBusy} />
           <Button appearance="outline" className="min-h-11" disabled={questionsLocked || busy} onClick={addQuestion}>
@@ -733,6 +738,7 @@ function TeacherQuizEditorForm({
                   )}
                   </RowActions>
                 </div>
+                {serverQuizId && question.serverId && <QuizQuestionSkill quizId={serverQuizId} questionId={question.serverId} resource={quizLabels} />}
                 {!question.editable ? (
                   <div className="text-sm text-text-tertiary">
                     <p className="mt-0 mb-2 whitespace-pre-wrap">{question.questionText}</p>

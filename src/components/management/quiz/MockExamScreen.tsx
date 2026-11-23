@@ -1,3 +1,6 @@
+import QuizLabelRun from './QuizLabelRun'
+import QuizQuestionSkill from './QuizQuestionSkill'
+import { useQuizLabels } from './useQuizLabels'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getCategories, type Category } from '../../../services/categoryService'
 import { ForbiddenPage } from '../../console/access-states'
@@ -682,6 +685,7 @@ function TeacherMockExamForm({
   const originalEditorRef = useRef<TeacherQuizEditor | null>(initial)
   const initialQuiz = initial?.quiz ?? null
   const [serverQuizId, setServerQuizId] = useState<string | null>(initialQuiz?.id ?? null)
+  const quizLabels = useQuizLabels(serverQuizId)
   const [quizSnapshot, setQuizSnapshot] = useState<TeacherQuizRecord | null>(initialQuiz)
   const [settings, setSettings] = useState<ExamSettings>({
     description: initialQuiz?.description ?? '',
@@ -1161,6 +1165,7 @@ function TeacherMockExamForm({
         key={question.clientId}
         question={question}
         number={number}
+        skill={serverQuizId && question.serverId && <QuizQuestionSkill quizId={serverQuizId} questionId={question.serverId} resource={quizLabels} />}
         sectionTitle={section.title}
         placement={placement}
         editable={canEditContent && question.editable && (!placement || question.questionType === 'SINGLE_CHOICE')}
@@ -1371,7 +1376,9 @@ function TeacherMockExamForm({
             {rail()}
           </aside>
           <div className="flex min-h-0 flex-1 flex-col">
-            <div className="shrink-0 px-4 pt-3 sm:px-6"><QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={() => { onStepChange(step); onReload() }} onBusyChange={setBusy} /></div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3 sm:px-6">
+              {serverQuizId && <QuizLabelRun quizId={serverQuizId} resource={quizLabels} />}
+              <QuizImportDialog quizId={serverQuizId} blockedReason={importBlockedReason} busy={busy} onReload={() => { onStepChange(step); onReload() }} onBusyChange={setBusy} /></div>
             <div className="flex shrink-0 border-b border-card-border px-4 py-2 sm:px-6 lg:hidden">
               <Button appearance="outline" size="sm" onClick={() => setRailOpen(true)}>Danh sách câu</Button>
             </div>

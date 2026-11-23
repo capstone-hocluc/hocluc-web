@@ -825,3 +825,34 @@ test('a teacher reads an assigned course\'s content without skill suggestions, w
   expect(state.requests.filter(r => r.path.includes('skill-suggestions'))).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
+
+test('staff can review and replace a skill chip on a locked quiz', async ({ page }) => {
+  const state = await installQuizFixture(page, 'STAFF')
+  Object.assign(state.quizzes[0], { locked: true, attemptCount: 1 })
+  const url = `**/api/v1/teacher/quizzes/${QUIZ_IDS.quiz}/labels`
+  const first = {
+    questionId: QUIZ_IDS.question, patternCode: 'MA.Q01', primarySkillCode: 'MA.S01',
+    microSkillCode: null, state: 'LABELLED', source: 'JEV', confidence: 0.5, counts: false,
+  }
+  await page.route(url, route => route.fulfill({ json: { success: true, data: {
+    labels: [first],
+    patterns: [
+      { code: 'MA.Q01', name: 'Phương trình', subject: 'Toán' },
+      { code: 'MA.Q02', name: 'Hàm số', subject: 'Toán' },
+    ],
+    status: 'DONE', progress: '1/1',
+  } } }))
+  await page.route(`${url}/${QUIZ_IDS.question}`, route => {
+    expect(route.request().postDataJSON()).toEqual({ patternCode: 'MA.Q02' })
+    return route.fulfill({ json: { success: true, data: {
+      ...first, patternCode: 'MA.Q02', primarySkillCode: 'MA.S02', source: 'MANUAL', confidence: null, counts: true,
+    } } })
+  })
+
+  await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
+  await expect(page.getByText('MA.S01 · Chờ duyệt', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Sửa nhãn' }).click()
+  await page.getByLabel('Dạng câu để gắn kỹ năng').selectOption('MA.Q02')
+  await page.getByRole('button', { name: 'Lưu nhãn' }).click()
+  await expect(page.getByText('MA.S02', { exact: true })).toBeVisible()
+})
