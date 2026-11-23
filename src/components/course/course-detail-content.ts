@@ -49,6 +49,11 @@ export function shortCourseName(title: string) {
   return title.split(' · ')[1]?.split(' – ')[0]?.trim() || title
 }
 
+// "Luyện thi … · Lộ trình Dài hạn – Từ nền tảng…" without its tagline: "Luyện thi … · Lộ trình Dài hạn".
+export function courseNameWithoutTagline(title: string) {
+  return title.split(' – ')[0]?.trim() || title
+}
+
 // An included course's description opens with a fact line such as
 // "Khoá cơ bản · 20 giờ · Phần 1A Tiếng Việt (câu 1–30)". The hours become their own figure and
 // the rest of that line is the course's one-line summary.

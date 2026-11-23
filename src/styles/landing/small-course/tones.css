@@ -1,0 +1,17 @@
+/* Four calm tints the parts take in turn: blue, green, amber, pink. */
+.course-page .sc-tone-0 {
+  --sc-soft: #eaf3ff;
+  --sc-ink: #0b5f9e;
+}
+.course-page .sc-tone-1 {
+  --sc-soft: #e7f6ee;
+  --sc-ink: #0f7a55;
+}
+.course-page .sc-tone-2 {
+  --sc-soft: #fff2de;
+  --sc-ink: #955a07;
+}
+.course-page .sc-tone-3 {
+  --sc-soft: #fdebf2;
+  --sc-ink: #b2306c;
+}

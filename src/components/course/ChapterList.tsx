@@ -19,7 +19,10 @@ export default function ChapterList({
         return (
           <details key={chapter.id} className="cd-chapter" open={openFirst && index === 0}>
             <summary>
-              <span className="cd-chapter-index">Chương {index + 1}</span>
+              <span className="cd-chapter-index">
+                <span className="cd-chapter-word">Chương </span>
+                {index + 1}
+              </span>
               <span className="cd-chapter-title">{chapter.title}</span>
               <span className="cd-chapter-count">{lessons.length} bài</span>
               <Icon name="chevron-down" />

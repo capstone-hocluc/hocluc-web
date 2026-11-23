@@ -25,6 +25,13 @@
   align-items: start;
   padding-block: 32px 72px;
 }
+/* Every course page opens on the same first row: the hero beside a purchase card of one width. */
+@media (min-width: 1200px) {
+  .course-page .cd-layout {
+    grid-template-columns: minmax(0, 1fr) 420px;
+    column-gap: 64px;
+  }
+}
 .course-page .cd-main {
   display: flex;
   flex-direction: column;
@@ -77,6 +84,9 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.course-page .cd-hero-jump {
+  margin-top: 28px;
+}
 
 /* Sections */
 .course-page .cd-block > h2 {
@@ -87,6 +97,14 @@
 .course-page .ab-lead {
   margin: -8px 0 20px;
   max-width: 62ch;
+}
+/* A paragraph of the description between or after its parts. */
+.course-page .ab-note {
+  grid-column: 1 / -1;
+  max-width: 62ch;
+}
+.course-page :is(.ab-lead, .ab-note) p + p {
+  margin-top: 4px;
 }
 .course-page .ab-bento {
   display: grid;
