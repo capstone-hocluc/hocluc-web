@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import type { UserRole } from '../../src/services/userService'
 import type { TeacherQuizRecord, TeacherQuizQuestion, TeacherQuizType, TeacherQuizSection } from '../../src/services/teacherQuizService'
 
@@ -314,7 +314,17 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
   return state
 }
 
-/** The exam and placement editors have two steps; open one by its label before touching its fields. */
-export async function showEditorStep(page: Page, label: 'Thông tin và quy định' | 'Các phần và câu hỏi') {
-  await page.getByRole('list', { name: 'Các bước soạn đề' }).getByRole('button', { name: label }).click()
+/** Waits until a quiz editor has loaded its quiz: its top bar then offers the settings. */
+export async function waitForEditor(page: Page) {
+  await expect(page.getByRole('button', { name: 'Thiết lập', exact: true })).toBeVisible()
+}
+
+/** Every quiz editor keeps its settings in a side panel; open it before touching a setting. */
+export async function openEditorSettings(page: Page) {
+  await page.getByRole('button', { name: 'Thiết lập', exact: true }).click()
+}
+
+/** Closes the settings panel so the editor behind it can be used again. */
+export async function closeEditorSettings(page: Page) {
+  await page.getByRole('dialog').getByRole('button', { name: 'Xong', exact: true }).click()
 }

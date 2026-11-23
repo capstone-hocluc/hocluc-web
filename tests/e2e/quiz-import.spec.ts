@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
-import { installQuizFixture, QUIZ_IDS, quizToken, showEditorStep } from './quiz-permissions-fixture'
+import { closeEditorSettings, installQuizFixture, openEditorSettings, QUIZ_IDS, quizToken, waitForEditor } from './quiz-permissions-fixture'
 
 const editUrl = `/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`
 const importUrl = '**/api/v1/teacher/quizzes/*/import/file?mode=APPEND'
@@ -36,7 +36,7 @@ for (const [role, area, path, id, extension] of [
       await route.fulfill({ json: { success: true, data: result } })
     })
     await page.goto(`/console/${area}/${path}/${id}/edit`)
-    if (path !== 'quizzes') await showEditorStep(page, 'Các phần và câu hỏi')
+    await waitForEditor(page)
     await choose(page, extension)
     await page.getByRole('button', { name: 'Nhập vào bản nháp', exact: true }).click()
     const dialog = page.getByRole('dialog')
@@ -63,9 +63,13 @@ test('unsaved changes block append', async ({ page }) => {
   await page.goto(editUrl)
   await expect(entry(page)).toBeEnabled()
   const title = page.getByLabel('Tên bài kiểm tra', { exact: true })
+  await openEditorSettings(page)
   await title.fill('Chưa lưu')
+  await closeEditorSettings(page)
   await expect(entry(page)).toBeDisabled()
+  await openEditorSettings(page)
   await title.fill('Quiz được giao')
+  await closeEditorSettings(page)
   await page.locator('textarea').first().fill('Câu hỏi chưa lưu')
   await expect(entry(page)).toBeDisabled()
 })

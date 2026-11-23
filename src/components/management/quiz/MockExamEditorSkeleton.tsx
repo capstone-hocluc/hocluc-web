@@ -1,103 +1,57 @@
-import Card from '../../console/card'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 
-function CardHeading({ eyebrow = 'w-32', title = 'w-48' }: { eyebrow?: string; title?: string }) {
+function QuestionCard() {
   return (
-    <div className="mb-4 flex flex-col gap-2">
-      <Skeleton className={`h-3 ${eyebrow}`} />
-      <Skeleton className={`h-5 ${title}`} />
+    <div className="flex flex-col gap-3 rounded-xl border border-card-border bg-card-background p-4">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-20 w-full rounded-lg" />
+      {[0, 1, 2, 3].map(option => <Skeleton key={option} className="h-10 w-full rounded-lg" />)}
     </div>
   )
 }
 
-function Field({ className = '' }: { className?: string }) {
+/**
+ * Placeholder with the editor's own layout while a saved quiz loads: the shared top bar, then the question list and
+ * contents rail of an exam, or the single column of question cards of a lesson or chapter quiz.
+ */
+export default function MockExamEditorSkeleton({ rail = true }: { rail?: boolean }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Skeleton className="h-3 w-28" />
-      <Skeleton className="h-10 w-full rounded-lg" />
-    </div>
-  )
-}
-
-function SettingsFields() {
-  return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <Field className="md:col-span-3" />
-      <Field className="md:col-span-3" />
-      <Field />
-      <Field />
-      <Field />
-      <div className="grid gap-4 sm:grid-cols-2 md:col-span-3">
-        <Field />
-        <Field />
-      </div>
-      <div className="flex gap-8 md:col-span-3">
-        <Skeleton className="h-5 w-52" />
-        <Skeleton className="h-5 w-52" />
-      </div>
-    </div>
-  )
-}
-
-/** Placeholder with the workspace's own layout (top bar with steps and actions, settings, step buttons) while a saved exam loads. */
-function ExamWorkspaceSkeleton() {
-  return (
-    <section className="flex h-dvh flex-col bg-card-surface-area" aria-busy="true" aria-label="Đang tải đề thi">
+    <section className="flex h-dvh flex-col bg-card-surface-area" aria-busy="true" aria-label="Đang tải bài kiểm tra">
       <header className="flex shrink-0 items-center gap-4 border-b border-card-border px-4 py-2.5 sm:px-6">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-1 items-center gap-2">
           <Skeleton className="size-9 rounded-lg" />
           <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-6 w-20 rounded-full" />
         </div>
-        <div className="hidden flex-1 justify-center gap-3 lg:flex">
-          {[0, 1].map(step => <Skeleton key={step} className="h-7 w-36 rounded-lg" />)}
-        </div>
-        <div className="ml-auto flex gap-2">
-          <Skeleton className="h-10 w-16 rounded-lg" />
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-24 rounded-lg max-sm:hidden" />
           <Skeleton className="h-10 w-32 rounded-lg" />
+          <Skeleton className="h-10 w-36 rounded-lg max-sm:hidden" />
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <div className="mx-auto w-full max-w-4xl p-4 sm:p-6">
-          <Card as="section" padding="lg"><SettingsFields /></Card>
+      {rail ? (
+        <div className="flex min-h-0 flex-1 lg:grid lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
+          <aside className="hidden flex-col gap-2 border-r border-card-border p-4 lg:flex">
+            <Skeleton className="h-5 w-32" />
+            {[0, 1, 2, 3, 4, 5].map(row => <Skeleton key={row} className="h-9 w-full rounded-lg" />)}
+          </aside>
+          <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6">
+            <Skeleton className="h-9 w-56 rounded-lg" />
+            <div className="mx-auto w-full max-w-3xl"><QuestionCard /></div>
+          </div>
         </div>
-      </div>
-      <footer className="flex shrink-0 justify-end border-t border-card-border px-4 py-3 sm:px-6">
-        <Skeleton className="h-10 w-32 rounded-lg" />
-      </footer>
-    </section>
-  )
-}
-
-/** Placeholder with the editor's own layout while a saved exam loads: the full-window workspace for an exam, the in-page form with its questions for a quick quiz. */
-export default function MockExamEditorSkeleton({ workspace = true }: { workspace?: boolean }) {
-  if (workspace) return <ExamWorkspaceSkeleton />
-  return (
-    <section className="flex flex-col gap-4" aria-busy="true" aria-label="Đang tải đề thi">
-      <header className="flex flex-col gap-1">
-        <Skeleton className="h-3 w-56" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="size-9 rounded-lg" />
-          <Skeleton className="h-8 w-72" />
-        </div>
-      </header>
-
-      <Card as="section" padding="lg"><SettingsFields /></Card>
-
-      <Card as="section" padding="lg">
-        <div className="mb-4 flex items-end justify-between gap-3">
-          <CardHeading eyebrow="w-24" title="w-52" />
-          <Skeleton className="h-9 w-36 rounded-lg" />
-        </div>
-        <div className="flex flex-col gap-3">
-          {[0, 1, 2].map(row => (
-            <div key={row} className="flex flex-col gap-2 rounded-xl border border-card-border p-4">
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-4/5" />
+      ) : (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-10 w-36 rounded-lg" />
             </div>
-          ))}
+            <QuestionCard />
+            <QuestionCard />
+          </div>
         </div>
-      </Card>
+      )}
     </section>
   )
 }

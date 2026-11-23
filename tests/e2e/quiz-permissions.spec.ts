@@ -1,12 +1,12 @@
 import { expect, test, type Page, type Locator } from '@playwright/test'
-import { installQuizFixture, QUIZ_IDS, quizToken, showEditorStep } from './quiz-permissions-fixture'
+import { closeEditorSettings, installQuizFixture, openEditorSettings, QUIZ_IDS, quizToken, waitForEditor } from './quiz-permissions-fixture'
 
 const writes = (state: Awaited<ReturnType<typeof installQuizFixture>>) => state.requests.filter(r => r.path.startsWith('/api/v1/teacher/') && r.method !== 'GET')
 
 test('BE response without difficulty supports adding, updating and ordering questions', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
   await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
-  await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toBeVisible()
+  await waitForEditor(page)
   const result = await page.evaluate(async quizId => {
     const servicePath = '/src/services/teacherQuizService.ts'
     const service = await import(servicePath)
@@ -36,8 +36,7 @@ for (const mode of ['unchanged', 'edited', 'invalid-response'] as const) {
       return route.fulfill({ json: { success: true, data: invalid } })
     })
     await page.goto(`/console/staff/placements/${QUIZ_IDS.quiz}/edit`)
-    await expect(page.getByLabel('Tên bài đánh giá đầu vào', { exact: true })).toBeVisible()
-    await showEditorStep(page, 'Các phần và câu hỏi')
+    await waitForEditor(page)
     if (mode !== 'unchanged') {
       await page.getByRole('button', { name: 'Sửa', exact: true }).click()
       await page.getByPlaceholder('Nhập nội dung câu hỏi', { exact: true }).fill('Câu hỏi vừa chỉnh sửa')
@@ -67,7 +66,7 @@ for (const [path, id, label] of [
     const state = await installQuizFixture(page, 'STAFF')
     if (path === 'placements') Object.assign(state.quizzes[0], { type: 'PLACEMENT', courseId: null, chapterId: null, lessonId: null })
     await page.goto(`/console/staff/${path}/${id}/edit`)
-    if (path !== 'quizzes') await showEditorStep(page, 'Các phần và câu hỏi')
+    await waitForEditor(page)
     if (path !== 'quizzes') await page.getByRole('button', { name: 'Sửa', exact: true }).click()
     await expect(page.getByRole('button', { name: new RegExp(`${label}$`) })).toHaveCount(0)
     await expect(page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true })).toBeChecked()
@@ -86,7 +85,7 @@ for (const type of ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWE
     const original = JSON.stringify(state.questions[0])
     for (const [path, id] of [['quizzes', QUIZ_IDS.quiz], ['mock-exams', QUIZ_IDS.exam]]) {
       await page.goto(`/console/staff/${path}/${id}/edit`)
-      if (path === 'mock-exams') await showEditorStep(page, 'Các phần và câu hỏi')
+      await waitForEditor(page)
       await expect(page.getByRole('button', { name: /Dạng đáp án$|Loại câu hỏi$/ })).toHaveCount(0)
       if (path === 'quizzes') await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
       else {
@@ -101,9 +100,13 @@ for (const type of ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWE
     expect(state.pageErrors).toEqual([])
   })
 }
+// An open create dialog hides the page behind it from the accessibility tree, so only one of the two scopes offers the field.
 async function select(page: Page, label: string, option: string) {
-  await page.locator('main').getByRole('button', { name: new RegExp(`${label}$`) }).click()
+  const scope = page.locator('main').or(page.getByRole('dialog', { name: /^Tạo / }))
+  await scope.getByRole('button', { name: new RegExp(`${label}$`) }).click()
   await page.getByRole('option', { name: option, exact: true }).click()
+  // A menu still fading out stays stuck open if another menu or dialog opens over it, so wait as a person would.
+  await expect(page.locator('[data-hocluc-select-menu]')).toHaveCount(0)
 }
 
 // Activate the source drag before scrolling to another tall card.
@@ -145,7 +148,9 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     await page.goto(`/console/${area}/quizzes`)
     const row = page.getByRole('row').filter({ has: page.getByRole('heading', { name: 'Quiz được giao', exact: true }) })
     await row.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click()
+    await openEditorSettings(page)
     await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`Quiz ${role}`)
+    await closeEditorSettings(page)
     await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
     const updated = page.getByRole('row').filter({ has: page.getByRole('heading', { name: `Quiz ${role}`, exact: true }) })
     await updated.getByRole('button', { name: 'Xuất bản', exact: true }).click()
@@ -172,18 +177,24 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
   test(`${role}: direct new quiz URL loads authenticated draft courses and lessons`, async ({ page }) => {
     const state = await installQuizFixture(page, role)
     await page.goto(`/console/${area}/quizzes/new`)
-    await expect(page.getByRole('heading', { name: 'Tạo bài kiểm tra', exact: true })).toBeVisible()
+    const dialog = page.getByRole('dialog', { name: 'Tạo bài kiểm tra' })
+    await expect(dialog).toBeVisible()
     await select(page, 'Khóa học', 'Khóa được phân công')
     await select(page, 'Chương', 'Chương nháp')
     await select(page, 'Bài học', 'Bài nháp')
-    await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`Quiz mới ${role}`)
-    await page.getByText('Cho phép xem đáp án sau khi nộp', { exact: true }).click()
-    await expect(page.getByRole('checkbox', { name: 'Cho phép xem đáp án sau khi nộp' })).toBeChecked()
-    await page.locator('textarea').first().fill('Câu mới')
-    for (const letter of ['A', 'B', 'C', 'D']) await page.getByLabel(`Nội dung lựa chọn ${letter} cho câu 1`, { exact: true }).fill(`Nội dung ${letter}`)
-    await page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true }).check()
-    await page.getByRole('button', { name: 'Lưu bản nháp', exact: true }).click()
-    await expect(page.getByRole('heading', { name: `Quiz mới ${role}`, exact: true })).toBeVisible()
+    await dialog.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`Quiz mới ${role}`)
+    await dialog.getByRole('button', { name: /Thêm thiết lập/ }).click()
+    await dialog.getByText('Cho phép xem đáp án sau khi nộp', { exact: true }).click()
+    await expect(dialog.getByRole('checkbox', { name: 'Cho phép xem đáp án sau khi nộp' })).toBeChecked()
+    await dialog.getByRole('button', { name: 'Tạo và soạn câu hỏi', exact: true }).click()
+    await waitForEditor(page)
+    // the fixture shares one question list between quizzes, so the new question is the second one
+    await page.getByRole('button', { name: 'Thêm câu hỏi', exact: true }).last().click()
+    await page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).last().fill('Câu mới')
+    for (const letter of ['A', 'B', 'C', 'D']) await page.getByLabel(`Nội dung lựa chọn ${letter} cho câu 2`, { exact: true }).fill(`Nội dung ${letter}`)
+    await page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true }).last().check()
+    await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
+    await expect(page.getByRole('row').filter({ has: page.getByRole('heading', { name: `Quiz mới ${role}`, exact: true }) })).toBeVisible()
     expect(writes(state).find(r => r.path === '/api/v1/teacher/quizzes')?.body).toMatchObject({ type: 'QUICK', lessonId: QUIZ_IDS.lesson, showAnswers: true })
     expect(writes(state).some(r => r.path.endsWith('/questions'))).toBe(true)
     expect(state.requests.some(r => r.path === '/api/v1/courses/main')).toBe(false)
@@ -204,13 +215,16 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
       test.setTimeout(60_000)
       const state = await installQuizFixture(page, role)
       await page.goto(`/console/${area}/quizzes/new`)
+      await expect(page.getByRole('dialog', { name: 'Tạo bài kiểm tra' })).toBeVisible()
       await select(page, 'Loại bài kiểm tra', label)
       await select(page, 'Khóa học', 'Khóa được phân công')
       await select(page, 'Chương', type === 'CHAPTER' ? 'Chương chưa có bài' : 'Chương nháp')
       if (type === 'LESSON') await select(page, 'Bài học', 'Bài nháp')
       else await expect(page.getByRole('button', { name: /Bài học$/ })).toHaveCount(0)
-      await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`${label} QA`)
-      await page.getByRole('button', { name: 'Lưu bản nháp', exact: true }).click()
+      await page.getByRole('dialog').getByLabel('Tên bài kiểm tra', { exact: true }).fill(`${label} QA`)
+      await page.getByRole('button', { name: 'Tạo và soạn câu hỏi', exact: true }).click()
+      await waitForEditor(page)
+      await page.getByRole('button', { name: 'Quay lại danh sách quiz', exact: true }).click()
       const row = page.getByRole('row').filter({ has: page.getByRole('heading', { name: `${label} QA`, exact: true }) })
       await expect(row.getByText(label, { exact: true })).toBeVisible()
       const payload = writes(state).find(r => r.method === 'POST' && r.path === '/api/v1/teacher/quizzes')!.body
@@ -220,7 +234,10 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
       if (type === 'CHAPTER') expect(state.requests.some(r => r.path.endsWith('/lessons'))).toBe(false)
       await row.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click()
       await expect(page.locator('main').getByRole('button', { name: /Loại bài kiểm tra$|Chương$|Bài học$|Khóa học$/ })).toHaveCount(0)
+      await openEditorSettings(page)
+      await expect(page.getByRole('dialog').getByText(label, { exact: true })).toBeVisible()
       await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`${label} đã sửa`)
+      await closeEditorSettings(page)
       await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
       await expect(page.getByRole('heading', { name: `${label} đã sửa`, exact: true })).toBeVisible()
       const update = writes(state).find(r => r.method === 'PUT')!.body
@@ -251,8 +268,8 @@ test('Quiz type and hierarchy changes preserve content and clear invalid child t
   test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'STAFF')
   await page.goto('/console/staff/quizzes/new')
+  await expect(page.getByRole('dialog', { name: 'Tạo bài kiểm tra' })).toBeVisible()
   await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill('Nội dung giữ lại')
-  await page.locator('textarea').first().fill('Câu hỏi giữ lại')
   await select(page, 'Khóa học', 'Khóa được phân công')
   await select(page, 'Chương', 'Chương nháp')
   await select(page, 'Bài học', 'Bài nháp')
@@ -269,7 +286,6 @@ test('Quiz type and hierarchy changes preserve content and clear invalid child t
   await expect(page.getByRole('button', { name: /Chương$/ })).toContainText('Chọn chương')
   await expect(page.getByRole('button', { name: /Bài học$/ })).toBeDisabled()
   await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toHaveValue('Nội dung giữ lại')
-  await expect(page.locator('textarea').first()).toHaveValue('Câu hỏi giữ lại')
   expect(writes(state)).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
@@ -372,7 +388,9 @@ test('Teacher read URL honors BE 403 and does not retain foreign quiz content', 
 test('BE write 403 is displayed; the client does not retry it or report success', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
   await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
+  await openEditorSettings(page)
   await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill('Bị từ chối')
+  await closeEditorSettings(page)
   state.denyNextWrite = true
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
   await expect(page.getByText('Không có quyền ghi quiz.', { exact: true })).toBeVisible()
@@ -384,7 +402,9 @@ test('BE write 403 is displayed; the client does not retry it or report success'
 test('a late save after the role changed is discarded and sends no follow-up question writes', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
   await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
+  await openEditorSettings(page)
   await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill('Đang lưu')
+  await closeEditorSettings(page)
   let release!: () => void
   state.writeGate = new Promise<void>(resolve => { release = resolve })
   await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
@@ -665,7 +685,7 @@ for (const role of ['STAFF', 'TEACHER'] as const) {
       await page.screenshot({ path: testInfo.outputPath(`detail-${width}.png`), fullPage: true })
       if (role === 'STAFF') {
         await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`, { waitUntil: 'domcontentloaded' })
-        await expect(page.getByLabel('Tên bài kiểm tra', { exact: true })).toBeVisible()
+        await waitForEditor(page)
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
         await page.screenshot({ path: testInfo.outputPath(`editor-${width}.png`), fullPage: true })
       }
@@ -753,7 +773,7 @@ test('exam workspace moves a question up inside its section and persists the ord
   state.questions.push({ ...state.questions[0], id: '60000000-0000-0000-0000-000000000009', sequence: 2, questionText: 'Câu thi thứ hai' })
   await page.setViewportSize({ width: 1440, height: 950 })
   await page.goto(`/console/staff/mock-exams/${QUIZ_IDS.exam}/edit`, { waitUntil: 'domcontentloaded' })
-  await showEditorStep(page, 'Các phần và câu hỏi')
+  await waitForEditor(page)
   await page.getByRole('navigation').getByRole('button', { name: /^Câu 2(,|$)/ }).click()
   await page.getByRole('button', { name: 'Sửa', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveValue('Câu thi thứ hai')
@@ -788,13 +808,15 @@ test('mobile quiz type form and combined filters fit the current console layout'
   const state = await installQuizFixture(page, 'STAFF')
   await page.setViewportSize({ width: 390, height: 950 })
   await page.goto('/console/staff/quizzes/new')
+  await expect(page.getByRole('dialog', { name: 'Tạo bài kiểm tra' })).toBeVisible()
   await select(page, 'Loại bài kiểm tra', 'Kiểm tra cuối bài')
   await select(page, 'Khóa học', 'Khóa được phân công')
   await select(page, 'Chương', 'Chương nháp')
   await select(page, 'Bài học', 'Bài nháp')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('quiz-type-form-mobile.png'), fullPage: true })
-  await page.getByRole('button', { name: 'Quay lại danh sách quiz', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Hủy', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await select(page, 'Lọc loại bài kiểm tra', 'Quiz nhanh')
   await select(page, 'Lọc trạng thái', 'Bản nháp')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
