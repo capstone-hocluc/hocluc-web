@@ -20,7 +20,6 @@ import {
   updateAiDraftQuestion,
   type AiAssistantMode,
   type AiConversation,
-  type AiDifficulty,
   type AiDraftItem,
   type AiDraftQuestion,
   type AiDraftResponse,
@@ -29,6 +28,7 @@ import {
   type AiPublishedAs,
   type AiRevisedItem,
   type AiConfirmRequest,
+  type AiPaperImport,
   type AiExamSheet,
   type AiSendConfig,
   type AiSheetDocument,
@@ -42,16 +42,14 @@ import type { BankSource } from '../services/questionBankService'
 import type { SelectOption } from '../components/console/select-field'
 import {
   buildPaper,
-  DIFFICULTY_LABELS,
   emptyManualQuestion,
   EXAM_FORMATS,
   questionNumbers,
-  sectionLabel,
   traceLines,
   type AiChatMessage,
-  type AiTraceItem,
   type AiTraceStage,
 } from '../components/management/ai-assistant/exam-format'
+import { addRunItem, finishBefore, initialStages, markAllDone, replaySteps, stepStages, stepTime, toolLine, withStage } from './ai-run-stages'
 import {
   liveDraftView,
   type LiveDraft,
@@ -100,6 +98,11 @@ export interface SheetRewrite {
 export interface ComposeExtra {
   sheet?: AiExamSheet
   confirmed?: boolean
+  /**
+   * The words are the request the assistant proposed, sent for the teacher once they agreed: its reply already said
+   * them, so the chat keeps them out of sight. Never set for the teacher's own words.
+   */
+  agreed?: boolean
   /** The paper a mock exam follows, as the assistant proposed it; the settings' paper otherwise. */
   bankSourceId?: string
 }
@@ -153,16 +156,6 @@ interface StreamHandle {
   syncResolve: (() => void) | null
   quietTimer: number | null
   hardTimer: number | null
-}
-
-const STAGE_TITLES: Record<string, string> = {
-  explore: 'Khảo sát ngân hàng câu hỏi',
-  plan: 'Lập ma trận đề',
-  write: 'Soạn câu hỏi',
-  lookup: 'Tra cứu',
-  revise: 'Sửa câu hỏi',
-  queue: 'Đang chờ đến lượt',
-  agent: 'Đọc đề và làm theo yêu cầu',
 }
 
 function errorMessage(error: unknown) {
@@ -225,111 +218,11 @@ function titleFromText(text: string) {
   return line.length > 60 ? `${line.slice(0, 59)}…` : line
 }
 
-function initialStages(mode: AiAssistantMode, agent = false): AiTraceStage[] {
-  if (agent) return [{ id: 'agent', title: STAGE_TITLES.agent, items: [], state: 'running' }]
-  if (mode === 'ask') return [{ id: 'lookup', title: STAGE_TITLES.lookup, items: [], state: 'running' }]
-  // A revise run reports its steps under the write stage, retitled.
-  if (mode === 'revise') return [{ id: 'write', title: STAGE_TITLES.revise, items: [], state: 'running' }]
-  return [
-    { id: 'explore', title: STAGE_TITLES.explore, state: 'running' },
-    { id: 'plan', title: STAGE_TITLES.plan, state: 'pending' },
-    { id: 'write', title: STAGE_TITLES.write, state: 'pending' },
-  ]
-}
-
-function withStage(
-  stages: AiTraceStage[],
-  id: string,
-  patch: Partial<AiTraceStage>
-): AiTraceStage[] {
-  if (!stages.some((stage) => stage.id === id)) {
-    return [...stages, { id, title: STAGE_TITLES[id] ?? id, ...patch }]
-  }
-  return stages.map((stage) => (stage.id === id ? { ...stage, ...patch } : stage))
-}
-
-/** A later stage starting means the ones before it finished. */
-function finishBefore(stages: AiTraceStage[], id: string): AiTraceStage[] {
-  const order = ['queue', 'agent', 'explore', 'plan', 'write']
-  const index = order.indexOf(id)
-  if (index < 0) return stages
-  return stages.map((stage) =>
-    order.indexOf(stage.id) >= 0 && order.indexOf(stage.id) < index && stage.state !== 'done'
-      ? { ...stage, state: 'done' }
-      : stage
-  )
-}
-
-function markAllDone(stages: AiTraceStage[]): AiTraceStage[] {
-  return stages.map((stage) => ({ ...stage, state: 'done' }))
-}
-
-function addTraceItem(stages: AiTraceStage[], item: AiTraceItem): AiTraceStage[] {
-  const running =
-    [...stages].reverse().find((stage) => stage.state === 'running') ?? stages[stages.length - 1]
-  if (!running) return stages
-  return stages.map((stage) =>
-    stage.id === running.id ? { ...stage, items: [...(stage.items ?? []), item] } : stage
-  )
-}
-
-/** What each tool the assistant calls does, in the teacher's words; its raw arguments (ids, JSON) stay hidden. */
-const TOOL_LABELS: Record<string, string> = {
-  get_exam_format: 'Xem cấu trúc đề',
-  list_patterns: 'Xem các dạng câu của môn',
-  get_pattern: 'Đọc yêu cầu của dạng câu',
-  matrix_stats: 'Đếm câu có sẵn trong ngân hàng',
-  search_bank_questions: 'Tìm câu mẫu trong ngân hàng',
-  list_draft_questions: 'Xem các câu của đề',
-  get_draft_question: 'Đọc câu trong đề',
-  list_document_questions: 'Xem các câu của đề',
-  get_document_question: 'Đọc câu trong đề',
-  revise_question: 'Viết lại câu',
-  check_question: 'Kiểm tra lại câu',
-  read_exam: 'Đọc đề',
-  read_questions: 'Đọc câu trong đề',
-  remove_questions: 'Bỏ câu',
-  move_questions: 'Đổi thứ tự câu',
-  rewrite_questions: 'Viết lại câu',
-  add_questions: 'Thêm câu',
-  compose_exam: 'Chuẩn bị soạn đề mới',
-  compose_mock_exam: 'Chuẩn bị soạn đề mô phỏng',
-  export_exam: 'Chuẩn bị file',
-  update_answer_key: 'Cập nhật đáp án',
-  remove_answer_key: 'Bỏ đáp án',
-  import_paper: 'Chuẩn bị nạp đề',
-  edit_text: 'Sửa chữ trên đề',
-  insert_text: 'Thêm dòng chữ',
-  remove_text: 'Bỏ dòng chữ',
-  add_exam_header: 'Thêm đầu đề',
-  replace_text: 'Tìm và thay chữ',
-}
-
-/** A file of the exam in the teacher's words: "Word không đáp án". */
-export function examFileName(file: { format?: unknown; answers?: unknown }) {
-  return `${file.format === 'pdf' ? 'PDF' : 'Word'} ${file.answers === false ? 'không đáp án' : 'có đáp án'}`
-}
-
-/** A tool call as one plain line: what it did, and at most a short readable hint (a difficulty, a query). */
-function toolLine(data: { tool: string; arguments?: unknown }) {
-  const args = (data.arguments && typeof data.arguments === 'object' ? data.arguments : {}) as Record<string, unknown>
-  const label = TOOL_LABELS[data.tool] ?? (data.tool ? 'Tra cứu dữ liệu' : 'Công cụ')
-  const difficulty = typeof args.difficulty === 'string' ? DIFFICULTY_LABELS[args.difficulty as AiDifficulty] : undefined
-  const query = typeof args.query === 'string' ? args.query.trim() : ''
-  const numbers = Array.isArray(args.numbers) ? args.numbers.filter((value): value is number => typeof value === 'number') : []
-  const number =
-    typeof args.number === 'number'
-      ? `câu ${args.number}`
-      : numbers.length > 0
-        ? `câu ${numbers.join(', ')}`
-        : typeof args.count === 'number'
-          ? `${args.count} câu`
-          : undefined
-  if (data.tool === 'export_exam') return { label, detail: examFileName(args) }
-  if (data.tool === 'remove_answer_key') return { label: args.part === 'all' ? 'Bỏ đáp án và lời giải' : 'Bỏ lời giải' }
-  const detail =
-    number ?? (difficulty ? `mức ${difficulty.toLowerCase()}` : query ? (query.length > 60 ? `${query.slice(0, 59)}…` : query) : undefined)
-  return { label, detail }
+/** A reply's run, rebuilt from the steps the server kept with it: its stages, timed as they happened. */
+function stepsOf(message: AiMessage): Pick<AiChatMessage, 'stages'> {
+  const mode = normalizeMode(message.mode)
+  const stages = mode ? replaySteps(message.steps, mode, Date.parse(message.createdAt)) : undefined
+  return stages ? { stages } : {}
 }
 
 function mapMessage(message: AiMessage): AiChatMessage {
@@ -341,9 +234,11 @@ function mapMessage(message: AiMessage): AiChatMessage {
     createdAt: message.createdAt,
     mode: normalizeMode(message.mode),
     trace: traceLines(message.trace),
+    ...stepsOf(message),
     ...(message.suggestions ? { suggestions: message.suggestions } : {}),
     ...(message.attachments?.length ? { attachments: message.attachments } : {}),
     ...(message.files?.length ? { files: message.files } : {}),
+    ...(message.agreed ? { agreed: true } : {}),
   }
 }
 
@@ -461,12 +356,20 @@ function atMost(promise: Promise<void>, ms: number) {
   return Promise.race([promise, new Promise<void>((resolve) => window.setTimeout(resolve, ms))])
 }
 
-/** The AI assistant page: conversations, the live stream of a run, and the draft it writes into. */
-export function useAiAssistant(bank: BankPaperList) {
+/**
+ * The AI assistant page: conversations, the live stream of a run, and the draft it writes into. `onPaperImport` loads a
+ * paper the teacher asked the assistant to load; left out where the viewer may not load papers.
+ */
+export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversationId: string, paper: AiPaperImport) => void) {
   const sheetRef = useRef<ExamSheet | null>(null)
   const attachSheet = useCallback((sheet: ExamSheet | null) => {
     sheetRef.current = sheet
   }, [])
+  // What the page does with a paper the teacher asked the assistant to load: it loads it at once, nothing to agree to.
+  const paperImportRef = useRef(onPaperImport ?? null)
+  useEffect(() => {
+    paperImportRef.current = onPaperImport ?? null
+  })
   // After a reload the list this tab showed last is shown at once, while it is asked for again.
   const [cachedConversations] = useState(() => readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE))
   const [conversations, setConversations] = useState<AiConversation[]>(cachedConversations ?? [])
@@ -741,7 +644,7 @@ export function useAiAssistant(bank: BankPaperList) {
         updateMessages(
           messagesRef.current.map((message) =>
             message.id === latest.id
-              ? { ...message, addedItemIds: finished.itemIds, stages: markAllDone(finished.stages), ...(stopped ? { stopped } : {}) }
+              ? { ...message, addedItemIds: finished.itemIds, stages: markAllDone(finished.stages, Date.now()), ...(stopped ? { stopped } : {}) }
               : message
           )
         )
@@ -760,7 +663,7 @@ export function useAiAssistant(bank: BankPaperList) {
               : endSummary(endEvent.data, finished.itemIds.length),
           createdAt: new Date().toISOString(),
           mode: finished.mode,
-          stages: markAllDone(finished.stages),
+          stages: markAllDone(finished.stages, Date.now()),
           addedItemIds: finished.itemIds,
           ...(endEvent.data.files?.length ? { files: endEvent.data.files } : {}),
           ...(stopped ? { stopped } : {}),
@@ -776,47 +679,9 @@ export function useAiAssistant(bank: BankPaperList) {
       if (!current) return
 
       switch (event.type) {
-        case 'stage': {
-          const stageId = current.mode === 'ask' ? 'lookup' : event.data.stage
-          let stages = current.stages
-          if (stageId === 'queue') {
-            // Queued behind other teachers' runs: shown first, the run's own steps wait until it starts.
-            updateRun({
-              ...current,
-              stages: [
-                { id: 'queue', title: STAGE_TITLES.queue, state: 'running', detail: event.data.summary ?? undefined },
-                ...stages
-                  .filter((stage) => stage.id !== 'queue')
-                  .map((stage) => (stage.state === 'running' ? { ...stage, state: 'pending' as const } : stage)),
-              ],
-            })
-            return
-          }
-          if (
-            current.mode !== 'ask' &&
-            (stageId === 'explore' || stageId === 'plan' || stageId === 'write') &&
-            event.data.status !== 'done'
-          ) {
-            stages = finishBefore(stages, stageId)
-          }
-          let detail: string | undefined
-          let notes: string[] | undefined
-          // The assistant's plan for the request ("Sẽ bỏ câu 3 rồi thêm 2 câu hình học") shows as its step's line.
-          if (stageId === 'explore' || stageId === 'agent') detail = event.data.summary ?? undefined
-          if (stageId === 'plan' && event.data.status === 'done') {
-            const cells = event.data.cells ?? 0
-            detail = `${cells} câu${event.data.degraded ? ' · rút gọn' : ''}${event.data.mimic ? ' · theo đề mẫu' : ''}`
-            notes = (event.data.notes ?? []).filter((note) => typeof note === 'string' && note.trim() !== '')
-          }
-          updateRun({
-            ...current,
-            stages: withStage(stages, stageId, {
-              title: STAGE_TITLES[stageId] ?? stageId,
-              state: event.data.status === 'done' ? 'done' : 'running',
-              ...(detail !== undefined ? { detail } : {}),
-              ...(notes?.length ? { notes } : {}),
-            }),
-          })
+        case 'stage':
+        case 'slot': {
+          updateRun({ ...current, stages: stepStages(current.stages, event, current.mode, stepTime(event), crypto.randomUUID()) })
           return
         }
         case 'text': {
@@ -825,43 +690,15 @@ export function useAiAssistant(bank: BankPaperList) {
         }
         case 'tool': {
           const line = toolLine(event.data)
-          const item: AiTraceItem = {
-            id: `tool-${crypto.randomUUID()}`,
-            label: line.label,
-            detail: line.detail,
-            state: 'done',
-          }
           updateRun({
             ...current,
             trace:
               current.mode === 'ask'
                 ? [...current.trace, line.detail ? `${line.label} · ${line.detail}` : line.label]
                 : current.trace,
-            stages: addTraceItem(current.stages, item),
+            stages: stepStages(current.stages, event, current.mode, stepTime(event), crypto.randomUUID()),
             // Words written before a tool call were the model thinking, not the answer.
             answer: undefined,
-          })
-          return
-        }
-        case 'slot': {
-          const label = event.data.revise && event.data.number
-            ? `Đang sửa câu ${event.data.number}`
-            : `Đang soạn câu ${event.data.index}/${event.data.total}`
-          const detail = [
-            sectionLabel(event.data.section),
-            event.data.difficulty ? DIFFICULTY_LABELS[event.data.difficulty as AiDifficulty] : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')
-          const item: AiTraceItem = { id: 'slot', label, detail: detail || undefined, state: 'running' }
-          const stages = finishBefore(current.stages, 'write')
-          updateRun({
-            ...current,
-            stages: withStage(stages, 'write', {
-              state: 'running',
-              detail: `${event.data.index}/${event.data.total} câu`,
-              items: [...(stages.find((stage) => stage.id === 'write')?.items ?? []).filter((entry) => entry.id !== 'slot'), item],
-            }),
           })
           return
         }
@@ -882,7 +719,7 @@ export function useAiAssistant(bank: BankPaperList) {
           updateRun({
             ...current,
             draft,
-            ...(writing ? {} : { stages: withStage(finishBefore(current.stages, 'write'), 'write', { state: 'running' }) }),
+            ...(writing ? {} : { stages: withStage(finishBefore(current.stages, 'write', Date.now()), 'write', { state: 'running' }, Date.now()) }),
           })
           return
         }
@@ -938,18 +775,22 @@ export function useAiAssistant(bank: BankPaperList) {
             ])
           }
           // The reply now holds the words; the running turn stops showing them.
-          updateRun({ ...current, stages: markAllDone(current.stages), answer: undefined })
+          updateRun({ ...current, stages: markAllDone(current.stages, Date.now()), answer: undefined })
           return
         }
         case 'end': {
-          updateRun({ ...current, stages: markAllDone(current.stages) })
+          updateRun({ ...current, stages: markAllDone(current.stages, Date.now()) })
           const conversationId = activeIdRef.current
-          if (event.data.confirm && conversationId) setConfirmRequest({ conversationId, request: event.data.confirm })
+          const confirm = event.data.confirm
+          if (confirm && conversationId) {
+            if (confirm.action === 'import') paperImportRef.current?.(conversationId, confirm)
+            else setConfirmRequest({ conversationId, request: confirm })
+          }
           void finishRun(event, activeIdRef.current ?? '')
           return
         }
         case 'error': {
-          updateRun({ ...current, stages: markAllDone(current.stages) })
+          updateRun({ ...current, stages: markAllDone(current.stages, Date.now()) })
           updateMessages([
             ...messagesRef.current,
             {
@@ -1115,7 +956,7 @@ export function useAiAssistant(bank: BankPaperList) {
             ...(agent ? { agent } : {}),
             messageId: null,
             jobId: null,
-            stages: initialStages(runMode, agent),
+            stages: initialStages(runMode, agent, null),
             trace: [],
             itemIds: [],
             knownAssistantIds: messagesRef.current
@@ -1241,6 +1082,7 @@ export function useAiAssistant(bank: BankPaperList) {
           : {}),
         ...(compose?.sheet ? { sheet: compose.sheet } : {}),
         ...(compose?.confirmed ? { confirmed: true } : {}),
+        ...(compose?.confirmed && compose.agreed ? { agreed: true } : {}),
       }
     },
     [settings]
@@ -1386,6 +1228,8 @@ export function useAiAssistant(bank: BankPaperList) {
             body: text,
             createdAt: new Date().toISOString(),
             ...(attachments?.length ? { attachments } : {}),
+            // What the assistant proposed, sent for the teacher once they agreed (the server marks it alike).
+            ...(compose?.confirmed && compose.agreed ? { agreed: true } : {}),
           },
         ])
         // A new compose run replaces the exam; a revise run rewrites some of its questions in place, and the assistant
@@ -1491,6 +1335,9 @@ export function useAiAssistant(bank: BankPaperList) {
             mode: runMode,
             error: true,
             ...(runMode !== 'revise' ? { retryText: text } : {}),
+            ...(runMode !== 'revise' && compose?.confirmed && compose.agreed
+              ? { retryAgreed: compose.bankSourceId ? { bankSourceId: compose.bankSourceId } : {} }
+              : {}),
           },
         ])
         // The error shows once, in the thread; the caller gives the teacher's words back to the input to send again.
@@ -1557,7 +1404,7 @@ export function useAiAssistant(bank: BankPaperList) {
       if (!current) return
       updateRun({
         ...current,
-        stages: addTraceItem(current.stages, { id: `step-${crypto.randomUUID()}`, label, detail, state: 'done' }),
+        stages: addRunItem(current.stages, { id: `step-${crypto.randomUUID()}`, label, detail, state: 'done' }, Date.now()),
       })
     },
     [updateRun]
@@ -1566,7 +1413,9 @@ export function useAiAssistant(bank: BankPaperList) {
   const regenerate = useCallback(() => {
     if (sendingRef.current || runRef.current) return
     const lastAssistant = [...messagesRef.current].reverse().find((message) => message.role === 'assistant')
-    const lastUser = [...messagesRef.current].reverse().find((message) => message.role === 'user')
+    // The teacher's own words: a request they agreed to (the assistant's, sent for them) is not shown, so asking again
+    // starts from what they asked.
+    const lastUser = [...messagesRef.current].reverse().find((message) => message.role === 'user' && !message.agreed)
     if (!lastUser) return
     const lastMode = normalizeMode(lastAssistant?.mode) ?? mode
     // A request to rewrite numbered questions needs those questions looked up again; composing it anew would
@@ -1602,9 +1451,15 @@ export function useAiAssistant(bank: BankPaperList) {
     async (messageId: string) => {
       const failed = messagesRef.current.find((message) => message.id === messageId)
       if (!failed?.retryText) return null
+      // A request the teacher agreed to goes again as it went: agreed (so not shown as theirs), from the paper it named.
+      if (failed.retryAgreed) {
+        const agreed = { confirmed: true, agreed: true, ...failed.retryAgreed }
+        const sent = await startRun(failed.retryText, failed.mode ?? mode, undefined, undefined, undefined, undefined, agreed)
+        return sent ? null : failed.retryText
+      }
       return sendFor(failed.retryText, failed.mode ?? mode)
     },
-    [mode, sendFor]
+    [mode, sendFor, startRun]
   )
 
   /** A subject (null: the whole paper) chosen for the question "Bạn muốn soạn môn nào?": the same request, with it added. */

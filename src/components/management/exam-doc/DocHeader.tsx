@@ -1,19 +1,17 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../../lib/cn'
-import Button from '../../console/button'
 import {
   AlertCircle,
   AlertTriangle,
   ArrowLeft,
   Check,
-  ListChecks,
   LoaderCircle,
   Pencil,
-  Sparkles,
   type LucideIcon,
 } from '../../console/icons'
 import { useExamDoc, type SaveState } from './exam-doc-context'
 import DocMenubar from './menubar/DocMenubar'
+import { HocLucAiMark } from './hocluc-ai-mark'
 
 interface DocHeaderProps {
   title: string
@@ -28,16 +26,11 @@ interface DocHeaderProps {
   outlineOpen: boolean
   onToggleOutline: () => void
   onNew: () => void
-  /**
-   * `paper`: a loaded paper is shown read-only: no save state, no menus, and the right panel is the reading's
-   * progress instead of the AI chat.
-   */
+  /** `paper`: a loaded paper is shown read-only: no save state and no menus. */
   variant?: 'compose' | 'paper'
   /** Buttons for the open paper, before the panel toggles. */
   actions?: ReactNode
 }
-
-const PRESSED_CLASS = 'border-primary-text/30 bg-badge-primary-background text-primary-text'
 
 const SAVE_STATES: Record<SaveState, { label: string; icon: LucideIcon; iconClass: string }> = {
   saved: { label: 'Đã lưu', icon: Check, iconClass: 'text-success-500' },
@@ -156,18 +149,22 @@ export default function DocHeader({
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {actions}
-        <Button
-          appearance={chatOpen ? 'outline' : 'ghost'}
-          size="sm"
+        {/* The assistant's own mark opens and closes its chat; open, the button holds a soft wash of the mark's colours, with no edge. */}
+        <button
+          type="button"
           aria-pressed={chatOpen}
           onClick={onToggleChat}
-          aria-label={paper ? 'Tiến trình' : 'Hỏi AI'}
-          title={paper ? 'Tiến trình' : 'Hỏi AI'}
-          className={cn(chatOpen && PRESSED_CLASS)}
+          aria-label="Hỏi AI"
+          title="Hỏi AI"
+          className={cn(
+            'inline-flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors outline-none focus-visible:ring-2 focus-visible:ring-input-primary-focus-border',
+            chatOpen
+              ? 'bg-linear-to-br from-blue-500/12 via-violet-500/12 to-fuchsia-500/12'
+              : 'hover:bg-background-gray-secondary'
+          )}
         >
-          {paper ? <ListChecks size={15} /> : <Sparkles size={15} />}
-          <span className="hidden md:inline">{paper ? 'Tiến trình' : 'Hỏi AI'}</span>
-        </Button>
+          <HocLucAiMark className="size-6" />
+        </button>
       </div>
     </header>
   )

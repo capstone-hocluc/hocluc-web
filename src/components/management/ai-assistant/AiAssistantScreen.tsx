@@ -8,7 +8,7 @@ import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getErrorMessage } from '../../../lib/errors'
 import ThemeProvider from '../../common/ThemeProvider'
 import Button from '../../console/button'
-import { FileText, Landmark } from '../../console/icons'
+import { Landmark } from '../../console/icons'
 import ConfirmDialog from '../../console/confirm-dialog'
 import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -42,7 +42,8 @@ import { restoreSoloPassages } from '../exam-doc/solo-passages'
 import { replaceQuestionBlocks, replaceSheetRange } from '../exam-doc/replace-question'
 import { examSheet, sheetDocument, sheetQuestion, sheetQuestions, type DraftPlace } from '../exam-doc/doc-snapshot'
 import { applySheetEdit, renumber } from '../exam-doc/sheet-edits'
-import { useStoreValue } from '../../../lib/value-store'
+import { createValueStore, useStoreValue } from '../../../lib/value-store'
+import type { ReadingTurn } from './reading-turn'
 import type { AiRun } from '../../../hooks/useAiAssistant'
 import AiSelectionMenu from '../exam-doc/ai-selection-menu'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
@@ -54,7 +55,6 @@ import { downloadDocument, downloadPdf } from '../exam-doc/export'
 import { useDocEditor } from '../exam-doc/use-doc-editor'
 import { useExamDocument } from '../exam-doc/use-exam-document'
 import type { BankSource } from '../../../services/questionBankService'
-import BankImportDialog from '../question-bank/BankImportDialog'
 import { useSourceActions } from '../question-bank/use-source-actions'
 import PaperReadingWorkspace from './PaperReadingWorkspace'
 import SheetWriting from './SheetWriting'
@@ -106,12 +106,13 @@ export default function AiAssistantScreen({
   canImport?: boolean
 }) {
   const bankPapers = useBankPapers(true)
-  const ai = useAiAssistant(bankPapers)
+  const ai = useAiAssistant(bankPapers, canImport ? (conversationId, paper) => void loadPaper(conversationId, paper) : undefined)
   // The loaded paper on the sheet instead of an exam: one asked for by the bank's list (or kept in the address) at
   // first. The list refreshes it; `queued` covers one just loaded, before the list has it.
   const [viewingId, setViewingId] = useState<string | null>(requestedPaper)
   const [queued, setQueued] = useState<BankSource | null>(null)
-  const [importing, setImporting] = useState(false)
+  // The open paper's reading, which the chat shows as its latest turn; it changes with every step of the reading.
+  const [readingTurn] = useState(() => createValueStore<ReadingTurn | null>(null))
   useEffect(clearRequestedPaper, [])
   const viewingPaper = viewingId
     ? (bankPapers.papers.find((paper) => paper.id === viewingId) ?? (queued?.id === viewingId ? queued : null))
@@ -467,7 +468,7 @@ export default function AiAssistantScreen({
   const startNow = composeAsk && replaceTotal === 0 && composeAsk.content ? composeAsk : null
   const startExam = useEffectEvent((request: Extract<AiConfirmRequest, { action: 'compose' }>) => {
     ai.dismissConfirm()
-    void sendMessage(request.content, true)
+    void sendMessage(request.content, 'proposal')
   })
   useEffect(() => {
     if (startNow && !ai.running) startExam(startNow)
@@ -513,11 +514,13 @@ export default function AiAssistantScreen({
   /**
    * Sends the composer's words; resolves false when they do not go, and the composer gets them back. "Sửa câu 2 …" in
    * compose mode rewrites those questions: each number is the one the sheet prints (or the question cards show), looked
-   * up to its draft question before anything is sent. `replacing`: the teacher already agreed to replace the exam.
+   * up to its draft question before anything is sent. `replacing`: the teacher already agreed to replace the exam;
+   * 'proposal' when the words are the request the assistant proposed (its reply said them, so the chat does not show
+   * them again), not the teacher's own.
    */
   function sendMessage(
     text: string,
-    replacing = false,
+    replacing: boolean | 'proposal' = false,
     attachments: AiAttachment[] = [],
     after?: string | null
   ): Promise<boolean> {
@@ -528,7 +531,11 @@ export default function AiAssistantScreen({
       const sheet = onSheet ? examSheet(onSheet.state.doc, draftPlaces) : undefined
       return ai.send(text, {
         attachments,
-        compose: { ...(sheet ? { sheet } : {}), ...(replacing ? { confirmed: true } : {}) },
+        compose: {
+          ...(sheet ? { sheet } : {}),
+          ...(replacing ? { confirmed: true } : {}),
+          ...(replacing === 'proposal' ? { agreed: true } : {}),
+        },
         ...(after !== undefined ? { after } : {}),
       })
     }
@@ -550,7 +557,7 @@ export default function AiAssistantScreen({
         setPendingReplace({ total, kept: ai.paper.questions.filter((question) => question.kept).length })
         return Promise.resolve(false)
       }
-      return ai.send(text, replacing ? { compose: { confirmed: true } } : undefined)
+      return ai.send(text, replacing ? { compose: { confirmed: true, ...(replacing === 'proposal' ? { agreed: true } : {}) } } : undefined)
     }
     const targets: AiRevisedItem[] = []
     const missing: number[] = []
@@ -581,12 +588,16 @@ export default function AiAssistantScreen({
     return ai.send(text, { revise: targets })
   }
 
-  /** The paper the assistant proposed, loaded as the teacher agreed: it opens here as the AI reads it. */
+  /**
+   * The paper the teacher asked the assistant to load, loaded at once (once per turn that asks): it opens here as the AI
+   * reads it, the chat beside it. The server reads a file once: asked again, a paper being read is refused, and one read
+   * already is not read again (only its questions still without a label are labelled).
+   */
   async function loadPaper(conversationId: string, paper: AiPaperImport) {
     try {
       openQueued(await importAiPaper(conversationId, paper))
     } catch (reason) {
-      showErrorToast(getErrorMessage(reason))
+      ai.setNotice(`Chưa nạp được đề ${paper.exam.name}: ${getErrorMessage(reason)}`)
     }
   }
 
@@ -788,58 +799,28 @@ export default function AiAssistantScreen({
       <PaperOutlineTree paper={ai.paper} numberOf={numberOf} onJump={jumpToQuestion} depth={2} />
     )
 
-  const importDialog = importing && (
-    <BankImportDialog
-      onClose={() => setImporting(false)}
-      onQueued={(source) => {
-        setImporting(false)
-        openQueued(source)
-      }}
-    />
-  )
 
-  if (viewingPaper) {
-    const labelling = sourceActions.labelling
-    return (
-      <ThemeProvider>
-        <PaperReadingWorkspace
-          key={viewingPaper.id}
-          source={viewingPaper}
-          onBack={onBack}
-          backHref={backHref}
-          backLabel={backLabel}
-          onNew={startNew}
-          renderTree={renderTree}
-          onLoadAgain={
-            canImport && viewingPaper.status === 'FAILED' ? () => sourceActions.loadAgain(viewingPaper) : undefined
-          }
-          onLabel={
-            canImport && viewingPaper.status === 'DONE' && viewingPaper.unlabelledCount > 0 && labelling?.ready !== false
-              ? () => sourceActions.askLabelling(viewingPaper)
-              : undefined
-          }
-          labellingBlocker={labelling && !labelling.ready ? labelling.reason : null}
-        >
-          {importDialog}
-          {sourceActions.dialogs}
-        </PaperReadingWorkspace>
-      </ThemeProvider>
-    )
-  }
-
-  return (
+  // The chat is the same beside an exam and beside a loaded paper: switching between them keeps its thread and composer.
+  const withChat = (content: ReactNode) => (
     <ThemeProvider>
       <AssistantChatProvider
         run={ai.runStore}
+        reading={readingTurn}
         runtimeRef={chatRuntime}
         conversationId={ai.activeId ?? null}
         messages={ai.messages}
         running={ai.running}
         loading={ai.draftLoading}
         sendBlocked={ai.mode === 'mock-exam' && !ai.settings.bankSourceId}
-        onSend={(text, attachments) => sendMessage(text, false, attachments)}
+        onSend={(text, attachments) => {
+          // The assistant works on the exam: a message sent while a paper is shown goes back to that exam.
+          setViewingId(null)
+          return sendMessage(text, false, attachments)
+        }}
         // A question takes images and PDFs; where the assistant changes the exam, staff attach a paper for it to load.
-        onAttach={ai.mode === 'ask' || ai.composeAgent ? ai.uploadAttachment : undefined}
+        // Files go to a question, or to the assistant (a paper to load into the bank). With no exam open yet, attaching
+        // makes the exam first, which tells whether the assistant is on before the words are sent.
+        onAttach={ai.mode === 'ask' || ai.composeAgent || !ai.activeId ? ai.uploadAttachment : undefined}
         onCancel={ai.cancel}
         onRegenerate={regenerate}
         examCard={!ai.composeAgent}
@@ -854,7 +835,79 @@ export default function AiAssistantScreen({
           return sendMessage(text, false, [], after)
         }}
       >
-      <ChatActionsProvider value={chatActions}>
+        <ChatActionsProvider value={chatActions}>{content}</ChatActionsProvider>
+      </AssistantChatProvider>
+    </ThemeProvider>
+  )
+
+  // The assistant in a sheet, on a screen too narrow for it beside the paper.
+  const chatSheetOverlay = (
+    <SheetOverlay isOpen={chatSheet} onOpenChange={setChatSheet}>
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="w-[min(380px,92vw)]! min-w-0! max-w-[92vw]! gap-0 border-l border-card-border bg-card-background p-0 sm:max-w-[92vw]!"
+      >
+        <SheetTitle className="sr-only">Trợ lý AI</SheetTitle>
+        <ChatPanel
+          {...chatPanelProps}
+          onClose={() => setChatSheet(false)}
+          onDockBottom={dockBottom}
+          className="flex h-full w-full"
+        />
+      </SheetContent>
+    </SheetOverlay>
+  )
+
+  if (viewingPaper) {
+    const labelling = sourceActions.labelling
+    return withChat(
+      <PaperReadingWorkspace
+        key={viewingPaper.id}
+        source={viewingPaper}
+        onBack={onBack}
+        backHref={backHref}
+        backLabel={backLabel}
+        onNew={startNew}
+        onClose={() => setViewingId(null)}
+        renderTree={renderTree}
+        chatOpen={chatOpen || chatSheet}
+        onToggleChat={toggleChat}
+        chatBeside={chatBeside}
+        onCollapseChat={() => setChatOpen(false)}
+        onReading={readingTurn.set}
+        renderChat={({ onCollapse, className, style }) => (
+          <ChatPanel
+            {...chatPanelProps}
+            card
+            onCollapse={onCollapse}
+            onDockBottom={dockBottom}
+            style={style}
+            className={className}
+          />
+        )}
+        chatBar={
+          chatBar ? (
+            <ChatBar {...chatPanelProps} run={ai.runStore} onDockSide={dockSide} onHide={() => setChatOpen(false)} />
+          ) : undefined
+        }
+        onLoadAgain={
+          canImport && viewingPaper.status === 'FAILED' ? () => sourceActions.loadAgain(viewingPaper) : undefined
+        }
+        onLabel={
+          canImport && viewingPaper.status === 'DONE' && viewingPaper.unlabelledCount > 0 && labelling?.ready !== false
+            ? () => sourceActions.askLabelling(viewingPaper)
+            : undefined
+        }
+        labellingBlocker={labelling && !labelling.ready ? labelling.reason : null}
+      >
+        {sourceActions.dialogs}
+        {chatSheetOverlay}
+      </PaperReadingWorkspace>
+    )
+  }
+
+  return withChat(
       <ExamDocContext.Provider value={docContext}>
       <div className="flex h-dvh w-full flex-col overflow-hidden bg-background-gray-secondary_alt_2 font-sans text-text-primary">
         <AiSelectionMenu
@@ -889,13 +942,6 @@ export default function AiAssistantScreen({
                 >
                   <Landmark size={15} />
                   <span className="hidden lg:inline">Lưu vào ngân hàng</span>
-                </Button>
-              )}
-              {/* Where the assistant changes the exam, a paper is loaded by attaching it in the chat. */}
-              {canImport && !ai.composeAgent && (
-                <Button appearance="ghost" size="sm" onClick={() => setImporting(true)} aria-label="Nạp đề" title="Nạp đề">
-                  <FileText size={15} />
-                  <span className="hidden lg:inline">Nạp đề</span>
                 </Button>
               )}
               {ai.activeId && (
@@ -1060,7 +1106,6 @@ export default function AiAssistantScreen({
           )}
         </div>
 
-        {importDialog}
 
         {bankDialog && bankAllowed && (
           <SaveToBankDialog
@@ -1086,21 +1131,7 @@ export default function AiAssistantScreen({
           />
         )}
 
-        <SheetOverlay isOpen={chatSheet} onOpenChange={setChatSheet}>
-          <SheetContent
-            side="right"
-            showCloseButton={false}
-            className="w-[min(380px,92vw)]! min-w-0! max-w-[92vw]! gap-0 border-l border-card-border bg-card-background p-0 sm:max-w-[92vw]!"
-          >
-            <SheetTitle className="sr-only">Trợ lý AI</SheetTitle>
-            <ChatPanel
-              {...chatPanelProps}
-              onClose={() => setChatSheet(false)}
-              onDockBottom={dockBottom}
-              className="flex h-full w-full"
-            />
-          </SheetContent>
-        </SheetOverlay>
+        {chatSheetOverlay}
 
         <SheetOverlay isOpen={outlineSheet} onOpenChange={setOutlineSheet}>
           <SheetContent
@@ -1173,7 +1204,10 @@ export default function AiAssistantScreen({
               const request = ai.confirmRequest
               ai.dismissConfirm()
               if (request?.action === 'mock') {
-                void ai.send(request.content, { mode: 'mock-exam', compose: { confirmed: true, bankSourceId: request.sourceId } })
+                void ai.send(request.content, {
+                  mode: 'mock-exam',
+                  compose: { confirmed: true, agreed: true, bankSourceId: request.sourceId },
+                })
               }
             }}
           />
@@ -1190,22 +1224,7 @@ export default function AiAssistantScreen({
             onConfirm={() => {
               const content = ai.confirmRequest?.action === 'compose' ? ai.confirmRequest.content : ''
               ai.dismissConfirm()
-              if (content) void sendMessage(content, true)
-            }}
-          />
-        )}
-
-        {ai.confirmRequest?.action === 'import' && (
-          <ConfirmDialog
-            title="Nạp đề vào ngân hàng?"
-            description={`AI sẽ đọc mọi trang của ${ai.confirmRequest.exam.name}${ai.confirmRequest.key ? ` cùng file đáp án ${ai.confirmRequest.key.name}` : ''} và tốn token.`}
-            cancelLabel="Chưa nạp"
-            confirmLabel="Nạp đề"
-            onCancel={ai.dismissConfirm}
-            onConfirm={() => {
-              const request = ai.confirmRequest
-              ai.dismissConfirm()
-              if (request?.action === 'import' && ai.activeId) void loadPaper(ai.activeId, request)
+              if (content) void sendMessage(content, 'proposal')
             }}
           />
         )}
@@ -1245,9 +1264,6 @@ export default function AiAssistantScreen({
         <StatusBar />
       </div>
       </ExamDocContext.Provider>
-      </ChatActionsProvider>
-      </AssistantChatProvider>
-    </ThemeProvider>
   )
 }
 

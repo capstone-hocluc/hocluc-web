@@ -18,6 +18,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./collapsible-root";
+import { formatDuration } from "./format-duration";
 
 export const ANIMATION_DURATION = 200;
 
@@ -180,7 +181,7 @@ function ReasoningTrigger({
   duration?: number | undefined;
   label?: string | undefined;
 }) {
-  const durationText = duration ? ` (${duration}s)` : "";
+  const durationText = duration ? ` · ${formatDuration(duration * 1000)}` : "";
 
   return (
     <CollapsibleTrigger
@@ -198,7 +199,7 @@ function ReasoningTrigger({
       <span
         data-slot="reasoning-trigger-label"
         className={cn(
-          "aui-reasoning-trigger-label-wrapper inline-block leading-none tabular-nums",
+          "aui-reasoning-trigger-label-wrapper inline-block text-start leading-tight tabular-nums",
           active && "shimmer motion-reduce:animate-none",
         )}
       >

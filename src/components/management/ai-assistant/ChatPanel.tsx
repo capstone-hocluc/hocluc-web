@@ -8,11 +8,13 @@ import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import type { SelectOption } from '../../console/select-field'
 import { EmptyState, EmptyStateGreeting } from '../../assistant-ui/elements/empty-state'
-import { ChevronRight, Clock, PanelBottom, Sparkles, SquarePen, X } from '../../console/icons'
+import { ChevronRight, Clock, PanelBottom, SquarePen, X } from '../../console/icons'
+import { HocLucAiMark } from '../exam-doc/hocluc-ai-mark'
 import AssistantSources from './chat/AssistantSources'
 import { ComposerChips } from './Composer'
 import { modeOf } from './composer-modes'
 import { StageGroup } from './chat/stage-group'
+import { RunStepsGroup } from './chat/RunStepsGroup'
 import StarterSuggestions from './StarterSuggestions'
 import type { AiChatMessage } from './exam-format'
 
@@ -98,7 +100,7 @@ function ComposerTop() {
   )
 }
 
-const THREAD_PARTS = { Welcome, ComposerExtra: Chips, ComposerTop, ReasoningGroup: StageGroup }
+const THREAD_PARTS = { Welcome, ComposerExtra: Chips, ComposerTop, ReasoningGroup: StageGroup, ChainOfThought: RunStepsGroup }
 
 export interface ChatPanelProps {
   messages: readonly AiChatMessage[]
@@ -188,12 +190,7 @@ export default function ChatPanel({
         )}
       >
         <header className="flex h-12 shrink-0 items-center gap-2 pr-2 pl-3.5">
-          <Sparkles
-            size={15}
-            strokeWidth={1.7}
-            className="shrink-0 text-primary-text"
-            aria-hidden
-          />
+          <HocLucAiMark className="size-5 shrink-0" />
           <h2 className="min-w-0 truncate text-[15px] font-semibold text-text-primary">
             Trợ lý AI soạn đề
           </h2>

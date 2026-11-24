@@ -16,8 +16,9 @@ import AssistantSources from './chat/AssistantSources'
 import { ThreadMessageById } from '@/components/assistant-ui/elements/thread.aui'
 import { TooltipProvider } from '@/components/assistant-ui/ui/tooltip'
 import { StageGroup } from './chat/stage-group'
+import { RunStepsGroup } from './chat/RunStepsGroup'
 
-const BAR_PARTS = { ReasoningGroup: StageGroup }
+const BAR_PARTS = { ReasoningGroup: StageGroup, ChainOfThought: RunStepsGroup }
 import Composer from './Composer'
 
 const ICON_BUTTON =

@@ -188,6 +188,7 @@ export function readingStages(view: LiveReading): AiTraceStage[] {
             label: partName(part),
             detail: part.status === 'DONE' ? `${part.questions} câu` : part.attempt > 1 ? `lần ${part.attempt}` : undefined,
             state: partState(part),
+            ...view.times[`part:${part.id}`],
           }))
         : undefined
     const detail =
@@ -198,6 +199,6 @@ export function readingStages(view: LiveReading): AiTraceStage[] {
           : stage === 'LABEL' && view.labelTotal > 0
             ? `${view.labelled}/${view.labelTotal} câu`
             : undefined
-    return { id: stage, title: STAGE_LABELS[stage], state, detail, items }
+    return { id: stage, title: STAGE_LABELS[stage], state, detail, items, ...view.times[stage] }
   })
 }

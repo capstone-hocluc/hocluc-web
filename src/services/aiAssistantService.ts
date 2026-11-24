@@ -50,6 +50,14 @@ export interface AiAttachment {
   size: number
 }
 
+/** One step of a finished run, kept with its reply: a stage, tool or slot event of its stream and when it was written. */
+export interface AiRunStep {
+  type: string
+  /** Epoch milliseconds. */
+  at: number
+  data: unknown
+}
+
 export interface AiMessage {
   id: string
   /** The message this one follows; none on messages older than versions, which follow the one before them. */
@@ -59,11 +67,15 @@ export interface AiMessage {
   mode?: AiAssistantMode | string | null
   content: string
   trace?: AiAgentStep[] | string[] | null
+  /** The steps of the run behind this reply, as its stream showed them; none on replies older than these. */
+  steps?: AiRunStep[] | null
   /** What the teacher might ask next, once proposed for an ask answer. */
   suggestions?: string[] | null
   attachments?: AiAttachment[] | null
   /** The files of the exam the assistant prepared in this reply, because the teacher asked for them. */
   files?: AiExamFile[] | null
+  /** A request the assistant proposed, sent for the teacher once they agreed; not their own words. */
+  agreed?: boolean | null
   createdAt: string
 }
 
@@ -403,9 +415,11 @@ export type AiStreamEvent =
         mimic?: boolean | null
         /** What the plan changed about the request, e.g. a count cut to the exam's size. */
         notes?: string[] | null
+        /** When the server stored this step, in epoch milliseconds (absent from an older server). */
+        at?: number
       }
     }
-  | { type: 'tool'; data: { tool: string; iteration?: number | null; arguments?: unknown } }
+  | { type: 'tool'; data: { tool: string; iteration?: number | null; arguments?: unknown; at?: number } }
   /** The words of an ask answer as they are written: all of model turn `turn` so far. */
   | { type: 'text'; data: { turn: number; text: string } }
   | {
@@ -424,6 +438,8 @@ export type AiStreamEvent =
         /** A revise run's slot: the question being rewritten, by its printed number. */
         revise?: boolean
         number?: number
+        /** When the server stored this step, in epoch milliseconds (absent from an older server). */
+        at?: number
       }
     }
   | {

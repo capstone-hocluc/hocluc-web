@@ -31,6 +31,7 @@ import {
   type ToolCallMessagePartComponent,
 } from "@assistant-ui/react";
 import { cn } from "@/lib/utils";
+import { formatDuration } from "./format-duration";
 import {
   CollapsibleRoot as Collapsible,
   CollapsibleContent,
@@ -109,14 +110,6 @@ const statusIconMap: Record<ToolStatus, React.ElementType> = {
   "requires-action": AlertCircleIcon,
 };
 
-const formatToolDuration = (ms: number) => {
-  if (ms < 1000) return "<1s";
-  const seconds = ms / 1000;
-  if (seconds < 10) return `${(Math.floor(seconds * 10) / 10).toFixed(1)}s`;
-  if (seconds < 60) return `${Math.floor(seconds)}s`;
-  return `${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s`;
-};
-
 function ToolFallbackDuration({
   className,
   ...props
@@ -128,12 +121,12 @@ function ToolFallbackDuration({
     <span
       data-slot="tool-fallback-duration"
       className={cn(
-        "aui-tool-fallback-duration text-muted-foreground text-xs tabular-nums",
+        "aui-tool-fallback-duration shrink-0 whitespace-nowrap text-muted-foreground text-xs tabular-nums",
         className,
       )}
       {...props}
     >
-      {formatToolDuration(elapsedMs)}
+      {formatDuration(elapsedMs)}
     </span>
   );
 }
@@ -190,7 +183,7 @@ function ToolFallbackTrigger({
       <span
         data-slot="tool-fallback-trigger-label"
         className={cn(
-          "aui-tool-fallback-trigger-label-wrapper inline-block min-w-0 text-start leading-none wrap-anywhere",
+          "aui-tool-fallback-trigger-label-wrapper inline-block min-w-0 text-start leading-tight wrap-anywhere",
           isCancelled && "text-muted-foreground line-through",
           isRunning && "shimmer motion-reduce:animate-none",
         )}

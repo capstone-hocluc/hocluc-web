@@ -10,6 +10,19 @@
   font-family: var(--font-sans);
 }
 
+/*
+ * Their words and icons are an editor's neutral ink, not the console's navy: the theme's tokens resolve on the root,
+ * so the light theme's are set again here.
+ */
+html:not([data-theme='dark']) .exam-doc-ui {
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-tertiary: #71717a;
+  --color-icon-primary: #27272a;
+  --color-icon-secondary: #52525b;
+  --color-icon-tertiary: #71717a;
+}
+
 /* Print layout: A4 sheets (sizes must match PAGE in pagination.ts) stacked behind one editable flow. */
 .exam-doc-pages {
   --exam-doc-page-gap: 24px;

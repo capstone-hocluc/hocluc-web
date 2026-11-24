@@ -222,15 +222,13 @@ export const parentHeadingText = (part: ExamPaperPart) => part.parentTitle?.toUp
 
 /**
  * A part's heading (tagged with the part), preceded by its section heading unless `parentShown` says the document
- * already has that one.
+ * already has that one. A part without a title (the questions of a quiz that has no parts) prints no heading of its own.
  */
 export function partHeadings(part: ExamPaperPart, parentShown: boolean): JSONContent[] {
   const parentText = parentHeadingText(part)
-  if (parentText === null) return [heading(2, part.title.toUpperCase(), { examPart: part.id })]
-  return [
-    ...(parentShown ? [] : [heading(2, parentText)]),
-    heading(3, part.code ? `${part.code}. ${part.title}` : part.title, { examPart: part.id }),
-  ]
+  const own = part.code ? `${part.code}. ${part.title}` : part.title
+  if (parentText === null) return part.title ? [heading(2, part.title.toUpperCase(), { examPart: part.id })] : []
+  return [...(parentShown ? [] : [heading(2, parentText)]), ...(own ? [heading(3, own, { examPart: part.id })] : [])]
 }
 
 /**

@@ -74,6 +74,7 @@ import {
   type ComponentType,
   type FC,
   type PropsWithChildren,
+  type ReactNode,
 } from "react";
 
 export type ThreadGroupPart = MessagePrimitive.GroupedParts.GroupPart;
@@ -128,21 +129,41 @@ export type ThreadComponents = {
   ReasoningGroup?:
     | ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>>
     | undefined;
+  /** Every step of a reply (reasoning and tool calls) together. */
+  ChainOfThought?:
+    | ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>>
+    | undefined;
   TaskGroup?: ComponentType<{ group: ThreadGroupPart }> | undefined;
   ComposerExtra?: ComponentType | undefined;
   /** Above the composer: a notice, the source paper picked. */
   ComposerTop?: ComponentType | undefined;
 };
 
-const messageGroupBy = groupPartByType<ThreadGroupKey>({
+const partGroupBy = groupPartByType<ThreadGroupKey>({
   reasoning: ["group-chainOfThought", "group-reasoning"],
   "tool-call": ["group-chainOfThought", "group-tool"],
   "standalone-tool-call": [],
 });
 
+/**
+ * Reasoning parts the host names (an `id` each: the steps of a run) are a group each, so each heads its own
+ * disclosure; unnamed ones that follow each other fall in one group, as streamed thinking does.
+ */
+const messageGroupBy = (
+  part: Parameters<typeof partGroupBy>[0],
+  context?: Parameters<typeof partGroupBy>[1],
+): readonly ThreadGroupKey[] => {
+  const path = partGroupBy(part, context);
+  if (part.type !== "reasoning" || !part.id) return path;
+  return path.map((key) =>
+    key === "group-reasoning" ? (`group-reasoning:${part.id}` as const) : key,
+  );
+};
+
 type ThreadGroupKey =
   | "group-chainOfThought"
   | "group-reasoning"
+  | `group-reasoning:${string}`
   | "group-tool"
   | "group-task";
 
@@ -727,9 +748,27 @@ const AssistantMessage: FC = () => {
     ToolFallback: ToolFallbackComponent = ToolFallback,
     ToolGroup,
     ReasoningGroup,
+    ChainOfThought,
     TaskGroup: TaskGroupComponent,
   } = useContext(ThreadComponentsContext);
   const groupBy = TaskGroupComponent ? taskAwareGroupBy : messageGroupBy;
+  const reasoningGroup = (part: ThreadGroupPart, children: ReactNode) => {
+    if (ReasoningGroup) {
+      return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
+    }
+    const running = part.status.type === "running";
+    return (
+      <ReasoningRoot streaming={running}>
+        <ReasoningTrigger
+          active={running}
+          duration={reasoningDuration(part.timing)}
+        />
+        <ReasoningContent aria-busy={running}>
+          <ReasoningText>{children}</ReasoningText>
+        </ReasoningContent>
+      </ReasoningRoot>
+    );
+  };
 
   const ACTION_BAR_PT = "pt-1.5";
   // Keep the action bar inside the contained root's paint box, then cancel its reserved space in flow.
@@ -749,7 +788,11 @@ const AssistantMessage: FC = () => {
           {({ part, children }) => {
             switch (part.type) {
               case "group-chainOfThought":
-                return <div data-slot="aui_chain-of-thought">{children}</div>;
+                return ChainOfThought ? (
+                  <ChainOfThought group={part}>{children}</ChainOfThought>
+                ) : (
+                  <div data-slot="aui_chain-of-thought">{children}</div>
+                );
               case "group-task":
                 return TaskGroupComponent ? (
                   <TaskGroupComponent group={part} />
@@ -761,25 +804,8 @@ const AssistantMessage: FC = () => {
                 return (
                   <DefaultToolGroup group={part}>{children}</DefaultToolGroup>
                 );
-              case "group-reasoning": {
-                if (ReasoningGroup) {
-                  return (
-                    <ReasoningGroup group={part}>{children}</ReasoningGroup>
-                  );
-                }
-                const running = part.status.type === "running";
-                return (
-                  <ReasoningRoot streaming={running}>
-                    <ReasoningTrigger
-                      active={running}
-                      duration={reasoningDuration(part.timing)}
-                    />
-                    <ReasoningContent aria-busy={running}>
-                      <ReasoningText>{children}</ReasoningText>
-                    </ReasoningContent>
-                  </ReasoningRoot>
-                );
-              }
+              case "group-reasoning":
+                return reasoningGroup(part, children);
               case "text":
                 return <MarkdownText />;
               case "reasoning":
@@ -811,7 +837,10 @@ const AssistantMessage: FC = () => {
                   </span>
                 );
               default:
-                return null;
+                // A reasoning part the host named is a group of its own.
+                return part.type.startsWith("group-reasoning:")
+                  ? reasoningGroup(part as ThreadGroupPart, children)
+                  : null;
             }
           }}
         </MessagePrimitive.GroupedParts>
@@ -822,8 +851,11 @@ const AssistantMessage: FC = () => {
         data-slot="aui_assistant-message-footer"
         className={cn("ms-2 flex items-center", ACTION_BAR_HEIGHT)}
       >
-        <BranchPicker />
-        <AssistantActionBar />
+        {/* A turn that is not a reply (a paper being read) has nothing to copy, regenerate or switch. */}
+        <AuiIf condition={(s) => s.message.metadata.custom?.actionsHidden !== true}>
+          <BranchPicker />
+          <AssistantActionBar />
+        </AuiIf>
       </div>
     </MessagePrimitive.Root>
   );
@@ -924,6 +956,9 @@ const UserImagePart: ImageMessagePartComponent = (part) => (
 );
 
 const UserMessage: FC = () => {
+  // A message the host sent on the user's behalf (`metadata.custom.hidden`) stays in the thread but out of sight.
+  const hidden = useAuiState((s) => s.message.metadata.custom?.hidden === true);
+  if (hidden) return null;
   return (
     <MessagePrimitive.Root
       data-slot="aui_user-message-root"

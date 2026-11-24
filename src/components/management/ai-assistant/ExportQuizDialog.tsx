@@ -10,6 +10,7 @@ import {
 } from '../../../services/aiAssistantService'
 import { getQuizChapterLessons, getQuizCourseChapters, getQuizCourses } from '../../../services/quizCourseService'
 import type { UserRole } from '../../../services/userService'
+import AppLink from '../../landing-page/AppLink'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import DropdownField from '../../console/dropdown-field'
@@ -136,9 +137,7 @@ export default function ExportQuizDialog({
             </Button>
             {editor && (
               <Button asChild>
-                <a href={editor} target="_blank" rel="noreferrer">
-                  Mở quiz
-                </a>
+                <AppLink href={editor}>Mở quiz</AppLink>
               </Button>
             )}
           </>
