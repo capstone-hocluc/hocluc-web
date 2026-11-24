@@ -216,8 +216,17 @@ test('category delete confirms the chosen leaf and keeps its parent', async ({ p
 
 test('draft course delete targets the selected course only', async ({ page }) => {
   const state = await installCrudFixture(page)
+  const course = state.courses.find((item) => item.id === IDS.section)!
+  course.paid = true
+  course.price = 690_000
   await page.goto('/staff/courses')
-  await courseCard(page, 'SECTION Đại số')
+  const card = courseCard(page, 'SECTION Đại số')
+  const footer = card.locator('footer')
+  const price = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(690_000)
+  await expect(card.getByText('Nháp', { exact: true })).toBeVisible()
+  await expect(footer.getByText('Nháp', { exact: true })).toHaveCount(0)
+  await expect(footer.getByText(price, { exact: true })).toHaveClass(/text-lg.*font-semibold/)
+  await footer
     .getByRole('button', { name: 'Thao tác khác với SECTION Đại số', exact: true })
     .click()
   await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click()
