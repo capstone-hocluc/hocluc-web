@@ -549,6 +549,13 @@ export async function installCrudFixture(
       totalPages: content.length ? 1 : 0,
       last: true,
     })
+    const roleUserId = path.match(/^\/api\/v1\/users\/([0-9a-f-]{36})\/role$/)?.[1]
+    if (roleUserId && method === 'PATCH') {
+      const user = state.users[roleUserId] ?? userProfile({ id: roleUserId })
+      user.role = body.role
+      state.users[roleUserId] = user
+      return answer(user)
+    }
     if (path.startsWith('/api/v1/users/') && /^[0-9a-f-]{36}$/.test(path.split('/').at(-1) ?? '')) {
       const id = path.split('/').at(-1)!
       if (method === 'GET') return answer(state.users[id] ?? userProfile({ id }))
