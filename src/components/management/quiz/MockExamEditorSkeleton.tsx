@@ -1,4 +1,7 @@
+import { cn } from '../../../lib/cn'
 import { Skeleton } from '../../tailgrids/core/skeleton'
+import EditorFrame from './EditorFrame'
+import { useEditorLayout } from './editor-layout'
 
 function QuestionCard() {
   return (
@@ -11,34 +14,51 @@ function QuestionCard() {
 }
 
 /**
- * Placeholder with the editor's own layout while a saved quiz loads: the shared top bar, then the question list and
- * contents rail of an exam, or the single column of question cards of a lesson or chapter quiz.
+ * Placeholder with the editor's own layout while a saved quiz loads, in the frame the viewer chose: the shared top bar,
+ * then the question list and contents rail of an exam, or the single column of question cards of a lesson or chapter
+ * quiz.
  */
 export default function MockExamEditorSkeleton({ rail = true }: { rail?: boolean }) {
+  const [layout] = useEditorLayout()
+  const workspace = layout === 'workspace'
+  const header = (
+    <header
+      className={cn(
+        'flex shrink-0 items-center gap-4',
+        workspace ? 'h-14 bg-card-background px-2 sm:px-3' : 'border-b border-card-border px-4 py-2.5 sm:px-6'
+      )}
+    >
+      <div className="flex flex-1 items-center gap-2">
+        <Skeleton className="size-9 rounded-lg" />
+        {workspace && <Skeleton className="hidden h-7 w-6 rounded-md sm:block" />}
+        <Skeleton className={workspace ? 'h-5 w-44' : 'h-6 w-48'} />
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-10 w-24 rounded-lg max-sm:hidden" />
+        <Skeleton className="h-10 w-32 rounded-lg" />
+        <Skeleton className="h-10 w-36 rounded-lg max-sm:hidden" />
+        <Skeleton className="size-10 rounded-lg" />
+      </div>
+    </header>
+  )
   return (
-    <section className="flex h-dvh flex-col bg-card-surface-area" aria-busy="true" aria-label="Đang tải bài kiểm tra">
-      <header className="flex shrink-0 items-center gap-4 border-b border-card-border px-4 py-2.5 sm:px-6">
-        <div className="flex flex-1 items-center gap-2">
-          <Skeleton className="size-9 rounded-lg" />
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-6 w-20 rounded-full" />
+    <EditorFrame
+      layout={layout}
+      header={header}
+      label="Đang tải bài kiểm tra"
+      busy
+      rail={rail && (
+        <div className="flex flex-col gap-2 p-4">
+          <Skeleton className="h-5 w-32" />
+          {[0, 1, 2, 3, 4, 5].map(row => <Skeleton key={row} className="h-9 w-full rounded-lg" />)}
         </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-24 rounded-lg max-sm:hidden" />
-          <Skeleton className="h-10 w-32 rounded-lg" />
-          <Skeleton className="h-10 w-36 rounded-lg max-sm:hidden" />
-        </div>
-      </header>
+      )}
+    >
       {rail ? (
-        <div className="flex min-h-0 flex-1 lg:grid lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
-          <aside className="hidden flex-col gap-2 border-r border-card-border p-4 lg:flex">
-            <Skeleton className="h-5 w-32" />
-            {[0, 1, 2, 3, 4, 5].map(row => <Skeleton key={row} className="h-9 w-full rounded-lg" />)}
-          </aside>
-          <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6">
-            <Skeleton className="h-9 w-56 rounded-lg" />
-            <div className="mx-auto w-full max-w-3xl"><QuestionCard /></div>
-          </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6">
+          <Skeleton className="h-9 w-56 rounded-lg" />
+          <div className="mx-auto w-full max-w-3xl"><QuestionCard /></div>
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-hidden">
@@ -52,6 +72,6 @@ export default function MockExamEditorSkeleton({ rail = true }: { rail?: boolean
           </div>
         </div>
       )}
-    </section>
+    </EditorFrame>
   )
 }

@@ -1,0 +1,4 @@
+/* A sheet whose questions open in the editor beside it: each question is a target. */
+.quiz-sheet-picking .exam-doc-sheet .ProseMirror {
+  cursor: pointer;
+}

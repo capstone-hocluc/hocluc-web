@@ -19,9 +19,11 @@ export interface QuizSettingsValues {
  * The settings of a lesson or chapter quiz being edited, in a side panel over its questions. Type and place are fixed
  * once the quiz exists; changes stay in the editor's form until it is saved.
  */
-export default function QuizSettingsSheet({ open, onClose, quiz, values, onChange, fieldErrors, nameDisabled, rulesDisabled, locked }: {
+export default function QuizSettingsSheet({ open, onClose, docked, quiz, values, onChange, fieldErrors, nameDisabled, rulesDisabled, locked }: {
   open: boolean
   onClose: () => void
+  /** A card beside the questions instead of a drawer over them. */
+  docked?: boolean
   quiz: TeacherQuizRecord
   values: QuizSettingsValues
   onChange: <K extends keyof QuizSettingsValues>(key: K, value: QuizSettingsValues[K]) => void
@@ -36,7 +38,7 @@ export default function QuizSettingsSheet({ open, onClose, quiz, values, onChang
     <span id={`quiz-settings-${field}-error`} className="text-sm font-medium text-badge-error-text" role="alert">{fieldErrors[field]}</span>
   const describedBy = (field: QuizFieldError) => fieldErrors[field] ? `quiz-settings-${field}-error` : undefined
   return (
-    <ConsoleSheet open={open} onClose={onClose} title="Thiết lập bài kiểm tra">
+    <ConsoleSheet open={open} onClose={onClose} docked={docked} title="Thiết lập bài kiểm tra">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 rounded-xl bg-background-gray-secondary px-4 py-3 text-sm text-text-tertiary">
           <StatusBadge tone="info" className="self-start">{quizTypeLabel(quiz.type)}</StatusBadge>

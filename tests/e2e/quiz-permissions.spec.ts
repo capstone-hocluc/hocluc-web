@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Locator } from '@playwright/test'
-import { closeEditorSettings, installQuizFixture, openEditorSettings, QUIZ_IDS, quizToken, waitForEditor } from './quiz-permissions-fixture'
+import { closeEditorSettings, editorSettings, installQuizFixture, openEditorSettings, QUIZ_IDS, quizToken, waitForEditor } from './quiz-permissions-fixture'
 
 const writes = (state: Awaited<ReturnType<typeof installQuizFixture>>) => state.requests.filter(r => r.path.startsWith('/api/v1/teacher/') && r.method !== 'GET')
 
@@ -152,6 +152,9 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
     await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`Quiz ${role}`)
     await closeEditorSettings(page)
     await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
+    // The editor closes back to the list, and the list says what was saved.
+    await expect(page).toHaveURL(new RegExp(`/console/${area}/quizzes$`))
+    await expect(page.getByRole('status').filter({ hasText: 'Đã lưu thay đổi quiz.' })).toBeVisible()
     const updated = page.getByRole('row').filter({ has: page.getByRole('heading', { name: `Quiz ${role}`, exact: true }) })
     await updated.getByRole('button', { name: 'Xuất bản', exact: true }).click()
     await expect(updated.getByText('Đã xuất bản', { exact: true })).toBeVisible()
@@ -235,7 +238,7 @@ for (const [role, area] of [['STAFF', 'staff'], ['MANAGER', 'manager'], ['ADMINI
       await row.getByRole('button', { name: 'Chỉnh sửa', exact: true }).click()
       await expect(page.locator('main').getByRole('button', { name: /Loại bài kiểm tra$|Chương$|Bài học$|Khóa học$/ })).toHaveCount(0)
       await openEditorSettings(page)
-      await expect(page.getByRole('dialog').getByText(label, { exact: true })).toBeVisible()
+      await expect(editorSettings(page).getByText(label, { exact: true })).toBeVisible()
       await page.getByLabel('Tên bài kiểm tra', { exact: true }).fill(`${label} đã sửa`)
       await closeEditorSettings(page)
       await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
@@ -338,6 +341,9 @@ test('Teacher reads quiz/exam/questions/attempts with no write controls or write
   await expect(page.getByText('Quiz ngoài phân công', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Tạo bài kiểm tra|Chỉnh sửa|Xuất bản|Thao tác khác/ })).toHaveCount(0)
   await page.getByRole('button', { name: 'Xem nội dung', exact: true }).click()
+  // The quiz opens on its A4 sheet; the list beside it carries each answer and its explanation.
+  await expect(page.locator('.exam-doc-sheet')).toBeVisible()
+  await page.getByRole('tab', { name: 'Danh sách', exact: true }).click()
   await expect(page.getByText('Giải thích được phép đọc', { exact: true })).toBeVisible()
   await expect(page.locator('main input,main textarea')).toHaveCount(0)
   await page.goto('/console/teacher/mock-exams')
@@ -680,6 +686,11 @@ for (const role of ['STAFF', 'TEACHER'] as const) {
         await page.screenshot({ path: testInfo.outputPath(`${screen}-${width}.png`), fullPage: true })
       }
       await page.goto(`/console/${area}/quizzes/${QUIZ_IDS.quiz}`, { waitUntil: 'domcontentloaded' })
+      // Both ways of reading the quiz fit the screen: the A4 sheet scrolls inside its own box.
+      await expect(page.locator('.exam-doc-sheet')).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: testInfo.outputPath(`detail-paper-${width}.png`), fullPage: true })
+      await page.getByRole('tab', { name: 'Danh sách', exact: true }).click()
       await expect(page.getByText('Giải thích được phép đọc', { exact: true })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.screenshot({ path: testInfo.outputPath(`detail-${width}.png`), fullPage: true })

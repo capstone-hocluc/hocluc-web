@@ -53,7 +53,11 @@ import QuizImportDialog from './QuizImportDialog'
 import QuizAnswerReviewDialog from './QuizAnswerReviewDialog'
 import ConfirmDialog from '../../console/confirm-dialog'
 import { describePublishProblems } from './publish-problems'
+import EditorFrame from './EditorFrame'
+import EditorLayoutToggle from './EditorLayoutToggle'
 import EditorTopBar from './EditorTopBar'
+import { useEditorLayout } from './editor-layout'
+import { useMinWidth } from '../../../hooks/use-min-width'
 import ExamCreateDialog from './ExamCreateDialog'
 import ExamSettingsSheet from './ExamSettingsSheet'
 import { examSettingsOf, examUpdatePayload, isExamLocked as isLocked, validateExamSettings, type AssessmentType, type ExamSettings } from './exam-settings'
@@ -74,7 +78,10 @@ interface TeacherMockExamsProps {
   assessmentType?: AssessmentType
   readOnly?: boolean
   startCreating?: boolean
-  initialEditorId?: string | null
+  /** The quiz open in the editor, from the address; null shows the list. */
+  editorId?: string | null
+  /** Opens a quiz in the editor (an id) or goes back to the list (null), through the address. */
+  onEditorChange: (id: string | null) => void
   onBack: () => void
   onAction: (message: string) => void
 }
@@ -317,12 +324,11 @@ function sameLayout(a: TeacherQuizSectionSpec[], b: TeacherQuizSectionSpec[]) {
   ]))
 }
 
-function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnly = true, startCreating = false, initialEditorId = null }: TeacherMockExamsProps) {
+function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnly = true, startCreating = false, editorId = null, onEditorChange }: TeacherMockExamsProps) {
   const placement = assessmentType === 'PLACEMENT'
   const quizzes = usePageResource(() => getTeacherQuizzes(), [])
   const [creating, setCreating] = useState(!readOnly && startCreating)
   const [viewingId, setViewingId] = useState<string | null>(null)
-  const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
   const [answerSettingsQuiz, setAnswerSettingsQuiz] = useState<TeacherQuizRecord | null>(null)
@@ -361,7 +367,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
     const shouldDuplicate =
       exam.status !== 'DRAFT' || isLocked(exam) || forceCopyIds.has(exam.id)
     if (!shouldDuplicate) {
-      setEditorQuizId(exam.id)
+      onEditorChange(exam.id)
       return
     }
     if (readOnly || busyId) return
@@ -370,7 +376,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
       const copy = await duplicateTeacherQuiz(exam.id)
       onAction('Đã tạo bản nháp để chỉnh sửa; đề gốc chưa bị thay đổi.')
       refresh()
-      setEditorQuizId(copy.id)
+      onEditorChange(copy.id)
     } catch (error) {
       onAction(getErrorMessage(error))
     } finally {
@@ -380,17 +386,17 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
 
   if (viewingId) return <QuizDetails quizId={viewingId} onBack={() => setViewingId(null)} />
 
-  if (!readOnly && editorQuizId) {
+  if (!readOnly && editorId) {
     return (
       <TeacherMockExamEditor
         assessmentType={assessmentType}
-        quizId={editorQuizId}
+        quizId={editorId}
         onCancel={() => {
-          setEditorQuizId(null)
+          onEditorChange(null)
           refresh()
         }}
         onSaved={(message) => {
-          setEditorQuizId(null)
+          onEditorChange(null)
           onAction(message)
           refresh()
         }}
@@ -463,11 +469,11 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
         </RowActions>} />
 
       {!readOnly && creating && (
-        <ExamCreateDialog assessmentType={assessmentType} onClose={() => setCreating(false)}
+        <ExamCreateDialog assessmentType={assessmentType} onClose={() => { setCreating(false); if (startCreating) onEditorChange(null) }}
           onCreated={(created) => {
             setCreating(false)
             refresh()
-            setEditorQuizId(created.id)
+            onEditorChange(created.id)
           }} />
       )}
       {!readOnly && !placement && answerSettingsQuiz && (
@@ -522,7 +528,8 @@ function TeacherMockExamEditor({
   onSaved: (message: string) => void
 }) {
   const access = useQuizAccess()
-  useConsoleFocus()
+  const [layout] = useEditorLayout()
+  useConsoleFocus(layout === 'workspace')
   const editor = usePageResource(() => access.canWrite ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
   if (!access.canWrite) return <ForbiddenPage />
   if (editor.status === 'loading') {
@@ -577,6 +584,9 @@ function TeacherMockExamForm({
   onReload: () => void
 }) {
   const access = useQuizAccess()
+  const [layout] = useEditorLayout()
+  // In the assistant's frame the settings sit beside the questions when there is room; a drawer otherwise.
+  const settingsDocked = useMinWidth(1024) && layout === 'workspace'
   const placement = assessmentType === 'PLACEMENT'
   const originalEditorRef = useRef<TeacherQuizEditor | null>(initial)
   const serverQuizId = initial.quiz.id
@@ -926,9 +936,10 @@ function TeacherMockExamForm({
   )
 
   return (
-    <section className="flex h-dvh min-w-0 flex-col bg-card-surface-area">
-      <EditorTopBar title={quizSnapshot.title} backLabel={backLabel} status={quizSnapshot.status} onBack={onCancel}>
-        <Button appearance="ghost" onClick={() => setSettingsOpen(true)} disabled={busy}>
+    <EditorFrame
+      layout={layout}
+      header={<EditorTopBar layout={layout} title={quizSnapshot.title} backLabel={backLabel} status={quizSnapshot.status} onBack={onCancel}>
+        <Button appearance="ghost" aria-pressed={settingsDocked ? settingsOpen : undefined} onClick={() => setSettingsOpen((open) => !open)} disabled={busy}>
           <Settings size={15} />Thiết lập
         </Button>
         <Button appearance="ghost" className={ambiguousQuestionSave ? undefined : 'max-sm:hidden'} onClick={onCancel} disabled={busy}>
@@ -942,24 +953,24 @@ function TeacherMockExamForm({
             <Send size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
           </Button>
         )}
-      </EditorTopBar>
-
-      {(error || ambiguousQuestionSave) && (
-        <div className="flex shrink-0 flex-col gap-3 px-4 pt-3 sm:px-6">
-          {error && <Notice tone="danger" role="alert" className="font-medium">{error}</Notice>}
-          {ambiguousQuestionSave && (
-            <Notice tone="warning" role="alert" aria-live="assertive">
-              Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
-            </Notice>
-          )}
-        </div>
-      )}
-
-      <div className="min-h-0 flex-1">
-        <div className="flex h-full flex-col lg:grid lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
-          <aside aria-label="Mục lục đề" className="hidden min-h-0 flex-col border-r border-card-border bg-card-background lg:flex">
-            {rail()}
-          </aside>
+        <EditorLayoutToggle />
+      </EditorTopBar>}
+      notices={(error || ambiguousQuestionSave) && <>
+        {error && <Notice tone="danger" role="alert" className="font-medium">{error}</Notice>}
+        {ambiguousQuestionSave && (
+          <Notice tone="warning" role="alert" aria-live="assertive">
+            Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
+          </Notice>
+        )}
+      </>}
+      rail={rail()}
+      railLabel="Mục lục đề"
+      aside={<ExamSettingsSheet docked={settingsDocked} open={settingsOpen} onClose={() => setSettingsOpen(false)} placement={placement} settings={settings}
+        onChange={updateSettings} courseName={quizSnapshot.courseTitle || 'Khóa học đã chọn'}
+        error={error && error === validateExamSettings(settings, placement, quizSnapshot) ? error : ''}
+        nameDisabled={publishedQuiz || busy} rulesDisabled={fieldsLocked || busy} locked={settingsLocked} published={publishedQuiz}
+        fromRequired={Boolean(quizSnapshot.availableFrom)} untilRequired={Boolean(quizSnapshot.availableUntil)} />}
+    >
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3 sm:px-6">
               <QuizLabelRun quizId={serverQuizId} resource={quizLabels} />
@@ -987,14 +998,6 @@ function TeacherMockExamForm({
               )}
             </ScrollArea>
           </div>
-        </div>
-      </div>
-
-      <ExamSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} placement={placement} settings={settings}
-        onChange={updateSettings} courseName={quizSnapshot.courseTitle || 'Khóa học đã chọn'}
-        error={error && error === validateExamSettings(settings, placement, quizSnapshot) ? error : ''}
-        nameDisabled={publishedQuiz || busy} rulesDisabled={fieldsLocked || busy} locked={settingsLocked} published={publishedQuiz}
-        fromRequired={Boolean(quizSnapshot.availableFrom)} untilRequired={Boolean(quizSnapshot.availableUntil)} />
 
       <SheetOverlay isOpen={railOpen} onOpenChange={setRailOpen}>
         <SheetContent side="left" showCloseButton={false} className="w-80! max-w-80! border-r border-card-border bg-card-background p-0">
@@ -1002,7 +1005,7 @@ function TeacherMockExamForm({
           {rail(() => setRailOpen(false))}
         </SheetContent>
       </SheetOverlay>
-    </section>
+    </EditorFrame>
   )
 }
 

@@ -173,7 +173,7 @@ test('placement create 409 keeps the draft and does not retry or publish', async
   const dialog = page.getByRole('dialog', { name: 'Tạo đánh giá đầu vào' })
   await dialog.getByLabel('Tên bài đánh giá đầu vào', { exact: true }).fill('Giữ bản nháp')
   state.denyNextWrite = true
-  state.denyWriteStatus = 409; state.denyWriteMessage = 'This operation conflicts with referenced or concurrently changed data.'
+  state.denyWriteStatus = 409; state.denyWriteMessage = 'Thao tác này vướng dữ liệu đang được dùng hoặc vừa được thay đổi. Tải lại trang rồi thử lại.'
   await dialog.getByRole('button', { name: 'Tạo và soạn câu hỏi', exact: true }).click()
   await expect(dialog.getByText(state.denyWriteMessage, { exact: true })).toBeVisible()
   await expect(dialog.getByLabel('Tên bài đánh giá đầu vào', { exact: true })).toHaveValue('Giữ bản nháp')

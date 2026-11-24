@@ -54,7 +54,11 @@ import { arrayMove, useDragReorder } from '../crud/use-drag-reorder'
 import { cn } from '../../../lib/cn'
 import ConfirmDialog from '../../console/confirm-dialog'
 import MockExamEditorSkeleton from './MockExamEditorSkeleton'
+import EditorFrame from './EditorFrame'
+import EditorLayoutToggle from './EditorLayoutToggle'
 import EditorTopBar from './EditorTopBar'
+import { useEditorLayout } from './editor-layout'
+import { useMinWidth } from '../../../hooks/use-min-width'
 import QuizCreateDialog from './QuizCreateDialog'
 import QuizSettingsSheet, { type QuizSettingsValues } from './QuizSettingsSheet'
 import { formatApiError, mapTeacherQuizValidationErrors, type QuizFieldError } from './quiz-form-errors'
@@ -68,7 +72,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 interface TeacherQuizProps {
   navigation?: ReactNode
   readOnly?: boolean
-  initialEditorId?: string | null
+  /** The quiz open in the editor, from the address; null shows the list. */
+  editorId?: string | null
+  /** Opens a quiz in the editor (an id) or goes back to the list (null), through the address. */
+  onEditorChange: (id: string | null) => void
   course: { id: string; name: string }
   onBack: () => void
   onAction: (message: string) => void
@@ -122,9 +129,8 @@ function quizIsLocked(quiz: TeacherQuizRecord | undefined) {
   return Boolean(quiz?.locked || (quiz?.attemptCount ?? 0) > 0)
 }
 
-function QuizScreen({ navigation, course, onBack, onAction, startCreating = false, readOnly = true, initialEditorId = null }: TeacherQuizProps) {
+function QuizScreen({ navigation, course, onBack, onAction, startCreating = false, readOnly = true, editorId = null, onEditorChange }: TeacherQuizProps) {
   const quizzes = usePageResource(() => getTeacherQuizzes(course.id || undefined), [course.id])
-  const [editorQuizId, setEditorQuizId] = useState<string | null>(initialEditorId)
   const [creating, setCreating] = useState(!readOnly && startCreating)
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -160,16 +166,16 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
 
   if (viewingId) return <QuizDetails quizId={viewingId} onBack={() => setViewingId(null)} />
 
-  if (!readOnly && editorQuizId) {
+  if (!readOnly && editorId) {
     return (
       <TeacherQuizEditorScreen
-        quizId={editorQuizId}
+        quizId={editorId}
         onCancel={() => {
-          setEditorQuizId(null)
+          onEditorChange(null)
           refresh()
         }}
         onSaved={(message) => {
-          setEditorQuizId(null)
+          onEditorChange(null)
           onAction(message)
           refresh()
         }}
@@ -197,13 +203,13 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
                       const duplicateBeforeEdit =
                         quiz.status !== 'DRAFT' || quizIsLocked(quiz) || forceCopyIds.has(quiz.id)
                       if (!duplicateBeforeEdit) {
-                        setEditorQuizId(quiz.id)
+                        onEditorChange(quiz.id)
                         return
                       }
                       void runQuizAction(
                         quiz,
                         () => duplicateTeacherQuiz(quiz.id).then((copy) => {
-                          setEditorQuizId(copy.id)
+                          onEditorChange(copy.id)
                           return copy
                         }),
                         'Đã tạo bản nháp để chỉnh sửa; quiz gốc chưa bị thay đổi.'
@@ -255,11 +261,11 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
         </RowActions>} />
 
       {!readOnly && creating && (
-        <QuizCreateDialog routeCourseId={course.id} onClose={() => setCreating(false)}
+        <QuizCreateDialog routeCourseId={course.id} onClose={() => { setCreating(false); if (startCreating) onEditorChange(null) }}
           onCreated={(created) => {
             setCreating(false)
             refresh()
-            setEditorQuizId(created.id)
+            onEditorChange(created.id)
           }} />
       )}
       {!readOnly && answerSettingsQuiz && (
@@ -312,7 +318,8 @@ function TeacherQuizEditorScreen({
   onSaved: (message: string) => void
 }) {
   const access = useQuizAccess()
-  useConsoleFocus()
+  const [layout] = useEditorLayout()
+  useConsoleFocus(layout === 'workspace')
   const editor = usePageResource(() => access.canWrite ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
   if (!access.canWrite) return <ForbiddenPage />
   if (editor.status === 'loading') {
@@ -358,6 +365,9 @@ function TeacherQuizEditorForm({
   onReload: () => void
 }) {
   const access = useQuizAccess()
+  const [layout] = useEditorLayout()
+  // In the assistant's frame the settings sit beside the questions when there is room; a drawer otherwise.
+  const settingsDocked = useMinWidth(1024) && layout === 'workspace'
   const initialQuiz = initial.quiz
   const quizId = initialQuiz.id
   const initialQuestionsRef = useRef<TeacherQuizEditor | null>(initial)
@@ -512,9 +522,10 @@ function TeacherQuizEditorForm({
   }
 
   return (
-    <section className="flex h-dvh min-w-0 flex-col bg-card-surface-area">
-      <EditorTopBar title={initialQuiz.title} backLabel="Quay lại danh sách quiz" status={initialQuiz.status} onBack={onCancel}>
-        <Button appearance="ghost" onClick={() => setSettingsOpen(true)} disabled={busy}>
+    <EditorFrame
+      layout={layout}
+      header={<EditorTopBar layout={layout} title={initialQuiz.title} backLabel="Quay lại danh sách quiz" status={initialQuiz.status} onBack={onCancel}>
+        <Button appearance="ghost" aria-pressed={settingsDocked ? settingsOpen : undefined} onClick={() => setSettingsOpen((open) => !open)} disabled={busy}>
           <Settings size={15} />Thiết lập
         </Button>
         <Button appearance="ghost" className={ambiguousQuestionSave ? undefined : 'max-sm:hidden'} disabled={busy} onClick={onCancel}>
@@ -528,19 +539,19 @@ function TeacherQuizEditorForm({
             <CheckCircle2 size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
           </Button>
         )}
-      </EditorTopBar>
-
-      {(error || ambiguousQuestionSave) && (
-        <div className="flex shrink-0 flex-col gap-3 px-4 pt-3 sm:px-6">
-          {error && <Notice tone="danger" role="alert" className="font-medium">{error}</Notice>}
-          {ambiguousQuestionSave && (
-            <Notice tone="warning" role="alert" aria-live="assertive">
-              Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn hoặc dữ liệu trả về chưa hợp lệ. Không lưu lại từ biểu mẫu này; hãy quay về danh sách và mở lại quiz để kiểm tra.
-            </Notice>
-          )}
-        </div>
-      )}
-
+        <EditorLayoutToggle />
+      </EditorTopBar>}
+      notices={(error || ambiguousQuestionSave) && <>
+        {error && <Notice tone="danger" role="alert" className="font-medium">{error}</Notice>}
+        {ambiguousQuestionSave && (
+          <Notice tone="warning" role="alert" aria-live="assertive">
+            Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn hoặc dữ liệu trả về chưa hợp lệ. Không lưu lại từ biểu mẫu này; hãy quay về danh sách và mở lại quiz để kiểm tra.
+          </Notice>
+        )}
+      </>}
+      aside={<QuizSettingsSheet docked={settingsDocked} open={settingsOpen} onClose={() => setSettingsOpen(false)} quiz={initialQuiz} values={values} onChange={updateValue}
+        fieldErrors={fieldErrors} nameDisabled={busy || ambiguousQuestionSave} rulesDisabled={settingsLocked || busy} locked={quizIsLocked(initialQuiz)} />}
+    >
       <ScrollArea aria-label="Nội dung bài kiểm tra" className="min-h-0 flex-1">
         <section aria-labelledby="quiz-questions-title" aria-describedby={fieldErrors.questions ? 'teacher-quiz-questions-error' : undefined}
           className="mx-auto flex w-full max-w-3xl flex-col gap-3 p-4 sm:p-6">
@@ -646,10 +657,7 @@ function TeacherQuizEditorForm({
           {fieldErrors.questions && <p id="teacher-quiz-questions-error" className="m-0 text-sm font-medium text-badge-error-text" role="alert">{fieldErrors.questions}</p>}
         </section>
       </ScrollArea>
-
-      <QuizSettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} quiz={initialQuiz} values={values} onChange={updateValue}
-        fieldErrors={fieldErrors} nameDisabled={busy || ambiguousQuestionSave} rulesDisabled={settingsLocked || busy} locked={quizIsLocked(initialQuiz)} />
-    </section>
+    </EditorFrame>
   )
 }
 

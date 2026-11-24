@@ -1,19 +1,14 @@
+import { useMemo } from 'react'
 import { usePageResource } from '../../../hooks/usePageResource'
 import { getTeacherQuiz, type TeacherQuizType } from '../../../services/teacherQuizService'
 import { ApiError } from '../../../lib/api'
 import Card, { CardTitle } from '../../console/card'
 import PageHeading from '../../console/page-heading'
 import Status from '../../console/status'
-import { CheckCircle2, FileText } from '../../console/icons'
-import Button from '../../console/button'
-import { ConsoleTabs, ConsoleTabsContent, ConsoleTabsList, ConsoleTabsTrigger } from '../../console/tabs'
-import PagedPreview from './PagedPreview'
-import QuizPaper from './QuizPaper'
-import { printQuizPaper } from './print-quiz-paper'
-import { cn } from '../../../lib/cn'
 import { quizTypeLabel, quizRequirement } from '../../../lib/quiz-types'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import MathText from '../../ui/MathText'
+import QuizQuestionsView from './paper/QuizQuestionsView'
+import { quizToPaper } from './paper/quiz-to-paper'
 
 const statusLabels = { DRAFT: 'Bản nháp', PUBLISHED: 'Đã xuất bản', ARCHIVED: 'Đã lưu trữ' }
 
@@ -26,13 +21,15 @@ export default function QuizDetails({ quizId, onBack, expectedType }: { quizId: 
   }, [quizId, expectedType])
   const editor = resource.status === 'ready' ? resource.data : null
   const quiz = editor?.quiz
+  // Built once per loaded quiz: the sheet lays its pages out again whenever it is handed a new paper.
+  const paper = useMemo(() => (editor ? quizToPaper(editor) : null), [editor])
   return (
     <section className="flex min-w-0 flex-col gap-5">
       <PageHeading onBack={onBack} backLabel="Quay lại danh sách" parent="Bài kiểm tra" title="Nội dung bài kiểm tra" readOnly />
       <ScheduleResourceState status={resource.status} skeleton="detail" errorMessage={resource.errorMessage}
         onRetry={resource.reload} empty={resource.status === 'ready' && !resource.data}
         emptyMessage="Không có dữ liệu bài kiểm tra.">
-        {editor && quiz && <>
+        {editor && quiz && paper && <>
           <Card padding="lg">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
@@ -56,48 +53,9 @@ export default function QuizDetails({ quizId, onBack, expectedType }: { quizId: 
             </dl>
             {quiz.description && <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-text-secondary">{quiz.description}</p>}
           </Card>
-          <ConsoleTabs defaultValue="questions">
-          <ConsoleTabsList aria-label="Cách xem bài kiểm tra">
-            <ConsoleTabsTrigger value="questions">Danh sách câu</ConsoleTabsTrigger>
-            <ConsoleTabsTrigger value="paper">Bản in</ConsoleTabsTrigger>
-          </ConsoleTabsList>
-          <ConsoleTabsContent value="paper">
-            {editor.questions.length === 0
-              ? <Card><p className="py-5 text-center text-sm text-text-tertiary">Chưa có câu hỏi.</p></Card>
-              : <>
-                <div className="flex justify-end">
-                  <Button appearance="outline" onClick={printQuizPaper}><FileText size={16} />Tải PDF</Button>
-                </div>
-                <div className="min-w-0 overflow-x-auto rounded-xl bg-background-gray-secondary p-3 sm:p-6">
-                  <PagedPreview label="Bản in bài kiểm tra, chia trang A4" version={editor.quiz.updatedAt ?? editor.quiz.id}>
-                    <QuizPaper editor={editor} />
-                  </PagedPreview>
-                </div>
-              </>}
-          </ConsoleTabsContent>
-          <ConsoleTabsContent value="questions">
-          {editor.questions.length === 0 && <Card><p className="py-5 text-center text-sm text-text-tertiary">Chưa có câu hỏi.</p></Card>}
-          {editor.questions.map((question) => <Card key={question.id} padding="lg" as="article">
-            <div className="mb-4 flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-background-gray-secondary text-sm font-semibold text-text-secondary">{question.sequence}</span>
-              <h2 className="min-w-0 pt-1 text-sm leading-6 font-medium whitespace-pre-wrap break-words text-text-primary"><MathText>{question.questionText}</MathText></h2>
-            </div>
-            {question.imageUrl && <img src={question.imageUrl} alt={`Hình minh họa câu ${question.sequence}`} className="mb-4 max-h-64 max-w-full rounded-lg object-contain" />}
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {question.options.map((option) => <li key={option.id}
-                className={cn('flex items-start gap-3 rounded-lg border border-card-border p-3 text-sm', option.correct && 'border-badge-success-text/20 bg-badge-success-bg')}>
-                <span className="font-medium text-text-secondary">{option.label}.</span>
-                <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-text-primary"><MathText>{option.text}</MathText></span>
-                {option.correct && <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-badge-success-text"><CheckCircle2 size={15} /><span className="sr-only sm:not-sr-only">Đáp án đúng</span></span>}
-              </li>)}
-            </ul>
-            {question.explanation && <div className="mt-4 rounded-lg bg-background-gray-secondary p-4">
-              <h3 className="mb-1 text-xs font-semibold text-text-secondary">Giải thích / hướng dẫn chấm</h3>
-              <p className="text-sm leading-6 whitespace-pre-wrap break-words text-text-secondary"><MathText>{question.explanation}</MathText></p>
-            </div>}
-          </Card>)}
-          </ConsoleTabsContent>
-          </ConsoleTabs>
+          {editor.questions.length === 0
+            ? <Card><p className="py-5 text-center text-sm text-text-tertiary">Chưa có câu hỏi.</p></Card>
+            : <QuizQuestionsView paper={paper} label={`Đề ${quiz.title} (chỉ đọc)`} />}
         </>}
       </ScheduleResourceState>
     </section>

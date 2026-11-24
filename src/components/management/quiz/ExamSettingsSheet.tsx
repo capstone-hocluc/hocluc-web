@@ -11,10 +11,12 @@ import type { ExamSettings } from './exam-settings'
  * it is saved.
  */
 export default function ExamSettingsSheet({
-  open, onClose, placement, settings, onChange, courseName, error, nameDisabled, rulesDisabled, locked, published, fromRequired, untilRequired,
+  open, onClose, docked, placement, settings, onChange, courseName, error, nameDisabled, rulesDisabled, locked, published, fromRequired, untilRequired,
 }: {
   open: boolean
   onClose: () => void
+  /** A card beside the questions instead of a drawer over them. */
+  docked?: boolean
   /** Why the last save stopped, shown here too since the panel covers the editor's own message. */
   error: string
   placement: boolean
@@ -31,7 +33,7 @@ export default function ExamSettingsSheet({
   untilRequired: boolean
 }) {
   return (
-    <ConsoleSheet open={open} onClose={onClose} title={placement ? 'Thiết lập bài đánh giá' : 'Thiết lập đề thi'}>
+    <ConsoleSheet open={open} onClose={onClose} docked={docked} title={placement ? 'Thiết lập bài đánh giá' : 'Thiết lập đề thi'}>
       <div className="flex flex-col gap-4">
         {error && <Notice tone="danger" role="alert">{error}</Notice>}
         <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">

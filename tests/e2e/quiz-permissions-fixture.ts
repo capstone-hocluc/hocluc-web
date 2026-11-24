@@ -324,7 +324,15 @@ export async function openEditorSettings(page: Page) {
   await page.getByRole('button', { name: 'Thiết lập', exact: true }).click()
 }
 
+/**
+ * The settings panel: a column beside the questions in the whole-window editor on a wide screen, a sheet over the editor
+ * inside the console or on a narrow one.
+ */
+export function editorSettings(page: Page) {
+  return page.getByRole('dialog').or(page.getByRole('complementary', { name: /^Thiết lập/ }))
+}
+
 /** Closes the settings panel so the editor behind it can be used again. */
 export async function closeEditorSettings(page: Page) {
-  await page.getByRole('dialog').getByRole('button', { name: 'Xong', exact: true }).click()
+  await editorSettings(page).getByRole('button', { name: 'Xong', exact: true }).click()
 }
