@@ -21,6 +21,7 @@ import { Skeleton } from '../../tailgrids/core/skeleton'
 
 const TARGETS: { id: AiQuizTarget; label: string }[] = [
   { id: 'EXAM', label: quizTypeLabel('EXAM') },
+  { id: 'PLACEMENT', label: 'Bài đánh giá đầu vào' },
   ...COURSE_QUIZ_TYPES,
 ]
 
@@ -74,12 +75,14 @@ export default function ExportQuizDialog({
   const [result, setResult] = useState<AiExportedQuiz | null>(null)
 
   const exam = type === 'EXAM'
+  const placement = type === 'PLACEMENT'
+  const courseOnly = exam || placement
   const needsLesson = type === 'LESSON' || type === 'QUICK'
   // A mock exam hangs on a main course; a chapter or lesson quiz on any course the viewer manages.
-  const courses = usePageResource(() => getQuizCourses(exam ? 'MAIN' : undefined), [exam])
+  const courses = usePageResource(() => getQuizCourses(courseOnly ? 'MAIN' : undefined), [courseOnly])
   const course = usePageResource(
-    () => (courseId && !exam ? getQuizCourseChapters(courseId) : Promise.resolve(null)),
-    [courseId, exam]
+    () => (courseId && !courseOnly ? getQuizCourseChapters(courseId) : Promise.resolve(null)),
+    [courseId, courseOnly]
   )
   const chapters = course.status === 'ready' && course.data?.id === courseId ? course.data.chapters : []
   const lessons = usePageResource(
@@ -91,7 +94,7 @@ export default function ExportQuizDialog({
   const minutesValue = minutes.trim() ? Number(minutes) : undefined
   const minutesInvalid =
     minutesValue !== undefined && (!Number.isInteger(minutesValue) || minutesValue < 1 || minutesValue > 600)
-  const targetChosen = exam ? Boolean(courseId) : needsLesson ? Boolean(lessonId) : Boolean(chapterId)
+  const targetChosen = placement || (exam ? Boolean(courseId) : needsLesson ? Boolean(lessonId) : Boolean(chapterId))
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -102,7 +105,7 @@ export default function ExportQuizDialog({
       setResult(
         await exportAiDraftToQuiz(conversationId, {
           type,
-          ...(exam ? { courseId } : needsLesson ? { lessonId } : { chapterId }),
+          ...(courseOnly ? { courseId: courseId || undefined } : needsLesson ? { lessonId } : { chapterId }),
           title: name.trim() || undefined,
           durationMinutes: minutesValue,
         })
@@ -116,8 +119,9 @@ export default function ExportQuizDialog({
   }
 
   if (result) {
+    const section = result.type === 'PLACEMENT' ? 'placements' : result.type === 'EXAM' ? 'mock-exams' : 'quizzes'
     const editor = role
-      ? roleHome(role).replace('/dashboard', `/${result.type === 'EXAM' ? 'mock-exams' : 'quizzes'}/${result.quizId}/edit`)
+      ? roleHome(role).replace('/dashboard', `/${section}/${result.quizId}/edit`)
       : null
     return (
       <ConsoleDialog
@@ -202,7 +206,7 @@ export default function ExportQuizDialog({
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Khóa học">
+          <Field label={placement ? "Khóa học (không bắt buộc)" : "Khóa học"}>
             {courses.status === 'loading' ? (
               <FieldSkeleton what="khóa học" />
             ) : (
@@ -224,7 +228,7 @@ export default function ExportQuizDialog({
               />
             )}
           </Field>
-          {!exam && (
+          {!courseOnly && (
             <Field label="Chương">
               {courseId && course.status === 'loading' ? (
                 <FieldSkeleton what="chương" />

@@ -742,7 +742,7 @@ export async function saveAiDraftToBank(conversationId: string, itemIds?: string
   return result.items ?? []
 }
 
-export type AiQuizTarget = 'EXAM' | 'CHAPTER' | 'LESSON' | 'QUICK'
+export type AiQuizTarget = 'PLACEMENT' | 'EXAM' | 'CHAPTER' | 'LESSON' | 'QUICK'
 
 /** Where the new quiz hangs (EXAM: a main course; CHAPTER: a chapter; LESSON, QUICK: a lesson) and what it takes. */
 export interface AiQuizExport {

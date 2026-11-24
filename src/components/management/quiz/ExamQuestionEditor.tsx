@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Pencil, Trash2 } from '../../console/icons'
 import Button from '../../console/button'
 import { textareaControlClass } from '../../console/form-field'
@@ -15,12 +15,13 @@ interface CategoryOption {
 
 /** One question of the exam in full: text, options, answer and the review flag, with the controls that move or remove it. */
 export default function ExamQuestionEditor({
-  question, number, sectionTitle, placement, editable, structureEditable, busy,
+  question, number, skill, sectionTitle, placement, editable, structureEditable, busy,
   canMoveUp, canMoveDown, categoryOptions, categoriesReady, categoriesLoading,
   onChange, onMove, onDelete, onPrevious, onNext,
 }: {
   question: DraftQuestion
   number: number
+  skill?: ReactNode
   sectionTitle: string
   placement: boolean
   /** The content of this question may be changed. */
@@ -59,6 +60,7 @@ export default function ExamQuestionEditor({
         <h2 className="m-0 text-base font-semibold">Câu {number}</h2>
         {editable && <Button appearance="ghost" size="sm" disabled={busy} onClick={() => setEditing(true)}><Pencil size={14} />Sửa</Button>}
       </header>
+      {skill}
       <p className="m-0 whitespace-pre-wrap break-words"><MathText>{question.questionText || 'Chưa có nội dung câu hỏi.'}</MathText></p>
       {question.imageUrl && <img src={question.imageUrl} alt={`Hình minh họa câu ${number}`} className="max-h-80 max-w-full self-start object-contain" />}
       {isChoice && (
@@ -95,6 +97,7 @@ export default function ExamQuestionEditor({
         )}
         </div>
       </header>
+      {skill}
 
       {!question.editable && (
         <p className="m-0 rounded-lg border border-card-border bg-background-gray-secondary px-3 py-2.5 text-sm text-text-tertiary">{typeLabel} · chỉ xem</p>

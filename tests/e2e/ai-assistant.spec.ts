@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import JSZip from 'jszip'
+import { roleHome } from '../../src/lib/role-home'
 import type { UserRole } from '../../src/services/userService'
 import { installQuizFixture } from './quiz-permissions-fixture'
 
@@ -1223,8 +1224,8 @@ async function openCheckedExam(page: Page, role: UserRole, bank: Pick<AiFixtureO
     ...bank,
   })
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto(`/console/${role === 'TEACHER' ? 'teacher' : 'manager'}/ai-assistant`)
-  await expect(page.locator('#exam-question-item-1')).toBeVisible()
+  await page.goto(roleHome(role).replace('/dashboard', '/ai-assistant'))
+  await expect(page.locator('#exam-question-item-1')).toBeVisible({ timeout: 15_000 })
   return fixture
 }
 
@@ -1313,6 +1314,24 @@ test('the exam becomes a draft mock exam of a course, opened from the result', a
   const published = page.getByRole('list', { name: 'Đã xuất bản', exact: true })
   await expect(published.getByRole('listitem').filter({ hasText: 'Đề ôn hàm số' })).toContainText('Đề thi thử')
   await expect(page.getByRole('list', { name: 'Bản nháp', exact: true }).getByText('Đề ôn hàm số')).toHaveCount(0)
+})
+
+test('staff can export a draft placement test without linking a course', async ({ page }) => {
+  const { state } = await openCheckedExam(page, 'STAFF', {})
+
+  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Thành quiz / đề thi…', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Loại bài kiểm tra' }).click()
+  await page.getByRole('option', { name: 'Bài đánh giá đầu vào', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Xuất 2 câu', exact: true }).click()
+
+  await expect(dialog.getByRole('link', { name: 'Mở quiz', exact: true })).toHaveAttribute(
+    'href', '/console/staff/placements/quiz-from-draft/edit',
+  )
+  const exported = state.requests.find((entry) => entry.method === 'POST' && entry.path.endsWith('/draft/quiz'))
+  expect(exported?.body).toMatchObject({ type: 'PLACEMENT' })
+  expect(exported?.body).not.toHaveProperty('courseId')
 })
 
 test('dragging a paper question reorders the draft through the API', async ({ page }) => {

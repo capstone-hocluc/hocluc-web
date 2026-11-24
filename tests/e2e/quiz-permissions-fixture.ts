@@ -305,6 +305,9 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
     }
     if (path === `/api/v1/teacher/attempts/${QUIZ_IDS.attempt}`) return answer({ attemptId: QUIZ_IDS.attempt,
       quizId: QUIZ_IDS.quiz, quizTitle: 'Quiz được giao', totalQuestions: 1, correctCount: 1, overallPercentage: 100, questions: [] })
+    if (match?.[2] === 'labels' && method === 'GET') {
+      return answer({ labels: [], patterns: [], status: null, progress: null })
+    }
     state.unmatched.push(`${method} ${path}`)
     return answer(null, 501, 'Fixture has no handler')
   })
