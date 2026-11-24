@@ -114,10 +114,14 @@ async function install(page: Page, role = 'STUDENT') {
       state.adminWrites.push({ method, path, body: request.postDataJSON() })
       return answer({ id: 'p1', ...request.postDataJSON() })
     }
-    if (path === '/api/v1/users' && method === 'GET')
-      return answer({ content: [{ id: 'student-1', email: 'an@example.invalid', firstName: 'An', lastName: 'Nguyễn',
-        displayName: 'Nguyễn An', status: 'ACTIVE', role: 'STUDENT', emailVerified: true }],
-        pageNumber: 0, pageSize: 20, totalElements: 1, totalPages: 1, last: true })
+    if (path === '/api/v1/admin/credits/users' && method === 'GET') {
+      const query = (url.searchParams.get('query') ?? '').toLowerCase()
+      const content = [
+        { userId: 'student-1', email: 'an@example.invalid', displayName: 'Nguyễn An', available: 15, bonus: 5, paid: 10, held: 0 },
+        { userId: 'student-2', email: 'binh@example.invalid', displayName: 'Lê Bình', available: 0, bonus: 0, paid: 0, held: 0 },
+      ].filter((row) => row.email.includes(query) || row.displayName.toLowerCase().includes(query))
+      return answer({ content, pageNumber: 0, pageSize: 20, totalElements: content.length, totalPages: 1, last: true })
+    }
     if (path === '/api/v1/admin/credits/users/student-1') return answer({ available: 15, bonus: 5, paid: 10, held: 0 })
     if (path === '/api/v1/admin/credits/users/student-1/history')
       return answer({ content: [{ id: 'a1', type: 'PURCHASE', bonusDelta: 0, paidDelta: 10, heldDelta: 0, balanceAfter: 15,
@@ -362,8 +366,14 @@ test('an administrator switches a pack on and corrects a learner balance with a 
   expect(state.adminWrites[0]).toMatchObject({ method: 'PUT', body: { price: 59000, active: true, credits: 50 } })
 
   await page.getByRole('tab', { name: 'Số dư học viên' }).click()
-  await page.getByRole('button', { name: 'Học viên', exact: true }).filter({ hasText: 'Chọn học viên' }).click()
-  await page.getByRole('option', { name: 'Nguyễn An' }).click()
+  const an = page.getByRole('row', { name: /Nguyễn An.*an@example.invalid/ })
+  const binh = page.getByRole('row', { name: /Lê Bình.*binh@example.invalid/ })
+  await expect(an).toBeVisible()
+  await expect(binh).toBeVisible()
+  await page.getByRole('searchbox', { name: 'Tìm học viên theo tên hoặc email' }).fill('an@example.invalid')
+  await expect(binh).toHaveCount(0)
+  await expect(an).toBeVisible()
+  await an.click()
   await expect(page.getByText('Mua gói · Gói 50').or(page.getByText('Mua gói'))).toBeVisible()
   await page.screenshot({ path: 'test-results/credits-admin.png', fullPage: true })
   await page.getByRole('button', { name: 'Điều chỉnh số dư' }).click()
@@ -373,5 +383,8 @@ test('an administrator switches a pack on and corrects a learner balance with a 
   await adjust.getByRole('button', { name: 'Lưu' }).click()
   await expect(adjust).toBeHidden()
   expect(state.adminWrites[1]).toMatchObject({ method: 'POST', body: { amount: 5, bucket: 'BONUS', reason: 'Bù lỗi hệ thống' } })
+  await page.getByRole('button', { name: 'Quay lại danh sách học viên' }).click()
+  await expect(an).toBeVisible()
+  await expect(binh).toHaveCount(0)
   expect(state.pageErrors).toEqual([])
 })
