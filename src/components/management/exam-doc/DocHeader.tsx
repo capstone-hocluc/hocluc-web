@@ -26,6 +26,7 @@ interface DocHeaderProps {
   outlineOpen: boolean
   onToggleOutline: () => void
   onNew: () => void
+  onExportQuiz?: () => void
   /** `paper`: a loaded paper is shown read-only: no save state and no menus. */
   variant?: 'compose' | 'paper'
   /** Buttons for the open paper, before the panel toggles. */
@@ -72,6 +73,7 @@ export default function DocHeader({
   outlineOpen,
   onToggleOutline,
   onNew,
+  onExportQuiz,
   variant = 'compose',
   actions,
 }: DocHeaderProps) {
@@ -139,6 +141,7 @@ export default function DocHeader({
         {!paper && (
         <DocMenubar
           onNew={onNew}
+          onExportQuiz={onExportQuiz}
           outlineOpen={outlineOpen}
           onToggleOutline={onToggleOutline}
           chatOpen={chatOpen}

@@ -19,7 +19,7 @@ interface Conversation {
   mode: string | null
   createdAt: string
   updatedAt: string
-  /** Set once the exam went out through "Xuất bản". */
+  /** Set once the exam was published. */
   publishedAt?: string | null
   publishedAs?: 'QUIZ' | 'EXAM' | 'DOCX' | 'PDF' | null
 }
@@ -451,7 +451,7 @@ async function installAiFixture(page: Page, role: UserRole = 'MANAGER', options:
       }
     }
 
-    // A file published from "Xuất bản"; the edit time stays as it was.
+    // Publishing keeps the edit time.
     if (action === 'publish' && method === 'POST') {
       if (body.as !== 'DOCX' && body.as !== 'PDF') return reply(null, 400, 'Kiểu xuất bản không hợp lệ.')
       conversation.publishedAt = stamp
@@ -1276,16 +1276,17 @@ test('a teacher, even one authoring the subject, is offered nothing for the bank
   await expect(page.getByRole('button', { name: 'Lưu câu 1 vào ngân hàng' })).toHaveCount(0)
   await expect(page.getByText('Đã lưu vào ngân hàng')).toHaveCount(0)
   expect(state.requests.filter((entry) => entry.path.endsWith('/draft/bank'))).toEqual([])
-  // writing quizzes is staff work: the teacher publishes the exam only as a file
-  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
-  await expect(page.getByRole('menuitem', { name: 'Word (.docx)', exact: true })).toBeVisible()
+  await expect(page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true })).toHaveCount(0)
+  await openFileMenu(page)
   await expect(page.getByRole('menuitem', { name: 'Thành quiz / đề thi…', exact: true })).toHaveCount(0)
+  await page.getByRole('menuitem', { name: 'Tải xuống', exact: true }).press('ArrowRight')
+  await expect(page.getByRole('menuitem', { name: 'Word (.docx)', exact: true })).toBeVisible()
 })
 
 test('the exam becomes a draft mock exam of a course, opened from the result', async ({ page }) => {
   const { state } = await openCheckedExam(page, 'MANAGER', {})
 
-  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
+  await openFileMenu(page)
   await page.getByRole('menuitem', { name: 'Thành quiz / đề thi…', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('button', { name: 'Khóa học' }).click()
@@ -1311,7 +1312,7 @@ test('the exam becomes a draft mock exam of a course, opened from the result', a
 test('staff can export a draft placement test without linking a course', async ({ page }) => {
   const { state } = await openCheckedExam(page, 'STAFF', {})
 
-  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
+  await openFileMenu(page)
   await page.getByRole('menuitem', { name: 'Thành quiz / đề thi…', exact: true }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('button', { name: 'Loại bài kiểm tra' }).click()
@@ -1751,8 +1752,15 @@ test('the exam list groups drafts, published exams and loaded papers, and keeps 
     publishedAt: '2026-10-21T08:00:00Z',
     publishedAs: 'QUIZ',
   }
+  const publishedWord: Conversation = {
+    ...handedOut,
+    id: 'conv-6',
+    title: 'Đề kiểm tra đã gửi',
+    updatedAt: '2026-10-22T08:00:00Z',
+    publishedAs: 'DOCX',
+  }
   const { state } = await installAiFixture(page, 'MANAGER', {
-    conversations: [savedExam, handedOut],
+    conversations: [savedExam, handedOut, publishedWord],
     documents: { 'conv-9': examDocument() },
     bankSources: [bankSource('src-1', 'Đề mẫu 2021', 'DONE', 1)],
   })
@@ -1765,7 +1773,7 @@ test('the exam list groups drafts, published exams and loaded papers, and keeps 
   const published = panel.getByRole('list', { name: 'Đã xuất bản', exact: true })
   const papers = panel.getByRole('list', { name: 'Đề nạp vào kho', exact: true })
   await expect(drafts.getByRole('button', { name: savedExam.title, exact: true })).toHaveAttribute('aria-current', 'location')
-  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao.*Quiz$/])
+  await expect(published.getByRole('listitem')).toHaveText([/^Đề kiểm tra đã gửi.*Word$/, /^Đề giữa kỳ đã giao.*Quiz$/])
   // A paper read to the end carries no tag: its group says what it is.
   await expect(papers.getByRole('listitem')).toHaveText(['Đề mẫu 2021'])
   // The back arrow and actions share a row above the two full-width tabs.
@@ -1786,17 +1794,11 @@ test('the exam list groups drafts, published exams and loaded papers, and keeps 
   await expect(page.getByRole('banner').getByRole('button', { name: /Đề mới|Danh sách đề|Thêm đề/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Hiện danh sách đề', exact: true })).toBeHidden()
 
-  // A Word file from "Xuất bản" publishes the exam; the same file from the File menu does not.
-  const publishes = () => state.requests.filter((entry) => entry.method === 'POST' && entry.path.endsWith('/publish'))
-  await downloadFromFileMenu(page, 'Word (.docx)')
-  expect(publishes()).toEqual([])
-  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
-  const download = page.waitForEvent('download')
-  await page.getByRole('menuitem', { name: 'Word (.docx)', exact: true }).click()
-  expect((await download).suggestedFilename()).toBe('ĐỀ-KIỂM-TRA-TOÁN-10.docx')
-  await expect.poll(() => publishes().map((entry) => entry.body)).toEqual([{ as: 'DOCX' }])
-  await expect(published.getByRole('listitem')).toHaveText([/^Đề kiểm tra Toán 10.*Word$/, /^Đề giữa kỳ đã giao.*Quiz$/])
-  await expect(drafts.getByRole('listitem')).toHaveCount(0)
+  // Downloading a Word file keeps the exam in its draft group.
+  const word = await downloadFromFileMenu(page, 'Word (.docx)')
+  expect(word.suggestedFilename()).toBe('ĐỀ-KIỂM-TRA-TOÁN-10.docx')
+  expect(state.requests.filter((entry) => entry.method === 'POST' && entry.path.endsWith('/publish'))).toEqual([])
+  await expect(drafts.getByRole('button', { name: savedExam.title, exact: true })).toBeVisible()
 
   // The viewer hides the loaded papers, sorts by name and folds the drafts; the last group shown cannot be hidden.
   await panel.getByRole('button', { name: 'Tùy chỉnh danh sách', exact: true }).click()
@@ -1806,15 +1808,14 @@ test('the exam list groups drafts, published exams and loaded papers, and keeps 
   await page.getByRole('menuitemcheckbox', { name: 'Đã xuất bản', exact: true }).click()
   await page.getByRole('menuitemradio', { name: 'Tên A–Z', exact: true }).click()
   await expect(papers).toHaveCount(0)
-  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao/, /^Đề kiểm tra Toán 10/])
+  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao/, /^Đề kiểm tra đã gửi/])
   await panel.getByRole('button', { name: 'Thu gọn Bản nháp', exact: true }).click()
   await expect(drafts).toHaveCount(0)
 
-  // All of it is still so after a reload, and the server kept the exam published.
+  // The list preferences and selected draft persist across reloads.
   await page.reload()
   await expect(docEditor(page)).toContainText(EXAM_STEMS[0], { timeout: 15_000 })
-  await expect(published.getByRole('button', { name: savedExam.title, exact: true })).toHaveAttribute('aria-current', 'location')
-  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao/, /^Đề kiểm tra Toán 10.*Word$/])
+  await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao/, /^Đề kiểm tra đã gửi.*Word$/])
   await expect(papers).toHaveCount(0)
   await expect(drafts).toHaveCount(0)
   await expect(panel.getByRole('button', { name: 'Mở Bản nháp', exact: true })).toBeVisible()
@@ -4028,14 +4029,6 @@ test('switching a saved free document to question cards saves the mode and turns
   await page.keyboard.press('Escape')
   await expect(page.getByRole('menuitem', { name: 'PDF (.pdf)', exact: true })).toHaveCount(0)
   await expect(page.getByRole('menuitemradio', { name: 'Văn bản tự do', exact: true })).toHaveCount(0)
-  // Publishing as a file is free-document work too.
-  await page.getByRole('banner').getByRole('button', { name: 'Xuất bản', exact: true }).click()
-  for (const label of ['Word (.docx)', 'PDF (.pdf)']) {
-    await expect(page.getByRole('menuitem', { name: label, exact: true })).toHaveAttribute('aria-disabled', 'true')
-    await expect(page.getByRole('menuitem', { name: label, exact: true })).toHaveAttribute('title', freeOnly)
-  }
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('menuitem', { name: 'PDF (.pdf)', exact: true })).toHaveCount(0)
 
   // Back to the free document, as it was, saved in that mode over the next version.
   await openFileMenu(page)

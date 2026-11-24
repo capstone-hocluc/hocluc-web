@@ -28,6 +28,7 @@ type MenuId = (typeof MENUS)[number]['id']
 
 interface DocMenubarProps {
   onNew: () => void
+  onExportQuiz?: () => void
   outlineOpen: boolean
   onToggleOutline: () => void
   chatOpen: boolean
@@ -40,6 +41,7 @@ interface DocMenubarProps {
  */
 export default function DocMenubar({
   onNew,
+  onExportQuiz,
   outlineOpen,
   onToggleOutline,
   chatOpen,
@@ -114,7 +116,7 @@ export default function DocMenubar({
   function renderMenu(id: MenuId) {
     switch (id) {
       case 'file':
-        return <FileMenu onNew={onNew} />
+        return <FileMenu onNew={onNew} onExportQuiz={onExportQuiz} />
       case 'edit':
         return <EditMenu run={run} />
       case 'view':

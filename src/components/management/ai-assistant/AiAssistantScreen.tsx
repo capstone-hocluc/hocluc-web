@@ -29,7 +29,6 @@ import DocSheet from '../exam-doc/DocSheet'
 import DocToolbar from '../exam-doc/DocToolbar'
 import StatusBar from '../exam-doc/StatusBar'
 import TemplateLibrary from '../exam-doc/templates/TemplateLibrary'
-import PublishMenu from './PublishMenu'
 import WorkspaceTree, { ShowExamListButton } from './WorkspaceTree'
 import { parentHeadingText, partHeadings, questionsToBlocks } from '../exam-doc/draft-to-doc'
 import { scrollToPos } from '../exam-doc/doc-outline'
@@ -930,29 +929,19 @@ export default function AiAssistantScreen({
           outlineOpen={outlineOpen || outlineSheet}
           onToggleOutline={toggleOutline}
           onNew={startNew}
+          onExportQuiz={quizAccess.canWrite && keptWritten > 0 ? () => setQuizDialog(true) : undefined}
           actions={
-            <>
-              {canSaveToBank && (
-                <Button
-                  appearance="ghost"
-                  size="sm"
-                  onClick={() => setBankDialog(true)}
-                  aria-label="Lưu vào ngân hàng"
-                  title="Lưu vào ngân hàng"
-                >
-                  <Landmark size={15} />
-                  <span className="hidden lg:inline">Lưu vào ngân hàng</span>
-                </Button>
-              )}
-              {ai.activeId && (
-                <PublishMenu
-                  onQuiz={quizAccess.canWrite && keptWritten > 0 ? () => setQuizDialog(true) : undefined}
-                  onPublished={(as) => {
-                    if (ai.activeId) void ai.markPublished(ai.activeId, as)
-                  }}
-                />
-              )}
-            </>
+            canSaveToBank && (
+              <Button
+                size="sm"
+                onClick={() => setBankDialog(true)}
+                aria-label="Lưu vào ngân hàng"
+                title="Lưu vào ngân hàng"
+              >
+                <Landmark size={15} />
+                <span className="hidden lg:inline">Lưu vào ngân hàng</span>
+              </Button>
+            )
           }
         />
 
