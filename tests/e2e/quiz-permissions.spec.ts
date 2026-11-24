@@ -67,7 +67,12 @@ for (const [path, id, label] of [
     if (path === 'placements') Object.assign(state.quizzes[0], { type: 'PLACEMENT', courseId: null, chapterId: null, lessonId: null })
     await page.goto(`/console/staff/${path}/${id}/edit`)
     await waitForEditor(page)
-    if (path !== 'quizzes') await page.getByRole('button', { name: 'Sửa', exact: true }).click()
+    if (path === 'mock-exams') {
+      await page.getByRole('button', { name: /^Câu 1\. / }).click()
+      await expect(page.getByRole('article', { name: 'Câu 1', exact: true })).toBeVisible()
+    } else if (path === 'placements') {
+      await page.getByRole('button', { name: 'Sửa', exact: true }).click()
+    }
     await expect(page.getByRole('button', { name: new RegExp(`${label}$`) })).toHaveCount(0)
     await expect(page.getByLabel('Đánh dấu lựa chọn A là đáp án đúng', { exact: true })).toBeChecked()
     expect(state.questions[0].questionType).toBe('SINGLE_CHOICE')
@@ -86,6 +91,10 @@ for (const type of ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'LONG_ANSWE
     for (const [path, id] of [['quizzes', QUIZ_IDS.quiz], ['mock-exams', QUIZ_IDS.exam]]) {
       await page.goto(`/console/staff/${path}/${id}/edit`)
       await waitForEditor(page)
+      if (path === 'mock-exams') {
+        await page.getByRole('button', { name: /^Câu 1\. / }).click()
+        await expect(page.getByRole('article', { name: 'Câu 1', exact: true })).toBeVisible()
+      }
       await expect(page.getByRole('button', { name: /Dạng đáp án$|Loại câu hỏi$/ })).toHaveCount(0)
       if (path === 'quizzes') await expect(page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true })).toHaveCount(0)
       else {
