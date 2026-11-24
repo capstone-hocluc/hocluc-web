@@ -195,6 +195,13 @@
   background: var(--color-surface-brand);
 }
 
+/* The tutor's launcher floats over the bottom right corner: the lesson can scroll its last row (the "Đánh dấu hoàn
+   thành" button) clear of it. 96px launcher + 24px gap + 8px air. */
+.viewer[data-tutor],
+.viewer[data-reading][data-tutor] {
+  padding-bottom: 128px;
+}
+
 .viewer video {
   max-height: min(64dvh, 720px);
   object-fit: contain;
