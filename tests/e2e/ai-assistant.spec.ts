@@ -1420,6 +1420,14 @@ test('an ask run shows the answer text sent in the answer event', async ({ page 
   await page.getByRole('button', { name: 'Gửi tin nhắn' }).click()
 
   await expect(page.getByText(answer, { exact: true })).toBeVisible({ timeout: 15_000 })
+
+  const reply = page.locator('[data-role="assistant"]').filter({ hasText: answer })
+  await reply.hover()
+  await reply.getByRole('button', { name: 'Thêm', exact: true }).click()
+  const exportItem = page.getByRole('menuitem', { name: 'Tải về dạng Markdown' })
+  await expect(exportItem).toBeVisible()
+  const [download] = await Promise.all([page.waitForEvent('download'), exportItem.click()])
+  expect(download.suggestedFilename()).toMatch(/\.md$/)
 })
 
 test('the assistant moves to a bar at the bottom of the paper, answers there, folds away and goes back beside it', async ({ page }) => {

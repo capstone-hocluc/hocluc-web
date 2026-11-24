@@ -909,7 +909,7 @@ const AssistantActionBar: FC = () => {
         <ActionBarMorePrimitive.Trigger asChild>
           <TooltipIconButton
             tooltip="Thêm"
-            className="data-[state=open]:bg-accent"
+            className="data-[state=open]:bg-background-gray-secondary_alt"
           >
             <MoreHorizontalIcon />
           </TooltipIconButton>
@@ -917,12 +917,13 @@ const AssistantActionBar: FC = () => {
         <ActionBarMorePrimitive.Content
           side="bottom"
           align="start"
-          sideOffset={6}
-          className="aui-action-bar-more-content bg-popover text-popover-foreground data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:animate-out data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] overflow-hidden rounded-xl border p-1.5"
+          sideOffset={4}
+          collisionPadding={8}
+          className="aui-action-bar-more-content exam-doc-ui z-70 min-w-[232px] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-xl border border-card-border bg-background-white-secondary p-1.5 text-text-primary shadow-md outline-none"
         >
           <ActionBarPrimitive.ExportMarkdown asChild>
-            <ActionBarMorePrimitive.Item className="aui-action-bar-more-item hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none select-none">
-              <DownloadIcon className="size-4" />
+            <ActionBarMorePrimitive.Item className="aui-action-bar-more-item flex h-8 w-full cursor-default items-center gap-2.5 rounded-md px-2 text-left text-[13px] text-text-primary outline-none select-none data-[highlighted]:bg-background-gray-secondary_alt data-[disabled]:pointer-events-none data-[disabled]:opacity-45">
+              <DownloadIcon aria-hidden className="size-4 shrink-0 text-icon-tertiary" />
               Tải về dạng Markdown
             </ActionBarMorePrimitive.Item>
           </ActionBarPrimitive.ExportMarkdown>
