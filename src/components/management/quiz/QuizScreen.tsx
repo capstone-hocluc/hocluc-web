@@ -12,7 +12,6 @@ import {
   Eye,
   CheckCircle2,
   Copy,
-  MoreHorizontal,
   Clock3,
   Pencil,
   Plus,
@@ -67,7 +66,6 @@ import { useConsoleFocus } from '../../console/console-focus'
 import { describePublishProblems } from './publish-problems'
 import Notice from '../../console/notice'
 import StatusBadge from '../../console/status'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
 
 interface TeacherQuizProps {
   navigation?: ReactNode
@@ -196,8 +194,9 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
         renderActions={(quiz) => <RowActions>
                   <IconAction label="Xem nội dung" icon={Eye} onClick={() => setViewingId(quiz.id)} />
                   {!readOnly && <>
-                  <Button
-                    size="sm" appearance="ghost"
+                  <IconAction
+                    label={quiz.status !== 'DRAFT' || quizIsLocked(quiz) || forceCopyIds.has(quiz.id) ? 'Tạo bản nháp sửa' : 'Chỉnh sửa'}
+                    icon={Pencil}
                     disabled={busyId !== null}
                     onClick={() => {
                       const duplicateBeforeEdit =
@@ -215,15 +214,10 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
                         'Đã tạo bản nháp để chỉnh sửa; quiz gốc chưa bị thay đổi.'
                       )
                     }}
-                  >
-                    <Pencil size={15} />
-                    {quiz.status !== 'DRAFT' || quizIsLocked(quiz) || forceCopyIds.has(quiz.id)
-                      ? 'Tạo bản nháp sửa'
-                      : 'Chỉnh sửa'}
-                  </Button>
-                  <Button
-                    appearance="outline"
-                    size="sm"
+                  />
+                  <IconAction
+                    label={quiz.status === 'PUBLISHED' ? 'Ẩn quiz' : 'Xuất bản'}
+                    icon={quiz.status === 'PUBLISHED' ? X : Send}
                     disabled={busyId !== null}
                     onClick={() => runQuizAction(
                       quiz,
@@ -231,32 +225,15 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
                       quiz.status === 'PUBLISHED' ? 'Đã ẩn quiz.' : 'Đã xuất bản quiz.',
                       quiz.status === 'PUBLISHED'
                     )}
-                  >
-                    {quiz.status === 'PUBLISHED' ? <X size={15} /> : <Send size={15} />}
-                    {quiz.status === 'PUBLISHED' ? 'Ẩn quiz' : 'Xuất bản'}
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger isDisabled={busyId !== null} aria-label={`Thao tác khác với ${quiz.title}`} className="grid size-9 place-items-center rounded-lg border border-card-border text-icon-tertiary hover:bg-background-gray-secondary data-disabled:opacity-50"><MoreHorizontal size={16} /></DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {quiz.status !== 'ARCHIVED' && (
-                        <DropdownMenuItem isDisabled={busyId !== null} onAction={() => setAnswerSettingsQuiz(quiz)}>
-                          <Eye size={15} />Cấu hình xem đáp án
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem isDisabled={busyId !== null} onAction={() => void runQuizAction(quiz, () => duplicateTeacherQuiz(quiz.id), 'Đã sao chép quiz thành bản nháp.')}>
-                        <Copy size={15} />Sao chép thành bản nháp
-                      </DropdownMenuItem>
-                      {!quizIsLocked(quiz) && (
-                        <DropdownMenuItem
-                          isDisabled={busyId !== null}
-                          className="text-badge-error-text focus:text-badge-error-text"
-                          onAction={() => setConfirmDelete(quiz)}
-                        >
-                          <Trash2 size={15} />Xóa quiz
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  />
+                  {quiz.status !== 'ARCHIVED' && (
+                    <IconAction label="Cấu hình xem đáp án" icon={Eye} disabled={busyId !== null} onClick={() => setAnswerSettingsQuiz(quiz)} />
+                  )}
+                  <IconAction label="Sao chép thành bản nháp" icon={Copy} disabled={busyId !== null}
+                    onClick={() => void runQuizAction(quiz, () => duplicateTeacherQuiz(quiz.id), 'Đã sao chép quiz thành bản nháp.')} />
+                  {!quizIsLocked(quiz) && (
+                    <IconAction label="Xóa quiz" icon={Trash2} variant="danger" disabled={busyId !== null} onClick={() => setConfirmDelete(quiz)} />
+                  )}
                   </>}
         </RowActions>} />
 

@@ -12,7 +12,6 @@ import {
   ArrowUp,
   Clock3,
   Copy,
-  MoreHorizontal,
   Pencil,
   Settings,
   Plus,
@@ -71,7 +70,6 @@ import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/she
 import { useConsoleFocus } from '../../console/console-focus'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import Notice from '../../console/notice'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../tailgrids/core/dropdown'
 
 interface TeacherMockExamsProps {
   navigation?: ReactNode
@@ -417,20 +415,16 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
         renderActions={(exam) => <RowActions>
                   <IconAction label="Xem nội dung" icon={Eye} onClick={() => setViewingId(exam.id)} />
                   {!readOnly && <>
-                  <Button
-                    size="sm" appearance="ghost"
+                  <IconAction
+                    label={exam.status !== 'DRAFT' || isLocked(exam) || forceCopyIds.has(exam.id) ? 'Tạo bản nháp sửa' : 'Chỉnh sửa'}
+                    icon={Pencil}
                     disabled={busyId !== null}
                     onClick={() => void openExamForEdit(exam)}
-                  >
-                    <Pencil size={15} />
-                    {exam.status !== 'DRAFT' || isLocked(exam) || forceCopyIds.has(exam.id)
-                      ? 'Tạo bản nháp sửa'
-                      : 'Chỉnh sửa'}
-                  </Button>
+                  />
                   {exam.status !== 'ARCHIVED' && (
-                    <Button
-                      appearance="outline"
-                      size="sm"
+                    <IconAction
+                      label={exam.status === 'PUBLISHED' ? placement ? 'Ẩn bài' : 'Ẩn đề thi' : 'Xuất bản'}
+                      icon={exam.status === 'PUBLISHED' ? X : Send}
                       disabled={busyId !== null}
                       onClick={() => void runAction(
                         exam,
@@ -438,33 +432,16 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
                         placement ? exam.status === 'PUBLISHED' ? 'Đã ẩn bài đánh giá đầu vào.' : 'Đã xuất bản bài đánh giá đầu vào.' : exam.status === 'PUBLISHED' ? 'Đã ẩn đề thi thử.' : 'Đã xuất bản đề thi thử.',
                         exam.status === 'PUBLISHED'
                       )}
-                    >
-                      {exam.status === 'PUBLISHED' ? <X size={15} /> : <Send size={15} />}
-                      {exam.status === 'PUBLISHED' ? placement ? 'Ẩn bài' : 'Ẩn đề thi' : 'Xuất bản'}
-                    </Button>
+                    />
                   )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger isDisabled={busyId !== null} aria-label={'Thao tác khác với ' + exam.title} className="grid size-9 place-items-center rounded-lg border border-card-border text-icon-tertiary hover:bg-background-gray-secondary data-disabled:opacity-50"><MoreHorizontal size={16} /></DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {!placement && exam.status !== 'ARCHIVED' && (
-                        <DropdownMenuItem isDisabled={busyId !== null} onAction={() => setAnswerSettingsQuiz(exam)}>
-                          <Eye size={15} />Cấu hình xem đáp án
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem isDisabled={busyId !== null} onAction={() => void runAction(exam, () => duplicateTeacherQuiz(exam.id), 'Đã sao chép đề thi thành bản nháp.')}>
-                        <Copy size={15} />Sao chép thành bản nháp
-                      </DropdownMenuItem>
-                      {!isLocked(exam) && (
-                        <DropdownMenuItem
-                          isDisabled={busyId !== null}
-                          className="text-badge-error-text focus:text-badge-error-text"
-                          onAction={() => setConfirmDelete(exam)}
-                        >
-                          <Trash2 size={15} />Xóa đề thi
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {!placement && exam.status !== 'ARCHIVED' && (
+                    <IconAction label="Cấu hình xem đáp án" icon={Eye} disabled={busyId !== null} onClick={() => setAnswerSettingsQuiz(exam)} />
+                  )}
+                  <IconAction label="Sao chép thành bản nháp" icon={Copy} disabled={busyId !== null}
+                    onClick={() => void runAction(exam, () => duplicateTeacherQuiz(exam.id), 'Đã sao chép đề thi thành bản nháp.')} />
+                  {!isLocked(exam) && (
+                    <IconAction label="Xóa đề thi" icon={Trash2} variant="danger" disabled={busyId !== null} onClick={() => setConfirmDelete(exam)} />
+                  )}
                   </>}
         </RowActions>} />
 
