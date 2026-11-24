@@ -1,4 +1,5 @@
 import type { TeacherQuizEditor, TeacherQuizQuestion, TeacherQuizSection } from '../../../../services/teacherQuizService'
+import type { DraftSection } from '../exam-draft'
 import type { ExamPaper, ExamPaperPart, ExamPaperQuestion } from '../../ai-assistant/exam-format'
 
 /** The part that holds the questions of no section: it prints no heading. */
@@ -8,7 +9,11 @@ function part(id: string, title: string, parentTitle: string | null): ExamPaperP
   return { id, title, code: null, parentTitle, firstNumber: null, targetCount: null }
 }
 
-function paperQuestion(question: TeacherQuizQuestion, partId: string, number: number): ExamPaperQuestion {
+type PaperQuestionSource = Pick<TeacherQuizQuestion,
+  'id' | 'groupId' | 'sequence' | 'questionText' | 'options' | 'explanation' | 'imageUrl' | 'needsReview' | 'reviewNote'
+>
+
+function paperQuestion(question: PaperQuestionSource, partId: string, number: number): ExamPaperQuestion {
   return {
     id: question.id,
     partId,
@@ -87,4 +92,44 @@ export function quizToPaper(editor: TeacherQuizEditor): ExamPaper {
     })),
     questions: paperQuestions,
   }
+}
+
+/** Projects the local draft onto the same paper as a saved quiz, using client IDs for selection. */
+export function draftQuizToPaper(
+  editor: TeacherQuizEditor,
+  sections: readonly DraftSection[],
+  title: string,
+  durationMinutes: number | null,
+): ExamPaper {
+  const saved = quizToPaper(editor)
+  const savedParts = new Map(saved.parts.map((item) => [item.id, item]))
+  const savedQuestions = new Map(saved.questions.map((question) => [question.id, question]))
+  const parts = sections.map((section) => {
+    const previous = savedParts.get(section.clientId)
+    if (previous?.parentTitle != null) return previous
+    return part(section.clientId, section.unassigned ? '' : section.title, section.parentTitle)
+  })
+  let number = 0
+  const questions = sections.flatMap((section) => section.questions.map((question) => {
+    const previous = question.serverId ? savedQuestions.get(question.serverId) : undefined
+    number += 1
+    return paperQuestion({
+      id: question.clientId,
+      groupId: previous?.groupId ?? null,
+      sequence: number,
+      questionText: question.questionText,
+      explanation: question.explanation,
+      imageUrl: question.imageUrl,
+      needsReview: question.needsReview,
+      reviewNote: question.reviewNote,
+      options: question.options.map((option, index) => ({
+        id: `${question.clientId}-${index}`,
+        sequence: index,
+        label: previous?.options[index]?.label ?? String.fromCharCode(65 + index),
+        text: option.text,
+        correct: option.correct,
+      })),
+    }, section.clientId, number)
+  }))
+  return { ...saved, title, durationMinutes, parts, questions }
 }

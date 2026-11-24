@@ -18,7 +18,7 @@ function QuestionCard() {
  * then the question list and contents rail of an exam, or the single column of question cards of a lesson or chapter
  * quiz.
  */
-export default function MockExamEditorSkeleton({ rail = true }: { rail?: boolean }) {
+export default function MockExamEditorSkeleton({ rail = true, paper = false }: { rail?: boolean; paper?: boolean }) {
   const [layout] = useEditorLayout()
   const workspace = layout === 'workspace'
   const header = (
@@ -48,6 +48,7 @@ export default function MockExamEditorSkeleton({ rail = true }: { rail?: boolean
       header={header}
       label="Đang tải bài kiểm tra"
       busy
+      paper={paper}
       rail={rail && (
         <div className="flex flex-col gap-2 p-4">
           <Skeleton className="h-5 w-32" />
@@ -55,7 +56,15 @@ export default function MockExamEditorSkeleton({ rail = true }: { rail?: boolean
         </div>
       )}
     >
-      {rail ? (
+      {paper ? (
+        <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-hidden bg-background-gray-secondary p-4">
+          <Skeleton className="h-9 w-56 rounded-lg" />
+          <div className="mx-auto aspect-[210/297] w-full max-w-3xl space-y-4 rounded-sm bg-card-background p-10">
+            <Skeleton className="mx-auto h-5 w-2/5" />
+            {[0, 1, 2, 3, 4, 5].map((row) => <Skeleton key={row} className="h-4 w-4/5" />)}
+          </div>
+        </div>
+      ) : rail ? (
         <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-6">
           <Skeleton className="h-9 w-56 rounded-lg" />
           <div className="mx-auto w-full max-w-3xl"><QuestionCard /></div>

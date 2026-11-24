@@ -7,7 +7,7 @@ import type { EditorLayout } from './editor-layout'
  * the work side by side. `workspace` (the AI assistant's frame): the whole window, a white header over a grey canvas,
  * the rail, the work and the settings each a card of their own.
  */
-export default function EditorFrame({ layout, header, notices, rail, railLabel, aside, label, busy, children }: {
+export default function EditorFrame({ layout, header, notices, rail, railLabel, aside, label, busy, paper, children }: {
   layout: EditorLayout
   header: ReactNode
   /** Messages over the work (a save that failed). */
@@ -20,6 +20,7 @@ export default function EditorFrame({ layout, header, notices, rail, railLabel, 
   label?: string
   /** A placeholder while the quiz loads. */
   busy?: boolean
+  paper?: boolean
   children: ReactNode
 }) {
   const workspace = layout === 'workspace'
@@ -30,6 +31,7 @@ export default function EditorFrame({ layout, header, notices, rail, railLabel, 
       aria-busy={busy || undefined}
       className={cn(
         'flex min-w-0 flex-col',
+        paper && '[--console-docked-sheet-width:min(380px,30vw)]',
         workspace
           ? 'h-dvh bg-background-gray-secondary_alt_2'
           // The console page's header and padding stay above and around it.
@@ -44,7 +46,11 @@ export default function EditorFrame({ layout, header, notices, rail, railLabel, 
         {rail && (
           <aside
             aria-label={railLabel}
-            className={cn('hidden w-72 shrink-0 flex-col lg:flex xl:w-80', workspace ? card : 'border-r border-card-border bg-card-background')}
+            className={cn(
+              'hidden shrink-0 flex-col lg:flex',
+              paper ? 'w-52 xl:w-56' : 'w-72 xl:w-80',
+              workspace ? card : 'border-r border-card-border bg-card-background',
+            )}
           >
             {rail}
           </aside>

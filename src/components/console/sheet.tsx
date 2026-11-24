@@ -24,7 +24,7 @@ function ConsoleSheet({ open, onClose, title, closeDisabled = false, docked = fa
     return (
       <aside
         aria-label={typeof title === 'string' ? title : undefined}
-        className="flex w-[min(460px,36vw)] shrink-0 flex-col overflow-hidden rounded-2xl border border-card-border bg-card-background shadow-xs"
+        className="flex w-[var(--console-docked-sheet-width,min(460px,36vw))] shrink-0 flex-col overflow-hidden rounded-2xl border border-card-border bg-card-background shadow-xs"
       >
         <header className="flex shrink-0 items-center gap-2 border-b border-card-border py-3 pr-2 pl-5">
           <h2 className="m-0 min-w-0 flex-1 truncate text-base font-semibold text-text-primary">{title}</h2>

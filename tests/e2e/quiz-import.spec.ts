@@ -46,8 +46,9 @@ for (const [role, area, path, id, extension] of [
     await expect(dialog.getByText('Kiểm tra đáp án câu mới.')).toBeVisible()
     await dialog.getByRole('button', { name: 'Tải lại bài để kiểm tra' }).click()
     if (path === 'quizzes') await expect(page.locator('textarea').filter({ hasText: 'Câu hỏi vừa nhập' })).toBeVisible()
-    else {
-      // The exam workspace shows one question at a time: the imported one is the second cell of the list.
+    else if (path === 'mock-exams') {
+      await expect(page.getByRole('button', { name: 'Câu 2. Câu hỏi vừa nhập', exact: true })).toBeVisible()
+    } else {
       await page.getByRole('navigation', { name: 'Danh sách câu hỏi' }).getByRole('button', { name: /^Câu 2(,|$)/ }).click()
       await expect(page.getByText('Câu hỏi vừa nhập', { exact: true })).toBeVisible()
     }

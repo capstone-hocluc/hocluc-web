@@ -5,7 +5,7 @@ import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getCategories, type Category } from '../../../services/categoryService'
 import { ForbiddenPage } from '../../console/access-states'
 import QuizDetails from './QuizDetails'
-import { useRef, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowDown,
   Eye,
@@ -66,6 +66,9 @@ import ExamQuestionEditor from './ExamQuestionEditor'
 import ExamQuestionRail from './ExamQuestionRail'
 import { CHOICE_TYPES, type DraftQuestion, type DraftSection } from './exam-draft'
 import ScrollArea from '../../ui/ScrollArea'
+import ConsoleSheet from '../../console/sheet'
+import QuizSheet from './paper/QuizSheet'
+import { draftQuizToPaper } from './paper/quiz-to-paper'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
 import { useConsoleFocus } from '../../console/console-focus'
 import { Skeleton } from '../../tailgrids/core/skeleton'
@@ -510,7 +513,7 @@ function TeacherMockExamEditor({
   const editor = usePageResource(() => access.canWrite ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
   if (!access.canWrite) return <ForbiddenPage />
   if (editor.status === 'loading') {
-    return <MockExamEditorSkeleton />
+    return <MockExamEditorSkeleton paper={assessmentType === 'EXAM'} />
   }
   if (editor.status !== 'ready' || !editor.data) {
     return (
@@ -562,9 +565,8 @@ function TeacherMockExamForm({
 }) {
   const access = useQuizAccess()
   const [layout] = useEditorLayout()
-  // In the assistant's frame the settings sit beside the questions when there is room; a drawer otherwise.
-  const settingsDocked = useMinWidth(1024) && layout === 'workspace'
   const placement = assessmentType === 'PLACEMENT'
+  const settingsDocked = useMinWidth(placement ? 1024 : 1280) && (!placement || layout === 'workspace')
   const originalEditorRef = useRef<TeacherQuizEditor | null>(initial)
   const serverQuizId = initial.quiz.id
   const quizLabels = useQuizLabels(serverQuizId)
@@ -574,6 +576,10 @@ function TeacherMockExamForm({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [railOpen, setRailOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const paper = useMemo(
+    () => placement ? null : draftQuizToPaper(initial, sections, settings.title, Number(settings.duration) || null),
+    [initial, placement, sections, settings.title, settings.duration],
+  )
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
@@ -595,13 +601,23 @@ function TeacherMockExamForm({
   const numbered = sections.flatMap((section) => section.questions.map((question) => ({ section, question })))
   const activeEntry = numbered.find((entry) => entry.question.clientId === selectedId)
     ?? numbered.find((entry) => entry.section.clientId === selectedId)
-    ?? (sections.some((section) => section.clientId === selectedId) ? null : numbered[0] ?? null)
+    ?? (placement && !sections.some((section) => section.clientId === selectedId) ? numbered[0] ?? null : null)
   const activeSection = activeEntry?.section ?? sections.find((section) => section.clientId === selectedId) ?? sections[0] ?? null
   const railSelectedId = activeEntry ? activeEntry.question.clientId : selectedId
   const importBlockedReason = publishedQuiz || settingsLocked ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
       : ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
         : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
           : structureReadOnly ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : ''
+
+  const selectPaperItem = (id: string) => {
+    if (!placement) setSettingsOpen(false)
+    setSelectedId(id)
+  }
+
+  const toggleSettings = () => {
+    if (!placement) setSelectedId(null)
+    setSettingsOpen((open) => !open)
+  }
 
   const updateSettings = <K extends keyof ExamSettings>(key: K, value: ExamSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }))
@@ -625,13 +641,13 @@ function TeacherMockExamForm({
     next.push(created)
     if (unassigned) next.push(unassigned)
     setSections(next)
-    setSelectedId(created.clientId)
+    selectPaperItem(created.clientId)
   }
 
   const addQuestion = (sectionId: string) => {
     const created = createDraftQuestion()
     setSections((items) => items.map((section) => section.clientId === sectionId ? { ...section, questions: [...section.questions, created] } : section))
-    setSelectedId(created.clientId)
+    selectPaperItem(created.clientId)
   }
 
   const deleteQuestion = (sectionId: string, clientId: string) => {
@@ -640,7 +656,7 @@ function TeacherMockExamForm({
     setSections((items) => items.map((section) => section.clientId === sectionId
       ? { ...section, questions: section.questions.filter((question) => question.clientId !== clientId) }
       : section))
-    setSelectedId(neighbour ? neighbour.question.clientId : sectionId)
+    selectPaperItem(neighbour ? neighbour.question.clientId : sectionId)
   }
 
   const moveSection = (clientId: string, direction: -1 | 1) => {
@@ -732,7 +748,7 @@ function TeacherMockExamForm({
     const problem = validate(publish)
     if (problem.message) {
       setError(problem.message)
-      if (problem.questionId) setSelectedId(problem.questionId)
+      if (problem.questionId) selectPaperItem(problem.questionId)
       if (problem.inSettings) setSettingsOpen(true)
       return
     }
@@ -887,6 +903,7 @@ function TeacherMockExamForm({
         skill={question.serverId && <QuizQuestionSkill quizId={serverQuizId} questionId={question.serverId} resource={quizLabels} />}
         sectionTitle={section.title}
         placement={placement}
+        inPanel={!placement}
         editable={canEditContent && question.editable && (!placement || question.questionType === 'SINGLE_CHOICE')}
         structureEditable={canEditQuestions}
         busy={busy}
@@ -898,8 +915,8 @@ function TeacherMockExamForm({
         onChange={(update) => updateQuestion(section.clientId, question.clientId, update)}
         onMove={(direction) => moveQuestion(section.clientId, question.clientId, direction)}
         onDelete={() => deleteQuestion(section.clientId, question.clientId)}
-        onPrevious={number > 1 ? () => setSelectedId(numbered[number - 2].question.clientId) : null}
-        onNext={number < numbered.length ? () => setSelectedId(numbered[number].question.clientId) : null}
+        onPrevious={number > 1 ? () => selectPaperItem(numbered[number - 2].question.clientId) : null}
+        onNext={number < numbered.length ? () => selectPaperItem(numbered[number].question.clientId) : null}
       />
     )
   }
@@ -907,16 +924,27 @@ function TeacherMockExamForm({
   // In the drawer every choice also closes it, so the question it leads to is in view.
   const rail = (afterChoice?: () => void) => (
     <ExamQuestionRail sections={sections} selectedId={railSelectedId} canEditStructure={canEditQuestions} busy={busy}
-      onSelect={(clientId) => { setSelectedId(clientId); afterChoice?.() }}
+      onSelect={(clientId) => { selectPaperItem(clientId); afterChoice?.() }}
       onAddQuestion={(sectionId) => { addQuestion(sectionId); afterChoice?.() }}
       onAddSection={() => { addSection(); afterChoice?.() }} />
+  )
+
+  const sectionIsEditable = activeSection && canEditQuestions && !activeSection.unassigned
+  const sectionControls = sectionIsEditable ? sectionBar(activeSection) : null
+  const questionPanel = !placement && !settingsOpen && selectedId && (activeEntry || sectionIsEditable) && (
+    <ConsoleSheet open docked={settingsDocked} onClose={() => setSelectedId(null)}
+      title={activeEntry ? `Câu ${numberOf.get(activeEntry.question.clientId)}` : `Phần ${editableSections.indexOf(activeSection) + 1}`}>
+      {activeEntry && questionEditor(activeEntry.section, activeEntry.question)}
+      {sectionControls}
+    </ConsoleSheet>
   )
 
   return (
     <EditorFrame
       layout={layout}
+      paper={!placement}
       header={<EditorTopBar layout={layout} title={quizSnapshot.title} backLabel={backLabel} status={quizSnapshot.status} onBack={onCancel}>
-        <Button appearance="ghost" aria-pressed={settingsDocked ? settingsOpen : undefined} onClick={() => setSettingsOpen((open) => !open)} disabled={busy}>
+        <Button appearance="ghost" aria-pressed={settingsDocked ? settingsOpen : undefined} onClick={toggleSettings} disabled={busy}>
           <Settings size={15} />Thiết lập
         </Button>
         <Button appearance="ghost" className={ambiguousQuestionSave ? undefined : 'max-sm:hidden'} onClick={onCancel} disabled={busy}>
@@ -942,11 +970,14 @@ function TeacherMockExamForm({
       </>}
       rail={rail()}
       railLabel="Mục lục đề"
-      aside={<ExamSettingsSheet docked={settingsDocked} open={settingsOpen} onClose={() => setSettingsOpen(false)} placement={placement} settings={settings}
-        onChange={updateSettings} courseName={quizSnapshot.courseTitle || 'Khóa học đã chọn'}
-        error={error && error === validateExamSettings(settings, placement, quizSnapshot) ? error : ''}
-        nameDisabled={publishedQuiz || busy} rulesDisabled={fieldsLocked || busy} locked={settingsLocked} published={publishedQuiz}
-        fromRequired={Boolean(quizSnapshot.availableFrom)} untilRequired={Boolean(quizSnapshot.availableUntil)} />}
+      aside={<>
+        <ExamSettingsSheet docked={settingsDocked} open={settingsOpen} onClose={() => setSettingsOpen(false)} placement={placement} settings={settings}
+          onChange={updateSettings} courseName={quizSnapshot.courseTitle || 'Khóa học đã chọn'}
+          error={error && error === validateExamSettings(settings, placement, quizSnapshot) ? error : ''}
+          nameDisabled={publishedQuiz || busy} rulesDisabled={fieldsLocked || busy} locked={settingsLocked} published={publishedQuiz}
+          fromRequired={Boolean(quizSnapshot.availableFrom)} untilRequired={Boolean(quizSnapshot.availableUntil)} />
+        {questionPanel}
+      </>}
     >
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex shrink-0 flex-wrap items-center gap-2 px-4 pt-3 sm:px-6">
@@ -956,23 +987,28 @@ function TeacherMockExamForm({
               <Button appearance="outline" size="sm" onClick={() => setRailOpen(true)}>Danh sách câu</Button>
             </div>
             <ScrollArea aria-label="Nội dung đề" className="min-h-0 flex-1">
-              {placement && ['loading', 'error', 'forbidden', 'not-found'].includes(categories.status) && (
-                <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-4 sm:px-6">
-                  {categories.status === 'loading' && <Skeleton className="h-4 w-44" role="status" aria-label="Đang tải môn học" />}
-                  {['error', 'forbidden', 'not-found'].includes(categories.status) && <Notice tone="warning">{categories.errorMessage || 'Không tải được các môn bạn được phép xem. Có thể lưu nháp và bổ sung sau.'}<Button appearance="outline" onClick={categories.reload}>Thử tải môn học</Button></Notice>}
-                </div>
-              )}
-              {activeSection && canEditQuestions && !activeSection.unassigned && sectionBar(activeSection)}
-              {activeEntry ? questionEditor(activeEntry.section, activeEntry.question) : (
-                <div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-3 p-4 sm:p-6">
-                  <p className="m-0 w-full rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
-                    {sections.length === 0 ? 'Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.' : 'Phần này chưa có câu hỏi.'}
-                  </p>
-                  {canEditQuestions && (sections.length === 0
-                    ? <Button appearance="outline" onClick={addSection} disabled={busy}><Plus size={15} />Thêm phần thi</Button>
-                    : activeSection && <Button appearance="outline" onClick={() => addQuestion(activeSection.clientId)} disabled={busy}><Plus size={15} />Thêm câu hỏi đầu tiên</Button>)}
-                </div>
-              )}
+              {paper ? (
+                <QuizSheet paper={paper} label="Trang giấy đề thi" selectedId={activeEntry?.question.clientId}
+                  onSelectQuestion={selectPaperItem} />
+              ) : (<>
+                {['loading', 'error', 'forbidden', 'not-found'].includes(categories.status) && (
+                  <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 pt-4 sm:px-6">
+                    {categories.status === 'loading' && <Skeleton className="h-4 w-44" role="status" aria-label="Đang tải môn học" />}
+                    {['error', 'forbidden', 'not-found'].includes(categories.status) && <Notice tone="warning">{categories.errorMessage || 'Không tải được các môn bạn được phép xem. Có thể lưu nháp và bổ sung sau.'}<Button appearance="outline" onClick={categories.reload}>Thử tải môn học</Button></Notice>}
+                  </div>
+                )}
+                {sectionControls}
+                {activeEntry ? questionEditor(activeEntry.section, activeEntry.question) : (
+                  <div className="mx-auto flex w-full max-w-3xl flex-col items-start gap-3 p-4 sm:p-6">
+                    <p className="m-0 w-full rounded-xl border border-dashed border-card-border bg-background-gray-secondary p-5 text-center text-sm text-text-tertiary">
+                      {sections.length === 0 ? 'Chưa có phần thi hoặc câu hỏi. Thêm một phần để bắt đầu soạn đề.' : 'Phần này chưa có câu hỏi.'}
+                    </p>
+                    {canEditQuestions && (sections.length === 0
+                      ? <Button appearance="outline" onClick={addSection} disabled={busy}><Plus size={15} />Thêm phần thi</Button>
+                      : activeSection && <Button appearance="outline" onClick={() => addQuestion(activeSection.clientId)} disabled={busy}><Plus size={15} />Thêm câu hỏi đầu tiên</Button>)}
+                  </div>
+                )}
+              </>)}
             </ScrollArea>
           </div>
 
