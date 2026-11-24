@@ -72,6 +72,8 @@ export function useDraftBank(conversationId: string | null, refreshKey: string, 
     [byItem, scopes]
   )
 
+  const subjectId = (itemId: string) => byItem?.get(itemId)?.subjectId ?? null
+
   const savedQuestionId = useCallback((itemId: string) => byItem?.get(itemId)?.questionId ?? null, [byItem])
 
   /** The viewer may save the question now: its subject is theirs and it is not in the bank yet. */
@@ -106,7 +108,7 @@ export function useDraftBank(conversationId: string | null, refreshKey: string, 
     [enabled, conversationId]
   )
 
-  return { ready, authorable, savedQuestionId, canSave, isSaving, save }
+  return { ready, authorable, subjectId, savedQuestionId, canSave, isSaving, save }
 }
 
 export type DraftBank = ReturnType<typeof useDraftBank>
