@@ -1768,11 +1768,20 @@ test('the exam list groups drafts, published exams and loaded papers, and keeps 
   await expect(published.getByRole('listitem')).toHaveText([/^Đề giữa kỳ đã giao.*Quiz$/])
   // A paper read to the end carries no tag: its group says what it is.
   await expect(papers.getByRole('listitem')).toHaveText(['Đề mẫu 2021'])
-  // As a word processor's tabs panel: an arrow that puts it away, the tabs with "+" beside them; no title, and
-  // loading a paper is the header's. The header has no buttons of its own for a new exam or for the list.
+  // The back arrow and actions share a row above the two full-width tabs.
   await expect(panel.getByRole('tab', { name: 'Đề', exact: true })).toHaveAttribute('aria-selected', 'true')
   await expect(panel.getByRole('heading')).toHaveCount(0)
   await expect(panel.getByRole('button', { name: 'Thêm đề', exact: true })).toBeVisible()
+  const back = await panel.getByRole('button', { name: 'Thu gọn danh sách đề' }).boundingBox()
+  const add = await panel.getByRole('button', { name: 'Thêm đề', exact: true }).boundingBox()
+  const settings = await panel.getByRole('button', { name: 'Tùy chỉnh danh sách' }).boundingBox()
+  const examTab = await panel.getByRole('tab', { name: 'Đề', exact: true }).boundingBox()
+  const templateTab = await panel.getByRole('tab', { name: 'Mẫu đề thi' }).boundingBox()
+  expect(add?.y).toBe(back?.y)
+  expect(settings?.y).toBe(back?.y)
+  expect(add?.x).toBeGreaterThan(back?.x ?? 0)
+  expect(examTab?.y).toBeGreaterThan(back?.y ?? 0)
+  expect(examTab?.width).toBeCloseTo(templateTab?.width ?? 0, 0)
   await expect(panel.getByRole('button', { name: /Nạp đề/ })).toHaveCount(0)
   await expect(page.getByRole('banner').getByRole('button', { name: /Đề mới|Danh sách đề|Thêm đề/ })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Hiện danh sách đề', exact: true })).toBeHidden()
