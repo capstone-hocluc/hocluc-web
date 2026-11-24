@@ -1384,11 +1384,7 @@ test('stopping a run asks the server to cancel it', async ({ page }, testInfo) =
   await expect(stop).toBeVisible()
   expect((await stop.boundingBox())?.width).toBe(28)
   expect((await stop.locator('svg').boundingBox())?.width).toBeLessThanOrEqual(14)
-  // While the run goes on, the time of the whole task counts up above its steps.
-  const runTime = page.locator('[data-slot="run-time"]')
-  await expect(runTime).toHaveText(/^Đang làm · /)
-  const counted = (await runTime.textContent()) ?? ''
-  await expect(runTime).not.toHaveText(counted, { timeout: 5_000 })
+  await expect(page.getByText(/^Đang làm · /)).toHaveCount(0)
   await page.getByRole('complementary', { name: 'Trợ lý AI', exact: true }).screenshot({ path: testInfo.outputPath('run-going.png') })
   await stop.click()
 
@@ -1568,8 +1564,8 @@ test('a reopened reply shows each step of its run and how long each took', async
 
   const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
   await expect(chat.getByText('Mình đã soạn xong 2 câu, đề nằm ở trang bên cạnh.')).toBeVisible()
-  // The whole task, from the request until its reply.
-  await expect(chat.locator('[data-slot="run-time"]')).toHaveText('Đã làm trong 1 phút 35 giây')
+  await expect(chat.getByText(/^Đã làm trong/)).toHaveCount(0)
+  await expect(chat.locator('[data-slot="tool-group-trigger"]')).toHaveCount(0)
   // Each stage heads a disclosure of its own and takes its share of the task, from where the stage before it stopped
   // (the plan, told only once done, from the end of the survey) until it stopped, the last until the reply: they add
   // up to the task.
@@ -1585,6 +1581,8 @@ test('a reopened reply shows each step of its run and how long each took', async
   await expect(chat.getByText('Khảo sát ngân hàng câu hỏi')).toHaveCount(1)
   const calls = chat.locator('[data-slot="tool-fallback-trigger"]')
   await expect(calls).toHaveCount(3)
+  const survey = chat.locator('[data-stage-disclosure]').filter({ hasText: 'Khảo sát ngân hàng câu hỏi' })
+  await expect(survey.locator('[data-slot="reasoning-content"]').getByText('Tìm câu mẫu trong ngân hàng')).toBeVisible()
   await expect(calls.nth(0)).toContainText('Tìm câu mẫu trong ngân hàng')
   await expect(calls.nth(0).locator('[data-slot="tool-fallback-duration"]')).toHaveText('4,5 giây')
   await expect(calls.nth(1)).toContainText('Kiểm tra lại câu')
@@ -3549,10 +3547,8 @@ test('a run still going when the exam is opened is followed again, from right be
   const stop = page.getByRole('button', { name: 'Dừng tạo câu trả lời' })
   await expect(stop).toBeVisible({ timeout: 15_000 })
   await expect(page.getByRole('button', { name: 'Khảo sát ngân hàng câu hỏi' })).toBeVisible()
-  // Caught up on in one go, the steps keep the times they happened at: the task counts from when the run began, the
-  // survey and its call took the minute they did, and the question being written counts from when it was begun.
-  // (From the request 95 seconds back, however long the page took to open; counted from the page it would read seconds.)
-  await expect(page.locator('[data-slot="run-time"]')).toHaveText(/^Đang làm · (1 phút (3[5-9]|[45]\d) giây|[2-4] phút( \d+ giây)?)$/)
+  // The stages keep their original times after reconnecting.
+  await expect(page.getByText(/^Đang làm · /)).toHaveCount(0)
   await expect(page.locator('[data-slot="reasoning-trigger-label"]').first()).toHaveText('Khảo sát ngân hàng câu hỏi · 1 phút 5 giây')
   // The stage being written goes on with its calls after it in the thread: its title shimmers and its time counts up.
   const writing = page.locator('[data-slot="reasoning-trigger-label"]').filter({ hasText: /^Soạn câu hỏi/ })

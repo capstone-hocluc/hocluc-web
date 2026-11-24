@@ -26,6 +26,7 @@ function stageOf(parts: Parts, group: ThreadGroupPart) {
  * that goes on shimmers and counts up, also once its calls follow it in the thread.
  */
 export function StageGroup({ group, children }: PropsWithChildren<{ group: ThreadGroupPart }>) {
+  const paperReading = useAuiState(({ message }) => Boolean(message.metadata.custom?.reading))
   const head = useAuiState(({ message }) => {
     const stage = stageOf(message.parts, group)
     const heads = message.metadata.custom?.stageHeads as readonly StageHead[] | undefined
@@ -45,23 +46,24 @@ export function StageGroup({ group, children }: PropsWithChildren<{ group: Threa
   const empty = useAuiState(({ message }) => {
     const stage = stageOf(message.parts, group)
     const part = stage === undefined ? undefined : message.parts[stage.index]
-    return part?.type !== 'reasoning' || part.text.trim() === ''
+    return group.indices.length === 1 && (part?.type !== 'reasoning' || part.text.trim() === '')
   })
   const elapsed = useElapsed(
     startedAt === undefined ? undefined : { startedAt, ...(completedAt !== undefined ? { completedAt } : {}) },
     running
   )
   return (
-    <ReasoningRoot variant="ghost" streaming={running}>
+    <ReasoningRoot variant="ghost" streaming={running} data-stage-disclosure="">
       <ReasoningTrigger
         active={running}
         label={head?.title}
         duration={elapsed === undefined ? undefined : elapsed / 1000}
         disabled={empty}
-        className="max-w-full disabled:cursor-default disabled:hover:text-muted-foreground [&:disabled_[data-slot=reasoning-trigger-chevron]]:hidden"
+        durationClassName={paperReading ? undefined : 'text-text-tertiary'}
+        className={`max-w-full disabled:cursor-default [&:disabled_[data-slot=reasoning-trigger-chevron]]:hidden ${paperReading ? 'disabled:hover:text-muted-foreground' : 'text-foreground disabled:hover:text-foreground'}`}
       />
       {!empty && (
-        <ReasoningContent aria-busy={running}>
+        <ReasoningContent aria-busy={running} className={paperReading ? undefined : 'text-foreground'}>
           <ReasoningText>{children}</ReasoningText>
         </ReasoningContent>
       )}

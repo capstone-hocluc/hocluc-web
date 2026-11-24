@@ -57,7 +57,7 @@ function shares(stages: readonly AiTraceStage[], since: number | undefined, unti
  * task from `since`, the request, until `until`, the reply (see `shares`). The tool's raw arguments never reach the
  * page.
  */
-export function stageParts(stages: readonly AiTraceStage[], since?: number, until?: number): Part[] {
+export function stageParts(stages: readonly AiTraceStage[], since?: number, until?: number, groupCalls = true): Part[] {
   const times = shares(stages, since, until)
   return stages.flatMap((stage, index): Part[] => [
     // The title is the stage's summary: assistant-ui keeps a reasoning part with no words only when it has one.
@@ -65,7 +65,7 @@ export function stageParts(stages: readonly AiTraceStage[], since?: number, unti
     ...(stage.items ?? []).map(
       (item): Part => ({
         type: 'tool-call',
-        toolCallId: item.id,
+        toolCallId: groupCalls ? `stage-${index}:${item.id}` : item.id,
         toolName: item.label,
         args: {},
         argsText: '',

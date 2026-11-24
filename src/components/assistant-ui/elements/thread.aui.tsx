@@ -154,6 +154,10 @@ const messageGroupBy = (
   context?: Parameters<typeof partGroupBy>[1],
 ): readonly ThreadGroupKey[] => {
   const path = partGroupBy(part, context);
+  if (part.type === "tool-call" && path.includes("group-tool")) {
+    const stage = /^stage-\d+(?=:)/.exec(part.toolCallId)?.[0];
+    if (stage) return ["group-chainOfThought", `group-reasoning:${stage}`];
+  }
   if (part.type !== "reasoning" || !part.id) return path;
   return path.map((key) =>
     key === "group-reasoning" ? (`group-reasoning:${part.id}` as const) : key,

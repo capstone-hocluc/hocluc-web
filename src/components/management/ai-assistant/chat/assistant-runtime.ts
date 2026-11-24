@@ -41,7 +41,7 @@ function readingMessage(turn: ReadingTurn): ThreadMessageLike {
     metadata: {
       custom: { reading: turn, actionsHidden: true, stageHeads: stageHeads(turn.stages), runTime: turn.runTime },
     },
-    content: [{ type: 'data-reading', data: null }, ...stageParts(turn.stages)],
+    content: [{ type: 'data-reading', data: null }, ...stageParts(turn.stages, undefined, undefined, false)],
   }
 }
 
@@ -100,7 +100,7 @@ function convertMessage(message: AiChatMessage, examCard: boolean, askedAt: numb
       id: PROGRESS_ID,
       role: 'assistant',
       status: { type: 'running' },
-      metadata: { custom: { stageHeads: stageHeads(message.stages), runTime: taskTime(askedAt) } },
+      metadata: { custom: { stageHeads: stageHeads(message.stages) } },
       content: [...stepParts(message, askedAt), ...(message.body ? [{ type: 'text' as const, text: message.body }] : [])],
     }
   }
@@ -123,7 +123,7 @@ function convertMessage(message: AiChatMessage, examCard: boolean, askedAt: numb
       role: 'assistant',
       createdAt,
       status: { type: 'incomplete', reason: 'error', error: message.body },
-      metadata: { custom: { source: message, stageHeads: stageHeads(message.stages), runTime } },
+      metadata: { custom: { source: message, stageHeads: stageHeads(message.stages) } },
       content: stepParts(message, askedAt, runTime),
     }
   }
@@ -135,7 +135,7 @@ function convertMessage(message: AiChatMessage, examCard: boolean, askedAt: numb
     role: 'assistant',
     createdAt,
     status: { type: 'complete', reason: 'stop' },
-    metadata: { custom: { source: message, stageHeads: stageHeads(message.stages), runTime } },
+    metadata: { custom: { source: message, stageHeads: stageHeads(message.stages) } },
     content: [
       ...stepParts(message, askedAt, runTime),
       ...(message.body ? [{ type: 'text' as const, text: message.body }] : []),

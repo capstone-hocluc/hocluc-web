@@ -4,19 +4,19 @@ import { formatDuration } from '@/components/assistant-ui/elements/format-durati
 import type { ThreadGroupPart } from '@/components/assistant-ui/elements/thread.aui'
 import { useElapsed, type StepTiming } from './use-elapsed'
 
-/**
- * Every step of a reply (its stages and the tools they called), headed by how long the whole task took: counting up
- * while it runs. A turn gives that span as `metadata.custom.runTime` (from the request to the reply, or a paper's
- * reading); without it, it is the span of the timed steps.
- */
+/** Paper readings retain their run timer. Assistant stages show their own times. */
 export function RunStepsGroup({ group, children }: PropsWithChildren<{ group: ThreadGroupPart }>) {
+  const paperReading = useAuiState(({ message }) => Boolean(message.metadata.custom?.reading))
   const runTime = useAuiState(({ message }) => message.metadata.custom?.runTime as StepTiming | undefined)
   const status = useAuiState(({ message }) => message.status?.type)
   const running = status === 'running'
-  const elapsed = useElapsed(runTime ?? group.timing, running)
+  const elapsed = useElapsed(paperReading ? runTime ?? group.timing : undefined, paperReading && running)
   return (
     <div data-slot="aui_chain-of-thought">
-      {elapsed !== undefined && (
+      {!paperReading && status === 'incomplete' && (
+        <p className="m-0 py-1 text-xs text-muted-foreground">Thất bại</p>
+      )}
+      {paperReading && elapsed !== undefined && (
         <p data-slot="run-time" className="m-0 py-1 text-xs text-muted-foreground tabular-nums">
           {running
             ? `Đang làm · ${formatDuration(elapsed)}`
