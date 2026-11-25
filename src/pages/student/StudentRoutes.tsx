@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
-import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
+import SchedulingPageFallback from '../../components/console/schedule/scheduling-page-fallback'
 import { isStudentAssessmentsPath, parseStudentRoute, studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
 import { getAttempt, type QuizDetail } from '../../services/assessmentService'
 import { usePageResource } from '../../hooks/usePageResource'

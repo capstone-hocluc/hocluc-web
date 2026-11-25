@@ -101,6 +101,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'QUIZ_READ',
     'QUIZ_WRITE',
     'SCHEDULE_READ',
+    'SCHEDULE_WRITE',
     'USER_READ',
     'ORDER_READ',
     'ENROLLMENT_READ',

@@ -87,8 +87,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, group: 'overview' },
   {
     page: 'schedules',
-    label: 'Lịch học',
-    tabLabel: 'Lịch học',
+    label: 'Lịch dạy',
     icon: CalendarDays,
     group: 'operations',
     permission: 'SCHEDULE_READ',
@@ -99,7 +98,6 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     page: 'attendance',
     tabOf: 'schedules',
     label: 'Điểm danh',
-    tabLabel: 'Điểm danh',
     icon: ClipboardCheck,
     group: 'operations',
     permission: 'ATTENDANCE_WRITE',

@@ -16,7 +16,7 @@ import CreditManagement from './crud/credit-management'
 import EnrollmentManagement from './crud/enrollment-management'
 import ManagerOverview from './ManagerOverview'
 import MentorOverview from './MentorOverview'
-import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
+import SchedulingPageFallback from '../console/schedule/scheduling-page-fallback'
 import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
