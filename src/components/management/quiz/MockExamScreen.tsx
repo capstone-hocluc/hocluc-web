@@ -24,6 +24,7 @@ import QuizDetails from './QuizDetails'
 import QuizEditor from './QuizEditor'
 import { isExamLocked as isLocked, type AssessmentType } from './exam-settings'
 import { describePublishProblems } from './publish-problems'
+import { quizPublishConfirmation } from './quiz-publish-confirmation'
 
 interface TeacherMockExamsProps {
   navigation?: ReactNode
@@ -45,6 +46,7 @@ export default function MockExamScreen({ navigation, assessmentType = 'EXAM', on
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
+  const [confirmPublish, setConfirmPublish] = useState<TeacherQuizRecord | null>(null)
   const [answerSettingsQuiz, setAnswerSettingsQuiz] = useState<TeacherQuizRecord | null>(null)
   const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
 
@@ -119,6 +121,7 @@ export default function MockExamScreen({ navigation, assessmentType = 'EXAM', on
   }
 
   const examItems = (quizzes.data ?? []).filter(quiz => quiz.type === assessmentType)
+  const publishConfirmation = confirmPublish ? quizPublishConfirmation(confirmPublish) : null
 
   return (
     <section className="flex min-w-0 flex-col gap-5">
@@ -142,12 +145,18 @@ export default function MockExamScreen({ navigation, assessmentType = 'EXAM', on
                       label={exam.status === 'PUBLISHED' ? placement ? 'Ẩn bài' : 'Ẩn đề thi' : 'Xuất bản'}
                       icon={exam.status === 'PUBLISHED' ? X : Send}
                       disabled={busyId !== null}
-                      onClick={() => void runAction(
-                        exam,
-                        () => exam.status === 'PUBLISHED' ? unpublishTeacherQuiz(exam.id) : publishTeacherQuiz(exam.id),
-                        placement ? exam.status === 'PUBLISHED' ? 'Đã ẩn bài đánh giá đầu vào.' : 'Đã xuất bản bài đánh giá đầu vào.' : exam.status === 'PUBLISHED' ? 'Đã ẩn đề thi thử.' : 'Đã xuất bản đề thi thử.',
-                        exam.status === 'PUBLISHED'
-                      )}
+                      onClick={() => {
+                        if (exam.status !== 'PUBLISHED' && quizPublishConfirmation(exam)) {
+                          setConfirmPublish(exam)
+                          return
+                        }
+                        void runAction(
+                          exam,
+                          () => exam.status === 'PUBLISHED' ? unpublishTeacherQuiz(exam.id) : publishTeacherQuiz(exam.id),
+                          placement ? exam.status === 'PUBLISHED' ? 'Đã ẩn bài đánh giá đầu vào.' : 'Đã xuất bản bài đánh giá đầu vào.' : exam.status === 'PUBLISHED' ? 'Đã ẩn đề thi thử.' : 'Đã xuất bản đề thi thử.',
+                          exam.status === 'PUBLISHED'
+                        )
+                      }}
                     />
                   )}
                   {!placement && exam.status !== 'ARCHIVED' && (
@@ -176,6 +185,27 @@ export default function MockExamScreen({ navigation, assessmentType = 'EXAM', on
             await updateTeacherQuiz(answerSettingsQuiz.id, { showAnswers })
             setAnswerSettingsQuiz(null)
           }, 'Đã lưu cấu hình xem đáp án.')} />
+      )}
+      {!readOnly && confirmPublish && publishConfirmation && (
+        <ConfirmDialog
+          title={publishConfirmation.title}
+          description={publishConfirmation.description}
+          cancelLabel="Hủy"
+          confirmLabel={publishConfirmation.confirmLabel}
+          mobileTouchTargets
+          busy={busyId === confirmPublish.id}
+          busyLabel="Đang xuất bản..."
+          onCancel={() => { if (!busyId) setConfirmPublish(null) }}
+          onConfirm={async () => {
+            const target = confirmPublish
+            await runAction(
+              target,
+              () => publishTeacherQuiz(target.id),
+              placement ? 'Đã xuất bản bài đánh giá đầu vào.' : 'Đã xuất bản đề thi thử.',
+            )
+            setConfirmPublish(null)
+          }}
+        />
       )}
       {!readOnly && confirmDelete && (
         <ConfirmDialog

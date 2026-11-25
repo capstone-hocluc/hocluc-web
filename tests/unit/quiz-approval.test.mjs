@@ -2,11 +2,12 @@ import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { createServer } from 'vite'
 
-let vite, reading, service
+let vite, reading, publishing, service
 before(async () => {
   vite = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true }, server: { middlewareMode: true, watch: null, ws: false } })
-  ;[reading, service] = await Promise.all([
+  ;[reading, publishing, service] = await Promise.all([
     vite.ssrLoadModule('/src/components/management/ai-assistant/chat/reading-permission.ts'),
+    vite.ssrLoadModule('/src/components/management/quiz/quiz-publish-confirmation.ts'),
     vite.ssrLoadModule('/src/services/aiAssistantService.ts'),
   ])
 })
@@ -76,4 +77,22 @@ test('both choices send the saved mode, request and config as an agreed message'
     await service.sendAiMessage('conversation-1', reading.readingPermissionReply(card('permission-1'), allow))
   }
   assert.deepEqual(expected, [])
+})
+
+test('only draft copies with an active original require replacement confirmation', () => {
+  const draft = { status: 'DRAFT', replacesQuizId: 'published-quiz', replacesQuizTitle: 'Đề gốc' }
+  assert.deepEqual(publishing.quizPublishConfirmation(draft), {
+    title: 'Thay bản đang dùng?',
+    description: 'Xuất bản bản này sẽ gỡ “Đề gốc” khỏi học viên.',
+    confirmLabel: 'Xuất bản và thay',
+  })
+  assert.deepEqual(publishing.quizPublishConfirmation({ ...draft, replacesQuizTitle: '   ' }), {
+    title: 'Thay bản đang dùng?',
+    description: 'Xuất bản bản này sẽ gỡ bản đang dùng khỏi học viên.',
+    confirmLabel: 'Xuất bản và thay',
+  })
+  assert.equal(publishing.quizPublishConfirmation({ ...draft, replacesQuizId: null }), null)
+  assert.equal(publishing.quizPublishConfirmation({ status: 'DRAFT' }), null)
+  assert.equal(publishing.quizPublishConfirmation({ ...draft, status: 'PUBLISHED' }), null)
+  assert.equal(publishing.quizPublishConfirmation({ ...draft, status: 'ARCHIVED' }), null)
 })

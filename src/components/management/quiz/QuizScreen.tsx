@@ -24,6 +24,7 @@ import QuizEditor from './QuizEditor'
 import { isExamLocked as quizIsLocked } from './exam-settings'
 import { formatApiError } from './quiz-form-errors'
 import { describePublishProblems } from './publish-problems'
+import { quizPublishConfirmation } from './quiz-publish-confirmation'
 
 interface TeacherQuizProps {
   navigation?: ReactNode
@@ -44,6 +45,7 @@ export default function QuizScreen({ navigation, course, onBack, onAction, start
   const [viewingId, setViewingId] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<TeacherQuizRecord | null>(null)
+  const [confirmPublish, setConfirmPublish] = useState<TeacherQuizRecord | null>(null)
   const [answerSettingsQuiz, setAnswerSettingsQuiz] = useState<TeacherQuizRecord | null>(null)
   const [forceCopyIds, setForceCopyIds] = useState<Set<string>>(() => new Set())
 
@@ -93,6 +95,7 @@ export default function QuizScreen({ navigation, course, onBack, onAction, start
   }
 
   const quizItems = (quizzes.data ?? []).filter(quiz => quiz.type !== 'EXAM' && quiz.type !== 'PLACEMENT')
+  const publishConfirmation = confirmPublish ? quizPublishConfirmation(confirmPublish) : null
 
   return (
     <section className="flex min-w-0 flex-col gap-5">
@@ -130,12 +133,18 @@ export default function QuizScreen({ navigation, course, onBack, onAction, start
                     label={quiz.status === 'PUBLISHED' ? 'Ẩn quiz' : 'Xuất bản'}
                     icon={quiz.status === 'PUBLISHED' ? X : Send}
                     disabled={busyId !== null}
-                    onClick={() => runQuizAction(
-                      quiz,
-                      () => quiz.status === 'PUBLISHED' ? unpublishTeacherQuiz(quiz.id) : publishTeacherQuiz(quiz.id),
-                      quiz.status === 'PUBLISHED' ? 'Đã ẩn quiz.' : 'Đã xuất bản quiz.',
-                      quiz.status === 'PUBLISHED'
-                    )}
+                    onClick={() => {
+                      if (quiz.status !== 'PUBLISHED' && quizPublishConfirmation(quiz)) {
+                        setConfirmPublish(quiz)
+                        return
+                      }
+                      void runQuizAction(
+                        quiz,
+                        () => quiz.status === 'PUBLISHED' ? unpublishTeacherQuiz(quiz.id) : publishTeacherQuiz(quiz.id),
+                        quiz.status === 'PUBLISHED' ? 'Đã ẩn quiz.' : 'Đã xuất bản quiz.',
+                        quiz.status === 'PUBLISHED'
+                      )
+                    }}
                   />
                   {quiz.status !== 'ARCHIVED' && (
                     <IconAction label="Cấu hình xem đáp án" icon={KeyRound} disabled={busyId !== null} onClick={() => setAnswerSettingsQuiz(quiz)} />
@@ -163,6 +172,23 @@ export default function QuizScreen({ navigation, course, onBack, onAction, start
             await updateTeacherQuiz(answerSettingsQuiz.id, { showAnswers })
             setAnswerSettingsQuiz(null)
           }, 'Đã lưu cấu hình xem đáp án.')} />
+      )}
+      {!readOnly && confirmPublish && publishConfirmation && (
+        <ConfirmDialog
+          title={publishConfirmation.title}
+          description={publishConfirmation.description}
+          cancelLabel="Hủy"
+          confirmLabel={publishConfirmation.confirmLabel}
+          mobileTouchTargets
+          busy={busyId === confirmPublish.id}
+          busyLabel="Đang xuất bản..."
+          onCancel={() => { if (!busyId) setConfirmPublish(null) }}
+          onConfirm={async () => {
+            const target = confirmPublish
+            await runQuizAction(target, () => publishTeacherQuiz(target.id), 'Đã xuất bản quiz.')
+            setConfirmPublish(null)
+          }}
+        />
       )}
       {!readOnly && confirmDelete && (
         <ConfirmDialog

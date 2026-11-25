@@ -5,6 +5,7 @@ import { useMinWidth } from '../../../hooks/use-min-width'
 import { usePageResource } from '../../../hooks/usePageResource'
 import { Clock3, Plus, Send, Settings, Sparkles } from '../../console/icons'
 import Button from '../../console/button'
+import ConfirmDialog from '../../console/confirm-dialog'
 import Notice from '../../console/notice'
 import ConsoleSheet from '../../console/sheet'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -51,6 +52,7 @@ export default function QuizEditorForm({
     quiz, placement, courseQuiz, settings, sections, numbered, selectedId, setSelectedId, focusQuestion, settingsOpen, showSettings,
     chatOpen, chatMounted, setChatOpen, toggleChat, error, busy, setBusy, fieldErrors, ambiguousQuestionSave,
     settingsLocked, published, canEditContent, canEditQuestions, importBlockedReason, appendBlockedReason,
+    publishConfirmation, publishConfirmOpen, requestPublish, confirmPublish, cancelPublish,
     selectPaperItem, updateSettings, updateSection, updateQuestion, addSection, addQuestion, deleteQuestion,
     moveSection, removeSection, moveQuestion, reorderQuestion, shiftQuestion, save,
   } = useQuizEditor(initial, onSaved, refreshing || Boolean(refreshError))
@@ -161,7 +163,7 @@ export default function QuizEditorForm({
           <Clock3 size={15} />{busy && !refreshError ? 'Đang lưu...' : 'Lưu thay đổi'}
         </Button>
         {quiz.status !== 'ARCHIVED' && (
-          <Button onClick={() => void save(true)} disabled={busy || settingsLocked || published || ambiguousQuestionSave}>
+          <Button onClick={requestPublish} disabled={busy || settingsLocked || published || ambiguousQuestionSave}>
             <Send size={15} />{busy && !refreshError ? 'Đang xử lý...' : 'Lưu và xuất bản'}
           </Button>
         )}
@@ -243,6 +245,20 @@ export default function QuizEditorForm({
           {rail(() => setRailOpen(false))}
         </SheetContent>
       </SheetOverlay>
+
+      {publishConfirmOpen && publishConfirmation && (
+        <ConfirmDialog
+          title={publishConfirmation.title}
+          description={publishConfirmation.description}
+          cancelLabel="Hủy"
+          confirmLabel={publishConfirmation.confirmLabel}
+          mobileTouchTargets
+          busy={busy}
+          busyLabel="Đang xuất bản..."
+          onCancel={cancelPublish}
+          onConfirm={() => void confirmPublish()}
+        />
+      )}
     </EditorFrame>
   )
 }

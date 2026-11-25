@@ -8,6 +8,8 @@ export type TeacherQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FA
 
 export interface TeacherQuizRecord {
   id: string
+  replacesQuizId?: string | null
+  replacesQuizTitle?: string | null
   type: TeacherQuizType
   status: TeacherQuizStatus
   title: string

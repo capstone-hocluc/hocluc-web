@@ -7,6 +7,7 @@ import { arrayMove } from '../crud/use-drag-reorder'
 import type { DraftQuestion, DraftSection } from './exam-draft'
 import { isExamLocked, validateExamSettings, type ExamSettings } from './exam-settings'
 import { describePublishProblems } from './publish-problems'
+import { quizPublishConfirmation } from './quiz-publish-confirmation'
 import { createDraftQuestion, createDraftSection, createUnassignedSection, quizEditorSections, recoverQuizDraft, sectionStructureIsSupported } from './quiz-editor-draft'
 import { courseQuizFieldErrors, quizEditorSettingsOf, quizEditorUpdatePayload } from './quiz-editor-settings'
 import { quizQuestionProblem } from './quiz-editor-validation'
@@ -44,6 +45,7 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
   const [saving, setBusy] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<QuizFieldError, string>>>({})
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
   // Append only reloads a clean form, so the new snapshot is also the new baseline.
   if (baseline.snapshot !== initial) {
     const next = editorBaseline(initial)
@@ -186,8 +188,7 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
     if (entry) moveQuestion(entry.section.clientId, id, direction)
   }
 
-  async function save(publish: boolean) {
-    if (!access.canWrite || busy || published || ambiguousQuestionSave || (publish && settingsLocked)) return
+  function validateSave(publish: boolean): boolean {
     const settingsErrors = courseQuiz ? courseQuizFieldErrors(settings) : {}
     const settingsError = courseQuiz
       ? Object.values(settingsErrors)[0]
@@ -196,7 +197,7 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
       setFieldErrors(settingsErrors)
       setError(courseQuiz ? 'Vui lòng kiểm tra các trường được đánh dấu.' : settingsError)
       showSettings(true)
-      return
+      return false
     }
 
     if (canEditContent) {
@@ -205,9 +206,16 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
         setFieldErrors({})
         setError(problem.message)
         if (problem.questionId) selectPaperItem(problem.questionId)
-        return
+        return false
       }
     }
+
+    return true
+  }
+
+  async function save(publish: boolean) {
+    if (!access.canWrite || busy || published || ambiguousQuestionSave || (publish && settingsLocked)) return
+    if (!validateSave(publish)) return
 
     setBusy(true)
     setError('')
@@ -248,10 +256,35 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
     }
   }
 
+  const publishConfirmation = quizPublishConfirmation(quiz)
+
+  function requestPublish() {
+    if (!access.canWrite || busy || published || ambiguousQuestionSave || settingsLocked) return
+    if (!validateSave(true)) return
+    if (publishConfirmation) {
+      setPublishConfirmOpen(true)
+      return
+    }
+    void save(true)
+  }
+
+  async function confirmPublish() {
+    try {
+      await save(true)
+    } finally {
+      setPublishConfirmOpen(false)
+    }
+  }
+
+  function cancelPublish() {
+    if (!busy) setPublishConfirmOpen(false)
+  }
+
   return {
     quiz, placement, courseQuiz, settings, sections, numbered, selectedId, setSelectedId, focusQuestion, settingsOpen, showSettings,
     chatOpen, chatMounted, setChatOpen, toggleChat, error, busy, setBusy, fieldErrors, ambiguousQuestionSave,
     settingsLocked, published, canEditContent, canEditQuestions, importBlockedReason, appendBlockedReason,
+    publishConfirmation, publishConfirmOpen, requestPublish, confirmPublish, cancelPublish,
     selectPaperItem, updateSettings, updateSection, updateQuestion, addSection, addQuestion, deleteQuestion,
     moveSection, removeSection, moveQuestion, reorderQuestion, shiftQuestion, save,
   }
