@@ -477,10 +477,30 @@ export default function AiAssistantScreen({
   const chatRuntime = useRef<AssistantRuntime | null>(null)
   const composerOf = () => chatRuntime.current?.thread.composer ?? null
   const [bankDialog, setBankDialog] = useState(false)
-  const [quizDialog, setQuizDialog] = useState(false)
+  // The questions the quiz being made takes, while its dialog is open.
+  const [quizDialog, setQuizDialog] = useState<string[] | null>(null)
   const canSaveToBank = bank.ready && writtenQuestions.some((question) => bank.authorable(question.id))
   const keptWritten = writtenQuestions.filter((question) => question.kept).length
   const { save: saveToBank } = bank
+
+  /**
+   * The written questions a quiz made from the exam takes, in order: on the free document those its sheet holds now (a
+   * question taken off the sheet stays in the draft), on the question cards those the draft keeps.
+   */
+  function quizItems(): string[] {
+    if (examDoc.mode === 'FREE' && editor) {
+      const written = new Set(writtenQuestions.map((question) => question.id))
+      const onSheet = sheetQuestions(editor.state.doc).flatMap((question) => question.itemId ?? [])
+      return [...new Set(onSheet)].filter((id) => written.has(id))
+    }
+    return writtenQuestions.filter((question) => question.kept).map((question) => question.id)
+  }
+
+  function openQuizExport() {
+    const items = quizItems()
+    if (items.length === 0) showErrorToast('Trang đề không còn câu nào do AI soạn để xuất.')
+    else setQuizDialog(items)
+  }
 
   const saveOneToBank = useCallback(
     async (id: string) => {
@@ -929,7 +949,7 @@ export default function AiAssistantScreen({
           outlineOpen={outlineOpen || outlineSheet}
           onToggleOutline={toggleOutline}
           onNew={startNew}
-          onExportQuiz={quizAccess.canWrite && keptWritten > 0 ? () => setQuizDialog(true) : undefined}
+          onExportQuiz={quizAccess.canWrite && keptWritten > 0 ? openQuizExport : undefined}
           actions={
             canSaveToBank && (
               <Button
@@ -1109,11 +1129,11 @@ export default function AiAssistantScreen({
           <ExportQuizDialog
             conversationId={ai.activeId}
             title={ai.activeConversation?.title ?? ''}
-            questionCount={keptWritten}
-            reviewCount={writtenQuestions.filter((question) => question.kept && question.needsReview).length}
+            itemIds={quizDialog}
+            reviewCount={writtenQuestions.filter((question) => quizDialog.includes(question.id) && question.needsReview).length}
             numberOf={numberOf}
             role={quizAccess.role}
-            onClose={() => setQuizDialog(false)}
+            onClose={() => setQuizDialog(null)}
             onExported={(as) => {
               if (ai.activeId) void ai.markPublished(ai.activeId, as)
             }}
