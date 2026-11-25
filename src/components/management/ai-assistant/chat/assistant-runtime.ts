@@ -13,6 +13,7 @@ import { getAiSuggestions, type AiAttachment } from '../../../../services/aiAssi
 import type { AiChatMessage, AiTraceStage } from '../exam-format'
 import { parentsOf } from '../../../../hooks/useAiAssistant'
 import { READING_ID, type ReadingTurn } from '../reading-turn'
+import { latestReadingPermissionId, readingPermissionState, type ReadingPermissionPart, type ReadingPermissionState } from './reading-permission'
 import { stageHeads, stageParts, traceParts } from './run-parts'
 
 /** The id of the turn that shows a run's progress while it goes on; it is never a message of the conversation. */
@@ -56,6 +57,7 @@ export function offersExam(message: AiChatMessage, examCard = true) {
     (examCard || message.mode === 'mock-exam') &&
     !message.error &&
     !message.subjectChoices &&
+    !message.permission &&
     (message.mode === 'compose' || message.mode === 'mock-exam' || message.mode === 'revise') &&
     (message.addedItemIds === undefined || message.addedItemIds.length > 0)
   )
@@ -94,7 +96,7 @@ function taskTime(askedAt: number, repliedAt?: string) {
  * error is a reply that did not finish: the thread shows its words as the error, with its "Thử lại". `askedAt` is
  * when the request a reply answers was sent.
  */
-function convertMessage(message: AiChatMessage, examCard: boolean, askedAt: number): ThreadMessageLike {
+function convertMessage(message: AiChatMessage, examCard: boolean, askedAt: number, permissionState: ReadingPermissionState): ThreadMessageLike {
   if (message.id === PROGRESS_ID) {
     return {
       id: PROGRESS_ID,
@@ -139,6 +141,10 @@ function convertMessage(message: AiChatMessage, examCard: boolean, askedAt: numb
     content: [
       ...stepParts(message, askedAt, runTime),
       ...(message.body ? [{ type: 'text' as const, text: message.body }] : []),
+      ...(message.permission?.kind === 'READING_PASSAGES' ? [{
+        type: 'data-reading-permission' as const,
+        data: { messageId: message.id, parts: message.permission.parts ?? [], state: permissionState } satisfies ReadingPermissionPart,
+      }] : []),
       ...(message.subjectChoices && !message.subjectChoices.answered ? [{ type: 'data-subjects' as const, data: null }] : []),
       ...(stoppedChip ? [{ type: 'data-stopped' as const, data: null }] : []),
       ...(exam ? [{ type: 'data-exam' as const, data: null }] : []),
@@ -216,8 +222,8 @@ export function useAssistantChatRuntime({
     return [...messages, ...read, progress]
   }, [messages, reads, running, stages, answer])
   const repository = useMemo(
-    () => branchesOf(shown, allMessages, examCard, reading),
-    [shown, allMessages, examCard, reading]
+    () => branchesOf(shown, allMessages, examCard, reading, running || loading),
+    [shown, allMessages, examCard, reading, running, loading]
   )
 
   // Where the assistant changes the exam (no exam card) it also answers every message.
@@ -300,7 +306,8 @@ function branchesOf(
   shown: readonly AiChatMessage[],
   all: readonly AiChatMessage[],
   examCard: boolean,
-  reading: ReadingTurn | null
+  reading: ReadingTurn | null,
+  permissionBusy: boolean,
 ): ExportedMessageRepository {
   const before = new Map(shown.map((message, index) => [message.id, index === 0 ? null : shown[index - 1].id]))
   const parents = parentsOf(all)
@@ -308,13 +315,16 @@ function branchesOf(
   const shownById = new Map(shown.map((message) => [message.id, message]))
   const ordered = [...all.map((message) => shownById.get(message.id) ?? message), ...shown.filter((message) => !kept.has(message.id))]
   const byId = new Map(ordered.map((message) => [message.id, message]))
+  const permissionId = latestReadingPermissionId(shown, all)
   const items = ordered.map((message) => {
     const parentId = before.has(message.id) ? (before.get(message.id) ?? null) : (parents.get(message.id) ?? null)
     // A reply answers the request it follows ("Tạo lại" sends that request again, so each version has its own).
     const request = parentId === null ? undefined : byId.get(parentId)
     const askedAt = request?.role === 'user' ? Date.parse(request.createdAt) : NaN
     return {
-      message: message.id === READING_ID && reading ? readingMessage(reading) : convertMessage(message, examCard, askedAt),
+      message: message.id === READING_ID && reading
+        ? readingMessage(reading)
+        : convertMessage(message, examCard, askedAt, readingPermissionState(message, permissionId, permissionBusy)),
       parentId,
     }
   })
@@ -331,6 +341,7 @@ function asksFollowUps(message: AiChatMessage | undefined, assistant: boolean): 
       message.role === 'assistant' &&
       (message.mode === 'ask' || (assistant && message.mode === 'compose')) &&
       !message.error &&
+      !message.permission &&
       !/^(local|subject|error|summary)-/.test(message.id)
   )
 }

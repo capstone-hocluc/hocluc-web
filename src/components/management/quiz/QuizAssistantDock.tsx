@@ -9,7 +9,7 @@ import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
 import ChatPanel from '../ai-assistant/ChatPanel'
 import { AssistantChatProvider } from '../ai-assistant/chat/AssistantChatProvider'
-import { ChatActionsProvider } from '../ai-assistant/chat/reply-parts'
+import { ChatActionsProvider } from '../ai-assistant/chat/ChatActionsProvider'
 import type { ExamPaper } from '../ai-assistant/exam-format'
 import { appendQuizDraft, pendingQuizDraftItemIds, quizAssistantSheet } from './quiz-assistant-draft'
 
@@ -154,6 +154,7 @@ export default function QuizAssistantDock({
       <ChatActionsProvider value={{
         onRetry: (id) => void chat.retry(id).then(giveBack),
         onChooseSubject: (id, subject) => void chat.chooseSubject(id, subject).then(giveBack),
+        onAnswerReadingPermission: busy ? undefined : (id, allow) => void chat.answerReadingPermission(id, allow),
       }}>
         {docked ? (open && panel) : (
           <SheetOverlay isOpen={open} onOpenChange={(shown) => { if (!shown) onClose() }}>

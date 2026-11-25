@@ -1,7 +1,7 @@
 // What a reply carries besides its words, as data parts of assistant-ui's thread: the subjects to choose from, the
 // chip of a stopped run, the exam's files, and each file the teacher asked the assistant for. Each is registered under
 // its name and reads the reply it belongs to.
-import { createContext, useContext, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { makeAssistantDataUI, useAuiState, type DataMessagePartProps } from '@assistant-ui/react'
 import { cn } from '../../../../lib/cn'
 import { ArtifactCard } from '../../../assistant-ui/elements/artifact-card'
@@ -14,32 +14,9 @@ import type { AiExamFile } from '../../../../services/aiAssistantService'
 import type { AiChatMessage } from '../exam-format'
 import { sourceOf } from './assistant-runtime'
 import ReadingPart from './ReadingPart'
-
-export type ExamDownload = 'docx' | 'pdf' | 'docx-exam' | 'pdf-exam'
-
-/** What a reply's own controls do. */
-export interface ChatActions {
-  /** Word or PDF of the exam with its answer key, or of the exam alone. */
-  onDownload?: (format: ExamDownload) => void
-  /** Writes the answer key after the exam again from the questions it holds now. */
-  onAnswerKey?: () => void
-  /** Sends the words of a failed send again. */
-  onRetry: (messageId: string) => void
-  /** Answers the question "Bạn muốn soạn môn nào?" with a subject (null: the whole paper). */
-  onChooseSubject: (messageId: string, subjectName: string | null) => void
-}
-
-const ChatActionsContext = createContext<ChatActions | null>(null)
-
-export function ChatActionsProvider({ value, children }: { value: ChatActions; children: ReactNode }) {
-  return <ChatActionsContext.Provider value={value}>{children}</ChatActionsContext.Provider>
-}
-
-function useChatActions() {
-  const actions = useContext(ChatActionsContext)
-  if (!actions) throw new Error('The chat turns need a ChatActionsProvider.')
-  return actions
-}
+import ReadingPermissionCard from './ReadingPermissionCard'
+import { useChatActions, type ExamDownload } from './chat-actions'
+import type { ReadingPermissionPart } from './reading-permission'
 
 /** The reply this turn shows (null for the progress turn). */
 function useReply(): AiChatMessage | null {
@@ -210,6 +187,7 @@ const StoppedUI = makeAssistantDataUI({ name: 'stopped', render: Stopped })
 const ExamUI = makeAssistantDataUI({ name: 'exam', render: ExamCard })
 const FileUI = makeAssistantDataUI({ name: 'file', render: FileCard })
 const ReadingUI = makeAssistantDataUI({ name: 'reading', render: ReadingPart })
+const ReadingPermissionUI = makeAssistantDataUI<ReadingPermissionPart>({ name: 'reading-permission', render: ReadingPermissionCard })
 
 /** Registers the reply's data parts with the thread; rendered once inside the chat's runtime. */
 export function ReplyDataUIs() {
@@ -220,6 +198,7 @@ export function ReplyDataUIs() {
       <ExamUI />
       <FileUI />
       <ReadingUI />
+      <ReadingPermissionUI />
     </>
   )
 }

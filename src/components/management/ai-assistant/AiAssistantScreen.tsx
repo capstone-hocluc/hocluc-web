@@ -48,7 +48,8 @@ import AiSelectionMenu from '../exam-doc/ai-selection-menu'
 import { useWheelZoom } from '../exam-doc/use-wheel-zoom'
 import { revisedNumbers } from './revise-request'
 import { AssistantChatProvider } from './chat/AssistantChatProvider'
-import { ChatActionsProvider, type ChatActions, type ExamDownload } from './chat/reply-parts'
+import { ChatActionsProvider } from './chat/ChatActionsProvider'
+import type { ChatActions, ExamDownload } from './chat/chat-actions'
 import { showErrorToast, showSuccessToast } from '../../../lib/toastBus'
 import { downloadDocument, downloadPdf } from '../exam-doc/export'
 import { useDocEditor } from '../exam-doc/use-doc-editor'
@@ -766,6 +767,10 @@ export default function AiAssistantScreen({
     onAnswerKey: () => writeAnswerKey(),
     onRetry: (messageId) => void ai.retry(messageId).then(giveBack),
     onChooseSubject: (messageId, subjectName) => void ai.chooseSubject(messageId, subjectName).then(giveBack),
+    onAnswerReadingPermission: (messageId, allow) => {
+      setViewingId(null)
+      void ai.answerReadingPermission(messageId, allow)
+    },
   }
 
   /** The left panel: every exam and loaded paper, grouped. */

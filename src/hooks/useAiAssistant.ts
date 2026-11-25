@@ -36,6 +36,7 @@ import {
   type AiSolutionStyle,
   type AiStreamEvent,
   type AiAnswerKeyAsk,
+  type AiReadingPermissionConfig,
 } from '../services/aiAssistantService'
 import { ApiError } from '../lib/api'
 import type { BankSource } from '../services/questionBankService'
@@ -60,6 +61,12 @@ import { readSessionCache, writeSessionCache } from '../lib/session-cache'
 
 const CONVERSATIONS_CACHE = 'ai-assistant.conversations'
 import { revisedNumbers } from '../components/management/ai-assistant/revise-request'
+import {
+  latestReadingPermissionId,
+  markReadingPermissionAnswered,
+  readingPermissionReply,
+  readingPermissionState,
+} from '../components/management/ai-assistant/chat/reading-permission'
 
 /**
  * Compose settings. No subject and no difficulty: the request names them ("10 câu Toán mức khó"), and one naming no
@@ -105,6 +112,8 @@ export interface ComposeExtra {
   agreed?: boolean
   /** The paper a mock exam follows, as the assistant proposed it; the settings' paper otherwise. */
   bankSourceId?: string
+  /** Answers a reading-passages permission prompt with the saved config and teacher decision. */
+  permissionConfig?: AiReadingPermissionConfig
 }
 
 /** The unit the AI is writing, with its words read once into questions and options (the sheet and the chat show them). */
@@ -239,6 +248,7 @@ function mapMessage(message: AiMessage): AiChatMessage {
     ...(message.attachments?.length ? { attachments: message.attachments } : {}),
     ...(message.files?.length ? { files: message.files } : {}),
     ...(message.agreed ? { agreed: true } : {}),
+    ...(message.permission?.kind === 'READING_PASSAGES' ? { permission: message.permission } : {}),
   }
 }
 
@@ -439,6 +449,7 @@ export function useAiAssistant(
   const messagesRef = useRef<AiChatMessage[]>([])
   /** Every message of the open conversation the server holds, in every branch; `messages` is the one shown. */
   const [allMessages, setAllMessages] = useState<AiChatMessage[]>([])
+  const allMessagesRef = useRef<AiChatMessage[]>([])
   const draftRef = useRef<AiDraftResponse | null>(null)
   const draftRefreshSequence = useRef(0)
   const runRef = useRef<AiRun | null>(null)
@@ -501,6 +512,11 @@ export function useAiAssistant(
   const updateMessages = useCallback((next: AiChatMessage[]) => {
     messagesRef.current = next
     setMessages(next)
+  }, [])
+
+  const updateAllMessages = useCallback((next: AiChatMessage[]) => {
+    allMessagesRef.current = next
+    setAllMessages(next)
   }, [])
 
   const updateDraft = useCallback((next: AiDraftResponse | null) => {
@@ -575,7 +591,7 @@ export function useAiAssistant(
     try {
       const server = (await getAiMessages(conversationId)).map(mapMessage)
       if (activeIdRef.current !== conversationId) return false
-      setAllMessages(server)
+      updateAllMessages(server)
       updateMessages(mergeServerMessages(branchOf(server), messagesRef.current))
       return true
     } catch {
@@ -583,7 +599,7 @@ export function useAiAssistant(
     } finally {
       then?.()
     }
-  }, [updateMessages])
+  }, [updateAllMessages, updateMessages])
 
   const refreshDraft = useCallback(async (conversationId: string) => {
     if (activeIdRef.current !== conversationId) return false
@@ -952,7 +968,7 @@ export function useAiAssistant(
       // Before the server's list is in, the mode shown is a guess (this tab's copy, or none) that the list corrects.
       modeFromListRef.current = conversation && listedRef.current ? null : conversationId
       if (conversationMode) setMode(conversationMode)
-      setAllMessages([])
+      updateAllMessages([])
       updateMessages([])
       updateDraft(null)
       setDraftLoading(true)
@@ -964,7 +980,7 @@ export function useAiAssistant(
         ])
         if (activeIdRef.current !== conversationId) return
         const all = serverMessages.map(mapMessage)
-        setAllMessages(all)
+        updateAllMessages(all)
         updateMessages(branchOf(all))
         updateDraft(draftResponse)
         // The config the exam was last asked with comes back to the settings (a reload would reset it).
@@ -997,7 +1013,7 @@ export function useAiAssistant(
         if (activeIdRef.current === conversationId) setDraftLoading(false)
       }
     },
-    [armRunTimer, beginStream, clearRunTimer, showSettings, stopStream, updateDraft, updateMessages, updateRun]
+    [armRunTimer, beginStream, clearRunTimer, showSettings, stopStream, updateAllMessages, updateDraft, updateMessages, updateRun]
   )
 
   const loadConversations = useCallback(async () => {
@@ -1093,6 +1109,7 @@ export function useAiAssistant(
       document?: AiSheetDocument,
       compose?: ComposeExtra
     ): AiSendConfig | undefined => {
+      if (compose?.permissionConfig) return compose.permissionConfig
       if (revise) {
         return { examFormat: settings.examFormat, solutionStyle: settings.solutionStyle, instruction: text, items: revise }
       }
@@ -1307,10 +1324,17 @@ export function useAiAssistant(
         // The server says whether the run replaces the exam; one that does not leaves the sheet as it is.
         if ((sent.replaced ?? replacing) && activeIdRef.current === conversationId) sheetRef.current?.clear()
         else if (replaced && sent.replaced === false && draftRef.current === replaced.cleared) updateDraft(replaced.before)
-        updateMessages(
-          messagesRef.current.map((message) =>
-            message.id === localUserId ? { ...message, id: sent.messageId } : message
+        const permissionConfig = compose?.permissionConfig
+        if (permissionConfig) {
+          updateAllMessages(
+            allMessagesRef.current.map((message) => markReadingPermissionAnswered(message, permissionConfig))
           )
+        }
+        updateMessages(
+          messagesRef.current.map((message) => {
+            const next = message.id === localUserId ? { ...message, id: sent.messageId } : message
+            return permissionConfig ? markReadingPermissionAnswered(next, permissionConfig) : next
+          })
         )
         sendingRef.current = false
         setSending(false)
@@ -1362,7 +1386,12 @@ export function useAiAssistant(
             error: true,
             ...(runMode !== 'revise' ? { retryText: text } : {}),
             ...(runMode !== 'revise' && compose?.confirmed && compose.agreed
-              ? { retryAgreed: compose.bankSourceId ? { bankSourceId: compose.bankSourceId } : {} }
+              ? {
+                  retryAgreed: {
+                    ...(compose.bankSourceId ? { bankSourceId: compose.bankSourceId } : {}),
+                    ...(compose.permissionConfig ? { permissionConfig: compose.permissionConfig } : {}),
+                  },
+                }
               : {}),
           },
         ])
@@ -1382,6 +1411,7 @@ export function useAiAssistant(
       mode,
       readQuizSheet,
       stopStream,
+      updateAllMessages,
       updateDraft,
       updateMessages,
       updateRun,
@@ -1481,12 +1511,32 @@ export function useAiAssistant(
       // A request the teacher agreed to goes again as it went: agreed (so not shown as theirs), from the paper it named.
       if (failed.retryAgreed) {
         const agreed = { confirmed: true, agreed: true, ...failed.retryAgreed }
-        const sent = await startRun(failed.retryText, failed.mode ?? mode, undefined, undefined, undefined, undefined, agreed)
+        const after = failed.retryAgreed.permissionConfig?.permissionMessageId
+        const sent = await startRun(failed.retryText, failed.mode ?? mode, undefined, undefined, undefined, after, agreed)
+        if (failed.retryAgreed.permissionConfig) return null
         return sent ? null : failed.retryText
       }
       return sendFor(failed.retryText, failed.mode ?? mode)
     },
     [mode, sendFor, startRun]
+  )
+
+  const answerReadingPermission = useCallback(
+    async (messageId: string, allow: boolean) => {
+      const asked = messagesRef.current.find((message) => message.id === messageId)
+      if (!asked?.permission || asked.permission.kind !== 'READING_PASSAGES') return false
+      const latestId = latestReadingPermissionId(messagesRef.current, allMessagesRef.current)
+      if (readingPermissionState(asked, latestId, sendingRef.current || runRef.current !== null) !== 'actionable') {
+        return false
+      }
+      const reply = readingPermissionReply({ id: asked.id, permission: asked.permission }, allow)
+      return startRun(reply.content, reply.mode, undefined, undefined, undefined, reply.parentId, {
+        confirmed: true,
+        agreed: true,
+        permissionConfig: reply.config,
+      })
+    },
+    [startRun]
   )
 
   /** A subject (null: the whole paper) chosen for the question "Bạn muốn soạn môn nào?": the same request, with it added. */
@@ -1532,7 +1582,7 @@ export function useAiAssistant(
     activeIdRef.current = null
     setActiveId(null)
     // The versions of the exam left behind go with it: its first question would count as one of the new one's.
-    setAllMessages([])
+    updateAllMessages([])
     updateMessages([])
     updateDraft(null)
     updateRun(null)
@@ -1542,7 +1592,7 @@ export function useAiAssistant(
     setDraftLoading(false)
     setNotice(null)
     showSettings(preferredSettingsRef.current)
-  }, [clearRunTimer, showSettings, stopStream, updateDraft, updateMessages, updateRun])
+  }, [clearRunTimer, showSettings, stopStream, updateAllMessages, updateDraft, updateMessages, updateRun])
 
   const selectConversation = useCallback(
     (conversationId: string) => {
@@ -1824,6 +1874,7 @@ export function useAiAssistant(
     regenerate,
     retry,
     chooseSubject,
+    answerReadingPermission,
     addRunStep,
     cancel,
     ensureConversation,

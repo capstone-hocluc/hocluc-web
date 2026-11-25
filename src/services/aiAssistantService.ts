@@ -78,6 +78,7 @@ export interface AiMessage {
   files?: AiExamFile[] | null
   /** A request the assistant proposed, sent for the teacher once they agreed; not their own words. */
   agreed?: boolean | null
+  permission?: AiReadingPermission | null
   createdAt: string
 }
 
@@ -270,6 +271,25 @@ export interface AiSendConfig {
   sheet?: AiExamSheet
   /** The teacher agreed to replace the exam on the sheet with a new one. */
   confirmed?: boolean
+}
+
+export type AiReadingPermissionAnswer = 'ALLOWED' | 'DECLINED'
+
+export interface AiReadingPermission {
+  kind: 'READING_PASSAGES'
+  parts: string[]
+  passages: number
+  request: string
+  mode: 'compose' | 'mock-exam'
+  config: AiSendConfig
+  answer: AiReadingPermissionAnswer | null
+}
+
+export interface AiReadingPermissionConfig extends AiSendConfig {
+  confirmed: true
+  agreed: true
+  permissionMessageId: string
+  allowReadingPassages: boolean
 }
 
 /** The questions on the sheet as the assistant that changes the exam reads them, by the numbers the sheet prints. */

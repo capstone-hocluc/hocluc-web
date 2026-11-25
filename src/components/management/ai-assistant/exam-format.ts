@@ -10,6 +10,8 @@ import type {
   AiExamDraftRecord,
   AiExamFile,
   AiExamFormat,
+  AiReadingPermission,
+  AiReadingPermissionConfig,
 } from '../../../services/aiAssistantService'
 
 export type AiTraceState = 'done' | 'running' | 'pending'
@@ -70,12 +72,13 @@ export interface AiChatMessage {
   /** An error of a send, with the words that can be sent again. */
   retryText?: string
   /** The send that failed was a request the teacher agreed to: "Thử lại" sends it as it went, from the paper it named. */
-  retryAgreed?: { bankSourceId?: string }
+  retryAgreed?: { bankSourceId?: string; permissionConfig?: AiReadingPermissionConfig }
   /**
    * A request the assistant proposed, sent for the teacher once they agreed: its reply already said it, so the chat
    * keeps it out of sight.
    */
   agreed?: boolean
+  permission?: AiReadingPermission
   /**
    * The question "Bạn muốn soạn môn nào?" asks: the words it was asked about, and the subjects to answer it. Once a
    * later send has taken its place it is `answered`: it stays a question in the thread, its subjects no longer offered.
