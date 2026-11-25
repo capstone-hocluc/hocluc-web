@@ -86,8 +86,6 @@ export default function TeacherSchedulePage() {
                   selectedId={t.selectedClass?.id}
                   onSelect={(item) => t.setSelectedClass(item)}
                   mode="teacher"
-                  minHour={16}
-                  maxHour={22}
                   showLegend={false}
                 />
               </div>

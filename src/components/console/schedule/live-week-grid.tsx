@@ -32,7 +32,7 @@ export default function LiveWeekGrid({
   selectedId,
   onSelect,
   mode,
-  minHour = 8,
+  minHour = 7,
   maxHour = 22,
   showLegend = true,
 }: Props) {
@@ -47,7 +47,7 @@ export default function LiveWeekGrid({
     let high = maxHour
     for (const item of classes) {
       const startMin = minutesFromInstant(item.startTime)
-      const endMin = minutesFromInstant(item.endTime)
+      const endMin = Math.max(startMin + 30, minutesFromInstant(item.endTime))
       low = Math.min(low, Math.floor(startMin / 60))
       high = Math.max(high, Math.ceil(endMin / 60))
     }

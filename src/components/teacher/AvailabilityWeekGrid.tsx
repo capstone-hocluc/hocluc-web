@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ConsoleLiveClass } from '../../services/liveClassService'
 import type { AvailabilitySlot, DayOfWeek } from '../../types/scheduling'
 import {
@@ -20,10 +20,8 @@ interface Props {
   onRemoveSlot: (slot: AvailabilitySlot) => void
 }
 
-const START_HOUR = 7
-const END_HOUR = 22
-const TOTAL_ROWS = (END_HOUR - START_HOUR) * 2
-const LABEL_HOURS = [7, 10, 13, 16, 18, 21]
+const DEFAULT_START_HOUR = 7
+const DEFAULT_END_HOUR = 22
 
 export default function AvailabilityWeekGrid({
   slots,
@@ -31,6 +29,35 @@ export default function AvailabilityWeekGrid({
   onAddRange,
   onRemoveSlot,
 }: Props) {
+  const { startHour, endHour } = useMemo(() => {
+    let low = DEFAULT_START_HOUR
+    let high = DEFAULT_END_HOUR
+    for (const slot of slots) {
+      const startMin = parseClockMinutes(slot.startTime)
+      const endMin = parseClockMinutes(slot.endTime)
+      if (endMin > startMin) {
+        low = Math.min(low, Math.floor(startMin / 60))
+        high = Math.max(high, Math.ceil(endMin / 60))
+      }
+    }
+    for (const item of weekClasses) {
+      const startMin = minutesFromInstant(item.startTime)
+      const endMin = Math.max(startMin + 30, minutesFromInstant(item.endTime))
+      low = Math.min(low, Math.floor(startMin / 60))
+      high = Math.max(high, Math.ceil(endMin / 60))
+    }
+    return { startHour: Math.max(0, low), endHour: Math.min(24, Math.max(low + 4, high)) }
+  }, [slots, weekClasses])
+
+  const totalRows = (endHour - startHour) * 2
+  const labelHours = useMemo(() => {
+    const list: number[] = []
+    for (let h = startHour; h < endHour; h += 3) {
+      list.push(h)
+    }
+    return list
+  }, [startHour, endHour])
+
   const [dragState, setDragState] = useState<{
     day: DayOfWeek
     anchorRow: number
@@ -52,8 +79,8 @@ export default function AvailabilityWeekGrid({
     if (!dragState) return
     const minRow = Math.min(dragState.anchorRow, dragState.currentRow)
     const maxRow = Math.max(dragState.anchorRow, dragState.currentRow)
-    const startMin = START_HOUR * 60 + minRow * 30
-    const endMin = START_HOUR * 60 + (maxRow + 1) * 30
+    const startMin = startHour * 60 + minRow * 30
+    const endMin = startHour * 60 + (maxRow + 1) * 30
     onAddRange(dragState.day, startMin, endMin)
     setDragState(null)
   }
@@ -99,9 +126,9 @@ export default function AvailabilityWeekGrid({
           ))}
         </div>
 
-        <div className="ls-avail-grid">
-          {LABEL_HOURS.map((hour) => {
-            const row = (hour - START_HOUR) * 2 + 1
+        <div className="ls-avail-grid" style={{ gridTemplateRows: `repeat(${totalRows}, 18px)` }}>
+          {labelHours.map((hour) => {
+            const row = (hour - startHour) * 2 + 1
             return (
               <div
                 key={hour}
@@ -114,11 +141,11 @@ export default function AvailabilityWeekGrid({
           })}
 
           {WEEKDAYS_ORDERED.map((day, dayIdx) =>
-            Array.from({ length: TOTAL_ROWS }, (_, row) => (
+            Array.from({ length: totalRows }, (_, row) => (
               <div
                 key={`${day.value}-${row}`}
                 role="gridcell"
-                aria-label={`${day.label} ${formatMinutesClock(START_HOUR * 60 + row * 30)}`}
+                aria-label={`${day.label} ${formatMinutesClock(startHour * 60 + row * 30)}`}
                 style={{ gridColumn: dayIdx + 2, gridRow: row + 1 }}
                 className="ls-avail-cell"
                 onPointerDown={(e) => {
@@ -144,10 +171,10 @@ export default function AvailabilityWeekGrid({
             const dayIdx = WEEKDAYS_ORDERED.findIndex((d) => d.value === slot.dayOfWeek)
             if (dayIdx === -1) return null
             const dayMeta = WEEKDAYS_ORDERED[dayIdx]
-            const startMin = Math.max(START_HOUR * 60, parseClockMinutes(slot.startTime))
-            const endMin = Math.min(END_HOUR * 60, parseClockMinutes(slot.endTime))
+            const startMin = Math.max(startHour * 60, parseClockMinutes(slot.startTime))
+            const endMin = Math.min(endHour * 60, parseClockMinutes(slot.endTime))
             if (endMin <= startMin) return null
-            const startRow = Math.floor((startMin - START_HOUR * 60) / 30) + 1
+            const startRow = Math.floor((startMin - startHour * 60) / 30) + 1
             const span = Math.max(1, Math.ceil((endMin - startMin) / 30))
             const startLabel = slot.startTime.slice(0, 5)
             const endLabel = slot.endTime.slice(0, 5)
@@ -173,11 +200,11 @@ export default function AvailabilityWeekGrid({
             const dayIdx = WEEKDAYS_ORDERED.findIndex((d) => d.value === dayEnum)
             if (dayIdx === -1) return null
 
-            const startMin = Math.max(START_HOUR * 60, minutesFromInstant(item.startTime))
-            const endMin = Math.min(END_HOUR * 60, Math.max(startMin + 30, minutesFromInstant(item.endTime)))
+            const startMin = Math.max(startHour * 60, minutesFromInstant(item.startTime))
+            const endMin = Math.min(endHour * 60, Math.max(startMin + 30, minutesFromInstant(item.endTime)))
             if (endMin <= startMin) return null
 
-            const startRow = Math.floor((startMin - START_HOUR * 60) / 30) + 1
+            const startRow = Math.floor((startMin - startHour * 60) / 30) + 1
             const span = Math.max(2, Math.ceil((endMin - startMin) / 30))
 
             const clockStart = formatClockFromInstant(item.startTime)
