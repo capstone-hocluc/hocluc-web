@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { ApiError } from '../../../lib/api'
 import { isCourseQuizType } from '../../../lib/quiz-types'
 import { useQuizAccess } from '../../../hooks/useQuizAccess'
@@ -13,14 +13,27 @@ import { quizQuestionProblem } from './quiz-editor-validation'
 import { formatApiError, mapTeacherQuizValidationErrors, type QuizFieldError } from './quiz-form-errors'
 import { saveQuizQuestions } from './save-quiz-questions'
 
-export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: string) => void) {
+function editorBaseline(snapshot: TeacherQuizEditor) {
+  const settings = quizEditorSettingsOf(snapshot.quiz)
+  const sections = quizEditorSections(snapshot)
+  return {
+    snapshot,
+    settings,
+    sections,
+    signature: JSON.stringify({ settings, sections }),
+    structureReadOnly: !sectionStructureIsSupported(snapshot, sections),
+  }
+}
+
+export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: string) => void, refreshBlocked: boolean) {
   const access = useQuizAccess()
-  const original = useRef(initial)
-  const [quiz, setQuiz] = useState(initial.quiz)
+  const [original, setOriginal] = useState(initial)
+  const [baseline, setBaseline] = useState(() => editorBaseline(initial))
+  const quiz = original.quiz
   const placement = quiz.type === 'PLACEMENT'
   const courseQuiz = isCourseQuizType(quiz.type)
-  const [settings, setSettings] = useState(() => quizEditorSettingsOf(initial.quiz))
-  const [sections, setSections] = useState(() => quizEditorSections(initial))
+  const [settings, setSettings] = useState(baseline.settings)
+  const [sections, setSections] = useState(baseline.sections)
   const [selectedId, setSelectedId] = useState<string | null>(() => courseQuiz && initial.questions.length === 0
     ? sections[0]?.questions[0]?.clientId ?? null : null)
   const [focusQuestion, setFocusQuestion] = useState(courseQuiz && initial.questions.length === 0)
@@ -28,12 +41,20 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMounted, setChatMounted] = useState(false)
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [saving, setBusy] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<QuizFieldError, string>>>({})
   const [ambiguousQuestionSave, setAmbiguousQuestionSave] = useState(false)
-  const [baseline] = useState(() => JSON.stringify({ settings, sections }))
-  const [structureReadOnly] = useState(() => !sectionStructureIsSupported(initial, sections))
-  const hasUnsavedChanges = JSON.stringify({ settings, sections }) !== baseline
+  // Append only reloads a clean form, so the new snapshot is also the new baseline.
+  if (baseline.snapshot !== initial) {
+    const next = editorBaseline(initial)
+    setBaseline(next)
+    setOriginal(initial)
+    setSettings(next.settings)
+    setSections(next.sections)
+  }
+  const busy = saving || refreshBlocked
+  const { structureReadOnly } = baseline
+  const hasUnsavedChanges = JSON.stringify({ settings, sections }) !== baseline.signature
   const settingsLocked = isExamLocked(quiz)
   const published = quiz.status !== 'DRAFT'
   const canEditContent = access.canWrite && !settingsLocked && !published && !ambiguousQuestionSave
@@ -179,7 +200,7 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
     }
 
     if (canEditContent) {
-      const problem = quizQuestionProblem(sections, original.current, { publish, placement, courseQuiz, fixedStructure: structureReadOnly })
+      const problem = quizQuestionProblem(sections, original, { publish, placement, courseQuiz, fixedStructure: structureReadOnly })
       if (problem.message) {
         setFieldErrors({})
         setError(problem.message)
@@ -191,12 +212,12 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
     setBusy(true)
     setError('')
     setFieldErrors({})
-    const before = original.current
+    const before = original
     try {
       await updateTeacherQuiz(quiz.id, quizEditorUpdatePayload(settings, quiz.type, settingsLocked))
       if (canEditContent) await saveQuizQuestions(before, sections, canEditQuestions, setSections)
       if (publish) await publishTeacherQuiz(quiz.id)
-      original.current = await getTeacherQuiz(quiz.id)
+      setOriginal(await getTeacherQuiz(quiz.id))
       const label = courseQuiz ? 'quiz' : placement ? 'bài đánh giá đầu vào' : 'đề thi thử'
       onSaved(publish ? `Đã lưu và xuất bản ${label}.` : `Đã lưu thay đổi ${label}.`)
     } catch (saveError) {
@@ -212,8 +233,7 @@ export function useQuizEditor(initial: TeacherQuizEditor, onSaved: (message: str
       }
       try {
         const refreshed = await getTeacherQuiz(quiz.id)
-        original.current = refreshed
-        setQuiz(refreshed.quiz)
+        setOriginal(refreshed)
         setSections((draftSections) => recoverQuizDraft(draftSections, before, refreshed))
         const blockers = refreshed.quiz.publishProblems?.filter(Boolean) ?? []
         if (publish && saveError instanceof ApiError && saveError.status === 409 && blockers.length > 0) {

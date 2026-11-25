@@ -1,6 +1,6 @@
 import { getSchema } from '@tiptap/core'
-import type { AiExamSheet } from '../../../services/aiAssistantService'
-import type { AiChatMessage, ExamPaper, ExamPaperQuestion } from '../ai-assistant/exam-format'
+import { exportAiDraftToQuiz, type AiDraftItem, type AiExamSheet, type AiQuizAppend } from '../../../services/aiAssistantService'
+import type { ExamPaper } from '../ai-assistant/exam-format'
 import { examSheet } from '../exam-doc/doc-snapshot'
 import { draftToDoc } from '../exam-doc/draft-to-doc'
 import { examDocExtensions } from '../exam-doc/editor-extensions'
@@ -19,11 +19,21 @@ export function quizAssistantSheet(paper: ExamPaper): AiExamSheet {
   return { ...sheet, questions: sheet.questions.map(({ number, text, part, group, context }) => ({ number, text, part, group, context })) }
 }
 
-export function writtenRunItemIds(
-  messages: readonly Pick<AiChatMessage, 'role' | 'addedItemIds'>[],
-  questions: readonly Pick<ExamPaperQuestion, 'id' | 'failure'>[],
+export function pendingQuizDraftItemIds(
+  items: readonly Pick<AiDraftItem, 'id' | 'addedToQuizId' | 'question'>[],
+  quizId: string,
 ): string[] {
-  const lastRun = [...messages].reverse().find((message) => message.role === 'assistant' && message.addedItemIds !== undefined)
-  const written = new Set(questions.filter((question) => !question.failure).map((question) => question.id))
-  return [...new Set(lastRun?.addedItemIds)].filter((id) => written.has(id))
+  return items
+    .filter((item) => item.addedToQuizId !== quizId && !item.question.failed && item.question.text?.trim())
+    .map((item) => item.id)
+}
+
+export async function appendQuizDraft(
+  conversationId: string,
+  body: AiQuizAppend,
+  refreshDraft: (id: string) => Promise<boolean>,
+) {
+  const result = await exportAiDraftToQuiz(conversationId, body)
+  const draftRefreshed = await refreshDraft(conversationId)
+  return { result, draftRefreshed }
 }

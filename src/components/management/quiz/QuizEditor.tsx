@@ -58,10 +58,13 @@ export default function QuizEditor({
       onCancel={onCancel}
       onSaved={onSaved}
       onReload={editor.reload}
+      refreshing={editor.refreshing}
+      refreshError={editor.refreshError}
+      onRetryRefresh={editor.reloadInBackground}
       appendNotice={appendNotice?.quizId === quizId ? appendNotice.message : ''}
       onAppendResult={(message) => {
         setAppendNotice({ quizId, message })
-        editor.reload()
+        editor.reloadInBackground()
       }}
     />
   )

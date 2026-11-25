@@ -208,6 +208,7 @@ export interface AiCheckResult {
 
 export interface AiDraftItem {
   id: string
+  addedToQuizId?: string | null
   draftId?: string
   sectionCode: string
   groupKey: string | null
@@ -791,7 +792,7 @@ export interface AiExportedQuiz extends AiAppendedQuiz {
   title: string
 }
 
-interface AiQuizAppend {
+export interface AiQuizAppend {
   quizId: string
   itemIds: string[]
 }

@@ -2,16 +2,16 @@ import { useRef, useState, type ReactNode } from 'react'
 import type { AssistantRuntime } from '@assistant-ui/react'
 import { useAiAssistant } from '../../../hooks/useAiAssistant'
 import { getErrorMessage } from '../../../lib/errors'
-import { exportAiDraftToQuiz } from '../../../services/aiAssistantService'
 import { isDefiniteTeacherQuestionWriteRejection } from '../../../services/teacherQuizService'
 import Button from '../../console/button'
 import ConfirmDialog from '../../console/confirm-dialog'
+import Notice from '../../console/notice'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
 import ChatPanel from '../ai-assistant/ChatPanel'
 import { AssistantChatProvider } from '../ai-assistant/chat/AssistantChatProvider'
 import { ChatActionsProvider } from '../ai-assistant/chat/reply-parts'
 import type { ExamPaper } from '../ai-assistant/exam-format'
-import { quizAssistantSheet, writtenRunItemIds } from './quiz-assistant-draft'
+import { appendQuizDraft, pendingQuizDraftItemIds, quizAssistantSheet } from './quiz-assistant-draft'
 
 interface Props {
   quizId: string
@@ -19,6 +19,7 @@ interface Props {
   docked: boolean
   busy: boolean
   blockedReason: string
+  appendFeedback?: ReactNode
   readPaper: () => ExamPaper
   onClose: () => void
   onBusyChange: (busy: boolean) => void
@@ -26,14 +27,17 @@ interface Props {
 }
 
 export default function QuizAssistantDock({
-  quizId, open, docked, busy, blockedReason, readPaper, onClose, onBusyChange, onAppendResult,
+  quizId, open, docked, busy, blockedReason, appendFeedback, readPaper, onClose, onBusyChange, onAppendResult,
 }: Props) {
   const chat = useAiAssistant(undefined, undefined, { quizId, readSheet: () => quizAssistantSheet(readPaper()) })
   const runtimeRef = useRef<AssistantRuntime | null>(null)
   const appending = useRef(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [draftRefreshFailed, setDraftRefreshFailed] = useState<string | null>(null)
   const loading = chat.conversationsLoading || chat.draftLoading
-  const ids = writtenRunItemIds(chat.messages, chat.paper.questions)
+  const draftStale = chat.activeId !== null && draftRefreshFailed === chat.activeId
+  const ids = draftStale ? [] : pendingQuizDraftItemIds(chat.draftItems, quizId)
+  const showAppend = ids.length > 0 && !chat.running && !loading
 
   function giveBack(text: string | null) {
     const composer = runtimeRef.current?.thread.composer
@@ -46,17 +50,33 @@ export default function QuizAssistantDock({
     runtimeRef.current?.thread.composer.setText('')
   }
 
+  async function retryDraftRefresh() {
+    const id = chat.activeId
+    if (!id || busy || chat.running) return
+    onBusyChange(true)
+    try {
+      if (await chat.refreshDraft(id)) setDraftRefreshFailed((failedId) => failedId === id ? null : failedId)
+    } finally {
+      onBusyChange(false)
+    }
+  }
+
   async function append() {
-    if (!chat.activeId || ids.length === 0 || blockedReason || busy || appending.current || chat.running) return
+    const id = chat.activeId
+    if (!id || !showAppend || blockedReason || busy || appending.current) return
     appending.current = true
     onBusyChange(true)
     chat.setNotice(null)
     try {
-      const result = await exportAiDraftToQuiz(chat.activeId, { quizId, itemIds: ids })
+      const { result, draftRefreshed } = await appendQuizDraft(id, { quizId, itemIds: ids }, chat.refreshDraft)
+      if (!draftRefreshed) setDraftRefreshFailed(id)
       onAppendResult(`Đã thêm ${result.questionCount} câu vào bài. Bỏ qua ${result.skipped.length} câu.`)
     } catch (error) {
       if (isDefiniteTeacherQuestionWriteRejection(error)) chat.setNotice(getErrorMessage(error))
-      else onAppendResult(`Chưa xác nhận được kết quả thêm câu hỏi. ${getErrorMessage(error)} Kiểm tra bài sau khi tải lại.`)
+      else {
+        if (!(await chat.refreshDraft(id))) setDraftRefreshFailed(id)
+        onAppendResult(`Chưa xác nhận được kết quả thêm câu hỏi. ${getErrorMessage(error)} Kiểm tra bài sau khi tải lại.`)
+      }
     } finally {
       appending.current = false
       onBusyChange(false)
@@ -73,7 +93,11 @@ export default function QuizAssistantDock({
           <p className="m-0 p-2 text-sm text-text-tertiary">Chưa có cuộc trò chuyện.</p>
         ) : chat.conversations.map((conversation) => (
           <Button key={conversation.id} size="sm" appearance="ghost" className="w-full justify-start" aria-pressed={conversation.id === chat.activeId}
-            onClick={() => { chat.selectConversation(conversation.id); setHistoryOpen(false) }}>
+            onClick={() => {
+              if (conversation.id !== chat.activeId && conversation.id === draftRefreshFailed) setDraftRefreshFailed(null)
+              chat.selectConversation(conversation.id)
+              setHistoryOpen(false)
+            }}>
             <span className="truncate">{conversation.title}</span>
           </Button>
         ))}
@@ -92,12 +116,25 @@ export default function QuizAssistantDock({
       conversationsOpen={historyOpen} onOpenConversations={() => setHistoryOpen((shown) => !shown)} history={history()}
       onPickPrompt={(_mode, prompt) => runtimeRef.current?.thread.composer.setText(prompt)}
       className={docked ? 'flex w-[var(--console-docked-sheet-width,min(460px,36vw))] shrink-0 border-l border-card-border' : 'flex h-full w-full'}
-      footer={ids.length > 0 && !chat.running && !loading && (
+      footer={(appendFeedback || showAppend || draftStale) && (
         <div className="flex shrink-0 flex-col gap-1 border-t border-card-border px-3 py-2">
-          <Button disabled={busy || Boolean(blockedReason)} onClick={() => void append()}>
-            Thêm {ids.length} câu vào bài
-          </Button>
-          {blockedReason && <p className="m-0 text-xs text-text-tertiary">{blockedReason}</p>}
+          {appendFeedback}
+          {showAppend && (
+            <>
+              <Button disabled={busy || Boolean(blockedReason)} onClick={() => void append()}>
+                Thêm {ids.length} câu vào bài
+              </Button>
+              {blockedReason && <p className="m-0 text-xs text-text-tertiary">{blockedReason}</p>}
+            </>
+          )}
+          {draftStale && (
+            <Notice tone="danger" role="alert">
+              Chưa tải lại được bản nháp cuộc trò chuyện.
+              <Button size="sm" appearance="outline" disabled={busy || chat.running} onClick={() => void retryDraftRefresh()}>
+                Tải lại bản nháp
+              </Button>
+            </Notice>
+          )}
         </div>
       )}
     />

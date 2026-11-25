@@ -384,7 +384,10 @@ export function useAiAssistant(
     paperImportRef.current = onPaperImport ?? null
   })
   // After a reload the list this tab showed last is shown at once, while it is asked for again.
-  const [cachedConversations] = useState(() => quizId ? null : readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE))
+  const [cachedConversations] = useState(() => {
+    if (quizId) return null
+    return readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE)?.filter((conversation) => !conversation.quizId) ?? null
+  })
   const [conversations, setConversations] = useState<AiConversation[]>(cachedConversations ?? [])
   const [conversationsLoading, setConversationsLoading] = useState(cachedConversations === null)
   const [conversationsError, setConversationsError] = useState(false)
@@ -437,6 +440,7 @@ export function useAiAssistant(
   /** Every message of the open conversation the server holds, in every branch; `messages` is the one shown. */
   const [allMessages, setAllMessages] = useState<AiChatMessage[]>([])
   const draftRef = useRef<AiDraftResponse | null>(null)
+  const draftRefreshSequence = useRef(0)
   const runRef = useRef<AiRun | null>(null)
   const sendingRef = useRef(false)
   const streamRef = useRef<StreamHandle | null>(null)
@@ -528,7 +532,10 @@ export function useAiAssistant(
     const current = draftRef.current
     if (batch.length === 0 || !current) return
     const byId = new Map(current.items.map((entry) => [entry.id, entry]))
-    for (const entry of batch) byId.set(entry.id, entry)
+    for (const entry of batch) {
+      const addedToQuizId = byId.get(entry.id)?.addedToQuizId
+      byId.set(entry.id, addedToQuizId ? { ...entry, addedToQuizId } : entry)
+    }
     updateDraft({ ...current, items: [...byId.values()] })
   }, [updateDraft])
 
@@ -579,9 +586,12 @@ export function useAiAssistant(
   }, [updateMessages])
 
   const refreshDraft = useCallback(async (conversationId: string) => {
+    if (activeIdRef.current !== conversationId) return false
+    const generation = generationRef.current
+    const sequence = ++draftRefreshSequence.current
     try {
       const next = await getAiDraft(conversationId)
-      if (activeIdRef.current !== conversationId) return false
+      if (generationRef.current !== generation || draftRefreshSequence.current !== sequence) return false
       updateDraft(next)
       return true
     } catch {
@@ -1788,6 +1798,8 @@ export function useAiAssistant(
     /** Every message of the open conversation in every branch, for the thread's versions of a turn. */
     allMessages,
     showBranch,
+    draftItems: draft?.items ?? [],
+    refreshDraft,
     paper,
     numberOf,
     draftLoading,

@@ -32,13 +32,18 @@ import { useQuizLabels } from './useQuizLabels'
 
 const QuizAssistantDock = lazy(() => import('./QuizAssistantDock'))
 
-export default function QuizEditorForm({ initial, onCancel, onSaved, onReload, appendNotice, onAppendResult }: {
+export default function QuizEditorForm({
+  initial, onCancel, onSaved, onReload, appendNotice, onAppendResult, refreshing, refreshError, onRetryRefresh,
+}: {
   initial: TeacherQuizEditor
   onCancel: () => void
   onSaved: (message: string) => void
   onReload: () => void
   appendNotice: string
   onAppendResult: (message: string) => void
+  refreshing: boolean
+  refreshError: string
+  onRetryRefresh: () => void
 }) {
   const [layout] = useEditorLayout()
   const [railOpen, setRailOpen] = useState(false)
@@ -48,8 +53,20 @@ export default function QuizEditorForm({ initial, onCancel, onSaved, onReload, a
     settingsLocked, published, canEditContent, canEditQuestions, importBlockedReason, appendBlockedReason,
     selectPaperItem, updateSettings, updateSection, updateQuestion, addSection, addQuestion, deleteQuestion,
     moveSection, removeSection, moveQuestion, reorderQuestion, shiftQuestion, save,
-  } = useQuizEditor(initial, onSaved)
+  } = useQuizEditor(initial, onSaved, refreshing || Boolean(refreshError))
   const settingsDocked = useMinWidth(placement || courseQuiz ? 1024 : 1280) && ((!placement && !courseQuiz) || layout === 'workspace')
+  const feedbackInDock = chatOpen && !settingsDocked && canEditContent
+  const appendFeedback = (appendNotice || refreshError) && (
+    <>
+      {appendNotice && <Notice>{appendNotice}</Notice>}
+      {refreshError && (
+        <Notice tone="danger" role="alert">
+          {refreshError}
+          <Button size="sm" appearance="outline" onClick={onRetryRefresh}>Thử tải lại bài</Button>
+        </Notice>
+      )}
+    </>
+  )
   const serverQuizId = quiz.id
   const quizLabels = useQuizLabels(serverQuizId)
   const paper = useMemo(
@@ -141,18 +158,18 @@ export default function QuizEditorForm({ initial, onCancel, onSaved, onReload, a
           {ambiguousQuestionSave ? 'Quay về danh sách' : 'Hủy'}
         </Button>
         <Button appearance="outline" onClick={() => void save(false)} disabled={busy || published || ambiguousQuestionSave}>
-          <Clock3 size={15} />{busy ? 'Đang lưu...' : 'Lưu thay đổi'}
+          <Clock3 size={15} />{busy && !refreshError ? 'Đang lưu...' : 'Lưu thay đổi'}
         </Button>
         {quiz.status !== 'ARCHIVED' && (
           <Button onClick={() => void save(true)} disabled={busy || settingsLocked || published || ambiguousQuestionSave}>
-            <Send size={15} />{busy ? 'Đang xử lý...' : 'Lưu và xuất bản'}
+            <Send size={15} />{busy && !refreshError ? 'Đang xử lý...' : 'Lưu và xuất bản'}
           </Button>
         )}
         <EditorLayoutToggle />
       </EditorTopBar>}
-      notices={(error || ambiguousQuestionSave || appendNotice) && <>
+      notices={(error || ambiguousQuestionSave || (!feedbackInDock && appendFeedback)) && <>
         {error && <Notice tone="danger" role="alert" className="font-medium">{error}</Notice>}
-        {appendNotice && <Notice>{appendNotice}</Notice>}
+        {!feedbackInDock && appendFeedback}
         {ambiguousQuestionSave && (
           <Notice tone="warning" role="alert" aria-live="assertive">
             Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
@@ -180,6 +197,7 @@ export default function QuizEditorForm({ initial, onCancel, onSaved, onReload, a
           <Suspense fallback={<QuizDockSkeleton open={chatOpen} docked={settingsDocked} onClose={() => setChatOpen(false)} />}>
             <QuizAssistantDock quizId={serverQuizId} open={chatOpen} docked={settingsDocked} busy={busy}
               blockedReason={appendBlockedReason} onClose={() => setChatOpen(false)} onBusyChange={setBusy} onAppendResult={onAppendResult}
+              appendFeedback={feedbackInDock ? appendFeedback : null}
               readPaper={() => paper ?? draftQuizToPaper(initial, sections, settings.title, Number(settings.duration) || null)} />
           </Suspense>
         )}

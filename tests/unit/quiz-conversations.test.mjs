@@ -26,9 +26,10 @@ function mockRequest(t, handler, role = 'STAFF') {
   t.after(() => { delete globalThis.localStorage })
 }
 
-test('lists and creates conversations for the quiz while keeping the workspace route unfiltered', async (t) => {
+test('lists quiz conversations separately from standalone workspace conversations', async (t) => {
   const quizId = 'quiz & 1'
   const conversation = { id: 'conversation-1', quizId }
+  const standalone = { id: 'workspace-1', quizId: null }
   const pending = [
     ['GET', quizId, undefined],
     ['POST', null, { title: 'Đề Toán', quizId }],
@@ -40,12 +41,12 @@ test('lists and creates conversations for the quiz while keeping the workspace r
     assert.equal(request.method, method)
     assert.equal(params.get('quizId'), filter)
     assert.deepEqual(request.body && JSON.parse(request.body), body)
-    return { data: method === 'GET' ? { content: [conversation] } : conversation }
+    return { data: method === 'GET' ? { content: [filter ? conversation : standalone] } : conversation }
   })
 
   assert.deepEqual((await service.getAiConversations(0, 50, quizId)).content, [conversation])
   assert.deepEqual(await service.createAiConversation({ title: 'Đề Toán', quizId }), conversation)
-  await service.getAiConversations()
+  assert.deepEqual((await service.getAiConversations()).content, [standalone])
   assert.equal(pending.length, 0)
 })
 
@@ -68,19 +69,60 @@ test('uses the active quiz write permission before appending', async (t) => {
   await assert.rejects(service.exportAiDraftToQuiz('conversation-1', { quizId: 'quiz-1', itemIds: ['written-1'] }), { status: 403 })
 })
 
-test('only written questions from the run can be appended', () => {
-  const messages = [
-    { role: 'assistant', addedItemIds: ['older'] },
-    { role: 'user' },
-    { role: 'assistant', addedItemIds: ['written-1', 'failed', 'sheet-2', 'written-1'] },
+const draftItem = (id, addedToQuizId) => ({ id, addedToQuizId, question: { text: `Câu hỏi ${id}` } })
+
+test('a freshly loaded draft offers written questions from every run', async (t) => {
+  const items = [
+    draftItem('earlier', null),
+    draftItem('later', null),
+    { id: 'failed', question: { failed: true, text: 'Không viết được câu hỏi' } },
+    { id: 'blank', question: { text: ' ' } },
   ]
-  const questions = [
-    { id: 'older' },
-    { id: 'written-1' },
-    { id: 'failed', failure: 'Không viết được câu hỏi' },
-  ]
-  assert.deepEqual(quizDraft.writtenRunItemIds(messages, questions), ['written-1'])
-  assert.deepEqual(quizDraft.writtenRunItemIds([...messages, { role: 'assistant', addedItemIds: [] }], questions), [])
+  mockRequest(t, (path, _params, request) => {
+    assert.equal(path, '/api/v1/ai-assistant/conversations/conversation-1/draft')
+    assert.equal(request.method, 'GET')
+    return { data: { items } }
+  })
+  const loaded = await service.getAiDraft('conversation-1')
+  assert.deepEqual(quizDraft.pendingQuizDraftItemIds(loaded.items, 'quiz-1'), ['earlier', 'later'])
+})
+
+test('a draft item added to the target quiz is no longer offered', () => {
+  const items = [draftItem('same', 'quiz-1'), draftItem('different', 'quiz-2'), draftItem('new', undefined)]
+  assert.deepEqual(quizDraft.pendingQuizDraftItemIds(items, 'quiz-1'), ['different', 'new'])
+})
+
+test('a successful append refreshes the draft and clears its pending count', async (t) => {
+  const quizId = 'quiz-1'
+  const conversationId = 'conversation-1'
+  const items = [draftItem('earlier', null), draftItem('later', null)]
+  const draftPath = `/api/v1/ai-assistant/conversations/${conversationId}/draft`
+  const response = { quizId, questionCount: 2, skipped: [] }
+  let writes = 0
+  let reads = 0
+  mockRequest(t, (path, _params, request) => {
+    if (path === draftPath) {
+      assert.equal(request.method, 'GET')
+      reads++
+      return { data: { items: writes ? items.map((item) => ({ ...item, addedToQuizId: quizId })) : items } }
+    }
+    assert.equal(path, `${draftPath}/quiz`)
+    assert.equal(request.method, 'POST')
+    assert.deepEqual(JSON.parse(request.body), { quizId, itemIds: ['earlier', 'later'] })
+    writes++
+    return { data: response }
+  })
+  let pending = await service.getAiDraft(conversationId)
+  const ids = quizDraft.pendingQuizDraftItemIds(pending.items, quizId)
+  assert.equal(ids.length, 2)
+  const appended = await quizDraft.appendQuizDraft(conversationId, { quizId, itemIds: ids }, async (id) => {
+    pending = await service.getAiDraft(id)
+    return true
+  })
+  assert.deepEqual(appended, { result: response, draftRefreshed: true })
+  assert.equal(writes, 1)
+  assert.equal(reads, 2)
+  assert.equal(quizDraft.pendingQuizDraftItemIds(pending.items, quizId).length, 0)
 })
 
 test('provides the current question, choices and shared passage as sheet context', () => {
