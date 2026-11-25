@@ -262,7 +262,9 @@ function SelectContent({ children, className, ...props }: SelectContentProps) {
       offset={4}
       className={cn(
         "w-(--trigger-width) app-scroll overflow-auto rounded-lg border border-card-border bg-background-white-secondary",
-        "duration-150 ease-out data-entering:animate-in data-entering:fade-in-0 data-exiting:animate-out data-exiting:fade-out-0",
+        // Time the open and close animations only: a property transition still running when the menu starts to close
+        // can be cut short, and react-aria then never removes the menu.
+        "animation-duration-150 ease-out data-entering:animate-in data-entering:fade-in-0 data-exiting:animate-out data-exiting:fade-out-0",
         "data-[placement=bottom]:slide-in-from-top-2 data-[placement=bottom]:slide-out-to-top-2",
         "data-[placement=top]:slide-in-from-bottom-2 data-[placement=top]:slide-out-to-bottom-2",
         className,
