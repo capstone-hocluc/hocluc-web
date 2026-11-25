@@ -15,6 +15,8 @@ import { ComposerChips } from './Composer'
 import { modeOf } from './composer-modes'
 import { StageGroup } from './chat/stage-group'
 import { RunStepsGroup } from './chat/RunStepsGroup'
+import { StageNote } from './chat/stage-note'
+import { StepCall } from './chat/step-call'
 import StarterSuggestions from './StarterSuggestions'
 import type { AiChatMessage } from './exam-format'
 
@@ -100,7 +102,15 @@ function ComposerTop() {
   )
 }
 
-const THREAD_PARTS = { Welcome, ComposerExtra: Chips, ComposerTop, ReasoningGroup: StageGroup, ChainOfThought: RunStepsGroup }
+const THREAD_PARTS = {
+  Welcome,
+  ComposerExtra: Chips,
+  ComposerTop,
+  ReasoningGroup: StageGroup,
+  ChainOfThought: RunStepsGroup,
+  Reasoning: StageNote,
+  ToolFallback: StepCall,
+}
 
 export interface ChatPanelProps {
   messages: readonly AiChatMessage[]

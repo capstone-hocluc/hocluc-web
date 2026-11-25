@@ -28,6 +28,8 @@ export interface AiTraceItem extends AiStepTimes {
   id: string
   label: string
   detail?: string
+  /** The tool the step used, for its icon: a tool's name, `slot` for a question being written, `read_part` for a part read. */
+  tool?: string
   state?: AiTraceState
 }
 

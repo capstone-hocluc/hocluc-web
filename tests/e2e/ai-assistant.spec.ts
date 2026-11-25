@@ -1593,19 +1593,21 @@ test('a reopened reply shows each step of its run and how long each took', async
   // Under its title a stage says what it found, without its title again.
   await expect(chat.getByText('Sẽ soạn 2 câu đạo hàm.')).toBeVisible()
   await expect(chat.getByText('Khảo sát ngân hàng câu hỏi')).toHaveCount(1)
-  const calls = chat.locator('[data-slot="tool-fallback-trigger"]')
+  const calls = chat.locator('[data-slot="run-step"]')
   await expect(calls).toHaveCount(3)
   const survey = chat.locator('[data-stage-disclosure]').filter({ hasText: 'Khảo sát ngân hàng câu hỏi' })
   await expect(survey.locator('[data-slot="reasoning-content"]').getByText('Tìm câu mẫu trong ngân hàng')).toBeVisible()
   // A finished stage's text is not faded at its edges: the fades belong to the scrolling preview of a running one.
   await expect(survey.locator('[data-slot="reasoning-fade"]')).toHaveCount(0)
   await expect(calls.nth(0)).toContainText('Tìm câu mẫu trong ngân hàng')
-  await expect(calls.nth(0).locator('[data-slot="tool-fallback-duration"]')).toHaveText('4,5 giây')
+  // Each step leads with the icon of what it did.
+  await expect(calls.nth(0).locator('svg')).toHaveCount(1)
+  await expect(calls.nth(0).locator('[data-slot="run-step-duration"]')).toHaveText('4,5 giây')
   await expect(calls.nth(1)).toContainText('Kiểm tra lại câu')
-  await expect(calls.nth(1).locator('[data-slot="tool-fallback-duration"]')).toHaveText('10 giây')
+  await expect(calls.nth(1).locator('[data-slot="run-step-duration"]')).toHaveText('10 giây')
   // The question the run was at has no time: the server tells of a question once it is saved, not when it is begun.
   await expect(calls.nth(2)).toContainText('Soạn câu 2/2')
-  await expect(calls.nth(2).locator('[data-slot="tool-fallback-duration"]')).toHaveCount(0)
+  await expect(calls.nth(2).locator('[data-slot="run-step-duration"]')).toHaveCount(0)
   await chat.screenshot({ path: testInfo.outputPath('run-steps.png') })
 })
 
@@ -3581,9 +3583,17 @@ test('a run still going when the exam is opened is followed again, from right be
   await expect(writing).toHaveClass(/shimmer/)
   const counted = (await writing.textContent()) ?? ''
   await expect(writing).not.toHaveText(counted, { timeout: 5_000 })
+  // The running stage stays folded: under its title one line says what it is doing now, and opening it trades that
+  // line for every step.
+  const writingStage = page.locator('[data-stage-disclosure]').filter({ has: writing })
+  await expect(writingStage.locator('[data-slot="reasoning-trigger"]')).toHaveAttribute('aria-expanded', 'false')
+  const activity = page.locator('[data-slot="stage-activity"]')
+  await expect(activity).toHaveCount(1)
+  await expect(activity).toContainText('Soạn câu 2/2')
   await openRunSteps(page)
-  const search = page.locator('[data-slot="tool-fallback-trigger"]').filter({ hasText: 'Tìm câu mẫu trong ngân hàng' })
-  await expect(search.locator('[data-slot="tool-fallback-duration"]')).toHaveText('1 phút')
+  await expect(activity).toHaveCount(0)
+  const search = page.locator('[data-slot="run-step"]').filter({ hasText: 'Tìm câu mẫu trong ngân hàng' })
+  await expect(search.locator('[data-slot="run-step-duration"]')).toHaveText('1 phút')
   await expect(page.getByText('Soạn câu 2/2', { exact: true })).toBeVisible()
   await expect(page.getByText(/excludeIds|patternCode/)).toHaveCount(0)
   // The question being written shows word by word on the sheet (and as one line in the chat), never in the saved document.
