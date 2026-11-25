@@ -243,7 +243,8 @@ function ReasoningContent({
       )}
       {...props}
     >
-      <ReasoningFade side="top" />
+      {/* The fades only edge the scrolling preview of a running step; on finished text they would wash out its lines. */}
+      {isPreview ? <ReasoningFade side="top" /> : null}
       {children}
       {isPreview ? <ReasoningFade /> : null}
     </CollapsibleContent>
