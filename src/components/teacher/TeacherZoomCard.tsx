@@ -109,11 +109,11 @@ export default function TeacherZoomCard({
         </>
       ) : (
         <>
-          <p className="m-0 text-sm leading-relaxed text-[#526984]">
-            {needsReconnect
-              ? zoomAccount?.lastError || 'Kết nối Zoom đã hết hạn hoặc bị thu hồi.'
-              : 'Kết nối tài khoản Zoom cá nhân để tổ chức lớp trực tuyến.'}
-          </p>
+          {needsReconnect && (
+            <p className="m-0 text-sm leading-relaxed text-[#526984]">
+              Kết nối Zoom đã hết hạn hoặc bị thu hồi.
+            </p>
+          )}
           <button
             type="button"
             disabled={busy}
