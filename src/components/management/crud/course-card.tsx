@@ -36,15 +36,18 @@ export default function CourseCard({ course, showSubject, onOpen, actions }: Pro
         className="rounded-none text-2xl"
       />
       <div className="flex flex-1 flex-col gap-2 px-4 pt-3 pb-4">
-        <p className="flex min-w-0 items-center gap-1.5 text-xs text-text-tertiary">
-          <span className="shrink-0">{COURSE_TYPE_LABELS[course.courseType]}</span>
-          {showSubject && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span className="truncate">{course.categoryName ?? 'Chưa phân loại'}</span>
-            </>
-          )}
-        </p>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <p className="flex min-w-0 items-center gap-1.5 text-xs text-text-tertiary">
+            <span className="shrink-0">{COURSE_TYPE_LABELS[course.courseType]}</span>
+            {showSubject && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="truncate">{course.categoryName ?? 'Chưa phân loại'}</span>
+              </>
+            )}
+          </p>
+          <Status tone={status.tone}>{status.label}</Status>
+        </div>
         <h3 className="m-0 text-base leading-6 font-semibold text-text-primary">
           <button
             type="button"
@@ -56,10 +59,9 @@ export default function CourseCard({ course, showSubject, onOpen, actions }: Pro
           </button>
         </h3>
         {dates && <p className="text-xs text-text-tertiary">{dates}</p>}
-        <p className="mt-auto pt-1 text-sm font-semibold text-text-primary">{coursePrice(course)}</p>
       </div>
       <footer className="flex min-h-13 items-center justify-between gap-2 border-t border-card-border py-2 pr-3 pl-4">
-        <Status tone={status.tone}>{status.label}</Status>
+        <p className="text-lg font-semibold text-text-primary">{coursePrice(course)}</p>
         <div className="relative z-10">{actions}</div>
       </footer>
     </article>

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import Button from '../console/button'
-import SelectField from '../console/select-field'
-import { LoaderCircle } from '../console/icons'
+import { IconAction } from '../console/icon-action'
+import { LoaderCircle, Pencil } from '../console/icons'
 import type { UpdateUserRequest, UserProfile, UserRole } from '../../services/userService'
 import { getAdminEnrollments } from '../../services/enrollmentAdminService'
 import { can } from '../../lib/permissions'
@@ -9,6 +9,7 @@ import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
 import Status from '../console/status'
 import RoleBadge from '../console/role-badge'
+import RoleEditor from './role-editor'
 import ConsoleDialog from '../console/dialog'
 import { ConsoleTabs, ConsoleTabsContent, ConsoleTabsList, ConsoleTabsTrigger } from '../console/tabs'
 import FormField, { fieldControlClass } from '../console/form-field'
@@ -22,9 +23,7 @@ import FactGrid from './fact-grid'
 import MentorProfilePanel from './mentor-profile-panel'
 import TeacherZoomPanel from './teacher-zoom-panel'
 import {
-  ROLE_LABELS,
   STATUS_LABELS,
-  PERSONNEL_ROLES,
   getStatusTone,
   getUserName,
 } from './user-labels'
@@ -83,6 +82,7 @@ function UserDetail({
   const [tab, setTab] = useState<UserTab>('overview')
   const busy = grantingRoles || savingProfile
   const [editing, setEditing] = useState(false)
+  const [editingRole, setEditingRole] = useState(false)
   // Changing the role sits beside the profile summary, not in a tab of its own.
   const canChangeRole = canGrantRoles && !!user && !isStudent && !editing
   const [draft, setDraft] = useState({ firstName: '', lastName: '', email: '', phone: '' })
@@ -103,6 +103,7 @@ function UserDetail({
       phone: user.phone ?? '',
     })
     setError('')
+    setEditingRole(false)
     setEditing(true)
   }
 
@@ -183,11 +184,15 @@ function UserDetail({
               <p className="text-sm break-all text-text-tertiary">{user.email}</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {!canChangeRole && <RoleBadge role={user.role} />}
+              {(!canChangeRole || !editingRole) && <RoleBadge role={user.role} />}
+              {canChangeRole && !editingRole && (
+                <IconAction label="Đổi vai trò" icon={Pencil} onClick={() => setEditingRole(true)} />
+              )}
               <Status tone={getStatusTone(user.status ?? 'PENDING')}>{STATUS_LABELS[user.status ?? 'PENDING']}</Status>
             </div>
-            {canChangeRole && (
-              <RoleEditor key={`${user.id}:${user.role}`} user={user} saving={grantingRoles} onSave={onSaveRole} />
+            {canChangeRole && editingRole && (
+              <RoleEditor key={`${user.id}:${user.role}`} user={user} saving={grantingRoles} onSave={onSaveRole}
+                onClose={() => setEditingRole(false)} />
             )}
             {canEditProfile && !editing && (
               <Button appearance="outline" onClick={startEditing} disabled={busy} className="w-full">
@@ -349,38 +354,6 @@ function UserDetail({
         </div>
       ) : null}
     </ConsoleDialog>
-  )
-}
-
-function RoleEditor({ user, saving, onSave }: {
-  user: UserProfile
-  saving: boolean
-  onSave: (user: UserProfile, role: UserRole) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<UserRole>(user.role)
-  const [error, setError] = useState('')
-  const dirty = draft !== user.role
-  const save = async () => {
-    setError('')
-    try { await onSave(user, draft) }
-    catch (err) { setError(err instanceof Error ? err.message : 'Không thể đổi vai trò.') }
-  }
-  return (
-    <fieldset disabled={saving} className="flex w-full flex-col gap-2 text-left">
-      <legend className="mb-1.5 text-xs text-text-tertiary">Vai trò</legend>
-      <SelectField ariaLabel="Vai trò" options={PERSONNEL_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
-        value={draft} disabled={saving} onChange={(value) => setDraft(value as UserRole)} />
-      {dirty && (
-        <>
-          <p className="text-xs leading-5 text-text-tertiary">Đổi vai trò sẽ kết thúc các phiên đăng nhập của tài khoản này.</p>
-          <div className="flex gap-2">
-            <Button size="sm" appearance="outline" className="flex-1" disabled={saving} onClick={() => { setDraft(user.role); setError('') }}>Hủy</Button>
-            <Button size="sm" className="flex-1" disabled={saving} onClick={() => void save()}>{saving ? 'Đang lưu...' : 'Lưu vai trò'}</Button>
-          </div>
-        </>
-      )}
-      {error && <p role="alert" className="text-sm text-badge-danger-text">{error}</p>}
-    </fieldset>
   )
 }
 

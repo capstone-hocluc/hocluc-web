@@ -10,20 +10,33 @@ import type {
   AiExamDraftRecord,
   AiExamFile,
   AiExamFormat,
+  AiReadingPermission,
+  AiReadingPermissionConfig,
 } from '../../../services/aiAssistantService'
 
 export type AiTraceState = 'done' | 'running' | 'pending'
 
+/**
+ * When a step started and finished, in epoch milliseconds, as far as it was seen: a step first seen already finished
+ * has neither, a step still going has no `completedAt`.
+ */
+export interface AiStepTimes {
+  startedAt?: number
+  completedAt?: number
+}
+
 /** One tool call or one progress line inside a trace stage. */
-export interface AiTraceItem {
+export interface AiTraceItem extends AiStepTimes {
   id: string
   label: string
   detail?: string
+  /** The tool the step used, for its icon: a tool's name, `slot` for a question being written, `read_part` for a part read. */
+  tool?: string
   state?: AiTraceState
 }
 
 /** A stage of a run: explore, plan, write each question, look things up. */
-export interface AiTraceStage {
+export interface AiTraceStage extends AiStepTimes {
   id: string
   title: string
   detail?: string
@@ -58,6 +71,14 @@ export interface AiChatMessage {
   stopped?: boolean
   /** An error of a send, with the words that can be sent again. */
   retryText?: string
+  /** The send that failed was a request the teacher agreed to: "Thử lại" sends it as it went, from the paper it named. */
+  retryAgreed?: { bankSourceId?: string; permissionConfig?: AiReadingPermissionConfig }
+  /**
+   * A request the assistant proposed, sent for the teacher once they agreed: its reply already said it, so the chat
+   * keeps it out of sight.
+   */
+  agreed?: boolean
+  permission?: AiReadingPermission
   /**
    * The question "Bạn muốn soạn môn nào?" asks: the words it was asked about, and the subjects to answer it. Once a
    * later send has taken its place it is `answered`: it stays a question in the thread, its subjects no longer offered.

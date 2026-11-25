@@ -216,8 +216,17 @@ test('category delete confirms the chosen leaf and keeps its parent', async ({ p
 
 test('draft course delete targets the selected course only', async ({ page }) => {
   const state = await installCrudFixture(page)
+  const course = state.courses.find((item) => item.id === IDS.section)!
+  course.paid = true
+  course.price = 690_000
   await page.goto('/staff/courses')
-  await courseCard(page, 'SECTION Đại số')
+  const card = courseCard(page, 'SECTION Đại số')
+  const footer = card.locator('footer')
+  const price = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(690_000)
+  await expect(card.getByText('Nháp', { exact: true })).toBeVisible()
+  await expect(footer.getByText('Nháp', { exact: true })).toHaveCount(0)
+  await expect(footer.getByText(price, { exact: true })).toHaveClass(/text-lg.*font-semibold/)
+  await footer
     .getByRole('button', { name: 'Thao tác khác với SECTION Đại số', exact: true })
     .click()
   await page.getByRole('menuitem', { name: 'Xóa', exact: true }).click()
@@ -514,6 +523,32 @@ test('administrator edits an account identity and a changed email resets verific
   expect(state.users[IDS.teacher].emailVerified).toBe(false)
 })
 
+test('the administrator opens, cancels, and saves the role editor from the badge', async ({ page }) => {
+  const state = await installCrudFixture(page, 'ADMINISTRATOR')
+  await page.goto('/admin/users')
+  await page.getByRole('row', { name: /Giáo viên QA/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
+  const edit = dialog.getByRole('button', { name: 'Đổi vai trò', exact: true })
+  const select = dialog.getByRole('button', { name: /Vai trò$/ })
+  const roleWrites = () => state.requests.filter((request) => request.method === 'PATCH' && request.path.endsWith('/role'))
+
+  await expect(dialog.locator('aside').getByText('Giáo viên', { exact: true })).toBeVisible()
+  await expect(select).toHaveCount(0)
+  await edit.click()
+  await selectOption(dialog, page, 'Vai trò$', 'Nhân viên')
+  await dialog.getByRole('button', { name: 'Hủy', exact: true }).click()
+  await expect(dialog.locator('aside').getByText('Giáo viên', { exact: true })).toBeVisible()
+  await expect(select).toHaveCount(0)
+  expect(roleWrites()).toEqual([])
+
+  await edit.click()
+  await selectOption(dialog, page, 'Vai trò$', 'Nhân viên')
+  await dialog.getByRole('button', { name: 'Lưu vai trò', exact: true }).click()
+  await expect(select).toHaveCount(0)
+  await expect(dialog.locator('aside').getByText('Nhân viên', { exact: true })).toBeVisible()
+  expect(roleWrites()).toMatchObject([{ body: { role: 'STAFF' } }])
+})
+
 test('staff sees account details without the administrator editor', async ({ page }) => {
   await installCrudFixture(page)
   await page.goto('/staff/users')
@@ -521,6 +556,8 @@ test('staff sees account details without the administrator editor', async ({ pag
   const dialog = page.getByRole('dialog', { name: 'Chi tiết tài khoản', exact: true })
   await expect(dialog.getByRole('button', { name: 'Sửa thông tin', exact: true })).toHaveCount(0)
   await expect(dialog.getByRole('button', { name: 'Lưu thông tin', exact: true })).toHaveCount(0)
+  await expect(dialog.locator('aside').getByText('Giáo viên', { exact: true })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Đổi vai trò', exact: true })).toHaveCount(0)
 })
 
 test('staff edits a recurring series and only the untouched sessions follow the new slot', async ({

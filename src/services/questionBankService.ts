@@ -222,6 +222,8 @@ export interface BankSource {
   unlabelledCount: number
   /** When the paper was loaded; a paper still being read has no `finishedAt` yet. */
   createdAt: string
+  /** When its reading last began (a paper read again starts over); absent from an older server. */
+  startedAt?: string | null
   finishedAt: string | null
   /** Its files are kept: a failed paper can be read again without uploading them. */
   retryable: boolean

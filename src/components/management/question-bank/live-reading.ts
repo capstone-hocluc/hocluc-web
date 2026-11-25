@@ -1,6 +1,7 @@
 import { Allow, parse } from 'partial-json'
 import type { BankIngestStage, BankStreamEvent, BankStreamPart, BankStreamSnapshot } from '../../../services/bankReadingStream'
 import type { BankIngestStatus } from '../../../services/questionBankService'
+import type { AiStepTimes } from '../ai-assistant/exam-format'
 
 /** A question as far as the AI has written it; the last one of a part being read is still being written. */
 export interface LiveQuestion {
@@ -34,6 +35,13 @@ export interface LiveReading {
   /** The question Luna is reading again now. */
   rewriting: number | null
   log: LiveLogEntry[]
+  /**
+   * When each step of the reading started and finished, as this page saw it: stages by name, parts as
+   * `part:<id>`. A step already going when the page connected has no start.
+   */
+  times: Record<string, AiStepTimes>
+  /** When the reading ended, as this page saw it. */
+  endedAt: number | null
   /** The server is reading this paper and streams it; false for a stored snapshot. */
   live: boolean
   ended: boolean
@@ -58,11 +66,23 @@ export const partName = (part: Pick<BankStreamPart, 'title' | 'fromQuestion' | '
   `${part.title ? part.title + ' · ' : ''}câu ${part.fromQuestion}–${part.toQuestion}`
 
 export function initialReading(status: BankIngestStatus): LiveReading {
-  return { status, stage: null, progress: null, error: null, parts: [], labelled: 0, labelTotal: 0, reviewed: 0, reviewTotal: 0, rereading: 0, needsPerson: 0, checking: null, rewriting: null, log: [], live: false, ended: false }
+  return { status, stage: null, progress: null, error: null, parts: [], labelled: 0, labelTotal: 0, reviewed: 0, reviewTotal: 0, rereading: 0, needsPerson: 0, checking: null, rewriting: null, log: [], times: {}, endedAt: null, live: false, ended: false }
 }
 
 function note(state: LiveReading, text: string, tone: LiveLogEntry['tone'] = 'info'): LiveLogEntry[] {
   return [{ at: Date.now(), text, tone }, ...state.log].slice(0, LOG_KEPT)
+}
+
+/** A step seen starting at `at`; one already started keeps its start. */
+function started(times: LiveReading['times'], key: string, at: number): LiveReading['times'] {
+  return times[key]?.startedAt !== undefined ? times : { ...times, [key]: { startedAt: at } }
+}
+
+/** A step seen finishing at `at`; one never seen starting keeps no times. */
+function finished(times: LiveReading['times'], key: string | null, at: number): LiveReading['times'] {
+  const time = key ? times[key] : undefined
+  if (!key || time?.startedAt === undefined || time.completedAt !== undefined) return times
+  return { ...times, [key]: { ...time, completedAt: at } }
 }
 
 function fromSnapshot(snapshot: BankStreamSnapshot, previous: LiveReading): LiveReading {
@@ -81,6 +101,8 @@ function fromSnapshot(snapshot: BankStreamSnapshot, previous: LiveReading): Live
     checking: snapshot.checking ?? null,
     rewriting: snapshot.rewriting ?? null,
     log: previous.log.length ? previous.log : snapshot.live ? note(previous, 'Đã kết nối, đang theo dõi AI đọc đề') : [],
+    times: previous.times,
+    endedAt: previous.endedAt,
     live: snapshot.live,
     ended: !snapshot.live,
   }
@@ -93,8 +115,10 @@ export function applyEvent(state: LiveReading, event: BankStreamEvent): LiveRead
       return fromSnapshot(event.data, state)
     case 'stage': {
       const moved = event.data.stage !== state.stage
+      const at = Date.now()
       return {
         ...state,
+        times: moved ? started(finished(state.times, state.stage, at), event.data.stage, at) : state.times,
         status: 'RUNNING',
         stage: event.data.stage,
         progress: event.data.progress,
@@ -117,7 +141,10 @@ export function applyEvent(state: LiveReading, event: BankStreamEvent): LiveRead
           : part.attempt > 1
             ? `Đọc lại ${partName(part)} (lần ${part.attempt})`
             : `AI bắt đầu viết ${partName(part)}`
-      return { ...state, parts, log: note(state, text, part.status === 'DONE' ? 'success' : part.attempt > 1 ? 'warning' : 'info') }
+      const key = `part:${part.id}`
+      const at = Date.now()
+      const times = part.status === 'DONE' ? finished(state.times, key, at) : started(state.times, key, at)
+      return { ...state, parts, times, log: note(state, text, part.status === 'DONE' ? 'success' : part.attempt > 1 ? 'warning' : 'info') }
     }
     case 'text':
       return {
@@ -154,9 +181,12 @@ export function applyEvent(state: LiveReading, event: BankStreamEvent): LiveRead
         log: first ? note(state, `Jev gán nhãn ${event.data.labelTotal} câu`) : state.log,
       }
     }
-    case 'end':
+    case 'end': {
+      const at = Date.now()
       return {
         ...state,
+        times: finished(state.times, state.stage, at),
+        endedAt: at,
         checking: null,
         rewriting: null,
         status: event.data.status,
@@ -170,6 +200,7 @@ export function applyEvent(state: LiveReading, event: BankStreamEvent): LiveRead
           event.data.status === 'DONE' ? 'success' : 'danger'
         ),
       }
+    }
   }
 }
 

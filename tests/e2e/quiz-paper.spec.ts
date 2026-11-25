@@ -8,9 +8,7 @@ const question = (id: string, sequence: number, text: string, options: ReturnTyp
   reviewNote: null, correctLabels: 'A', options, ...extra,
 })
 
-test('the quiz reads as a printed paper: part title, shared passage, bold question numbers, options laid out by length', async ({ page }) => {
-  // Paged.js cuts the paper into A4 pages in the browser, after loading its own chunk.
-  test.setTimeout(60_000)
+test('a quiz is read on the A4 sheets of the exam workspace or as a dense list, answers beside the questions', async ({ page }) => {
   const state = await installQuizFixture(page, 'TEACHER')
   await page.route(`**/api/v1/teacher/quizzes/${QUIZ_IDS.quiz}`, async route => {
     if (route.request().method() !== 'GET') return route.fallback()
@@ -24,13 +22,14 @@ test('the quiz reads as a printed paper: part title, shared passage, bold questi
           groups: [{ id: 'group-1', sectionId: 'section-1', instruction: null, passage: 'Một trường học có 40 học sinh.', imageUrl: null,
             sourcePage: null, sequence: 1, firstQuestion: 2, lastQuestion: 2, questionIds: ['q-2'] }],
           questions: [
-            question('q-1', 1, 'Giải phương trình $x^2 = 4$.', [option('o1', 'A', '$2$', true), option('o2', 'B', '$-2$'), option('o3', 'C', '$\\pm 2$'), option('o4', 'D', '$4$')]),
+            question('q-1', 1, 'Giải phương trình $x^2 = 4$ với $x > 0$.', [option('o1', 'A', '$2$', true), option('o2', 'B', '$-2$'), option('o3', 'C', '$\\pm 2$'), option('o4', 'D', '$4$')],
+              { explanation: 'Vì $2^2 = 4$ và $2 > 0$.' }),
             question('q-2', 2, 'Phát biểu nào sau đây đúng?', [
               option('o5', 'A', 'Số học sinh nam nhiều hơn số học sinh nữ trong lớp học này', true),
               option('o6', 'B', 'Số học sinh nữ nhiều hơn số học sinh nam trong lớp học này'),
               option('o7', 'C', 'Số học sinh nam bằng số học sinh nữ trong toàn bộ lớp học'),
               option('o8', 'D', 'Không đủ dữ kiện để kết luận về số học sinh của lớp học'),
-            ], { groupId: 'group-1' }),
+            ], { groupId: 'group-1', needsReview: true, reviewNote: 'Kiểm tra lại số liệu' }),
           ],
         },
       },
@@ -38,19 +37,47 @@ test('the quiz reads as a printed paper: part title, shared passage, bold questi
   })
   await page.goto('/console/teacher/quizzes')
   await page.getByRole('button', { name: 'Xem nội dung', exact: true }).click()
-  await page.getByRole('tab', { name: 'Bản in' }).click()
 
-  const paper = page.getByRole('article', { name: 'Bản in bài kiểm tra' })
-  await expect(paper.getByRole('heading', { name: 'Quiz được giao' })).toBeVisible({ timeout: 30_000 })
-  await expect(paper.getByText('Thời gian làm bài: 150 phút · 2 câu')).toBeVisible()
-  await expect(paper.getByRole('heading', { name: 'Phần 2. Toán học' })).toBeVisible()
-  await expect(paper.getByText('Dựa vào thông tin dưới đây để trả lời câu 2')).toBeVisible()
-  await expect(paper.getByText('Một trường học có 40 học sinh.')).toBeVisible()
-  await expect(paper.locator('strong', { hasText: 'Câu 1:' })).toBeVisible()
-  const lists = paper.locator('.quiz-paper-options')
-  await expect(lists.nth(0)).toHaveAttribute('data-columns', '4')
-  await expect(lists.nth(1)).toHaveAttribute('data-columns', '1')
-  expect(await paper.evaluate(element => getComputedStyle(element).fontFamily)).toContain('Times New Roman')
-  await expect(page.getByRole('button', { name: 'Tải PDF' })).toBeVisible()
+  // The sheets come first: the title, time, part, shared passage and numbered questions as the assistant lays them out.
+  await expect(page.getByRole('tab', { name: 'Giấy A4', exact: true })).toHaveAttribute('aria-selected', 'true')
+  const sheet = page.getByLabel('Đề Quiz được giao (chỉ đọc)')
+  await expect(sheet.getByRole('heading', { name: 'QUIZ ĐƯỢC GIAO' })).toBeVisible()
+  await expect(sheet.getByText('Thời gian làm bài: 150 phút')).toBeVisible()
+  await expect(sheet.getByRole('heading', { name: 'PHẦN 2. TOÁN HỌC' })).toBeVisible()
+  await expect(sheet.getByText('Dựa vào thông tin dưới đây để trả lời câu 2')).toBeVisible()
+  await expect(sheet.getByText('Một trường học có 40 học sinh.')).toBeVisible()
+  await expect(sheet.locator('strong', { hasText: 'Câu 1.' })).toBeVisible()
+  await expect(sheet.locator('strong', { hasText: 'Câu 2.' })).toBeVisible()
+  expect(await sheet.evaluate(element => getComputedStyle(element).fontFamily)).toContain('Times New Roman')
+  await expect(page.getByText('1 trang A4')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tải PDF' })).toBeEnabled()
+
+  // A mouse pick does not ring the tab it lands on.
+  const listTab = page.getByRole('tab', { name: 'Danh sách', exact: true })
+  await listTab.click()
+  expect(await listTab.evaluate(element => getComputedStyle(element).outlineStyle)).toBe('none')
+
+  // The list: the question and its options on the left, the answer and its explanation on the right.
+  const list = page.getByRole('list', { name: 'Câu hỏi và lời giải' })
+  await expect(list.getByText('Phần 2. Toán học')).toBeVisible()
+  const first = list.getByRole('listitem', { name: 'Câu 1' })
+  await expect(first.getByText('Đáp án: A')).toBeVisible()
+  await expect(first.getByText(/^Vì/)).toBeVisible()
+  await expect(list.getByText('Dựa vào thông tin dưới đây để trả lời câu 2')).toBeVisible()
+  const second = list.getByRole('listitem', { name: 'Câu 2' })
+  await expect(second.getByText('Cần rà soát: Kiểm tra lại số liệu')).toBeVisible()
+  const [question1, answer1] = await Promise.all([
+    first.getByText(/^Giải phương trình/).boundingBox(),
+    first.getByText('Đáp án: A').boundingBox(),
+  ])
+  expect(answer1!.x).toBeGreaterThan(question1!.x + question1!.width)
+  // The sheets are not built while the list is shown.
+  await expect(page.locator('.exam-doc-sheet')).toHaveCount(0)
+
+  // The choice is kept for the next quiz opened.
+  await page.getByRole('button', { name: 'Quay lại danh sách' }).click()
+  await page.getByRole('button', { name: 'Xem nội dung', exact: true }).click()
+  await expect(page.getByRole('tab', { name: 'Danh sách', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('list', { name: 'Câu hỏi và lời giải' })).toBeVisible()
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })

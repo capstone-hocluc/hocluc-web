@@ -14,7 +14,7 @@ import {
   SearchPlus,
   Table2,
 } from '@tailgrids/icons'
-import { BarChart3, Calculator, NotebookPen } from '../../../console/icons'
+import { BarChart3, Calculator, ClipboardList, NotebookPen } from '../../../console/icons'
 import { LINE_HEIGHTS, ZOOM_LEVELS, useExamDoc, type DocMode } from '../exam-doc-context'
 import { sampleChart } from '../chart-data'
 import { INSERT_DATA_CHARTS, INSERT_FIGURES } from '../chart-editor/chart-types'
@@ -73,7 +73,7 @@ function setBlockLineHeight(editor: Editor, value: string | null) {
   editor.chain().focus().setLineSpacing(value).run()
 }
 
-export function FileMenu({ onNew }: { onNew: () => void }) {
+export function FileMenu({ onNew, onExportQuiz }: { onNew: () => void; onExportQuiz?: () => void }) {
   const { editor, mode, setMode } = useExamDoc()
   const pdfJob = usePdfJob()
   // The menu mounts when it opens, so the answer key is looked for now.
@@ -92,6 +92,7 @@ export function FileMenu({ onNew }: { onNew: () => void }) {
   }
   return (
     <>
+      {onExportQuiz && <MenuItem label="Thành quiz / đề thi…" icon={ClipboardList} onSelect={onExportQuiz} />}
       <MenuItem label="Thêm đề" icon={NotebookPen} onSelect={onNew} />
       <MenuItem
         label="Mở file (Word, Markdown, JSON)…"

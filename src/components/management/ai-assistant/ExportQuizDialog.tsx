@@ -10,6 +10,7 @@ import {
 } from '../../../services/aiAssistantService'
 import { getQuizChapterLessons, getQuizCourseChapters, getQuizCourses } from '../../../services/quizCourseService'
 import type { UserRole } from '../../../services/userService'
+import AppLink from '../../landing-page/AppLink'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import DropdownField from '../../console/dropdown-field'
@@ -31,8 +32,8 @@ interface ExportQuizDialogProps {
   conversationId: string
   /** The exam's name, the quiz's title unless changed. */
   title: string
-  /** The written questions the exam keeps: what the quiz takes. */
-  questionCount: number
+  /** The draft questions the quiz takes, in the exam's order: those the exam shows now. */
+  itemIds: string[]
   /** How many of those the check could not confirm; the quiz keeps them flagged. */
   reviewCount?: number
   numberOf: Map<string, number>
@@ -57,7 +58,7 @@ const failed = (status: string) => status === 'error' || status === 'forbidden' 
 export default function ExportQuizDialog({
   conversationId,
   title,
-  questionCount,
+  itemIds,
   reviewCount = 0,
   numberOf,
   role,
@@ -108,6 +109,7 @@ export default function ExportQuizDialog({
           ...(courseOnly ? { courseId: courseId || undefined } : needsLesson ? { lessonId } : { chapterId }),
           title: name.trim() || undefined,
           durationMinutes: minutesValue,
+          itemIds,
         })
       )
       onExported?.(exam ? 'EXAM' : 'QUIZ')
@@ -136,9 +138,7 @@ export default function ExportQuizDialog({
             </Button>
             {editor && (
               <Button asChild>
-                <a href={editor} target="_blank" rel="noreferrer">
-                  Mở quiz
-                </a>
+                <AppLink href={editor}>Mở quiz</AppLink>
               </Button>
             )}
           </>
@@ -180,7 +180,7 @@ export default function ExportQuizDialog({
             Huỷ
           </Button>
           <Button type="submit" disabled={!targetChosen || minutesInvalid || busy}>
-            {busy ? 'Đang xuất…' : `Xuất ${questionCount} câu`}
+            {busy ? 'Đang xuất…' : `Xuất ${itemIds.length} câu`}
           </Button>
         </>
       }

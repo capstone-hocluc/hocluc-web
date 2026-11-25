@@ -23,7 +23,10 @@ export default function SubjectScopeEditor({ userId, role }: { userId: string; r
   const capabilities = CAPABILITIES.filter((capability) => CAPABILITY_ROLES[capability].includes(role))
   const resource = useScheduleResource(`subject-scopes:${userId}`, async () => {
     const [scopes, categories] = await Promise.all([getUserSubjectScopes(userId), getCategories()])
-    return { granted: scopes.scopes.map((scope) => key(scope.categoryId, scope.capability)), rows: subjectRows(categories) }
+    const granted = scopes.scopes
+      .filter((scope) => role !== 'TEACHER' || scope.capability !== 'AUTHOR')
+      .map((scope) => key(scope.categoryId, scope.capability))
+    return { granted, rows: subjectRows(categories) }
   })
   const [draft, setDraft] = useState<string[] | null>(null)
   const [saving, setSaving] = useState(false)

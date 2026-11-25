@@ -81,9 +81,8 @@ export default function QuizCatalog({ items, status, errorMessage, onRetry, read
       </div> },
     { accessorKey: 'attemptCount', header: 'Lượt làm', meta: { className: 'text-center' } },
     { accessorKey: 'status', header: 'Trạng thái',
-      cell: ({ row: { original: quiz } }) => <div className="flex flex-col items-start gap-1.5 whitespace-nowrap">
+      cell: ({ row: { original: quiz } }) => <div className="whitespace-nowrap">
         <Status tone={quiz.status === 'PUBLISHED' ? 'success' : quiz.status === 'DRAFT' ? 'warning' : 'neutral'}>{labels[quiz.status]}</Status>
-        {(quiz.locked || quiz.attemptCount > 0) && <span className="text-xs text-text-tertiary">Đã có lượt thi</span>}
       </div> },
     { id: 'actions', header: 'Thao tác', enableSorting: false,
       meta: { className: 'text-right' }, cell: ({ row }) => renderActions(row.original) },

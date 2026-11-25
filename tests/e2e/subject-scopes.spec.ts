@@ -62,7 +62,7 @@ test.afterEach(async ({ page }) => {
   })
 })
 
-test('a subject right is saved as the whole set and Hủy thay đổi restores the stored ones', async ({
+test('a teacher saves only teaching subjects and Hủy thay đổi restores the stored ones', async ({
   page,
 }) => {
   await installCrudFixture(page, 'ADMINISTRATOR')
@@ -74,11 +74,12 @@ test('a subject right is saved as the whole set and Hủy thay đổi restores t
 
   const author = dialog.getByRole('checkbox', { name: 'Soạn nhãn · Toán', exact: true })
   const teach = dialog.getByRole('checkbox', { name: 'Giảng dạy · Toán', exact: true })
-  const algebra = dialog.getByRole('checkbox', { name: 'Soạn nhãn · Đại số', exact: true })
+  const algebra = dialog.getByRole('checkbox', { name: 'Giảng dạy · Đại số', exact: true })
   const save = dialog.getByRole('button', { name: 'Lưu quyền', exact: true })
   const reset = dialog.getByRole('button', { name: 'Hủy thay đổi', exact: true })
 
-  await expect(author).toBeChecked()
+  await expect(author).toHaveCount(0)
+  await expect(dialog.getByRole('columnheader', { name: 'Soạn nhãn' })).toHaveCount(0)
   await expect(teach).not.toBeChecked()
   await expect(algebra).not.toBeChecked()
   await expect(save).toBeDisabled()
@@ -97,7 +98,6 @@ test('a subject right is saved as the whole set and Hủy thay đổi restores t
   await expect.poll(() => written).toEqual([
     {
       scopes: [
-        { categoryId: IDS.root, capability: 'AUTHOR' },
         { categoryId: IDS.root, capability: 'TEACH' },
       ],
     },
@@ -152,11 +152,11 @@ test('the subject rights table fits a 390px viewport without scrolling the page 
   await page.setViewportSize({ width: 390, height: 844 })
   await installCrudFixture(page, 'ADMINISTRATOR')
   await installScopes(page, {
-    [IDS.teacher]: [{ categoryId: IDS.root, capability: 'AUTHOR' }],
+    [IDS.teacher]: [{ categoryId: IDS.root, capability: 'TEACH' }],
   })
   await page.goto('/admin/users')
   const dialog = await openSubjectTab(page, /Giáo viên QA/)
-  await expect(dialog.getByRole('checkbox', { name: 'Soạn nhãn · Toán', exact: true })).toBeChecked()
+  await expect(dialog.getByRole('checkbox', { name: 'Giảng dạy · Toán', exact: true })).toBeChecked()
 
   const { scrollWidth, clientWidth } = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,

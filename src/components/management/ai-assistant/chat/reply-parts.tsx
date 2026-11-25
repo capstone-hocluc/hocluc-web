@@ -1,44 +1,22 @@
 // What a reply carries besides its words, as data parts of assistant-ui's thread: the subjects to choose from, the
 // chip of a stopped run, the exam's files, and each file the teacher asked the assistant for. Each is registered under
 // its name and reads the reply it belongs to.
-import { createContext, useContext, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { makeAssistantDataUI, useAuiState, type DataMessagePartProps } from '@assistant-ui/react'
-import { FileFormatPdf } from '@tailgrids/icons'
 import { cn } from '../../../../lib/cn'
 import { ArtifactCard } from '../../../assistant-ui/elements/artifact-card'
 import { field, fieldInteractive, paper, pressable } from '../../../assistant-ui/elements/console-surfaces'
 import { FileText, ListChecks, Square } from '../../../console/icons'
+import { ExamFileIcon } from './exam-file-icon'
 import { usePdfBusy, usePdfJob } from '../../exam-doc/export'
-import { examFileName } from '../../../../hooks/useAiAssistant'
+import { examFileName } from '../../../../hooks/ai-run-stages'
 import type { AiExamFile } from '../../../../services/aiAssistantService'
 import type { AiChatMessage } from '../exam-format'
 import { sourceOf } from './assistant-runtime'
-
-export type ExamDownload = 'docx' | 'pdf' | 'docx-exam' | 'pdf-exam'
-
-/** What a reply's own controls do. */
-export interface ChatActions {
-  /** Word or PDF of the exam with its answer key, or of the exam alone. */
-  onDownload: (format: ExamDownload) => void
-  /** Writes the answer key after the exam again from the questions it holds now. */
-  onAnswerKey: () => void
-  /** Sends the words of a failed send again. */
-  onRetry: (messageId: string) => void
-  /** Answers the question "Bạn muốn soạn môn nào?" with a subject (null: the whole paper). */
-  onChooseSubject: (messageId: string, subjectName: string | null) => void
-}
-
-const ChatActionsContext = createContext<ChatActions | null>(null)
-
-export function ChatActionsProvider({ value, children }: { value: ChatActions; children: ReactNode }) {
-  return <ChatActionsContext.Provider value={value}>{children}</ChatActionsContext.Provider>
-}
-
-function useChatActions() {
-  const actions = useContext(ChatActionsContext)
-  if (!actions) throw new Error('The chat turns need a ChatActionsProvider.')
-  return actions
-}
+import ReadingPart from './ReadingPart'
+import ReadingPermissionCard from './ReadingPermissionCard'
+import { useChatActions, type ExamDownload } from './chat-actions'
+import type { ReadingPermissionPart } from './reading-permission'
 
 /** The reply this turn shows (null for the progress turn). */
 function useReply(): AiChatMessage | null {
@@ -126,7 +104,7 @@ function ExamCard(_: DataMessagePartProps) {
   const { onDownload, onAnswerKey } = useChatActions()
   const pdfBusy = usePdfBusy()
   const pdfJob = usePdfJob()
-  if (!reply) return null
+  if (!reply || !onDownload || !onAnswerKey) return null
   const added = reply.addedItemIds?.length ?? 0
   const title = reply.stopped
     ? added > 0
@@ -147,19 +125,19 @@ function ExamCard(_: DataMessagePartProps) {
           other in a narrow panel. */}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-1.5">
         <CardAction onClick={() => onDownload('docx')}>
-          <FileText aria-hidden />
+          <ExamFileIcon format="word" />
           <span className="truncate">Tải Word</span>
         </CardAction>
         <CardAction disabled={pdfBusy} onClick={() => onDownload('pdf')}>
-          <FileFormatPdf aria-hidden />
+          <ExamFileIcon format="pdf" />
           <span className="truncate">{pdfJob === 'full' ? 'Đang tạo PDF…' : 'Tải PDF'}</span>
         </CardAction>
         <CardAction onClick={() => onDownload('docx-exam')}>
-          <FileText aria-hidden />
+          <ExamFileIcon format="word" />
           <span className="truncate">Word không đáp án</span>
         </CardAction>
         <CardAction disabled={pdfBusy} onClick={() => onDownload('pdf-exam')}>
-          <FileFormatPdf aria-hidden />
+          <ExamFileIcon format="pdf" />
           <span className="truncate">{pdfJob === 'examOnly' ? 'Đang tạo PDF…' : 'PDF không đáp án'}</span>
         </CardAction>
       </div>
@@ -171,21 +149,36 @@ function ExamCard(_: DataMessagePartProps) {
   )
 }
 
-/** A file of the exam the teacher asked the assistant for: made from the sheet as it is when downloaded. */
+/**
+ * A file of the exam the teacher asked the assistant for, as a file is shown: its icon and its name, a click away from
+ * the download. It is made from the sheet as it is when downloaded.
+ */
 function FileCard({ data }: DataMessagePartProps<AiExamFile>) {
   const { onDownload } = useChatActions()
   const pdfBusy = usePdfBusy()
   const pdfJob = usePdfJob()
+  if (!onDownload) return null
   const pdf = data.format === 'pdf'
   const download: ExamDownload = `${pdf ? 'pdf' : 'docx'}${data.answers ? '' : '-exam'}` as ExamDownload
   const making = pdf && pdfJob === (data.answers ? 'full' : 'examOnly')
   return (
-    <ArtifactCard className="mt-3" icon={pdf ? <FileFormatPdf /> : <FileText size={16} />} title={`Đề thi · ${examFileName(data)}`}>
-      <CardAction className="self-start" disabled={pdf && pdfBusy} onClick={() => onDownload(download)}>
-        {pdf ? <FileFormatPdf aria-hidden /> : <FileText aria-hidden />}
-        <span className="truncate">{making ? 'Đang tạo PDF…' : pdf ? 'Tải PDF' : 'Tải Word'}</span>
-      </CardAction>
-    </ArtifactCard>
+    <button
+      type="button"
+      disabled={pdf && pdfBusy}
+      onClick={() => onDownload(download)}
+      title={`Tải ${examFileName(data)}`}
+      aria-label={making ? 'Đang tạo PDF…' : `Đề thi ${data.answers ? 'có' : 'không'} đáp án, tệp ${pdf ? 'PDF' : 'Word'}`}
+      className={cn(
+        fieldInteractive,
+        pressable,
+        'mt-3 flex max-w-full items-center gap-2.5 rounded-xl py-2 pr-3.5 pl-2.5 text-left text-[13px] font-medium text-text-primary outline-none focus-visible:ring-1 focus-visible:ring-text-primary/25 disabled:pointer-events-none disabled:opacity-60'
+      )}
+    >
+      <ExamFileIcon format={data.format} label className="w-6" />
+      <span className="truncate">
+        {making ? 'Đang tạo PDF…' : `Đề thi ${data.answers ? 'có' : 'không'} đáp án`}
+      </span>
+    </button>
   )
 }
 
@@ -193,6 +186,8 @@ const SubjectsUI = makeAssistantDataUI({ name: 'subjects', render: SubjectChoice
 const StoppedUI = makeAssistantDataUI({ name: 'stopped', render: Stopped })
 const ExamUI = makeAssistantDataUI({ name: 'exam', render: ExamCard })
 const FileUI = makeAssistantDataUI({ name: 'file', render: FileCard })
+const ReadingUI = makeAssistantDataUI({ name: 'reading', render: ReadingPart })
+const ReadingPermissionUI = makeAssistantDataUI<ReadingPermissionPart>({ name: 'reading-permission', render: ReadingPermissionCard })
 
 /** Registers the reply's data parts with the thread; rendered once inside the chat's runtime. */
 export function ReplyDataUIs() {
@@ -202,6 +197,8 @@ export function ReplyDataUIs() {
       <StoppedUI />
       <ExamUI />
       <FileUI />
+      <ReadingUI />
+      <ReadingPermissionUI />
     </>
   )
 }

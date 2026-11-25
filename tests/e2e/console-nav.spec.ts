@@ -21,20 +21,21 @@ const AREA: Record<MenuRole, string> = {
   ADMINISTRATOR: 'admin',
 }
 
-// Most used first: the overview, then daily operations, learners and payments, training, and the system last.
+// Most used first: the overview, then training (courses, tests, the question bank), learners and payments, daily
+// operations, and the system last.
 const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
   MANAGER: [
     { label: '', items: ['Tổng quan'] },
-    { label: 'Vận hành', items: ['Lịch học', 'Giám sát hỗ trợ'] },
-    { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
     { label: 'Đào tạo', items: ['Khóa học', 'Bài kiểm tra', 'Ngân hàng câu hỏi'] },
+    { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
+    { label: 'Vận hành', items: ['Lịch học', 'Giám sát hỗ trợ'] },
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
   ],
   STAFF: [
     { label: '', items: ['Tổng quan'] },
-    { label: 'Vận hành', items: ['Lịch học', 'Phân công Mentor'] },
-    { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
     { label: 'Đào tạo', items: ['Khóa học', 'Bài kiểm tra', 'Ngân hàng câu hỏi'] },
+    { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
+    { label: 'Vận hành', items: ['Lịch học', 'Phân công Mentor'] },
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
   ],
   TEACHER: [
@@ -46,13 +47,13 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
     { label: '', items: ['Tổng quan'] },
     { label: 'Hỗ trợ', items: ['Hỏi Mentor'] },
   ],
-  // The administrator works on the system first, and owns no classes of its own.
+  // The administrator owns no classes of its own; the system is last for it too.
   ADMINISTRATOR: [
     { label: '', items: ['Tổng quan'] },
-    { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
-    { label: 'Vận hành', items: ['Phân công Mentor'] },
-    { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
     { label: 'Đào tạo', items: ['Khóa học', 'Bài kiểm tra', 'Ngân hàng câu hỏi'] },
+    { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
+    { label: 'Vận hành', items: ['Phân công Mentor'] },
+    { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
   ],
 }
 

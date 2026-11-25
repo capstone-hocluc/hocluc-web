@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, type CSSProperties } from 'react'
+import { createContext, useContext, useRef, type CSSProperties, type ReactNode } from 'react'
 import { Thread } from '@/components/assistant-ui/elements/thread.aui'
 import { TooltipProvider } from '@/components/assistant-ui/ui/tooltip'
 import { cn } from '../../../lib/cn'
@@ -8,11 +8,15 @@ import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import type { SelectOption } from '../../console/select-field'
 import { EmptyState, EmptyStateGreeting } from '../../assistant-ui/elements/empty-state'
-import { ChevronRight, Clock, PanelBottom, Sparkles, SquarePen, X } from '../../console/icons'
+import { ChevronRight, Clock, PanelBottom, SquarePen, X } from '../../console/icons'
+import { HocLucAiMark } from '../exam-doc/hocluc-ai-mark'
 import AssistantSources from './chat/AssistantSources'
 import { ComposerChips } from './Composer'
 import { modeOf } from './composer-modes'
 import { StageGroup } from './chat/stage-group'
+import { RunStepsGroup } from './chat/RunStepsGroup'
+import { StageNote } from './chat/stage-note'
+import { StepCall } from './chat/step-call'
 import StarterSuggestions from './StarterSuggestions'
 import type { AiChatMessage } from './exam-format'
 
@@ -28,6 +32,7 @@ type PanelParts = Pick<
   ChatPanelProps,
   'mode' | 'onModeChange' | 'settings' | 'onSettingsChange' | 'papers' | 'papersLoading' | 'papersError' | 'onReloadPapers'
 > & {
+  countFromPrompt?: boolean
   greeting: string
   pending: boolean
   notice: string | null
@@ -56,7 +61,7 @@ function Welcome() {
 
 /** The mode menu and the settings chip, beside the composer's attach button. */
 function Chips() {
-  const { mode, onModeChange, settings, onSettingsChange, papersError } = usePanelParts()
+  const { mode, onModeChange, settings, onSettingsChange, papersError, countFromPrompt } = usePanelParts()
   return (
     <ComposerChips
       mode={mode}
@@ -64,6 +69,7 @@ function Chips() {
       settings={settings}
       onSettingsChange={onSettingsChange}
       papersError={papersError}
+      countFromPrompt={countFromPrompt}
     />
   )
 }
@@ -98,7 +104,15 @@ function ComposerTop() {
   )
 }
 
-const THREAD_PARTS = { Welcome, ComposerExtra: Chips, ComposerTop, ReasoningGroup: StageGroup }
+const THREAD_PARTS = {
+  Welcome,
+  ComposerExtra: Chips,
+  ComposerTop,
+  ReasoningGroup: StageGroup,
+  ChainOfThought: RunStepsGroup,
+  Reasoning: StageNote,
+  ToolFallback: StepCall,
+}
 
 export interface ChatPanelProps {
   messages: readonly AiChatMessage[]
@@ -123,6 +137,9 @@ export interface ChatPanelProps {
   onOpenConversations: () => void
   /** Fills the composer with a starter prompt (it is not sent). */
   onPickPrompt: (mode: AiAssistantMode, prompt: string) => void
+  countFromPrompt?: boolean
+  history?: ReactNode
+  footer?: ReactNode
   onCollapse?: () => void
   onClose?: () => void
   /** Moves the assistant to a bar at the bottom of the paper. */
@@ -153,6 +170,9 @@ export default function ChatPanel({
   conversationsOpen,
   onOpenConversations,
   onPickPrompt,
+  countFromPrompt,
+  history,
+  footer,
   onCollapse,
   onClose,
   onDockBottom,
@@ -188,12 +208,7 @@ export default function ChatPanel({
         )}
       >
         <header className="flex h-12 shrink-0 items-center gap-2 pr-2 pl-3.5">
-          <Sparkles
-            size={15}
-            strokeWidth={1.7}
-            className="shrink-0 text-primary-text"
-            aria-hidden
-          />
+          <HocLucAiMark className="size-5 shrink-0" />
           <h2 className="min-w-0 truncate text-[15px] font-semibold text-text-primary">
             Trợ lý AI soạn đề
           </h2>
@@ -252,6 +267,7 @@ export default function ChatPanel({
             )}
           </div>
         </header>
+        {history}
 
         <PanelPartsContext.Provider
           value={{
@@ -268,6 +284,7 @@ export default function ChatPanel({
             notice,
             onDismissNotice,
             pickPrompt,
+            countFromPrompt,
           }}
         >
           <TooltipProvider>
@@ -276,6 +293,7 @@ export default function ChatPanel({
             </div>
           </TooltipProvider>
         </PanelPartsContext.Provider>
+        {footer}
       </div>
     </aside>
   )

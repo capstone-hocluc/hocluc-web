@@ -410,6 +410,8 @@ export default function QuestionBankDetail({
       open={id !== null}
       onClose={onClose}
       maxWidth={1120}
+      // One size for every question: a short one leaves room below, a long one scrolls inside.
+      height={820}
       title={question ? dialogTitle(question) : 'Câu hỏi'}
     >
       {question ? (

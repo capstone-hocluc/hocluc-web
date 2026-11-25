@@ -535,7 +535,6 @@ export default function WorkspaceTree({
     </>
   )
   const header = 'flex h-12 shrink-0 items-center gap-1 pr-2 pl-3'
-  // The arrow that puts the panel away (folds it beside the sheet, or closes it as a sheet), alone on top.
   const hide = onCollapse ?? onClose
   const hideLabel = onCollapse ? 'Thu gọn danh sách đề' : 'Đóng danh sách đề'
 
@@ -545,8 +544,8 @@ export default function WorkspaceTree({
       className={cn('flex-col bg-card-background', className)}
       style={style}
     >
-      {hide && (
-        <div className="flex h-12 shrink-0 items-center px-2">
+      <div className="flex h-12 shrink-0 items-center gap-1 px-2">
+        {hide && (
           <button
             type="button"
             onClick={hide}
@@ -556,16 +555,16 @@ export default function WorkspaceTree({
           >
             <ArrowLeft size={18} strokeWidth={1.8} />
           </button>
-        </div>
-      )}
+        )}
+        <div className="ml-auto flex items-center gap-1">{actions}</div>
+      </div>
       {templates ? (
         // The tabs name the panel, so it carries no title of its own.
         <Tabs.Root defaultValue="exams" className="flex min-h-0 flex-1 flex-col">
           <header className={header}>
             <Tabs.List
               aria-label="Tài liệu"
-              // Both tabs as wide as the longer name, as a segmented control is.
-              className="mr-auto grid min-w-0 grid-cols-2 gap-1 rounded-xl bg-background-gray-secondary p-1"
+              className="grid w-full min-w-0 grid-cols-2 gap-1 rounded-xl bg-background-gray-secondary p-1"
             >
               <Tabs.Trigger value="exams" title="Đề của tôi" className={TAB_CLASS}>
                 Đề
@@ -574,7 +573,6 @@ export default function WorkspaceTree({
                 Mẫu đề thi
               </Tabs.Trigger>
             </Tabs.List>
-            {actions}
           </header>
           <Tabs.Content value="exams" className="min-h-0 flex-1 outline-none">
             {tree}
@@ -589,7 +587,6 @@ export default function WorkspaceTree({
             <h2 className="min-w-0 flex-1 truncate pl-1 text-sm font-semibold text-text-primary">
               Đề của tôi
             </h2>
-            {actions}
           </header>
           <div className="min-h-0 flex-1">{tree}</div>
         </>

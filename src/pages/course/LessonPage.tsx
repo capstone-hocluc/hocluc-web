@@ -202,7 +202,7 @@ function LessonPage({ courseId, lessonId, onBackToStudy, onNavigateLesson, onOpe
             <LessonWorkspaceNav courseId={lesson.sectionCourseId ?? courseId ?? ''} lesson={lesson} activeVideoId={selectedVideoId}
               onSelectVideo={id => { void selectVideo(id) }} onNavigateLesson={navigateLesson} />
           </aside>}
-          <div className={styles.viewer} data-reading={isTextLesson || undefined} aria-busy={switchingVideo} role="region" aria-label="Nội dung bài học" tabIndex={0}>
+          <div className={styles.viewer} data-reading={isTextLesson || undefined} data-tutor={lesson.owned || undefined} aria-busy={switchingVideo} role="region" aria-label="Nội dung bài học" tabIndex={0}>
           {!isTextLesson && <h1 className="text-xl font-bold text-text-heading">{lesson.title}</h1>}
           {switchingVideo && <p role="status" className="text-sm text-text-secondary">Đang lưu và chuyển video…</p>}
           <LessonContent

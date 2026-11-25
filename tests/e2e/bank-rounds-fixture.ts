@@ -76,7 +76,13 @@ const queuedPaper = {
   retryable: false,
 }
 
-/** A question bank with nothing in it yet, and one exam year that has two sittings; papers are loaded in the AI workspace. */
+/**
+ * A paper whose reading failed before its files were kept, so loading it again asks for them, and one exam year that
+ * has two sittings.
+ */
+const failedPaper = { ...queuedPaper, round: 'DOT_1', status: 'FAILED', progress: null, error: 'Không đọc được file.' }
+
+/** A question bank holding one paper to load again, and one exam year that has two sittings. */
 export async function installBankRoundFixture(page: Page) {
   const state = await installQuizFixture(page, 'STAFF')
   let upload: string | null = null
@@ -99,7 +105,7 @@ export async function installBankRoundFixture(page: Page) {
           json: { success: true, status: 202, message: 'OK', data: queuedPaper },
         })
       }
-      return ok([])
+      return ok([failedPaper])
     }
     return route.fulfill({
       status: 404,

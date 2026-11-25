@@ -42,6 +42,7 @@ import {
   type ImageMessagePartComponent,
   type TextMessagePartComponent,
   type ToolCallMessagePartComponent,
+  type ReasoningMessagePartComponent,
   useAuiState,
 } from "@assistant-ui/react";
 import {
@@ -74,6 +75,7 @@ import {
   type ComponentType,
   type FC,
   type PropsWithChildren,
+  type ReactNode,
 } from "react";
 
 export type ThreadGroupPart = MessagePrimitive.GroupedParts.GroupPart;
@@ -122,10 +124,16 @@ export type ThreadComponents = {
   AssistantMessage?: ComponentType | undefined;
   Welcome?: ComponentType | undefined;
   ToolFallback?: ToolCallMessagePartComponent | undefined;
+  /** A reasoning part's text, inside its group. */
+  Reasoning?: ReasoningMessagePartComponent | undefined;
   ToolGroup?:
     | ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>>
     | undefined;
   ReasoningGroup?:
+    | ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>>
+    | undefined;
+  /** Every step of a reply (reasoning and tool calls) together. */
+  ChainOfThought?:
     | ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>>
     | undefined;
   TaskGroup?: ComponentType<{ group: ThreadGroupPart }> | undefined;
@@ -134,15 +142,35 @@ export type ThreadComponents = {
   ComposerTop?: ComponentType | undefined;
 };
 
-const messageGroupBy = groupPartByType<ThreadGroupKey>({
+const partGroupBy = groupPartByType<ThreadGroupKey>({
   reasoning: ["group-chainOfThought", "group-reasoning"],
   "tool-call": ["group-chainOfThought", "group-tool"],
   "standalone-tool-call": [],
 });
 
+/**
+ * Reasoning parts the host names (an `id` each: the steps of a run) are a group each, so each heads its own
+ * disclosure; unnamed ones that follow each other fall in one group, as streamed thinking does.
+ */
+const messageGroupBy = (
+  part: Parameters<typeof partGroupBy>[0],
+  context?: Parameters<typeof partGroupBy>[1],
+): readonly ThreadGroupKey[] => {
+  const path = partGroupBy(part, context);
+  if (part.type === "tool-call" && path.includes("group-tool")) {
+    const stage = /^stage-\d+(?=:)/.exec(part.toolCallId)?.[0];
+    if (stage) return ["group-chainOfThought", `group-reasoning:${stage}`];
+  }
+  if (part.type !== "reasoning" || !part.id) return path;
+  return path.map((key) =>
+    key === "group-reasoning" ? (`group-reasoning:${part.id}` as const) : key,
+  );
+};
+
 type ThreadGroupKey =
   | "group-chainOfThought"
   | "group-reasoning"
+  | `group-reasoning:${string}`
   | "group-tool"
   | "group-task";
 
@@ -725,11 +753,30 @@ const MessageError: FC = () => {
 const AssistantMessage: FC = () => {
   const {
     ToolFallback: ToolFallbackComponent = ToolFallback,
+    Reasoning: ReasoningComponent = Reasoning,
     ToolGroup,
     ReasoningGroup,
+    ChainOfThought,
     TaskGroup: TaskGroupComponent,
   } = useContext(ThreadComponentsContext);
   const groupBy = TaskGroupComponent ? taskAwareGroupBy : messageGroupBy;
+  const reasoningGroup = (part: ThreadGroupPart, children: ReactNode) => {
+    if (ReasoningGroup) {
+      return <ReasoningGroup group={part}>{children}</ReasoningGroup>;
+    }
+    const running = part.status.type === "running";
+    return (
+      <ReasoningRoot streaming={running}>
+        <ReasoningTrigger
+          active={running}
+          duration={reasoningDuration(part.timing)}
+        />
+        <ReasoningContent aria-busy={running}>
+          <ReasoningText>{children}</ReasoningText>
+        </ReasoningContent>
+      </ReasoningRoot>
+    );
+  };
 
   const ACTION_BAR_PT = "pt-1.5";
   // Keep the action bar inside the contained root's paint box, then cancel its reserved space in flow.
@@ -749,7 +796,11 @@ const AssistantMessage: FC = () => {
           {({ part, children }) => {
             switch (part.type) {
               case "group-chainOfThought":
-                return <div data-slot="aui_chain-of-thought">{children}</div>;
+                return ChainOfThought ? (
+                  <ChainOfThought group={part}>{children}</ChainOfThought>
+                ) : (
+                  <div data-slot="aui_chain-of-thought">{children}</div>
+                );
               case "group-task":
                 return TaskGroupComponent ? (
                   <TaskGroupComponent group={part} />
@@ -761,29 +812,12 @@ const AssistantMessage: FC = () => {
                 return (
                   <DefaultToolGroup group={part}>{children}</DefaultToolGroup>
                 );
-              case "group-reasoning": {
-                if (ReasoningGroup) {
-                  return (
-                    <ReasoningGroup group={part}>{children}</ReasoningGroup>
-                  );
-                }
-                const running = part.status.type === "running";
-                return (
-                  <ReasoningRoot streaming={running}>
-                    <ReasoningTrigger
-                      active={running}
-                      duration={reasoningDuration(part.timing)}
-                    />
-                    <ReasoningContent aria-busy={running}>
-                      <ReasoningText>{children}</ReasoningText>
-                    </ReasoningContent>
-                  </ReasoningRoot>
-                );
-              }
+              case "group-reasoning":
+                return reasoningGroup(part, children);
               case "text":
                 return <MarkdownText />;
               case "reasoning":
-                return <Reasoning {...part} />;
+                return <ReasoningComponent {...part} />;
               case "tool-call":
                 return part.toolUI ?? <ToolFallbackComponent {...part} />;
               case "data":
@@ -811,7 +845,10 @@ const AssistantMessage: FC = () => {
                   </span>
                 );
               default:
-                return null;
+                // A reasoning part the host named is a group of its own.
+                return part.type.startsWith("group-reasoning:")
+                  ? reasoningGroup(part as ThreadGroupPart, children)
+                  : null;
             }
           }}
         </MessagePrimitive.GroupedParts>
@@ -822,8 +859,11 @@ const AssistantMessage: FC = () => {
         data-slot="aui_assistant-message-footer"
         className={cn("ms-2 flex items-center", ACTION_BAR_HEIGHT)}
       >
-        <BranchPicker />
-        <AssistantActionBar />
+        {/* A turn that is not a reply (a paper being read) has nothing to copy, regenerate or switch. */}
+        <AuiIf condition={(s) => s.message.metadata.custom?.actionsHidden !== true}>
+          <BranchPicker />
+          <AssistantActionBar />
+        </AuiIf>
       </div>
     </MessagePrimitive.Root>
   );
@@ -873,7 +913,7 @@ const AssistantActionBar: FC = () => {
         <ActionBarMorePrimitive.Trigger asChild>
           <TooltipIconButton
             tooltip="Thêm"
-            className="data-[state=open]:bg-accent"
+            className="data-[state=open]:bg-background-gray-secondary_alt"
           >
             <MoreHorizontalIcon />
           </TooltipIconButton>
@@ -881,12 +921,13 @@ const AssistantActionBar: FC = () => {
         <ActionBarMorePrimitive.Content
           side="bottom"
           align="start"
-          sideOffset={6}
-          className="aui-action-bar-more-content bg-popover text-popover-foreground data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:animate-out data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-[8rem] overflow-hidden rounded-xl border p-1.5"
+          sideOffset={4}
+          collisionPadding={8}
+          className="aui-action-bar-more-content exam-doc-ui z-70 min-w-[232px] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-xl border border-card-border bg-background-white-secondary p-1.5 text-text-primary shadow-md outline-none"
         >
           <ActionBarPrimitive.ExportMarkdown asChild>
-            <ActionBarMorePrimitive.Item className="aui-action-bar-more-item hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none select-none">
-              <DownloadIcon className="size-4" />
+            <ActionBarMorePrimitive.Item className="aui-action-bar-more-item flex h-8 w-full cursor-default items-center gap-2.5 rounded-md px-2 text-left text-[13px] text-text-primary outline-none select-none data-[highlighted]:bg-background-gray-secondary_alt data-[disabled]:pointer-events-none data-[disabled]:opacity-45">
+              <DownloadIcon aria-hidden className="size-4 shrink-0 text-icon-tertiary" />
               Tải về dạng Markdown
             </ActionBarMorePrimitive.Item>
           </ActionBarPrimitive.ExportMarkdown>
@@ -924,6 +965,9 @@ const UserImagePart: ImageMessagePartComponent = (part) => (
 );
 
 const UserMessage: FC = () => {
+  // A message the host sent on the user's behalf (`metadata.custom.hidden`) stays in the thread but out of sight.
+  const hidden = useAuiState((s) => s.message.metadata.custom?.hidden === true);
+  if (hidden) return null;
   return (
     <MessagePrimitive.Root
       data-slot="aui_user-message-root"

@@ -121,6 +121,7 @@ export {
   CornerDownLeft,
   GripVertical,
   KeyRound,
+  Minimize2,
   Pause,
   QrCode,
   Save,
