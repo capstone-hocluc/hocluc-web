@@ -20,7 +20,7 @@ export const STAGE_TITLES: Record<string, string> = {
 }
 
 /** What each tool the assistant calls does, in the teacher's words; its raw arguments (ids, JSON) stay hidden. */
-const TOOL_LABELS: Record<string, string> = {
+export const TOOL_LABELS: Record<string, string> = {
   get_exam_format: 'Xem cấu trúc đề',
   list_patterns: 'Xem các dạng câu của môn',
   get_pattern: 'Đọc yêu cầu của dạng câu',
@@ -179,7 +179,11 @@ export function stepStages(
 ): AiTraceStage[] {
   if (event.type === 'tool') {
     const line = toolLine(event.data)
-    return addRunItem(stages, { id: `tool-${key}`, label: line.label, detail: line.detail, state: 'running', startedAt: at }, at)
+    return addRunItem(
+      stages,
+      { id: `tool-${key}`, label: line.label, detail: line.detail, tool: event.data.tool, state: 'running', startedAt: at },
+      at
+    )
   }
   if (event.type === 'slot') {
     const label = event.data.revise && event.data.number
@@ -195,7 +199,7 @@ export function stepStages(
     const previous = finished.find((stage) => stage.id === 'write')?.items ?? []
     // The question the run is at, untimed: a compose run tells of a question once it is saved (the units are written
     // side by side), so when its writing began is not known.
-    const item: AiTraceItem = { id: 'slot', label, detail: detail || undefined, state: 'running' }
+    const item: AiTraceItem = { id: 'slot', label, detail: detail || undefined, tool: 'slot', state: 'running' }
     return withStage(finished, 'write', {
       state: 'running',
       detail: `${event.data.index}/${event.data.total} câu`,

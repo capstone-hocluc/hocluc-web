@@ -187,6 +187,7 @@ export function readingStages(view: LiveReading): AiTraceStage[] {
             id: part.id,
             label: partName(part),
             detail: part.status === 'DONE' ? `${part.questions} câu` : part.attempt > 1 ? `lần ${part.attempt}` : undefined,
+            tool: 'read_part',
             state: partState(part),
             ...view.times[`part:${part.id}`],
           }))

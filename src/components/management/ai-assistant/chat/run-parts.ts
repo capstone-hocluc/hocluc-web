@@ -8,15 +8,22 @@ function stageText(stage: AiTraceStage) {
   return [stage.detail, ...(stage.notes ?? [])].filter(Boolean).join('\n\n')
 }
 
-/** A stage as its disclosure heads it: its title, and whether it still goes on. */
+/** A stage as its disclosure heads it: which stage it is (its icon), its title, and whether it still goes on. */
 export interface StageHead {
+  id: string
   title: string
   running: boolean
 }
 
 /** A message's stages in the order of its reasoning parts, kept as `metadata.custom.stageHeads`. */
 export function stageHeads(stages: readonly AiTraceStage[] | undefined): StageHead[] {
-  return (stages ?? []).map((stage) => ({ title: stage.title, running: stage.state === 'running' }))
+  return (stages ?? []).map((stage) => ({ id: stage.id, title: stage.title, running: stage.state === 'running' }))
+}
+
+/** What a call's row shows besides its label, kept as the call's `artifact`: its tool (the icon) and a short hint. */
+export interface StepArtifact {
+  tool?: string
+  detail?: string
 }
 
 /** A step's times as assistant-ui reads them on a part; none for a step not seen starting. */
@@ -69,6 +76,7 @@ export function stageParts(stages: readonly AiTraceStage[], since?: number, unti
         toolName: item.label,
         args: {},
         argsText: '',
+        artifact: { tool: item.tool, detail: item.detail } satisfies StepArtifact,
         ...(item.state === 'running' && stage.state === 'running' ? {} : { result: item.detail || 'Xong' }),
         ...timingOf(item),
       })
@@ -80,14 +88,16 @@ export function stageParts(stages: readonly AiTraceStage[], since?: number, unti
 export function traceParts(lines: readonly string[]): Part[] {
   return lines.map(
     (line, index): Part => {
-      const [name, ...detail] = line.split(' · ')
+      const [name, ...rest] = line.split(' · ')
+      const detail = rest.join(' · ')
       return {
         type: 'tool-call',
         toolCallId: `trace-${index}`,
         toolName: name,
         args: {},
         argsText: '',
-        result: detail.join(' · ') || 'Xong',
+        artifact: { detail: detail || undefined } satisfies StepArtifact,
+        result: detail || 'Xong',
       }
     }
   )

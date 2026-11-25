@@ -11,7 +11,7 @@ import {
 } from "react";
 import { useIsomorphicLayoutEffect } from "../utils/useIsomorphicLayoutEffect";
 import { cva, type VariantProps } from "class-variance-authority";
-import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import { BrainIcon, ChevronDownIcon, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   CollapsibleRoot as Collapsible,
@@ -175,6 +175,7 @@ function ReasoningTrigger({
   duration,
   durationClassName,
   label = "Suy nghĩ",
+  icon: Icon = BrainIcon,
   className,
   ...props
 }: React.ComponentProps<typeof CollapsibleTrigger> & {
@@ -182,6 +183,8 @@ function ReasoningTrigger({
   duration?: number | undefined;
   durationClassName?: string | undefined;
   label?: string | undefined;
+  /** What the disclosure holds, before its label; a thought by default. */
+  icon?: LucideIcon | undefined;
 }) {
   const durationText = duration ? ` · ${formatDuration(duration * 1000)}` : "";
 
@@ -194,7 +197,7 @@ function ReasoningTrigger({
       )}
       {...props}
     >
-      <BrainIcon
+      <Icon
         data-slot="reasoning-trigger-icon"
         className="aui-reasoning-trigger-icon size-4 shrink-0"
       />
@@ -253,9 +256,13 @@ function ReasoningContent({
 
 function ReasoningText({
   className,
+  contentClassName,
   children,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.ComponentProps<"div"> & {
+  /** The column the text's blocks stand in, spaced apart by default. */
+  contentClassName?: string | undefined;
+}) {
   const isPreview = useContext(ReasoningPreviewContext);
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -326,7 +333,10 @@ function ReasoningText({
       )}
       {...props}
     >
-      <div ref={contentRef} className="aui-reasoning-text-content space-y-4">
+      <div
+        ref={contentRef}
+        className={cn("aui-reasoning-text-content space-y-4", contentClassName)}
+      >
         {children}
       </div>
     </div>

@@ -42,6 +42,7 @@ import {
   type ImageMessagePartComponent,
   type TextMessagePartComponent,
   type ToolCallMessagePartComponent,
+  type ReasoningMessagePartComponent,
   useAuiState,
 } from "@assistant-ui/react";
 import {
@@ -123,6 +124,8 @@ export type ThreadComponents = {
   AssistantMessage?: ComponentType | undefined;
   Welcome?: ComponentType | undefined;
   ToolFallback?: ToolCallMessagePartComponent | undefined;
+  /** A reasoning part's text, inside its group. */
+  Reasoning?: ReasoningMessagePartComponent | undefined;
   ToolGroup?:
     | ComponentType<PropsWithChildren<{ group: ThreadGroupPart }>>
     | undefined;
@@ -750,6 +753,7 @@ const MessageError: FC = () => {
 const AssistantMessage: FC = () => {
   const {
     ToolFallback: ToolFallbackComponent = ToolFallback,
+    Reasoning: ReasoningComponent = Reasoning,
     ToolGroup,
     ReasoningGroup,
     ChainOfThought,
@@ -813,7 +817,7 @@ const AssistantMessage: FC = () => {
               case "text":
                 return <MarkdownText />;
               case "reasoning":
-                return <Reasoning {...part} />;
+                return <ReasoningComponent {...part} />;
               case "tool-call":
                 return part.toolUI ?? <ToolFallbackComponent {...part} />;
               case "data":
