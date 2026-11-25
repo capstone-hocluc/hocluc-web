@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, type CSSProperties } from 'react'
+import { createContext, useContext, useRef, type CSSProperties, type ReactNode } from 'react'
 import { Thread } from '@/components/assistant-ui/elements/thread.aui'
 import { TooltipProvider } from '@/components/assistant-ui/ui/tooltip'
 import { cn } from '../../../lib/cn'
@@ -32,6 +32,7 @@ type PanelParts = Pick<
   ChatPanelProps,
   'mode' | 'onModeChange' | 'settings' | 'onSettingsChange' | 'papers' | 'papersLoading' | 'papersError' | 'onReloadPapers'
 > & {
+  countFromPrompt?: boolean
   greeting: string
   pending: boolean
   notice: string | null
@@ -60,7 +61,7 @@ function Welcome() {
 
 /** The mode menu and the settings chip, beside the composer's attach button. */
 function Chips() {
-  const { mode, onModeChange, settings, onSettingsChange, papersError } = usePanelParts()
+  const { mode, onModeChange, settings, onSettingsChange, papersError, countFromPrompt } = usePanelParts()
   return (
     <ComposerChips
       mode={mode}
@@ -68,6 +69,7 @@ function Chips() {
       settings={settings}
       onSettingsChange={onSettingsChange}
       papersError={papersError}
+      countFromPrompt={countFromPrompt}
     />
   )
 }
@@ -135,6 +137,9 @@ export interface ChatPanelProps {
   onOpenConversations: () => void
   /** Fills the composer with a starter prompt (it is not sent). */
   onPickPrompt: (mode: AiAssistantMode, prompt: string) => void
+  countFromPrompt?: boolean
+  history?: ReactNode
+  footer?: ReactNode
   onCollapse?: () => void
   onClose?: () => void
   /** Moves the assistant to a bar at the bottom of the paper. */
@@ -165,6 +170,9 @@ export default function ChatPanel({
   conversationsOpen,
   onOpenConversations,
   onPickPrompt,
+  countFromPrompt,
+  history,
+  footer,
   onCollapse,
   onClose,
   onDockBottom,
@@ -259,6 +267,7 @@ export default function ChatPanel({
             )}
           </div>
         </header>
+        {history}
 
         <PanelPartsContext.Provider
           value={{
@@ -275,6 +284,7 @@ export default function ChatPanel({
             notice,
             onDismissNotice,
             pickPrompt,
+            countFromPrompt,
           }}
         >
           <TooltipProvider>
@@ -283,6 +293,7 @@ export default function ChatPanel({
             </div>
           </TooltipProvider>
         </PanelPartsContext.Provider>
+        {footer}
       </div>
     </aside>
   )

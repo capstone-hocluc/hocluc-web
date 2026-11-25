@@ -1,12 +1,13 @@
 import { useLayoutEffect, type ReactNode, type RefObject } from 'react'
 import { AssistantRuntimeProvider, type AssistantRuntime } from '@assistant-ui/react'
 import { runAnswerOf, runStagesOf, type AiRunStore } from '../../../../hooks/useAiAssistant'
-import { useStoreValue } from '../../../../lib/value-store'
+import { createValueStore, useStoreValue } from '../../../../lib/value-store'
 import type { ReadingTurn, ReadingTurnStore } from '../reading-turn'
 import { useAssistantChatRuntime, type AssistantChatOptions } from './assistant-runtime'
 import { ReplyDataUIs } from './reply-parts'
 
 const wholeTurn = (turn: ReadingTurn | null) => turn
+const noReading = createValueStore<ReadingTurn | null>(null)
 
 /**
  * The chat's assistant-ui runtime, made here rather than in the page: it follows the run's stages and the words of its
@@ -22,13 +23,13 @@ export function AssistantChatProvider({
   ...options
 }: AssistantChatOptions & {
   run: AiRunStore
-  reading: ReadingTurnStore
+  reading?: ReadingTurnStore
   runtimeRef: RefObject<AssistantRuntime | null>
   children: ReactNode
 }) {
   const stages = useStoreValue(run, runStagesOf)
   const answer = useStoreValue(run, runAnswerOf)
-  const readingTurn = useStoreValue(reading, wholeTurn)
+  const readingTurn = useStoreValue(reading ?? noReading, wholeTurn)
   const runtime = useAssistantChatRuntime({ ...options, stages, answer, reading: readingTurn })
   useLayoutEffect(() => {
     runtimeRef.current = runtime

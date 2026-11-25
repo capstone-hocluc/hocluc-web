@@ -20,9 +20,9 @@ export type ExamDownload = 'docx' | 'pdf' | 'docx-exam' | 'pdf-exam'
 /** What a reply's own controls do. */
 export interface ChatActions {
   /** Word or PDF of the exam with its answer key, or of the exam alone. */
-  onDownload: (format: ExamDownload) => void
+  onDownload?: (format: ExamDownload) => void
   /** Writes the answer key after the exam again from the questions it holds now. */
-  onAnswerKey: () => void
+  onAnswerKey?: () => void
   /** Sends the words of a failed send again. */
   onRetry: (messageId: string) => void
   /** Answers the question "Bạn muốn soạn môn nào?" with a subject (null: the whole paper). */
@@ -127,7 +127,7 @@ function ExamCard(_: DataMessagePartProps) {
   const { onDownload, onAnswerKey } = useChatActions()
   const pdfBusy = usePdfBusy()
   const pdfJob = usePdfJob()
-  if (!reply) return null
+  if (!reply || !onDownload || !onAnswerKey) return null
   const added = reply.addedItemIds?.length ?? 0
   const title = reply.stopped
     ? added > 0
@@ -180,6 +180,7 @@ function FileCard({ data }: DataMessagePartProps<AiExamFile>) {
   const { onDownload } = useChatActions()
   const pdfBusy = usePdfBusy()
   const pdfJob = usePdfJob()
+  if (!onDownload) return null
   const pdf = data.format === 'pdf'
   const download: ExamDownload = `${pdf ? 'pdf' : 'docx'}${data.answers ? '' : '-exam'}` as ExamDownload
   const making = pdf && pdfJob === (data.answers ? 'full' : 'examOnly')

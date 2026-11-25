@@ -1,6 +1,7 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import { API_BASE_URL, getAccessToken, refreshAfterUnauthorized, request } from '../lib/api'
 import type { BankSource } from './questionBankService'
+import { assertQuizWriteAccess } from './teacherQuizService'
 
 /** 'revise' is a compose run that rewrites named questions ("Sửa câu 2"); the composer never offers it as a mode. */
 export type AiAssistantMode = 'ask' | 'compose' | 'mock-exam' | 'revise'
@@ -10,6 +11,7 @@ export type AiDraftSource = 'AI' | 'BANK' | 'MANUAL'
 
 export interface AiConversation {
   id: string
+  quizId?: string | null
   ownerId?: string
   title: string
   subjectId: string | null
@@ -399,6 +401,7 @@ export type AiSolutionStyle = 'full' | 'short'
 export interface CreateAiConversation {
   title: string
   subjectId?: string
+  quizId?: string
 }
 
 export type AiStreamStage = 'explore' | 'plan' | 'write' | 'Tra cứu' | string
@@ -511,9 +514,11 @@ const requireData = <T>(response: { data?: T }, message: string): T => {
   return response.data
 }
 
-export async function getAiConversations(page = 0, size = 50): Promise<AiConversationPage> {
+export async function getAiConversations(page = 0, size = 50, quizId?: string): Promise<AiConversationPage> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (quizId) params.set('quizId', quizId)
   return requireData(
-    await request<AiConversationPage>(`${BASE}/conversations?page=${page}&size=${size}`, { auth: true }),
+    await request<AiConversationPage>(`${BASE}/conversations?${params}`, { auth: true }),
     'Không tải được danh sách cuộc trò chuyện.'
   )
 }
@@ -775,18 +780,31 @@ export interface AiQuizExport {
 }
 
 /** The draft quiz made from the exam, and the questions left out with why. */
-export interface AiExportedQuiz {
+interface AiAppendedQuiz {
   quizId: string
-  type: AiQuizTarget
-  title: string
   questionCount: number
   skipped: Array<{ itemId: string; reason: string }>
 }
 
-export async function exportAiDraftToQuiz(conversationId: string, body: AiQuizExport): Promise<AiExportedQuiz> {
+export interface AiExportedQuiz extends AiAppendedQuiz {
+  type: AiQuizTarget
+  title: string
+}
+
+interface AiQuizAppend {
+  quizId: string
+  itemIds: string[]
+}
+
+export function exportAiDraftToQuiz(conversationId: string, body: AiQuizExport): Promise<AiExportedQuiz>
+export function exportAiDraftToQuiz(conversationId: string, body: AiQuizAppend): Promise<AiAppendedQuiz>
+export async function exportAiDraftToQuiz(conversationId: string, body: AiQuizExport | AiQuizAppend): Promise<AiAppendedQuiz> {
+  const append = 'quizId' in body
+  if (append) assertQuizWriteAccess()
   return requireData(
-    await request<AiExportedQuiz>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/quiz`, {
+    await request<AiAppendedQuiz>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/quiz`, {
       auth: true,
+      guardIdentity: append,
       method: 'POST',
       body,
       timeoutMs: 120_000,

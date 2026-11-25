@@ -1,6 +1,6 @@
 import type { ToolCallMessagePart, ToolCallMessagePartStatus } from '@assistant-ui/react'
 import type { StepArtifact } from './run-parts'
-import { stepState } from './step-call'
+import { stepState } from './step-state'
 import { stepIcon } from './step-icons'
 import { StepRow } from './step-row'
 import { useElapsed } from './use-elapsed'

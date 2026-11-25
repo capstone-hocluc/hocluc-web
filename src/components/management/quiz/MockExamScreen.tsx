@@ -5,7 +5,7 @@ import { useQuizAccess } from '../../../hooks/useQuizAccess'
 import { getCategories, type Category } from '../../../services/categoryService'
 import { ForbiddenPage } from '../../console/access-states'
 import QuizDetails from './QuizDetails'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowDown,
   Eye,
@@ -17,6 +17,7 @@ import {
   Settings,
   Plus,
   Send,
+  Sparkles,
   Trash2,
   X,
 } from '../../console/icons'
@@ -74,6 +75,9 @@ import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/she
 import { useConsoleFocus } from '../../console/console-focus'
 import { Skeleton } from '../../tailgrids/core/skeleton'
 import Notice from '../../console/notice'
+import QuizDockSkeleton from './QuizDockSkeleton'
+
+const QuizAssistantDock = lazy(() => import('./QuizAssistantDock'))
 
 interface TeacherMockExamsProps {
   navigation?: ReactNode
@@ -510,6 +514,7 @@ function TeacherMockExamEditor({
 }) {
   const access = useQuizAccess()
   const [layout] = useEditorLayout()
+  const [appendNotice, setAppendNotice] = useState('')
   useConsoleFocus(layout === 'workspace')
   const editor = usePageResource(() => access.canWrite ? getTeacherQuiz(quizId) : Promise.resolve(null), [quizId, access.canWrite])
   if (!access.canWrite) return <ForbiddenPage />
@@ -542,6 +547,8 @@ function TeacherMockExamEditor({
       onCancel={onCancel}
       onSaved={onSaved}
       onReload={editor.reload}
+      appendNotice={appendNotice}
+      onAppended={(message) => { setAppendNotice(message); editor.reload() }}
     />
   )
 }
@@ -557,12 +564,16 @@ function TeacherMockExamForm({
   onCancel,
   onSaved,
   onReload,
+  appendNotice,
+  onAppended,
 }: {
   assessmentType: AssessmentType
   initial: TeacherQuizEditor
   onCancel: () => void
   onSaved: (message: string) => void
   onReload: () => void
+  appendNotice: string
+  onAppended: (message: string) => void
 }) {
   const access = useQuizAccess()
   const [layout] = useEditorLayout()
@@ -577,6 +588,8 @@ function TeacherMockExamForm({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [railOpen, setRailOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatMounted, setChatMounted] = useState(false)
   const paper = useMemo(
     () => placement ? null : draftQuizToPaper(initial, sections, settings.title, Number(settings.duration) || null),
     [initial, placement, sections, settings.title, settings.duration],
@@ -605,19 +618,32 @@ function TeacherMockExamForm({
     ?? (placement && !sections.some((section) => section.clientId === selectedId) ? numbered[0] ?? null : null)
   const activeSection = activeEntry?.section ?? sections.find((section) => section.clientId === selectedId) ?? sections[0] ?? null
   const railSelectedId = activeEntry ? activeEntry.question.clientId : selectedId
-  const importBlockedReason = publishedQuiz || settingsLocked ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
+  const appendBlockedReason = publishedQuiz || settingsLocked ? 'Chỉ nhập vào bản nháp chưa có lượt làm.'
       : ambiguousQuestionSave ? 'Tải lại bài để xác nhận kết quả lưu trước khi nhập.'
-        : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.'
-          : structureReadOnly ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : ''
+        : hasUnsavedChanges ? 'Lưu thay đổi rồi mở lại bài trước khi nhập file.' : ''
+  const importBlockedReason = appendBlockedReason || (structureReadOnly ? 'Cấu trúc bài này đang ở chế độ chỉ xem.' : '')
 
   const selectPaperItem = (id: string) => {
-    if (!placement) setSettingsOpen(false)
+    if (!placement) {
+      setSettingsOpen(false)
+      setChatOpen(false)
+    }
     setSelectedId(id)
   }
 
   const toggleSettings = () => {
     if (!placement) setSelectedId(null)
+    setChatOpen(false)
     setSettingsOpen((open) => !open)
+  }
+
+  const toggleChat = () => {
+    if (!chatOpen) {
+      if (!placement) setSelectedId(null)
+      setSettingsOpen(false)
+      setChatMounted(true)
+    }
+    setChatOpen(!chatOpen)
   }
 
   const updateSettings = <K extends keyof ExamSettings>(key: K, value: ExamSettings[K]) => {
@@ -750,7 +776,10 @@ function TeacherMockExamForm({
     if (problem.message) {
       setError(problem.message)
       if (problem.questionId) selectPaperItem(problem.questionId)
-      if (problem.inSettings) setSettingsOpen(true)
+      if (problem.inSettings) {
+        setChatOpen(false)
+        setSettingsOpen(true)
+      }
       return
     }
     setBusy(true)
@@ -948,6 +977,11 @@ function TeacherMockExamForm({
         <Button appearance="ghost" aria-pressed={settingsDocked ? settingsOpen : undefined} onClick={toggleSettings} disabled={busy}>
           <Settings size={15} />Thiết lập
         </Button>
+        {access.canWrite && canEditContent && (
+          <Button appearance="ghost" aria-pressed={chatOpen} onClick={toggleChat} disabled={busy}>
+            <Sparkles size={15} />Trợ lý AI
+          </Button>
+        )}
         <Button appearance="ghost" className={ambiguousQuestionSave ? undefined : 'max-sm:hidden'} onClick={onCancel} disabled={busy}>
           {ambiguousQuestionSave ? 'Quay về danh sách' : 'Hủy'}
         </Button>
@@ -961,8 +995,9 @@ function TeacherMockExamForm({
         )}
         <EditorLayoutToggle />
       </EditorTopBar>}
-      notices={(error || ambiguousQuestionSave) && <>
+      notices={(error || ambiguousQuestionSave || appendNotice) && <>
         {error && <Notice tone="danger" role="alert" className="font-medium">{error}</Notice>}
+        {appendNotice && <Notice>{appendNotice}</Notice>}
         {ambiguousQuestionSave && (
           <Notice tone="warning" role="alert" aria-live="assertive">
             Máy chủ có thể đã nhận một phần thay đổi câu hỏi nhưng phản hồi bị gián đoạn. Không gửi lại từ biểu mẫu này; hãy quay về danh sách và mở lại đề để kiểm tra.
@@ -978,6 +1013,13 @@ function TeacherMockExamForm({
           nameDisabled={publishedQuiz || busy} rulesDisabled={fieldsLocked || busy} locked={settingsLocked} published={publishedQuiz}
           fromRequired={Boolean(quizSnapshot.availableFrom)} untilRequired={Boolean(quizSnapshot.availableUntil)} />
         {questionPanel}
+        {chatMounted && access.canWrite && canEditContent && (
+          <Suspense fallback={<QuizDockSkeleton open={chatOpen} docked={settingsDocked} onClose={() => setChatOpen(false)} />}>
+            <QuizAssistantDock quizId={serverQuizId} open={chatOpen} docked={settingsDocked} busy={busy}
+              blockedReason={appendBlockedReason} onClose={() => setChatOpen(false)} onBusyChange={setBusy} onAppended={onAppended}
+              readPaper={() => paper ?? draftQuizToPaper(initial, sections, settings.title, Number(settings.duration) || null)} />
+          </Suspense>
+        )}
       </>}
     >
           <div className="flex min-h-0 flex-1 flex-col">

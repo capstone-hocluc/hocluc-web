@@ -256,7 +256,8 @@ export function ComposerChips({
   settings,
   onSettingsChange,
   papersError,
-}: Pick<ComposerProps, 'mode' | 'onModeChange' | 'settings' | 'onSettingsChange' | 'papersError'>) {
+  countFromPrompt,
+}: Pick<ComposerProps, 'mode' | 'onModeChange' | 'settings' | 'onSettingsChange' | 'papersError'> & { countFromPrompt?: boolean }) {
   const text = useAuiState(({ composer }) => composer.text)
   const [sends, setSends] = useState(0)
   useAuiEvent('composer.send', () => setSends((count) => count + 1))
@@ -266,7 +267,7 @@ export function ComposerChips({
       {mode !== 'ask' && (
         <SettingsMenu
           key={sends}
-          summary={settingsSummary(mode, settings, requestedCount(text))}
+          summary={settingsSummary(mode, settings, requestedCount(text), countFromPrompt)}
           missing={mode === 'mock-exam' && !settings.bankSourceId}
           hasError={Boolean(mode === 'mock-exam' && papersError)}
         >
@@ -388,11 +389,12 @@ const labelOf = (options: readonly SelectOption[], id: string) =>
 function settingsSummary(
   mode: Exclude<AiAssistantMode, 'ask'>,
   settings: AiComposeSettings,
-  typedCount: number | null
+  typedCount: number | null,
+  countFromPrompt = false,
 ) {
   const count = typedCount
     ? `${typedCount} câu`
-    : (labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount)) ??
+    : countFromPrompt ? undefined : (labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount)) ??
       (typeof settings.questionCount === 'number' ? `${settings.questionCount} câu` : undefined))
   const format = mode === 'compose' ? labelOf(EXAM_FORMATS, settings.examFormat) : undefined
   const reuse =

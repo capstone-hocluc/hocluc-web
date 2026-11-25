@@ -337,6 +337,13 @@ export interface BankPaperList {
   refresh: () => void
 }
 
+const NO_BANK_PAPERS: BankPaperList = { papers: [], loading: false, error: null, refresh: () => undefined }
+
+interface QuizConversationScope {
+  quizId: string
+  readSheet: () => AiExamSheet
+}
+
 /** The open exam's sheet, as the page lends it to the runs that replace its exam. */
 export interface ExamSheet {
   /** Saves what waits to be saved, so the server keeps the exam a new run replaces as the teacher sees it. */
@@ -360,7 +367,13 @@ function atMost(promise: Promise<void>, ms: number) {
  * The AI assistant page: conversations, the live stream of a run, and the draft it writes into. `onPaperImport` loads a
  * paper the teacher asked the assistant to load; left out where the viewer may not load papers.
  */
-export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversationId: string, paper: AiPaperImport) => void) {
+export function useAiAssistant(
+  bank: BankPaperList = NO_BANK_PAPERS,
+  onPaperImport?: (conversationId: string, paper: AiPaperImport) => void,
+  scope?: QuizConversationScope,
+) {
+  const quizId = scope?.quizId
+  const readQuizSheet = scope?.readSheet
   const sheetRef = useRef<ExamSheet | null>(null)
   const attachSheet = useCallback((sheet: ExamSheet | null) => {
     sheetRef.current = sheet
@@ -371,9 +384,10 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
     paperImportRef.current = onPaperImport ?? null
   })
   // After a reload the list this tab showed last is shown at once, while it is asked for again.
-  const [cachedConversations] = useState(() => readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE))
+  const [cachedConversations] = useState(() => quizId ? null : readSessionCache<AiConversation[]>(CONVERSATIONS_CACHE))
   const [conversations, setConversations] = useState<AiConversation[]>(cachedConversations ?? [])
   const [conversationsLoading, setConversationsLoading] = useState(cachedConversations === null)
+  const [conversationsError, setConversationsError] = useState(false)
   /** The server's list has come in at least once (until then the list shown may be this tab's copy, or nothing). */
   const [listed, setListed] = useState(false)
   const listedRef = useRef(false)
@@ -431,7 +445,7 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
   const cancelTimerRef = useRef<number | null>(null)
   const autoSelectRef = useRef(true)
   const cancelRequestedRef = useRef(false)
-  const addressConversationRef = useRef<string | null>(conversationInAddress())
+  const addressConversationRef = useRef<string | null>(quizId ? null : conversationInAddress())
   /** An exam opened before the list arrived: its mode comes from the list, unless the teacher picks one first. */
   const modeFromListRef = useRef<string | null>(null)
   /** Questions streamed in since the last paint; they reach the draft (and the document) together. */
@@ -477,8 +491,8 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
   const updateConversations = useCallback((next: AiConversation[]) => {
     conversationsRef.current = next
     setConversations(next)
-    writeSessionCache(CONVERSATIONS_CACHE, next)
-  }, [])
+    if (!quizId) writeSessionCache(CONVERSATIONS_CACHE, next)
+  }, [quizId])
 
   const updateMessages = useCallback((next: AiChatMessage[]) => {
     messagesRef.current = next
@@ -987,8 +1001,9 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
       void loadConversation(wanted)
     }
     try {
-      const page = await getAiConversations()
+      const page = await getAiConversations(0, 50, quizId)
       updateConversations(page.content ?? [])
+      setConversationsError(false)
       const opened = modeFromListRef.current
       modeFromListRef.current = null
       if (opened && opened === activeIdRef.current) {
@@ -999,13 +1014,14 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
         void loadConversation(page.content[0].id)
       }
     } catch (error) {
+      setConversationsError(true)
       setNotice(errorMessage(error))
     } finally {
       listedRef.current = true
       setListed(true)
       setConversationsLoading(false)
     }
-  }, [loadConversation, updateConversations])
+  }, [loadConversation, quizId, updateConversations])
 
   useEffect(() => {
     // The first fetch starts the request lifecycle; its loading flags drive the skeletons.
@@ -1014,8 +1030,8 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
 
   useEffect(() => {
     // Until the list has loaded the address may still name the exam to open, so it is left alone.
-    if (listed) showConversationInAddress(activeId)
-  }, [activeId, listed])
+    if (listed && !quizId) showConversationInAddress(activeId)
+  }, [activeId, listed, quizId])
 
   useEffect(() => {
     // A mock exam is built on a paper the bank has read: settings naming none of them take the first one.
@@ -1073,7 +1089,7 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
       if (runMode === 'ask') return document ? { document } : undefined
       return {
         examFormat: settings.examFormat,
-        questionCount: settings.questionCount === 'full' ? 'full' : settings.questionCount,
+        ...(!quizId ? { questionCount: settings.questionCount } : {}),
         bankRatio: settings.bankRatio,
         solutionStyle: settings.solutionStyle,
         instruction: text,
@@ -1085,7 +1101,7 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
         ...(compose?.confirmed && compose.agreed ? { agreed: true } : {}),
       }
     },
-    [settings]
+    [quizId, settings]
   )
 
   /**
@@ -1104,7 +1120,7 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
       const creation = (async () => {
         setCreatingConversation(true)
         try {
-          const conversation = await createAiConversation({ title })
+          const conversation = await createAiConversation({ title, ...(quizId ? { quizId } : {}) })
           updateConversations([conversation, ...conversationsRef.current])
           if (generationRef.current !== generation || activeIdRef.current) return null
           activeIdRef.current = conversation.id
@@ -1124,7 +1140,7 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
       creationRef.current = { generation, promise: creation }
       return creation
     },
-    [refreshDraft, updateConversations, updateDraft]
+    [quizId, refreshDraft, updateConversations, updateDraft]
   )
 
   /** Takes back the conversation a failed send created: it holds nothing yet, so it leaves the list and the screen. */
@@ -1241,8 +1257,8 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
         const toAssistant = runMode === 'compose' && assistantOnRef.current && !compose?.confirmed
         // The assistant reads the sheet with every message, also one sent again ("Tạo lại", "Thử lại"): without it an
         // exam with questions would read as empty, and a new exam would start over it unasked.
-        if (toAssistant && !compose?.sheet) {
-          const sheet = sheetRef.current?.read()
+        if ((toAssistant || readQuizSheet) && !compose?.sheet) {
+          const sheet = readQuizSheet?.() ?? sheetRef.current?.read()
           if (sheet) compose = { ...compose, sheet }
         }
         const replacing = examRun && !toAssistant
@@ -1354,6 +1370,7 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
       discardConversation,
       ensureConversation,
       mode,
+      readQuizSheet,
       stopStream,
       updateDraft,
       updateMessages,
@@ -1764,6 +1781,7 @@ export function useAiAssistant(bank: BankPaperList, onPaperImport?: (conversatio
   return {
     conversations,
     conversationsLoading,
+    conversationsError,
     activeId,
     activeConversation,
     messages,
