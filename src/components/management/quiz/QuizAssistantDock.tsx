@@ -3,6 +3,7 @@ import type { AssistantRuntime } from '@assistant-ui/react'
 import { useAiAssistant } from '../../../hooks/useAiAssistant'
 import { getErrorMessage } from '../../../lib/errors'
 import { exportAiDraftToQuiz } from '../../../services/aiAssistantService'
+import { isDefiniteTeacherQuestionWriteRejection } from '../../../services/teacherQuizService'
 import Button from '../../console/button'
 import ConfirmDialog from '../../console/confirm-dialog'
 import { SheetContent, SheetOverlay, SheetTitle } from '../../tailgrids/core/sheet'
@@ -21,11 +22,11 @@ interface Props {
   readPaper: () => ExamPaper
   onClose: () => void
   onBusyChange: (busy: boolean) => void
-  onAppended: (message: string) => void
+  onAppendResult: (message: string) => void
 }
 
 export default function QuizAssistantDock({
-  quizId, open, docked, busy, blockedReason, readPaper, onClose, onBusyChange, onAppended,
+  quizId, open, docked, busy, blockedReason, readPaper, onClose, onBusyChange, onAppendResult,
 }: Props) {
   const chat = useAiAssistant(undefined, undefined, { quizId, readSheet: () => quizAssistantSheet(readPaper()) })
   const runtimeRef = useRef<AssistantRuntime | null>(null)
@@ -52,9 +53,10 @@ export default function QuizAssistantDock({
     chat.setNotice(null)
     try {
       const result = await exportAiDraftToQuiz(chat.activeId, { quizId, itemIds: ids })
-      onAppended(`Đã thêm ${result.questionCount} câu vào bài. Bỏ qua ${result.skipped.length} câu.`)
+      onAppendResult(`Đã thêm ${result.questionCount} câu vào bài. Bỏ qua ${result.skipped.length} câu.`)
     } catch (error) {
-      chat.setNotice(getErrorMessage(error))
+      if (isDefiniteTeacherQuestionWriteRejection(error)) chat.setNotice(getErrorMessage(error))
+      else onAppendResult(`Chưa xác nhận được kết quả thêm câu hỏi. ${getErrorMessage(error)} Kiểm tra bài sau khi tải lại.`)
     } finally {
       appending.current = false
       onBusyChange(false)

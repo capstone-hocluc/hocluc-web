@@ -3,6 +3,7 @@ import { Button as AriaButton, Disclosure, DisclosurePanel, Heading } from 'reac
 import { cn } from '../../../lib/cn'
 import Button from '../../console/button'
 import { ChevronDown, Plus } from '../../console/icons'
+import { useDragReorder } from '../crud/use-drag-reorder'
 import ScrollArea from '../../ui/ScrollArea'
 import { Checkbox } from '../../tailgrids/core/checkbox'
 import { questionStatus, type DraftSection, type QuestionStatus } from './exam-draft'
@@ -37,7 +38,9 @@ function QuestionGroup({ selectedId, children }: { selectedId: string | null; ch
 }
 
 /** The exam's sections as foldable groups, each with a grid of numbered cells coloured by what the question still needs. */
-export default function ExamQuestionRail({ sections, selectedId, canEditStructure, busy, footer, onSelect, onAddQuestion, onAddSection }: {
+export default function ExamQuestionRail({
+  sections, selectedId, canEditStructure, busy, footer, onSelect, onAddQuestion, onAddSection, onReorderQuestion, onShiftQuestion,
+}: {
   sections: DraftSection[]
   selectedId: string | null
   /** Sections and questions may be added; false for a fixed structure or a locked exam. */
@@ -48,9 +51,13 @@ export default function ExamQuestionRail({ sections, selectedId, canEditStructur
   onSelect: (clientId: string) => void
   onAddQuestion: (sectionId: string) => void
   onAddSection: () => void
+  onReorderQuestion?: (fromId: string, toId: string) => void
+  onShiftQuestion?: (id: string, direction: -1 | 1) => void
 }) {
   const [onlyUnresolved, setOnlyUnresolved] = useState(false)
   const railRef = useRef<HTMLDivElement>(null)
+  const drag = useDragReorder((from, to) => onReorderQuestion?.(from, to), (id, direction) => onShiftQuestion?.(id, direction))
+  const canDrag = canEditStructure && !busy && Boolean(onReorderQuestion)
 
   useEffect(() => {
     const nav = railRef.current?.querySelector('nav')
@@ -103,16 +110,24 @@ export default function ExamQuestionRail({ sections, selectedId, canEditStructur
                   <div className="grid grid-cols-6 gap-1.5 px-2 pt-1 pb-2">
                     {shown.map(({ question, number, status }) => {
                       const selected = question.clientId === selectedId
+                      const sortable = canDrag ? drag.rowProps(question.clientId) : undefined
+                      const handle = canDrag ? drag.handleProps(question.clientId, `câu ${number}`, busy) : undefined
                       return (
                         <button
+                          {...sortable}
                           key={question.clientId}
                           type="button"
                           aria-current={selected ? 'true' : undefined}
                           aria-label={`Câu ${number}${STATUS_LABEL[status]}`}
                           onClick={() => onSelect(question.clientId)}
+                          onPointerDown={handle?.onPointerDown}
+                          onPointerUp={handle?.onPointerUp}
+                          onKeyDown={handle?.onKeyDown}
+                          aria-keyshortcuts={canDrag ? 'ArrowUp ArrowDown' : undefined}
                           className={cn(
                             'grid h-9 cursor-pointer place-items-center rounded-lg border text-xs font-semibold transition-colors',
                             selected ? CELL_SELECTED : CELL_TONE[status],
+                            sortable?.className,
                           )}
                         >
                           {number}

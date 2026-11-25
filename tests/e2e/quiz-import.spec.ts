@@ -45,8 +45,7 @@ for (const [role, area, path, id, extension] of [
     await expect(dialog.getByText('Câu thiếu đáp án')).toBeVisible()
     await expect(dialog.getByText('Kiểm tra đáp án câu mới.')).toBeVisible()
     await dialog.getByRole('button', { name: 'Tải lại bài để kiểm tra' }).click()
-    if (path === 'quizzes') await expect(page.locator('textarea').filter({ hasText: 'Câu hỏi vừa nhập' })).toBeVisible()
-    else if (path === 'mock-exams') {
+    if (path !== 'placements') {
       await expect(page.getByRole('button', { name: 'Câu 2. Câu hỏi vừa nhập', exact: true })).toBeVisible()
     } else {
       await page.getByRole('navigation', { name: 'Danh sách câu hỏi' }).getByRole('button', { name: /^Câu 2(,|$)/ }).click()
@@ -71,7 +70,8 @@ test('unsaved changes block append', async ({ page }) => {
   await openEditorSettings(page)
   await title.fill('Quiz được giao')
   await closeEditorSettings(page)
-  await page.locator('textarea').first().fill('Câu hỏi chưa lưu')
+  await page.getByRole('button', { name: /^Câu 1\. / }).click()
+  await page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).fill('Câu hỏi chưa lưu')
   await expect(entry(page)).toBeDisabled()
 })
 
@@ -204,20 +204,26 @@ test('Teacher direct editor URL denies access before exposing import', async ({ 
   expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/quizzes/'))).toEqual([])
 })
 
-test('imported grouped content is read-only after reload and is not flattened', async ({ page }) => {
+test('imported passage groups stay intact when editing questions after reload', async ({ page }) => {
   const state = await installQuizFixture(page, 'STAFF')
   let imported = false
   await page.route(`**/api/v1/teacher/quizzes/${QUIZ_IDS.quiz}`, route => {
     if (!imported || route.request().method() !== 'GET') return route.fallback()
     return route.fulfill({ json: { success: true, data: { quiz: state.quizzes[0], sections: [],
-      groups: [{ id: 'group-1', questionIds: [QUIZ_IDS.question] }], questions: state.questions, pages: [] } } })
+      groups: [{ id: 'group-1', sectionId: null, passage: 'Đoạn văn dùng chung', questionIds: [QUIZ_IDS.question] }],
+      questions: state.questions.map(question => ({ ...question, groupId: 'group-1' })), pages: [] } } })
   })
   await page.route(importUrl, route => { imported = true; return route.fulfill({ json: { success: true, data: { ...result, groupsAdded: 1 } } }) })
   await page.goto(editUrl)
   await choose(page)
   await page.getByRole('button', { name: 'Nhập vào bản nháp', exact: true }).click()
   await page.getByRole('button', { name: 'Tải lại bài để kiểm tra' }).click()
-  await expect(page.getByText('Bài có phần hoặc nhóm câu hỏi ngoài phạm vi chỉnh sửa', { exact: false })).toBeVisible()
-  await expect(page.locator('textarea').first()).toBeDisabled()
+  await expect(page.getByText('Đoạn văn dùng chung', { exact: true })).toBeVisible()
   await expect(entry(page)).toBeDisabled()
+  await page.getByRole('button', { name: /^Câu 1\. / }).click()
+  await page.getByRole('textbox', { name: 'Nội dung câu hỏi', exact: true }).fill('Câu hỏi sau khi sửa')
+  await page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
+  expect(state.questions[0]).toMatchObject({ questionText: 'Câu hỏi sau khi sửa', groupId: 'group-1' })
+  expect(state.requests.filter(request => request.method === 'PUT' && /sections$|questions\/order$/.test(request.path))).toEqual([])
 })

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Pencil, Trash2 } from '../../console/icons'
 import Button from '../../console/button'
 import { textareaControlClass } from '../../console/form-field'
@@ -15,7 +15,7 @@ interface CategoryOption {
 
 /** One question of the exam in full: text, options, answer and the review flag, with the controls that move or remove it. */
 export default function ExamQuestionEditor({
-  question, number, skill, sectionTitle, placement, inPanel = false, editable, structureEditable, busy,
+  question, number, skill, sectionTitle, placement, inPanel = false, focusQuestion = false, editable, structureEditable, busy,
   canMoveUp, canMoveDown, categoryOptions, categoriesReady, categoriesLoading,
   onChange, onMove, onDelete, onPrevious, onNext,
 }: {
@@ -25,6 +25,7 @@ export default function ExamQuestionEditor({
   sectionTitle: string
   placement: boolean
   inPanel?: boolean
+  focusQuestion?: boolean
   /** The content of this question may be changed. */
   editable: boolean
   /** The question may also be moved or removed. */
@@ -48,6 +49,12 @@ export default function ExamQuestionEditor({
   // The explanation is optional for a choice question: it stays folded until there is one or the teacher asks for it.
   const [explaining, setExplaining] = useState(Boolean(question.explanation))
   const [editing, setEditing] = useState(inPanel)
+  const article = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!focusQuestion || !editing || !editable) return
+    const frame = window.requestAnimationFrame(() => article.current?.querySelector('textarea')?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [editable, editing, focusQuestion])
   const navigation = onPrevious !== undefined && (
     <footer className="flex items-center justify-between gap-3 border-t border-card-border pt-4">
       <Button appearance="outline" onClick={onPrevious ?? undefined} disabled={!onPrevious}><ArrowLeft size={15} />Câu trước</Button>
@@ -82,7 +89,7 @@ export default function ExamQuestionEditor({
   )
 
   return (
-    <article aria-label={`Câu ${number}`} className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
+    <article ref={article} aria-label={`Câu ${number}`} className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4 sm:p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         {!inPanel && <h2 className="m-0 min-w-0 text-base font-semibold text-text-primary">Câu {number}</h2>}
         <div className="ml-auto flex items-center gap-2">
