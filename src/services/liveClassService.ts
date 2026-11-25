@@ -290,35 +290,88 @@ export async function getMyLiveAttendanceSummary(): Promise<StudentLiveAttendanc
   }
 }
 
-/** The licensed Zoom user the center gives a teacher; their live classes are hosted there. */
+/** A teacher's personal Zoom OAuth account or mock Zoom status. */
 export interface TeacherZoomAccount {
+  connected: boolean
   zoomEmail: string | null
-  /** Real Zoom meetings are made: a teacher without an account cannot be given a live class. */
+  planType: 'BASIC' | 'LICENSED' | null
+  /** Real Zoom meetings are made: a teacher without a connected account cannot be given a live class. */
   zoomEnabled: boolean
+  status: 'CONNECTED' | 'REVOKED' | 'ERROR' | null
+  lastError: string | null
+}
+
+const EMPTY_TEACHER_ZOOM: TeacherZoomAccount = {
+  connected: false,
+  zoomEmail: null,
+  planType: null,
+  zoomEnabled: false,
+  status: null,
+  lastError: null,
 }
 
 export async function getTeacherZoomAccount(userId: string): Promise<TeacherZoomAccount> {
-  const response = await request<TeacherZoomAccount>(`/api/v1/users/${encodeURIComponent(userId)}/zoom-account`, { auth: true })
-  return response.data ?? { zoomEmail: null, zoomEnabled: false }
+  const response = await request<TeacherZoomAccount>(
+    `/api/v1/users/${encodeURIComponent(userId)}/zoom-account`,
+    { auth: true }
+  )
+  return response.data ?? EMPTY_TEACHER_ZOOM
 }
 
-export async function assignTeacherZoomAccount(userId: string, zoomEmail: string): Promise<TeacherZoomAccount> {
-  const response = await request<TeacherZoomAccount>(`/api/v1/users/${encodeURIComponent(userId)}/zoom-account`, {
-    method: 'PUT',
+export async function getMyTeacherZoom(): Promise<TeacherZoomAccount> {
+  const response = await request<TeacherZoomAccount>('/api/v1/teacher/zoom', { auth: true })
+  return response.data ?? EMPTY_TEACHER_ZOOM
+}
+
+export async function connectMyTeacherZoom(): Promise<{ authorizeUrl: string }> {
+  const response = await request<{ authorizeUrl: string }>('/api/v1/teacher/zoom/connect', {
+    method: 'POST',
     auth: true,
-    body: { zoomEmail: zoomEmail.trim() },
   })
-  if (!response.data) throw new Error('Không lưu được tài khoản Zoom.')
+  if (!response.data?.authorizeUrl) throw new Error('Không khởi tạo được liên kết kết nối Zoom.')
   return response.data
 }
 
-export const MISSING_ZOOM_ACCOUNT = 'Giáo viên này chưa được cấp tài khoản Zoom. Vui lòng liên hệ quản trị viên để được cấp.'
+export async function disconnectMyTeacherZoom(): Promise<TeacherZoomAccount> {
+  const response = await request<TeacherZoomAccount>('/api/v1/teacher/zoom', {
+    method: 'DELETE',
+    auth: true,
+  })
+  return response.data ?? EMPTY_TEACHER_ZOOM
+}
+
+export const MISSING_ZOOM_ACCOUNT = 'Giảng viên chưa kết nối Zoom.'
 
 const ZOOM_ERRORS: Record<string, string> = {
   TEACHER_ZOOM_ACCOUNT_MISSING: MISSING_ZOOM_ACCOUNT,
-  ZOOM_ACCOUNT_TAKEN: 'Tài khoản Zoom này đã được cấp cho giáo viên khác.',
-  ZOOM_ACCOUNT_IN_USE: 'Tài khoản Zoom này còn lớp trực tuyến sắp tới nên chưa đổi được. Đổi sau khi các lớp đó kết thúc hoặc được hủy.',
-  ZOOM_HOST_UNAVAILABLE: 'Tài khoản Zoom của giáo viên đang có lớp khác vào giờ này. Hãy chọn giờ khác.',
+  ZOOM_ACCOUNT_TAKEN: 'Tài khoản Zoom này đã được kết nối với giảng viên khác.',
+  ZOOM_ACCOUNT_IN_USE:
+    'Tài khoản Zoom này đang có lớp trực tuyến sắp tới nên chưa ngắt kết nối hoặc đổi được.',
+  ZOOM_HOST_UNAVAILABLE:
+    'Tài khoản Zoom của giảng viên đang có lớp khác vào giờ này. Hãy chọn giờ khác.',
+  ZOOM_RECONNECT_REQUIRED:
+    'Kết nối Zoom đã hết hạn hoặc bị thu hồi. Giảng viên cần kết nối lại tài khoản Zoom.',
+  ZOOM_OAUTH_NOT_CONFIGURED: 'Hệ thống chưa cấu hình kết nối Zoom OAuth.',
+  ZOOM_OAUTH_STATE_INVALID: 'Phiên kết nối Zoom đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.',
+  ZOOM_OAUTH_ORIGIN_INVALID: 'Địa chỉ chuyển hướng không hợp lệ.',
+  ZOOM_API_ERROR: 'Không kết nối được với Zoom lúc này. Vui lòng thử lại sau.',
+}
+
+const ZOOM_CALLBACK_REASONS: Record<string, string> = {
+  invalid_state: ZOOM_ERRORS.ZOOM_OAUTH_STATE_INVALID,
+  invalid_origin: ZOOM_ERRORS.ZOOM_OAUTH_ORIGIN_INVALID,
+  denied: 'Bạn đã hủy cấp quyền kết nối tài khoản Zoom.',
+  missing_code: 'Không nhận được mã xác thực từ Zoom. Vui lòng thử lại.',
+  invalid_teacher: 'Chỉ tài khoản giảng viên mới được kết nối Zoom.',
+  not_configured: ZOOM_ERRORS.ZOOM_OAUTH_NOT_CONFIGURED,
+  oauth_failed: 'Không hoàn tất được kết nối Zoom. Vui lòng thử lại.',
+  account_taken: ZOOM_ERRORS.ZOOM_ACCOUNT_TAKEN,
+}
+
+export function zoomCallbackErrorMessage(reason?: string | null): string {
+  if (reason && ZOOM_CALLBACK_REASONS[reason]) return ZOOM_CALLBACK_REASONS[reason]
+  if (reason && ZOOM_ERRORS[reason]) return ZOOM_ERRORS[reason]
+  return 'Không kết nối được tài khoản Zoom. Vui lòng thử lại.'
 }
 
 /** The Vietnamese message for a Zoom account error, or the server's own message for any other error. */

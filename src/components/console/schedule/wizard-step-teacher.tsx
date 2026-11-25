@@ -1,3 +1,4 @@
+import Notice from '../notice'
 import SelectField from '../select-field'
 import { fieldControlClass } from '../form-field'
 import type { Course } from '../../../services/courseService'
@@ -24,6 +25,7 @@ interface Props {
   availability?: TeacherAvailabilityResponse | null
   availabilityLoading: boolean
   zoomAccount?: TeacherZoomAccount | null
+  zoomMissing: boolean
   teachingLoadLabel: string
 }
 
@@ -48,10 +50,17 @@ export default function WizardStepTeacher({
   availability,
   availabilityLoading,
   zoomAccount,
+  zoomMissing,
   teachingLoadLabel,
 }: Props) {
   return (
-    <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_310px]">
+    <div className="flex flex-col gap-4">
+      {zoomMissing && (
+        <Notice tone="danger">
+          Giảng viên chưa kết nối Zoom. Giảng viên cần vào trang Lịch dạy để kết nối tài khoản Zoom trước khi xếp lịch.
+        </Notice>
+      )}
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_310px]">
       <div className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
           Tên lớp
@@ -141,6 +150,7 @@ export default function WizardStepTeacher({
         zoomAccount={zoomAccount}
         teachingLoadLabel={teachingLoadLabel}
       />
+      </div>
     </div>
   )
 }

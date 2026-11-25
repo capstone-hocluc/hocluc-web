@@ -14,6 +14,7 @@ interface Props {
   liveClass: ConsoleLiveClass
   nowMs: number
   busy: boolean
+  zoomMissing?: boolean
   onOpenContent: () => void
   onStart: () => void
   onEnd: () => void
@@ -23,6 +24,7 @@ export default function TeacherNextClassCard({
   liveClass,
   nowMs,
   busy,
+  zoomMissing = false,
   onOpenContent,
   onStart,
   onEnd,
@@ -50,6 +52,15 @@ export default function TeacherNextClassCard({
         <span className="text-[15px] text-white/95">
           {dayText} · {timeText} · {seatsText}
         </span>
+        {zoomMissing && (
+          <a
+            href="#teacher-zoom-card"
+            className="mt-1 inline-flex items-center gap-1.5 self-start rounded-full bg-[#fff0ee] px-3 py-1 text-[13px] font-semibold text-[#a3261a] underline-offset-2 hover:underline"
+          >
+            <AlertTriangle size={14} aria-hidden="true" />
+            Chưa kết nối Zoom — Kết nối ngay
+          </a>
+        )}
         {liveClass.needsAttention && (
           <span className="mt-1 inline-flex items-center gap-1.5 self-start rounded-full bg-[#fff1dc] px-2.5 py-1 text-[13px] font-medium text-[#7a3d00]">
             <AlertTriangle size={14} aria-hidden="true" />

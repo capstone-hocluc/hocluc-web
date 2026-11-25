@@ -1,20 +1,11 @@
-import { type FormEvent, useState } from 'react'
-import Button from '../console/button'
 import Notice from '../console/notice'
-import { Input } from '../tailgrids/core/input'
-import { Label } from '../tailgrids/core/label'
-import { TextField } from '../tailgrids/core/text-field'
 import { Skeleton } from '../tailgrids/core/skeleton'
 import { useScheduleResource } from '../../hooks/useScheduleResource'
-import { assignTeacherZoomAccount, getTeacherZoomAccount, zoomErrorMessage } from '../../services/liveClassService'
+import { getTeacherZoomAccount } from '../../services/liveClassService'
 
-/** The Zoom user a teacher hosts their live classes on; only an administrator changes it. */
-export default function TeacherZoomPanel({ userId, canEdit }: { userId: string; canEdit: boolean }) {
+/** Read-only view of the teacher's self-connected personal Zoom account. */
+export default function TeacherZoomPanel({ userId }: { userId: string }) {
   const resource = useScheduleResource(`teacher-zoom:${userId}`, () => getTeacherZoomAccount(userId))
-  const [draft, setDraft] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
 
   if (resource.status === 'loading' || resource.status === 'idle') {
     return (
@@ -28,48 +19,50 @@ export default function TeacherZoomPanel({ userId, canEdit }: { userId: string; 
     return <Notice tone="danger">{resource.errorMessage || 'Không tải được tài khoản Zoom.'}</Notice>
   }
 
-  const current = resource.data.zoomEmail ?? ''
-  const value = draft ?? current
+  const account = resource.data
+  const planLabel =
+    account.planType === 'BASIC'
+      ? 'Miễn phí (tối đa 40 phút/buổi)'
+      : account.planType === 'LICENSED'
+        ? 'Trả phí (License)'
+        : null
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (busy) return
-    setBusy(true)
-    setError('')
-    setSaved(false)
-    try {
-      await assignTeacherZoomAccount(userId, value)
-      setDraft(null)
-      setSaved(true)
-      resource.reload()
-    } catch (requestError) {
-      setError(zoomErrorMessage(requestError, 'Không lưu được tài khoản Zoom.'))
-    } finally {
-      setBusy(false)
+  if (!account.connected) {
+    if (account.status === 'ERROR' || account.status === 'REVOKED') {
+      return (
+        <div className="flex flex-col gap-2">
+          <Notice tone="danger">
+            {account.lastError || 'Kết nối Zoom của giảng viên cần được kết nối lại.'}
+          </Notice>
+          {account.zoomEmail && (
+            <p className="m-0 text-xs text-text-tertiary">Tài khoản gần nhất: {account.zoomEmail}</p>
+          )}
+        </div>
+      )
     }
-  }
 
-  if (!canEdit) {
-    return current ? (
-      <p className="text-sm text-text-primary">{current}</p>
-    ) : (
-      <Notice tone="warning">Giáo viên này chưa được cấp tài khoản Zoom.</Notice>
+    return (
+      <div className="flex flex-col gap-2">
+        <Notice tone="warning">Chưa kết nối Zoom.</Notice>
+        <p className="m-0 text-xs text-text-tertiary">
+          Giảng viên tự kết nối tài khoản Zoom cá nhân trong trang Lịch dạy.
+        </p>
+      </div>
     )
   }
 
   return (
-    <form className="flex flex-col gap-3" onSubmit={(event) => void submit(event)}>
-      {!current && <Notice tone="warning">Giáo viên này chưa được cấp tài khoản Zoom.</Notice>}
-      {error && <Notice tone="danger">{error}</Notice>}
-      {saved && <Notice tone="info">Đã lưu tài khoản Zoom.</Notice>}
-      <TextField className="gap-2" type="email" name="zoomEmail" autoComplete="off" value={value} disabled={busy}
-        onChange={(next) => { setDraft(next); setSaved(false) }}>
-        <Label>Email tài khoản Zoom</Label>
-        <Input className="w-full" />
-      </TextField>
-      <div className="flex justify-end">
-        <Button type="submit" disabled={busy || value.trim() === current}>{busy ? 'Đang lưu…' : 'Lưu'}</Button>
-      </div>
-    </form>
+    <dl className="m-0 grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
+      <dt className="text-text-tertiary">Trạng thái</dt>
+      <dd className="m-0 font-medium text-text-primary">Đã kết nối</dd>
+      <dt className="text-text-tertiary">Email Zoom</dt>
+      <dd className="m-0 break-all text-text-primary">{account.zoomEmail || '—'}</dd>
+      {planLabel && (
+        <>
+          <dt className="text-text-tertiary">Gói tài khoản</dt>
+          <dd className="m-0 text-text-primary">{planLabel}</dd>
+        </>
+      )}
+    </dl>
   )
 }

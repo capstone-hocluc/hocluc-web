@@ -2,9 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { useCurrentUser } from './useCurrentUser'
 import { useScheduleResource } from './useScheduleResource'
 import {
+  connectMyTeacherZoom,
+  disconnectMyTeacherZoom,
   endLiveClass,
   getLiveClassesInRange,
+  getMyTeacherZoom,
   startLiveClass,
+  zoomCallbackErrorMessage,
+  zoomErrorMessage,
   type ConsoleLiveClass,
 } from '../services/liveClassService'
 import { addLocalDays, localDateTimeToInstant, localToday, startOfLocalWeek } from '../lib/scheduling'
@@ -23,12 +28,32 @@ export function useTeacherSchedule() {
   const [contentTarget, setContentTarget] = useState<ConsoleLiveClass | null>(null)
   const [attendanceTarget, setAttendanceTarget] = useState<ConsoleLiveClass | null>(null)
   const [busy, setBusy] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
-  const [notice, setNotice] = useState('')
+  const [zoomBusy, setZoomBusy] = useState(false)
+  const [initialZoomFeedback] = useState(() => {
+    if (typeof window === 'undefined') return { notice: '', error: '' }
+    const params = new URLSearchParams(window.location.search)
+    const status = params.get('zoom')
+    if (status === 'connected') return { notice: 'Đã kết nối tài khoản Zoom.', error: '' }
+    if (status === 'error') {
+      return { notice: '', error: zoomCallbackErrorMessage(params.get('reason')) }
+    }
+    return { notice: '', error: '' }
+  })
+  const [errorMessage, setErrorMessage] = useState(initialZoomFeedback.error)
+  const [notice, setNotice] = useState(initialZoomFeedback.notice)
 
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 30_000)
     return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    if (!url.searchParams.has('zoom') && !url.searchParams.has('reason')) return
+    url.searchParams.delete('zoom')
+    url.searchParams.delete('reason')
+    const cleaned = `${url.pathname}${url.search ? url.search : ''}${url.hash}`
+    window.history.replaceState({}, '', cleaned)
   }, [])
 
   const weekStart = startOfLocalWeek(anchorDate)
@@ -58,6 +83,11 @@ export function useTeacherSchedule() {
   const summaryResource = useScheduleResource(
     profile?.id ? `teacher-live-summary:${profile.id}` : null,
     () => getLiveClassesInRange(upcomingWindow)
+  )
+
+  const zoomResource = useScheduleResource(
+    profile?.id ? `teacher-my-zoom:${profile.id}` : null,
+    () => getMyTeacherZoom()
   )
 
   const summaryClasses = summaryResource.data ?? []
@@ -93,6 +123,35 @@ export function useTeacherSchedule() {
   const reloadAll = () => {
     weekResource.reload()
     summaryResource.reload()
+    zoomResource.reload()
+  }
+
+  const handleConnectZoom = async () => {
+    if (zoomBusy) return
+    setZoomBusy(true)
+    setErrorMessage('')
+    try {
+      const res = await connectMyTeacherZoom()
+      window.location.assign(res.authorizeUrl)
+    } catch (error) {
+      setErrorMessage(zoomErrorMessage(error, getErrorMessage(error)))
+      setZoomBusy(false)
+    }
+  }
+
+  const handleDisconnectZoom = async () => {
+    if (zoomBusy) return
+    setZoomBusy(true)
+    setErrorMessage('')
+    try {
+      await disconnectMyTeacherZoom()
+      setNotice('Đã ngắt kết nối tài khoản Zoom.')
+      zoomResource.reload()
+    } catch (error) {
+      setErrorMessage(zoomErrorMessage(error, getErrorMessage(error)))
+    } finally {
+      setZoomBusy(false)
+    }
   }
 
   const handleStart = async (liveClass: ConsoleLiveClass) => {
@@ -148,6 +207,11 @@ export function useTeacherSchedule() {
     attendanceTarget,
     setAttendanceTarget,
     busy,
+    zoomAccount: zoomResource.data,
+    zoomLoading: zoomResource.status === 'loading' || zoomResource.status === 'idle',
+    zoomBusy,
+    handleConnectZoom,
+    handleDisconnectZoom,
     goPrevWeek: () => {
       setAnchorDate(addLocalDays(weekStart, -7))
       setSelectedClass(null)

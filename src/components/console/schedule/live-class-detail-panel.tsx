@@ -71,8 +71,8 @@ export default function LiveClassDetailPanel({
         <dd className="m-0 text-text-primary">
           {liveClass.status === 'CANCELLED'
             ? 'Đã hủy'
-            : liveClass.meetingUrl
-              ? 'Zoom · đã tạo'
+            : liveClass.teacherName
+              ? `Zoom của ${liveClass.teacherName}`
               : 'Zoom'}
         </dd>
         <dt className="text-[#526984]">Giữ chỗ</dt>

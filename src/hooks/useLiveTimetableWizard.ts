@@ -50,6 +50,7 @@ export function useLiveTimetableWizard({
   const [capacity, setCapacity] = useState('20')
   const [previewSessions, setPreviewSessions] = useState<WizardEditableSession[]>([])
   const [previewBlockingErrors, setPreviewBlockingErrors] = useState<string[]>([])
+  const [previewWarnings, setPreviewWarnings] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -94,6 +95,7 @@ export function useLiveTimetableWizard({
   const selectedTeacher = teachers.find((t) => t.id === teacherId)
   const teacherName = formatTeacherLabel(selectedTeacher)
   const subjectName = subjects.find((s) => s.id === subjectId)?.name ?? ''
+  const zoomMissing = Boolean(zoomResource.data?.zoomEnabled && !zoomResource.data?.connected)
 
   const teachingLoadLabel = useMemo(() => {
     const list = teacherClassesResource.data ?? []
@@ -113,6 +115,10 @@ export function useLiveTimetableWizard({
     }
     if (!subjectId) {
       setErrorMessage('Vui lòng chọn môn học giảng viên dạy được.')
+      return
+    }
+    if (zoomMissing) {
+      setErrorMessage('Giảng viên chưa kết nối Zoom.')
       return
     }
     setErrorMessage('')
@@ -155,6 +161,7 @@ export function useLiveTimetableWizard({
       })
       setPreviewSessions(mapPreviewSessions(res.sessions))
       setPreviewBlockingErrors(res.blockingErrors)
+      setPreviewWarnings(res.warnings ?? [])
       setStep(3)
     } catch (error) {
       setErrorMessage(zoomErrorMessage(error, getErrorMessage(error)))
@@ -168,6 +175,7 @@ export function useLiveTimetableWizard({
     if (!active.length) {
       setPreviewSessions(nextList)
       setPreviewBlockingErrors([])
+      setPreviewWarnings([])
       return
     }
     setBusy(true)
@@ -199,6 +207,7 @@ export function useLiveTimetableWizard({
       })
       setPreviewSessions(merged)
       setPreviewBlockingErrors(res.blockingErrors)
+      setPreviewWarnings(res.warnings ?? [])
     } catch (error) {
       setErrorMessage(zoomErrorMessage(error, getErrorMessage(error)))
     } finally {
@@ -278,6 +287,7 @@ export function useLiveTimetableWizard({
     availability: availabilityResource.data,
     availabilityLoading: availabilityResource.status === 'loading',
     zoomAccount: zoomResource.data,
+    zoomMissing,
     teachingLoadLabel,
     startDate,
     setStartDate,
@@ -289,6 +299,7 @@ export function useLiveTimetableWizard({
     setCapacity,
     previewSessions,
     previewBlockingErrors,
+    previewWarnings,
     includedCount,
     busy,
     errorMessage,

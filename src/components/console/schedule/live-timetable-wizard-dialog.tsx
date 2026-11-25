@@ -78,7 +78,7 @@ function LiveTimetableWizardBody({
         {wizard.step === 1 && (
           <button
             type="button"
-            disabled={wizard.busy || wizard.subjectsLoading}
+            disabled={wizard.busy || wizard.subjectsLoading || wizard.zoomMissing}
             onClick={wizard.goToStep2}
             className="min-h-11 rounded-xl bg-[#0b3a82] px-6 text-[15px] font-semibold text-white hover:bg-[#082e68] disabled:opacity-50"
           >
@@ -184,6 +184,7 @@ function LiveTimetableWizardBody({
             availability={wizard.availability}
             availabilityLoading={wizard.availabilityLoading}
             zoomAccount={wizard.zoomAccount}
+            zoomMissing={wizard.zoomMissing}
             teachingLoadLabel={wizard.teachingLoadLabel}
           />
         )}
@@ -212,6 +213,7 @@ function LiveTimetableWizardBody({
             capacity={wizard.capacity}
             sessions={wizard.previewSessions}
             blockingErrors={wizard.previewBlockingErrors}
+            warnings={wizard.previewWarnings}
             previewBusy={wizard.busy}
             onToggleIncluded={wizard.toggleIncluded}
             onUpdateSessionTime={wizard.updateSessionTime}

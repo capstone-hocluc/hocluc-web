@@ -4,6 +4,7 @@ import Notice from '../../components/console/notice'
 import TeacherPageHeader from '../../components/teacher/TeacherPageHeader'
 import TeacherNextClassCard from '../../components/teacher/TeacherNextClassCard'
 import TeacherTodoPanel from '../../components/teacher/TeacherTodoPanel'
+import TeacherZoomCard from '../../components/teacher/TeacherZoomCard'
 import TeacherClassDetailDialog from '../../components/teacher/TeacherClassDetailDialog'
 import LiveScheduleSkeleton from '../../components/console/schedule/live-schedule-skeleton'
 import LiveWeekGrid from '../../components/console/schedule/live-week-grid'
@@ -15,6 +16,7 @@ import { formatWeekRangeLabel } from '../../lib/liveScheduleFormat'
 export default function TeacherSchedulePage() {
   const t = useTeacherSchedule()
   const weekLabel = formatWeekRangeLabel(t.weekStart)
+  const zoomMissing = Boolean(t.zoomAccount?.zoomEnabled && !t.zoomAccount?.connected)
 
   return (
     <div className="space-y-5">
@@ -40,6 +42,7 @@ export default function TeacherSchedulePage() {
               liveClass={t.nextClass}
               nowMs={t.nowMs}
               busy={t.busy}
+              zoomMissing={zoomMissing}
               onOpenContent={() => t.setContentTarget(t.nextClass)}
               onStart={() => void t.handleStart(t.nextClass!)}
               onEnd={() => void t.handleEnd(t.nextClass!)}
@@ -91,11 +94,20 @@ export default function TeacherSchedulePage() {
               </div>
             </div>
 
-            <TeacherTodoPanel
-              todos={t.todos}
-              onOpenAttendance={(item) => t.setAttendanceTarget(item)}
-              onOpenContent={(item) => t.setContentTarget(item)}
-            />
+            <div className="flex w-full shrink-0 flex-col gap-5 lg:w-[320px]">
+              <TeacherZoomCard
+                zoomAccount={t.zoomAccount}
+                loading={t.zoomLoading}
+                busy={t.zoomBusy}
+                onConnect={() => void t.handleConnectZoom()}
+                onDisconnect={() => void t.handleDisconnectZoom()}
+              />
+              <TeacherTodoPanel
+                todos={t.todos}
+                onOpenAttendance={(item) => t.setAttendanceTarget(item)}
+                onOpenContent={(item) => t.setContentTarget(item)}
+              />
+            </div>
           </div>
         </>
       )}

@@ -82,18 +82,21 @@ export default function TeacherAvailabilitySummaryCard({
         </dd>
         <dt className="text-[#526984]">Zoom</dt>
         <dd className="m-0 inline-flex items-center gap-1.5 text-text-primary">
-          {!zoomAccount?.zoomEnabled ? (
+          {zoomAccount?.connected ? (
             <>
               <Check size={14} className="text-[#0b3a82]" aria-hidden="true" />
-              Đã kết nối
+              <span>
+                Đã kết nối
+                {zoomAccount.planType === 'BASIC' ? ' (Miễn phí)' : ''}
+              </span>
             </>
-          ) : zoomAccount.zoomEmail ? (
+          ) : zoomAccount && !zoomAccount.zoomEnabled ? (
             <>
               <Check size={14} className="text-[#0b3a82]" aria-hidden="true" />
-              Đã kết nối
+              <span>Mô phỏng</span>
             </>
           ) : (
-            <span className="text-[#a3261a]">Chưa cấp tài khoản</span>
+            <span className="text-[#a3261a]">Chưa kết nối Zoom</span>
           )}
         </dd>
         <dt className="text-[#526984]">Đang dạy</dt>

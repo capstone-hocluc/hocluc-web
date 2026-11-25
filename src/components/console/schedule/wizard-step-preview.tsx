@@ -20,6 +20,7 @@ interface Props {
   capacity: string
   sessions: WizardEditableSession[]
   blockingErrors: string[]
+  warnings: string[]
   previewBusy: boolean
   onToggleIncluded: (rowKey: string) => void
   onUpdateSessionTime: (rowKey: string, date: string, start: string, end: string) => Promise<void>
@@ -32,6 +33,7 @@ export default function WizardStepPreview({
   capacity,
   sessions,
   blockingErrors,
+  warnings,
   previewBusy,
   onToggleIncluded,
   onUpdateSessionTime,
@@ -96,6 +98,18 @@ export default function WizardStepPreview({
             {blockingErrors.map((err) => (
               <p key={err} className="m-0 text-sm">
                 {err}
+              </p>
+            ))}
+          </div>
+        </Notice>
+      )}
+
+      {warnings.length > 0 && (
+        <Notice tone="warning">
+          <div className="space-y-1">
+            {warnings.map((warn) => (
+              <p key={warn} className="m-0 text-sm">
+                {warn}
               </p>
             ))}
           </div>

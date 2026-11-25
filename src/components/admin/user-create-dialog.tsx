@@ -14,14 +14,11 @@ import { useScheduleResource } from '../../hooks/useScheduleResource'
 import { PERSONNEL_ROLES } from '../../lib/role-home'
 import { subjectRows } from '../../lib/subject-rows'
 import { getCategories } from '../../services/categoryService'
-import { assignTeacherZoomAccount, zoomErrorMessage } from '../../services/liveClassService'
 import { ROLE_LABELS, getErrorMessage } from './user-labels'
 
 type CreateUserForm = Required<Pick<CreateUserRequest, 'email' | 'password' | 'firstName' | 'lastName' | 'role'>> & {
   displayName: string
   phone: string
-  /** A teacher's live classes are hosted on the Zoom user the center gives them. */
-  zoomEmail: string
 }
 
 type AccountType = 'STUDENT' | 'PERSONNEL'
@@ -33,7 +30,6 @@ const emptyForm = (type: AccountType): CreateUserForm => ({
   lastName: '',
   displayName: '',
   phone: '',
-  zoomEmail: '',
   role: type === 'STUDENT' ? 'STUDENT' : 'STAFF',
 })
 
@@ -50,10 +46,7 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
   const [mentorSubjects, setMentorSubjects] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  // the account exists but its Zoom user was refused: only closing is left, the rest is done on the account
-  const [createdWithoutZoom, setCreatedWithoutZoom] = useState(false)
   const mentor = form.role === 'MENTOR'
-  const teacher = form.role === 'TEACHER'
   const subjects = useScheduleResource(open && mentor ? 'create-user:subjects' : null, async () => subjectRows(await getCategories()))
 
   const set = <K extends keyof CreateUserForm>(key: K, value: CreateUserForm[K]) =>
@@ -62,21 +55,18 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
   const reset = () => {
     setForm(emptyForm(accountType))
     setMentorSubjects([])
-    setCreatedWithoutZoom(false)
   }
 
   const close = () => {
     if (loading) return
-    const created = createdWithoutZoom
     reset()
     setError('')
-    if (created) onCreated()
-    else onClose()
+    onClose()
   }
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (loading || createdWithoutZoom) return
+    if (loading) return
     if (mentor && !mentorSubjects.length) {
       setError('Chọn ít nhất một môn cho Mentor.')
       return
@@ -84,23 +74,12 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
     setLoading(true)
     setError('')
     try {
-      const { zoomEmail, ...account } = form
-      const created = await createUser({
-        ...account,
+      await createUser({
+        ...form,
         displayName: form.displayName.trim() || undefined,
         phone: form.phone.trim() || undefined,
         scopes: mentor ? mentorSubjects.map((categoryId) => ({ categoryId, capability: 'MENTOR' as const })) : undefined,
       })
-      if (teacher && zoomEmail.trim()) {
-        try {
-          await assignTeacherZoomAccount(created.id, zoomEmail)
-        } catch (zoomError: unknown) {
-          setCreatedWithoutZoom(true)
-          setError('Đã tạo tài khoản nhưng chưa gán được Zoom: '
-            + zoomErrorMessage(zoomError, 'Không lưu được tài khoản Zoom.') + ' Mở tài khoản, thẻ Zoom, để gán lại.')
-          return
-        }
-      }
       reset()
       onCreated()
     } catch (requestError: unknown) {
@@ -121,14 +100,12 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
       footer={
         <>
           <Button type="button" appearance="outline" onClick={close} disabled={loading}>
-            {createdWithoutZoom ? 'Đóng' : 'Hủy'}
+            Hủy
           </Button>
-          {!createdWithoutZoom && (
-            <Button type="submit" disabled={loading}>
-              {loading && <LoaderCircle size={15} className="animate-spin" />}
-              Tạo
-            </Button>
-          )}
+          <Button type="submit" disabled={loading}>
+            {loading && <LoaderCircle size={15} className="animate-spin" />}
+            Tạo
+          </Button>
         </>
       }
     >
@@ -165,14 +142,6 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
         ) : (
           <SelectField ariaLabel="Vai trò" options={PERSONNEL_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
             value={form.role} disabled={loading} onChange={(value) => set('role', value as UserRole)} />
-        )}
-
-        {teacher && (
-          <TextField className="gap-2" type="email" name="zoomEmail" autoComplete="off" value={form.zoomEmail}
-            disabled={loading || createdWithoutZoom} onChange={(v) => set('zoomEmail', v)}>
-            <Label>Email tài khoản Zoom</Label>
-            <Input className="w-full" />
-          </TextField>
         )}
 
         {mentor && (
