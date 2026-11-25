@@ -4,7 +4,10 @@ import { formatDuration } from '@/components/assistant-ui/elements/format-durati
 import type { ThreadGroupPart } from '@/components/assistant-ui/elements/thread.aui'
 import { useElapsed, type StepTiming } from './use-elapsed'
 
-/** Paper readings retain their run timer. Assistant stages show their own times. */
+/**
+ * Paper readings keep their run timer. An assistant reply has no header: each stage shows its own time, and a failed
+ * or stopped reply already says so in its body.
+ */
 export function RunStepsGroup({ group, children }: PropsWithChildren<{ group: ThreadGroupPart }>) {
   const paperReading = useAuiState(({ message }) => Boolean(message.metadata.custom?.reading))
   const runTime = useAuiState(({ message }) => message.metadata.custom?.runTime as StepTiming | undefined)
@@ -13,9 +16,6 @@ export function RunStepsGroup({ group, children }: PropsWithChildren<{ group: Th
   const elapsed = useElapsed(paperReading ? runTime ?? group.timing : undefined, paperReading && running)
   return (
     <div data-slot="aui_chain-of-thought">
-      {!paperReading && status === 'incomplete' && (
-        <p className="m-0 py-1 text-xs text-muted-foreground">Thất bại</p>
-      )}
       {paperReading && elapsed !== undefined && (
         <p data-slot="run-time" className="m-0 py-1 text-xs text-muted-foreground tabular-nums">
           {running
