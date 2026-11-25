@@ -12,6 +12,7 @@ import {
   ArrowUp,
   Clock3,
   Copy,
+  KeyRound,
   Pencil,
   Settings,
   Plus,
@@ -438,7 +439,7 @@ function MockExamScreen({ navigation, assessmentType = 'EXAM', onAction, readOnl
                     />
                   )}
                   {!placement && exam.status !== 'ARCHIVED' && (
-                    <IconAction label="Cấu hình xem đáp án" icon={Eye} disabled={busyId !== null} onClick={() => setAnswerSettingsQuiz(exam)} />
+                    <IconAction label="Cấu hình xem đáp án" icon={KeyRound} disabled={busyId !== null} onClick={() => setAnswerSettingsQuiz(exam)} />
                   )}
                   <IconAction label="Sao chép thành bản nháp" icon={Copy} disabled={busyId !== null}
                     onClick={() => void runAction(exam, () => duplicateTeacherQuiz(exam.id), 'Đã sao chép đề thi thành bản nháp.')} />

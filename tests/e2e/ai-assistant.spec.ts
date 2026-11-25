@@ -1597,6 +1597,8 @@ test('a reopened reply shows each step of its run and how long each took', async
   await expect(calls).toHaveCount(3)
   const survey = chat.locator('[data-stage-disclosure]').filter({ hasText: 'Khảo sát ngân hàng câu hỏi' })
   await expect(survey.locator('[data-slot="reasoning-content"]').getByText('Tìm câu mẫu trong ngân hàng')).toBeVisible()
+  // A finished stage's text is not faded at its edges: the fades belong to the scrolling preview of a running one.
+  await expect(survey.locator('[data-slot="reasoning-fade"]')).toHaveCount(0)
   await expect(calls.nth(0)).toContainText('Tìm câu mẫu trong ngân hàng')
   await expect(calls.nth(0).locator('[data-slot="tool-fallback-duration"]')).toHaveText('4,5 giây')
   await expect(calls.nth(1)).toContainText('Kiểm tra lại câu')
