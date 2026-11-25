@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Copy,
   Clock3,
+  KeyRound,
   Pencil,
   Plus,
   Settings,
@@ -227,7 +228,7 @@ function QuizScreen({ navigation, course, onBack, onAction, startCreating = fals
                     )}
                   />
                   {quiz.status !== 'ARCHIVED' && (
-                    <IconAction label="Cấu hình xem đáp án" icon={Eye} disabled={busyId !== null} onClick={() => setAnswerSettingsQuiz(quiz)} />
+                    <IconAction label="Cấu hình xem đáp án" icon={KeyRound} disabled={busyId !== null} onClick={() => setAnswerSettingsQuiz(quiz)} />
                   )}
                   <IconAction label="Sao chép thành bản nháp" icon={Copy} disabled={busyId !== null}
                     onClick={() => void runQuizAction(quiz, () => duplicateTeacherQuiz(quiz.id), 'Đã sao chép quiz thành bản nháp.')} />
