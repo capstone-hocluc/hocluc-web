@@ -429,6 +429,8 @@ export type AiStreamEvent =
         status?: 'running' | string
         index: number
         total: number
+        /** How many questions the run has saved, this one included; `index` is its place on the paper. */
+        done?: number | null
         position?: number | null
         section?: string | null
         group?: string | null

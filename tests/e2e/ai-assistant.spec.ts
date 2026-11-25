@@ -1611,6 +1611,46 @@ test('a reopened reply shows each step of its run and how long each took', async
   await chat.screenshot({ path: testInfo.outputPath('run-steps.png') })
 })
 
+test('a question added after seven is counted among the questions of its run, not by its place on the paper', async ({ page }) => {
+  const saved: Conversation = { id: 'conv-9', title: 'Đề đã lưu', subjectId: 'category-1', mode: 'compose', createdAt: stamp, updatedAt: stamp }
+  const start = Date.parse(stamp)
+  const at = (seconds: number) => start + seconds * 1000
+  await installAiFixture(page, 'MANAGER', {
+    conversations: [saved],
+    messages: {
+      'conv-9': [
+        { id: 'm1', conversationId: 'conv-9', role: 'USER', mode: 'compose', content: 'Thêm 1 câu nguyên hàm.', createdAt: stamp },
+        {
+          id: 'm2',
+          conversationId: 'conv-9',
+          role: 'ASSISTANT',
+          mode: 'compose',
+          content: 'Mình đã thêm 1 câu.',
+          createdAt: new Date(at(30)).toISOString(),
+          steps: [
+            { type: 'stage', at: at(0), data: { stage: 'plan', status: 'done', cells: 1 } },
+            { type: 'slot', at: at(20), data: { stage: 'write', index: 8, total: 1, done: 1 } },
+          ],
+        },
+      ],
+    },
+    drafts: {
+      'conv-9': {
+        draft: { id: 'draft-conv-9', conversationId: 'conv-9', name: 'Đề đã lưu', examFormat: 'VACT_2025', status: 'DRAFT' },
+        items: [item('conv-9', 'saved-1', 1, 'Câu đã lưu trong bản nháp.', { passed: true })],
+      },
+    },
+    documents: { 'conv-9': structuredDocument('Đề đã lưu', ['saved-1']) },
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/console/manager/ai-assistant')
+
+  const chat = page.getByRole('complementary', { name: 'Trợ lý AI', exact: true })
+  await expect(chat.getByText('Mình đã thêm 1 câu.')).toBeVisible()
+  await openRunSteps(page)
+  await expect(chat.locator('[data-slot="run-step"]').filter({ hasText: /^Soạn câu/ })).toContainText('Soạn câu 1/1')
+})
+
 test('the first question of a new exam has no versions from the exam opened before it', async ({ page }) => {
   const saved: Conversation = { id: 'conv-9', title: 'Đề đã lưu', subjectId: 'category-1', mode: 'compose', createdAt: stamp, updatedAt: stamp }
   await installAiFixture(page, 'MANAGER', {
@@ -4006,6 +4046,59 @@ test('a question the teacher takes off the sheet is kept as received, so reopeni
   state.drafts.get('conv-9')!.items.push(item('conv-9', 'item-2', 2, 'Rút gọn biểu thức hai x trừ x.'))
   await page.reload()
   await expect(questionLines(sheet)).toHaveText(['Câu 2. Rút gọn biểu thức hai x trừ x.'], { timeout: 15_000 })
+})
+
+test('a quiz made from the free document takes only the questions its sheet still holds', async ({ page }) => {
+  const { state } = await installAiFixture(page, 'MANAGER', {
+    conversations: [savedExam],
+    drafts: {
+      'conv-9': {
+        draft: { id: 'draft-conv-9', conversationId: 'conv-9', name: savedExam.title, examFormat: 'VACT_2025', status: 'DRAFT' },
+        items: [
+          { ...item('conv-9', 'item-1', 1, 'Tính giá trị của biểu thức x cộng 1.'), kept: true },
+          { ...item('conv-9', 'item-2', 2, 'Rút gọn biểu thức hai x trừ x.'), kept: true },
+        ],
+      },
+    },
+    documents: {
+      'conv-9': {
+        mode: 'FREE',
+        version: 4,
+        updatedAt: stamp,
+        content: {
+          type: 'doc',
+          attrs: { deliveredItems: ['item-1', 'item-2'] },
+          content: [
+            heading(1, 'ĐỀ KIỂM TRA TOÁN 10'),
+            { type: 'heading', attrs: { level: 2, examPart: 'P2' }, content: [run('PHẦN 2. TOÁN HỌC')] },
+            { type: 'paragraph', attrs: { examItem: 'item-1' }, content: [run('Câu 1. ', 'bold'), run('Tính giá trị của biểu thức x cộng 1.')] },
+            { type: 'paragraph', attrs: { examItem: 'item-2' }, content: [run('Câu 2. ', 'bold'), run('Rút gọn biểu thức hai x trừ x.')] },
+            paragraph(run('--- HẾT ---', 'bold')),
+          ],
+        },
+      },
+    },
+  })
+  await openSavedDocument(page, 'Tính giá trị của biểu thức x cộng 1.')
+  const sheet = docEditor(page)
+  await expect(questionLines(sheet)).toHaveCount(2)
+
+  // Câu 1 leaves the sheet; the draft still keeps it.
+  await sheet.getByText('Câu 1.').click()
+  await page.keyboard.press('Home')
+  await page.keyboard.press('Backspace')
+  await expect(questionLines(sheet)).toHaveCount(1)
+
+  await openFileMenu(page)
+  await page.getByRole('menuitem', { name: 'Thành quiz / đề thi…', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Loại bài kiểm tra' }).click()
+  await page.getByRole('option', { name: 'Bài đánh giá đầu vào', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Xuất 1 câu', exact: true }).click()
+
+  await expect(dialog.getByRole('link', { name: 'Mở quiz', exact: true })).toBeVisible()
+  const exported = state.requests.find((entry) => entry.method === 'POST' && entry.path.endsWith('/draft/quiz'))
+  expect(exported?.body).toMatchObject({ type: 'PLACEMENT', itemIds: ['item-2'] })
 })
 
 test('switching a saved free document to question cards saves the mode and turns the free-only tools off', async ({ page }) => {

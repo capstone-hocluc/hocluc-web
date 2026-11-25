@@ -186,9 +186,11 @@ export function stepStages(
     )
   }
   if (event.type === 'slot') {
+    // A server that does not count yet sends only the place on the paper, the count while a whole exam is written.
+    const done = event.data.done ?? event.data.index
     const label = event.data.revise && event.data.number
       ? `Sửa câu ${event.data.number}`
-      : `Soạn câu ${event.data.index}/${event.data.total}`
+      : `Soạn câu ${done}/${event.data.total}`
     const detail = [
       sectionLabel(event.data.section),
       event.data.difficulty ? DIFFICULTY_LABELS[event.data.difficulty as AiDifficulty] : null,
@@ -202,7 +204,7 @@ export function stepStages(
     const item: AiTraceItem = { id: 'slot', label, detail: detail || undefined, tool: 'slot', state: 'running' }
     return withStage(finished, 'write', {
       state: 'running',
-      detail: `${event.data.index}/${event.data.total} câu`,
+      detail: `${done}/${event.data.total} câu`,
       items: [...(closeItems(previous.filter((entry) => entry.id !== 'slot'), at) ?? []), item],
     }, at)
   }
