@@ -5,14 +5,14 @@ import {
   getMyLiveAttendanceSummary,
   type ConsoleLiveClass,
 } from '../services/liveClassService'
-import { bookLiveClass, getLiveClassJoinLink } from '../services/courseService'
-import { addLocalDays, localDateTimeToInstant, localToday, safeExternalUrl } from '../lib/scheduling'
+import { bookLiveClass } from '../services/courseService'
+import { addLocalDays, localDateTimeToInstant, localToday } from '../lib/scheduling'
 import { getErrorMessage } from '../lib/errors'
+import { studentRoutes } from '../lib/studentRoutes'
 
 export function useStudentSchedule() {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming')
   const [nowMs, setNowMs] = useState(() => Date.now())
-  const [joinEntry, setJoinEntry] = useState<{ classId: string; url: string | null } | null>(null)
   const [bookingBusyId, setBookingBusyId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState('')
   const [notice, setNotice] = useState('')
@@ -84,24 +84,6 @@ export function useStudentSchedule() {
           Date.parse(nextClass.endTime) >= nowMs))
   )
 
-  useEffect(() => {
-    if (!nextClass || !nextCanJoin) return
-    let active = true
-    getLiveClassJoinLink(nextClass.id)
-      .then((url) => {
-        if (active) setJoinEntry({ classId: nextClass.id, url: safeExternalUrl(url) })
-      })
-      .catch(() => {
-        if (active) setJoinEntry({ classId: nextClass.id, url: null })
-      })
-    return () => {
-      active = false
-    }
-  }, [nextClass, nextCanJoin])
-
-  const joinUrl =
-    nextClass && nextCanJoin && joinEntry?.classId === nextClass.id ? joinEntry.url : null
-
   const handleBook = async (liveClassId: string) => {
     setBookingBusyId(liveClassId)
     setErrorMessage('')
@@ -126,7 +108,7 @@ export function useStudentSchedule() {
     notice,
     nextClass,
     nextCanJoin,
-    joinUrl,
+    joinUrl: nextClass ? studentRoutes.liveRoom(nextClass.id) : null,
     upcoming7Days,
     pastClasses,
     attendance: attendanceResource.data,

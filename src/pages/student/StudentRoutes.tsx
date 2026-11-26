@@ -22,6 +22,7 @@ import LessonPage from '../course/LessonPage'
 import QuizDetailPage from '../assessments/QuizDetailPage'
 import QuizAttemptPage from '../assessments/QuizAttemptPage'
 import QuizReviewPage from '../assessments/QuizReviewPage'
+import LiveRoomPage from '../LiveRoomPage'
 
 const StudentSchedulePage = lazy(() => import('./StudentSchedulePage'))
 
@@ -79,6 +80,16 @@ function StudentRoutes({
     tutorReturnTo: `${window.location.pathname}${window.location.search}`,
     lessonStudyCourseId: studyId ?? lessonStudyCourseId,
   })
+
+  if (route.name === 'live-room') {
+    return (
+      <LiveRoomPage
+        key={route.liveClassId}
+        liveClassId={route.liveClassId}
+        onLeave={() => redirect(studentRoutes.schedule())}
+      />
+    )
+  }
 
   const page = (): ReactNode => {
     switch (route.name) {

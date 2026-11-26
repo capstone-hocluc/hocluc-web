@@ -8,6 +8,7 @@ import {
   relativeDayLabel,
 } from '../../../lib/liveScheduleFormat'
 import { localToday } from '../../../lib/scheduling'
+import AppLink from '../../landing-page/AppLink'
 
 interface Props {
   liveClass: ConsoleLiveClass
@@ -49,15 +50,13 @@ export default function StudentNextClassCard({
 
       {liveClass.booked ? (
         canJoin && joinUrl ? (
-          <a
+          <AppLink
             href={joinUrl}
-            target="_blank"
-            rel="noreferrer"
             className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-6.5 text-base font-bold text-[#1565c0] no-underline hover:bg-[#e3f0ff]"
           >
             <Video size={20} aria-hidden="true" />
             Vào lớp
-          </a>
+          </AppLink>
         ) : (
           <button
             type="button"

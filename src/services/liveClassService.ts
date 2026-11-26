@@ -226,6 +226,33 @@ export async function startLiveClass(liveClassId: string): Promise<ConsoleLiveCl
   return response.data
 }
 
+export interface LiveRoom {
+  liveClassId: string
+  title: string
+  startTime: string
+  endTime: string
+  embedded: boolean
+  sdkKey: string | null
+  signature: string | null
+  meetingNumber: string | null
+  passcode: string | null
+  userName: string | null
+  userEmail: string | null
+  role: 0 | 1 | null
+  zak: string | null
+  registrantToken: string | null
+  fallbackUrl: string | null
+}
+
+export async function getLiveRoom(liveClassId: string, signal?: AbortSignal): Promise<LiveRoom> {
+  const response = await request<LiveRoom>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/room`,
+    { method: 'POST', auth: true, guardIdentity: true, signal }
+  )
+  if (!response.data) throw new Error('Không mở được phòng học.')
+  return response.data
+}
+
 export async function endLiveClass(liveClassId: string): Promise<ConsoleLiveClass> {
   const response = await request<ConsoleLiveClass>(
     `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/end`,

@@ -14,6 +14,8 @@ import {
 } from '../services/liveClassService'
 import { addLocalDays, localDateTimeToInstant, localToday, startOfLocalWeek } from '../lib/scheduling'
 import { getErrorMessage } from '../lib/errors'
+import { ApiError } from '../lib/api'
+import { teacherLiveRoomPath } from '../lib/console-routes'
 
 export interface TeacherTodoItem {
   kind: 'attendance' | 'content'
@@ -90,6 +92,12 @@ export function useTeacherSchedule() {
     () => getMyTeacherZoom()
   )
 
+  useEffect(() => {
+    if (window.location.hash === '#teacher-zoom-card') {
+      document.getElementById('teacher-zoom-card')?.scrollIntoView({ block: 'center' })
+    }
+  }, [weekResource.status, summaryResource.status, zoomResource.status])
+
   const summaryClasses = summaryResource.data ?? []
 
   const nextClass = useMemo(() => {
@@ -155,28 +163,20 @@ export function useTeacherSchedule() {
   }
 
   const handleStart = async (liveClass: ConsoleLiveClass) => {
-    // Open the tab before the request so it counts as user-initiated. The "noopener" feature
-    // would make window.open return null, leaving no handle to send the tab to Zoom, so the
-    // opener link is cut by hand instead.
-    const popup = window.open('', '_blank')
-    if (popup) popup.opener = null
     setBusy(true)
     setErrorMessage('')
     try {
-      const started = await startLiveClass(liveClass.id)
-      const url = started.startUrl || started.meetingUrl
-      if (!url) {
-        popup?.close()
-      } else if (popup) {
-        popup.location.href = url
-      } else {
-        window.location.assign(url)
-      }
-      setNotice('Đã mở phòng dạy.')
-      reloadAll()
+      await startLiveClass(liveClass.id)
+      window.dispatchEvent(new CustomEvent('hl-navigate', { detail: { path: teacherLiveRoomPath(liveClass.id) } }))
     } catch (error) {
-      popup?.close()
-      setErrorMessage(getErrorMessage(error))
+      if (error instanceof ApiError && error.code === 'ZOOM_RECONNECT_REQUIRED') {
+        setSelectedClass(null)
+        setErrorMessage('Kết nối Zoom đã hết hạn. Hãy kết nối lại ở mục Tài khoản Zoom.')
+        zoomResource.reload()
+        document.getElementById('teacher-zoom-card')?.scrollIntoView({ block: 'center' })
+      } else {
+        setErrorMessage(getErrorMessage(error))
+      }
     } finally {
       setBusy(false)
     }
