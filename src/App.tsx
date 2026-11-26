@@ -15,6 +15,7 @@ import PaymentInstructionsPage from './pages/payment/PaymentInstructionsPage'
 import AuthPage from './components/auth/AuthPage'
 import StudentRouteGuard from './components/student/StudentRouteGuard'
 import StudentRoutes from './pages/student/StudentRoutes'
+import LiveRoomPage from './pages/LiveRoomPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import ManagementDashboard from './components/management/ManagementDashboard'
 import ManagementRouteGuard, {
@@ -28,7 +29,7 @@ import { accessTokenRole } from './lib/api'
 import { showErrorToast } from './lib/toastBus'
 import type { UserProfile } from './services/userService'
 import { parseStudentRoute, studentRoutes, toStudentPath } from './lib/studentRoutes'
-import { CONSOLE_LOGIN_PATH, isConsoleLoginPath, isConsolePath, quizPagePath, stripConsolePrefix, toConsolePath } from './lib/console-routes'
+import { CONSOLE_LOGIN_PATH, TEACHER_SCHEDULE_PATH, isConsoleLoginPath, isConsolePath, quizPagePath, stripConsolePrefix, teacherLiveRoomId, toConsolePath } from './lib/console-routes'
 import { NotFoundStatusPage } from './components/console/status-page'
 import ThemeProvider from './components/common/ThemeProvider'
 import { runWithUnsavedActionGuard } from './hooks/useUnsavedActionGuard'
@@ -64,6 +65,7 @@ function App() {
       return 'management-login'
     }
     const path = stripConsolePrefix(rawPath)
+    if (teacherLiveRoomId(path)) return 'teacher-live-room'
     // Breadcrumb "Trang chủ" links to the bare area (/console/manager); it opens that area's dashboard.
     const areaRoot = path.match(/^\/(admin|staff|manager|mentor|teacher)$/)
     if (areaRoot) {
@@ -503,23 +505,34 @@ function App() {
         />
       </ThemeProvider>
     )
-  if (authMode?.startsWith('teacher-'))
+  if (authMode?.startsWith('teacher-')) {
+    const liveClassId = authMode === 'teacher-live-room' ? teacherLiveRoomId(currentPath) : null
     return (
       <ManagementRouteGuard
         allowedRoles={['TEACHER']}
         onLogin={() => navigateTo(managementLoginPath())}
         onExit={handleLogout}
       >
-        <TeacherDashboard
-          key={authMode}
-          page={authMode.replace('teacher-', '')}
-          onNavigate={navigateTeacher}
-          onBack={backToLanding}
-          onLogout={handleLogout}
-          logoutLoading={logoutLoading}
-        />
+        {liveClassId ? (
+          <LiveRoomPage
+            key={liveClassId}
+            liveClassId={liveClassId}
+            teacher
+            onLeave={() => navigateTo(TEACHER_SCHEDULE_PATH, {}, { replace: true })}
+          />
+        ) : (
+          <TeacherDashboard
+            key={authMode}
+            page={authMode.replace('teacher-', '')}
+            onNavigate={navigateTeacher}
+            onBack={backToLanding}
+            onLogout={handleLogout}
+            logoutLoading={logoutLoading}
+          />
+        )}
       </ManagementRouteGuard>
     )
+  }
   // Every authenticated learning screen (dashboard, courses, study, lessons,
   // video, quizzes, attempts, results, review, learning profile) renders inside
   // the single StudentLayout owned by StudentRoutes.

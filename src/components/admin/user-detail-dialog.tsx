@@ -322,7 +322,7 @@ function UserDetail({
 
                   {showZoomTab && (
                     <ConsoleTabsContent value="zoom">
-                      <TeacherZoomPanel userId={user.id} canEdit={viewer?.role === 'ADMINISTRATOR'} />
+                      <TeacherZoomPanel userId={user.id} />
                     </ConsoleTabsContent>
                   )}
 

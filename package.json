@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": ["packages/zoom-meeting-sdk"],
   "scripts": {
     "test:e2e:purchase": "tsc --noEmit -p tsconfig.e2e.purchase.json && playwright test purchase.spec.ts",
     "dev": "vite",
@@ -17,6 +18,7 @@
     "test:e2e:landing": "tsc --noEmit -p tsconfig.e2e.json && playwright test landing.spec.ts"
   },
   "dependencies": {
+    "@hocluc/zoom-meeting-sdk": "1.0.0",
     "@assistant-ui/react": "^0.15.36",
     "@assistant-ui/react-markdown": "^0.14.26",
     "@base-ui/react": "^1.8.0",

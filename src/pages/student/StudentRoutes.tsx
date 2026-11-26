@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, type ReactNode } from 'react'
 import StudentLayout from '../../components/student/layout/StudentLayout'
-import SchedulingPageFallback from '../../components/scheduling/SchedulingPageFallback'
+import SchedulingPageFallback from '../../components/console/schedule/scheduling-page-fallback'
 import { isStudentAssessmentsPath, parseStudentRoute, studentRoutes, type StudentRoute } from '../../lib/studentRoutes'
 import { getAttempt, type QuizDetail } from '../../services/assessmentService'
 import { usePageResource } from '../../hooks/usePageResource'
@@ -22,6 +22,7 @@ import LessonPage from '../course/LessonPage'
 import QuizDetailPage from '../assessments/QuizDetailPage'
 import QuizAttemptPage from '../assessments/QuizAttemptPage'
 import QuizReviewPage from '../assessments/QuizReviewPage'
+import LiveRoomPage from '../LiveRoomPage'
 
 const StudentSchedulePage = lazy(() => import('./StudentSchedulePage'))
 
@@ -79,6 +80,16 @@ function StudentRoutes({
     tutorReturnTo: `${window.location.pathname}${window.location.search}`,
     lessonStudyCourseId: studyId ?? lessonStudyCourseId,
   })
+
+  if (route.name === 'live-room') {
+    return (
+      <LiveRoomPage
+        key={route.liveClassId}
+        liveClassId={route.liveClassId}
+        onLeave={() => redirect(studentRoutes.schedule())}
+      />
+    )
+  }
 
   const page = (): ReactNode => {
     switch (route.name) {
