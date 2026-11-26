@@ -52,6 +52,7 @@ export interface ApiResponse<T = unknown> {
   data?: T
   errors?: Record<string, string>
   code?: string
+  errorCode?: string
   path?: string
   timestamp?: string
 }
@@ -229,7 +230,7 @@ export async function request<T = unknown>(
       data?.message || `Request failed with status ${response.status}`,
       response.status,
       data?.errors,
-      data?.code,
+      data?.code || data?.errorCode,
       data?.data
     )
   }

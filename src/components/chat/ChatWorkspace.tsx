@@ -13,6 +13,7 @@ import { chatDay } from '../console/chat-format'
 import Modal from '../ui/Modal'
 import { ArrowLeft, Send, Search, RefreshCw, FileText, Check, Plus } from '../console/icons'
 import { chatService } from '../../services/chatService'
+import { ApiError } from '../../lib/api'
 import {
   chatError,
   chatIdentity,
@@ -20,11 +21,19 @@ import {
   useChatWorkspace,
 } from '../../hooks/useChatWorkspace'
 import { useUnsavedActionGuard } from '../../hooks/useUnsavedActionGuard'
-import type { ChatAttachment, ChatStatus, SendChatMessage } from '../../types/chat'
+import type {
+  ChatAttachment,
+  ChatConversation,
+  ChatStatus,
+  ChatSubjectOption,
+  CreateChatConversation,
+  SendChatMessage,
+} from '../../types/chat'
 import { CreditAmount } from '../credits/CreditIcon'
 import { refreshCredits } from '../../lib/credits'
 import MentorHoursEditor from './MentorHoursEditor'
 import MentorCardDialog from './mentor-card-dialog'
+import SubjectChipGroup from './SubjectChipGroup'
 export interface ChatWorkspaceProps {
   conversationId?: string
   onSelectConversation: (id?: string) => void
@@ -45,6 +54,29 @@ const studentStatusChip: Record<ChatStatus, string> = {
   OPEN: 'bg-badge-warning-bg text-badge-warning-text',
   IN_PROGRESS: 'bg-primary-soft text-primary-text',
   RESOLVED: 'bg-badge-success-bg text-badge-success-text',
+}
+const MAX_BODY_LENGTH = 4000
+
+function mentorOf(conversation: Pick<ChatConversation, 'mentor' | 'assignedMentor'>) {
+  return conversation.mentor ?? conversation.assignedMentor
+}
+
+function isSubjectOption(item: unknown): item is ChatSubjectOption {
+  return (
+    Boolean(item) &&
+    typeof item === 'object' &&
+    typeof (item as ChatSubjectOption).id === 'string' &&
+    (item as ChatSubjectOption).id.length > 0 &&
+    typeof (item as ChatSubjectOption).name === 'string' &&
+    (item as ChatSubjectOption).name.length > 0
+  )
+}
+
+function extractSubjects(data: unknown): ChatSubjectOption[] {
+  if (!data || typeof data !== 'object') return []
+  const raw = (data as { subjects?: unknown }).subjects
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isSubjectOption)
 }
 
 export default function ChatWorkspace({
@@ -88,6 +120,7 @@ export default function ChatWorkspace({
   )
   // A capability-level send block (account restriction) applies on top of the per-conversation flag.
   const canSend = chat.capabilities?.canSend !== false && Boolean(chat.detail?.canSend)
+  const activeMentor = chat.detail ? mentorOf(chat.detail) : undefined
   const Button = isConsole ? ConsoleButton : StudentButton
   const Notice = isConsole ? ConsoleNotice : StudentNotice
   const surface = isConsole
@@ -512,7 +545,7 @@ export default function ChatWorkspace({
                   <p className={`mt-1 text-xs ${muted}`}>
                     {isConsole
                       ? item.student.displayName
-                      : item.mentor?.displayName || 'Đang chờ Mentor'}{' '}
+                      : mentorOf(item)?.displayName || 'Đang chờ Mentor'}{' '}
                     · {item.subjectName || 'Môn học'}
                   </p>
                   <p className={`mt-2 line-clamp-2 text-sm ${muted}`}>
@@ -587,18 +620,26 @@ export default function ChatWorkspace({
                       <>
                         <p className={`mt-1 text-xs ${muted}`}>
                           {isConsole
-                            ? chat.detail.student.displayName
-                            : `${chat.detail.mentor?.displayName || 'Đang chờ phân công Mentor'} · ${statusLabels[chat.detail.status]}`}
+                            ? [chat.detail.student.displayName, chat.detail.subjectName]
+                                .filter(Boolean)
+                                .join(' · ')
+                            : [
+                                activeMentor?.displayName || 'Đang chờ phân công Mentor',
+                                chat.detail.subjectName,
+                                statusLabels[chat.detail.status],
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
                         </p>
                         <p className={`mt-1 text-xs ${muted}`}>
                           {chat.detail.mentorAvailability?.label || 'Chưa thiết lập lịch hỗ trợ'}
-                          {!isConsole && chat.detail.mentor && (
+                          {!isConsole && activeMentor && (
                             <>
                               {' · '}
                               <button
                                 type="button"
                                 className="font-semibold text-primary-text underline-offset-2 hover:underline"
-                                onClick={() => setMentorCardId(chat.detail!.mentor!.id)}
+                                onClick={() => setMentorCardId(activeMentor.id)}
                               >
                                 Xem hồ sơ Mentor
                               </button>
@@ -972,18 +1013,22 @@ function NewRequest({
   onCreated: (id: string) => void
   renderButton: (props: ComponentProps<typeof StudentButton>) => React.ReactNode
 }) {
-  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([])
+  const [subjects, setSubjects] = useState<ChatSubjectOption[]>([])
   const [subject, setSubject] = useState('')
+  const [needsSubject, setNeedsSubject] = useState(false)
+  const [loadingSubjects, setLoadingSubjects] = useState(false)
+  const [blockedNoMentor, setBlockedNoMentor] = useState(false)
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [error, setError] = useState('')
+  const [errorTone, setErrorTone] = useState<'danger' | 'warning'>('danger')
   const [busy, setBusy] = useState(false)
   useUnsavedActionGuard(false, busy)
   const [locked, setLocked] = useState(false)
   const requestId = useRef(crypto.randomUUID())
+  const submitting = useRef(false)
   const lockedPayload = useRef<{
     title: string
-    subjectCategoryId: string
     initialMessage: string
     clientRequestId: string
   } | null>(null)
@@ -991,41 +1036,84 @@ function NewRequest({
   const scope = useRef(chatIdentity())
   useEffect(() => {
     alive.current = true
-    void chatService
-      .listSubjects()
-      .then((result) => {
-        if (alive.current && scope.current === chatIdentity()) setSubjects(result.data ?? [])
-      })
-      .catch((cause) => {
-        if (alive.current && scope.current === chatIdentity()) setError(chatError(cause))
-      })
     return () => {
       alive.current = false
     }
   }, [])
+  async function loadFallbackSubjects(fallback: ChatSubjectOption[]) {
+    setLoadingSubjects(true)
+    try {
+      const result = await chatService.listSubjects()
+      if (!alive.current || scope.current !== chatIdentity()) return
+      const fetched = (result.data ?? []).filter(isSubjectOption)
+      setSubjects(fetched.length > 0 ? fetched : fallback)
+    } catch (cause) {
+      if (!alive.current || scope.current !== chatIdentity()) return
+      if (fallback.length > 0) {
+        setSubjects(fallback)
+      } else {
+        setError(chatError(cause))
+        setErrorTone('danger')
+      }
+    } finally {
+      if (alive.current && scope.current === chatIdentity()) setLoadingSubjects(false)
+    }
+  }
   async function create() {
-    if (busy || !subject || !title.trim() || !body.trim()) return
-    const payload = lockedPayload.current ?? {
+    if (submitting.current || busy || blockedNoMentor || loadingSubjects) return
+    const base = lockedPayload.current ?? {
       title: title.trim(),
-      subjectCategoryId: subject,
       initialMessage: body.trim(),
       clientRequestId: requestId.current,
     }
-    lockedPayload.current = payload
+    if (!base.title || !base.initialMessage) return
+    if (needsSubject && !subject) return
+    const payload: CreateChatConversation = subject
+      ? { ...base, subjectCategoryId: subject }
+      : { ...base }
+    lockedPayload.current = base
+    submitting.current = true
     setLocked(true)
     setBusy(true)
     setError('')
+    let completed = false
     try {
       const result = await chatService.createConversation(payload)
       if (alive.current && scope.current === chatIdentity()) {
         if (!result.data) throw new Error('Yêu cầu chưa được xác nhận.')
+        completed = true
         void refreshCredits()
         onCreated(result.data.id)
       }
     } catch (cause) {
-      if (alive.current && scope.current === chatIdentity()) setError(chatError(cause))
+      if (!alive.current || scope.current !== chatIdentity()) return
+      if (cause instanceof ApiError && cause.code === 'CHAT_SUBJECT_REQUIRED') {
+        const wasAlreadyNeeded = needsSubject
+        const incoming = extractSubjects(cause.data)
+        setNeedsSubject(true)
+        setError(chatError(cause))
+        setErrorTone('warning')
+        if (wasAlreadyNeeded) {
+          setSubject('')
+          void loadFallbackSubjects(incoming.length > 0 ? incoming : subjects)
+        } else if (incoming.length > 0) {
+          setSubjects(incoming)
+        } else {
+          void loadFallbackSubjects([])
+        }
+      } else if (cause instanceof ApiError && cause.code === 'CHAT_NO_MENTOR') {
+        setBlockedNoMentor(true)
+        setError(chatError(cause))
+        setErrorTone('danger')
+      } else {
+        setError(chatError(cause))
+        setErrorTone('danger')
+      }
     } finally {
-      if (alive.current && scope.current === chatIdentity()) setBusy(false)
+      if (!completed) {
+        submitting.current = false
+        if (alive.current && scope.current === chatIdentity()) setBusy(false)
+      }
     }
   }
   return (
@@ -1045,25 +1133,10 @@ function NewRequest({
         className="space-y-4"
       >
         {error && (
-          <p role="alert" className="text-danger">
+          <StudentNotice tone={errorTone} role="alert">
             {error}
-          </p>
+          </StudentNotice>
         )}
-        <label className="block text-sm font-semibold text-text-heading">
-          Môn học
-          <SelectField
-            required
-            ariaLabel="Môn học"
-            triggerClassName={`mt-1 ${field}`}
-            value={subject}
-            disabled={busy || locked}
-            onChange={(nextValue) => setSubject(nextValue)}
-            options={[
-              { id: '', label: 'Chọn môn học' },
-              ...subjects.map((item) => ({ id: String(item.id), label: item.name })),
-            ]}
-          />
-        </label>
         <label className="block text-sm font-semibold text-text-heading">
           Tiêu đề
           <input
@@ -1082,12 +1155,22 @@ function NewRequest({
             required
             aria-label="Nội dung yêu cầu"
             rows={5}
+            maxLength={MAX_BODY_LENGTH}
             className={`mt-1 ${field}`}
             value={body}
             disabled={busy || locked}
             onChange={(event) => setBody(event.target.value)}
           />
         </label>
+        {needsSubject && (
+          <SubjectChipGroup
+            subjects={subjects}
+            value={subject}
+            onChange={setSubject}
+            disabled={busy || blockedNoMentor || loadingSubjects}
+            loading={loadingSubjects}
+          />
+        )}
         <p className="text-[13px] text-text-body">
           Bạn có thể đính kèm ảnh hoặc PDF sau khi tạo hội thoại.
         </p>
@@ -1109,8 +1192,18 @@ function NewRequest({
           })}
           {renderButton({
             type: 'submit',
-            disabled: busy || !subject || !title.trim() || !body.trim(),
-            children: busy ? 'Đang tạo…' : locked ? 'Thử tạo lại' : 'Tạo yêu cầu',
+            disabled:
+              busy ||
+              blockedNoMentor ||
+              loadingSubjects ||
+              !title.trim() ||
+              !body.trim() ||
+              (needsSubject && !subject),
+            children: busy
+              ? 'Đang tạo…'
+              : locked && !blockedNoMentor && errorTone === 'danger' && (!needsSubject || Boolean(subject))
+                ? 'Thử tạo lại'
+                : 'Tạo yêu cầu',
           })}
         </div>
       </form>
