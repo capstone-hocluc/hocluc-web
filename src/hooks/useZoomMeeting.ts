@@ -40,7 +40,9 @@ export function useZoomMeeting(room: LiveRoom | null) {
       let joinStarted = false
       let closed = false
       let resizeTimer: ReturnType<typeof setTimeout> | undefined
-      const videoSize = () => ({ width: root.clientWidth, height: root.clientHeight })
+      // SDK 6.10.5 scales height from width using the current view's minimum
+      // aspect ratio; its speaker view is the most restrictive (568:400).
+      const videoSize = () => ({ width: Math.min(root.clientWidth, Math.floor(root.clientHeight * 568 / 400)), height: root.clientHeight })
       const resize = () => {
         clearTimeout(resizeTimer)
         resizeTimer = setTimeout(() => {

@@ -79,6 +79,13 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
     return () => controller.abort()
   }, [attempt, liveClassId])
 
+  const handleLeave = async () => {
+    if (client) {
+      try { await client.leaveMeeting() } catch { /* Navigation must remain available if Zoom has disconnected. */ }
+    }
+    onLeave()
+  }
+
   const handleEnd = async () => {
     if (ending) return
     const signal = requestRef.current?.signal
@@ -121,7 +128,7 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
 
   return (
     <main ref={roomRef} className="flex h-dvh flex-col overflow-hidden bg-background-gray-secondary">
-      {!result ? <LiveRoomSkeleton teacher={teacher} onLeave={onLeave} /> : (
+      {!result ? <LiveRoomSkeleton teacher={teacher} onLeave={() => void handleLeave()} /> : (
         <>
           <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-card-border bg-card-background px-3 py-2">
             <div className="min-w-0">
@@ -133,7 +140,7 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
             </div>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" appearance="outline" onClick={() => void toggleFullscreen()}>{fullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}</Button>
-              {!client && <Button size="sm" appearance="outline" onClick={onLeave} disabled={ending}>Rời lớp</Button>}
+              {!client && <Button size="sm" appearance="outline" onClick={() => void handleLeave()} disabled={ending}>Rời lớp</Button>}
             </div>
           </header>
           {endError && <Notice tone="danger">{endError}</Notice>}
@@ -154,7 +161,7 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
               {client && panel && <div className="absolute inset-y-0 right-0 z-10 flex w-full max-w-80 md:static md:w-auto md:max-w-none">{panel === 'class' && teacher ? <ClassPanel client={client} state={participants} /> : <ChatPanel chat={chat} currentUserId={participants.currentUserId} />}</div>}
             </div>
             {controls.notice && <Notice tone="warning">{controls.notice}</Notice>}
-            {client && <RoomControls controls={controls} teacher={teacher} unread={chat.unread} onChat={() => { chat.clearUnread(); setPanel(panel === 'chat' ? null : 'chat') }} onParticipants={() => setPanel(panel === 'class' ? null : 'class')} onLeave={onLeave} onEnd={() => setConfirmEnd(true)} />}
+            {client && <RoomControls controls={controls} teacher={teacher} unread={chat.unread} onChat={() => { chat.clearUnread(); setPanel(panel === 'chat' ? null : 'chat') }} onParticipants={() => setPanel(panel === 'class' ? null : 'class')} onLeave={() => void handleLeave()} onEnd={() => setConfirmEnd(true)} />}
             </div>
           )}
         </>

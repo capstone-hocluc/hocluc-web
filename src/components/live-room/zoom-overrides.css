@@ -30,3 +30,8 @@
   position: absolute;
   visibility: hidden;
 }
+.hocluc-zoom-room.hocluc-zoom-custom [aria-label="Screen share control bar"],
+.hocluc-zoom-room.hocluc-zoom-custom [aria-label="Screen share audio tooltip"] {
+  visibility: hidden !important;
+  pointer-events: none;
+}

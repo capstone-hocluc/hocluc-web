@@ -206,6 +206,12 @@ function App() {
   const navigateTo = useCallback((rawPath, state = {}, { replace = false } = {}) => {
     const path = toConsolePath(toStudentPath(rawPath === '/onboarding' ? '/student/dashboard' : rawPath))
     runWithUnsavedActionGuard(() => {
+      const isRoom = (value: string) => /^\/(?:console\/teacher|student)\/live-classes\/[^/]+\/room\/?$/.test(value.split(/[?#]/, 1)[0])
+      if (isRoom(path) || isRoom(window.location.pathname)) {
+        if (replace) window.location.replace(path)
+        else window.location.assign(path)
+        return
+      }
       if (replace) replaceCurrentHistoryEntry(state, path)
       else pushHistoryEntry(state, path)
       setAuthMode(getAuthMode())
