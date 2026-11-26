@@ -9,6 +9,7 @@ import {
 } from '../../../lib/liveScheduleFormat'
 import { addLocalDays, localToday } from '../../../lib/scheduling'
 import { cn } from '../../../lib/cn'
+import Status from '../status'
 import LiveClassLegend from './live-class-legend'
 import { hourLinesStyle, LIVE_CLASS_TONE_CLASS, selectedRing, WEEK_COLUMNS, type LiveClassTone } from './live-class-tones'
 
@@ -180,6 +181,9 @@ export default function LiveWeekGrid({
                   )}
                   <span className="truncate">{item.title}</span>
                 </strong>
+                {mode === 'management' && item.hostZoomReconnectRequired && (
+                  <Status tone="danger" className="shrink-0 px-1 py-0 text-[10px] leading-3 whitespace-normal">Zoom GV cần kết nối lại</Status>
+                )}
                 <span className="whitespace-nowrap">{formatTimeRangeFromInstants(item.startTime, item.endTime)}</span>
                 {secondaryLine && (
                   <span

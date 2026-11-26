@@ -31,6 +31,7 @@ export interface ConsoleLiveClass {
   detailsFilled?: boolean
   attendanceTaken?: boolean
   needsAttention?: boolean
+  hostZoomReconnectRequired?: boolean
   attentionReason?: string | null
 }
 

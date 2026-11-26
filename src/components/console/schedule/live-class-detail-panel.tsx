@@ -54,6 +54,7 @@ export default function LiveClassDetailPanel({
             <>
               <LiveClassStatus status={liveClass.status} />
               {liveClass.needsAttention && liveClass.status !== 'CANCELLED' && <Status tone="warning">Ngoài giờ rảnh</Status>}
+              {liveClass.hostZoomReconnectRequired && <Status tone="danger">Zoom GV cần kết nối lại</Status>}
             </>
           }
         />
@@ -85,6 +86,9 @@ export default function LiveClassDetailPanel({
 
         {liveClass.needsAttention && liveClass.attentionReason && (
           <Notice tone="warning">{liveClass.attentionReason}</Notice>
+        )}
+        {liveClass.hostZoomReconnectRequired && (
+          <Notice tone="danger">Giảng viên cần kết nối lại Zoom trước buổi học.</Notice>
         )}
 
         {isEditable && (

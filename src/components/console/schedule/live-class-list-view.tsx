@@ -70,6 +70,7 @@ export default function LiveClassListView({
                       </h3>
                       <LiveClassStatus status={item.status} />
                       {isAttention && <Status tone="warning">Ngoài giờ rảnh</Status>}
+                      {item.hostZoomReconnectRequired && <Status tone="danger">Zoom GV cần kết nối lại</Status>}
                     </div>
                     <p className="mt-1 truncate text-sm text-text-tertiary">
                       {[item.teacherName, item.courseTitle].filter(Boolean).join(' · ')}

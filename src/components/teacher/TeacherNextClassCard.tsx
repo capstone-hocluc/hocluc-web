@@ -59,7 +59,7 @@ export default function TeacherNextClassCard({
         <p className="text-sm text-text-tertiary">
           {dayText} · {timeText} · {seatsText}
         </p>
-        {zoomMissing && (
+        {(zoomMissing || liveClass.hostZoomReconnectRequired) && (
           <a
             href="#teacher-zoom-card"
             className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-danger underline-offset-2 hover:underline"

@@ -56,6 +56,9 @@ export default function SchedulingPage({ role, navigation }: Props) {
 
       {s.notice && <Notice tone="info">{s.notice}</Notice>}
       {s.mutationError && <Notice tone="danger">{s.mutationError}</Notice>}
+      {s.zoomReconnectCount > 0 && (
+        <Notice tone="danger">{s.zoomReconnectCount} buổi có giảng viên cần kết nối lại Zoom</Notice>
+      )}
       {s.attentionClasses.length > 0 && (
         <Notice tone="warning">
           <span className="min-w-0 flex-1">{s.attentionClasses.length} buổi nằm ngoài giờ rảnh giảng viên đã khai</span>

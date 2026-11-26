@@ -161,6 +161,7 @@ export function useManagementSchedule() {
     attentionOnly,
     setAttentionOnly,
     attentionClasses,
+    zoomReconnectCount: allClasses.filter((c) => c.hostZoomReconnectRequired).length,
     displayedClasses,
     classesStatus: classesResource.status,
     classesError: classesResource.errorMessage,
