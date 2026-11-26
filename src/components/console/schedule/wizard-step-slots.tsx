@@ -1,8 +1,10 @@
-import { AlertTriangle, Plus, Trash2 } from '../icons'
+import { Plus, Trash2 } from '../icons'
 import ClockSelect from './clock-select'
 import DateField from '../date-field'
 import SelectField from '../select-field'
-import { fieldControlClass } from '../form-field'
+import Button from '../button'
+import Notice from '../notice'
+import Field, { fieldControlClass } from '../form-field'
 import type { LiveTimetableSlot } from '../../../services/liveClassService'
 import type { AvailabilityExceptionResponse, AvailabilitySlot, DayOfWeek } from '../../../types/scheduling'
 import {
@@ -77,18 +79,14 @@ export default function WizardStepSlots({
             return (
               <div
                 key={index}
-                className="grid grid-cols-[minmax(0,1fr)_14px_minmax(0,1fr)_44px] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_100px_14px_100px_44px]"
+                className="grid grid-cols-[minmax(0,1fr)_14px_minmax(0,1fr)_36px] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_100px_14px_100px_36px]"
               >
                 <div className="col-span-full sm:col-span-1">
                   <SelectField
                     ariaLabel={`Thứ của khung ${index + 1}`}
                     value={slot.dayOfWeek}
                     onChange={(value) => updateSlot(index, { dayOfWeek: value as DayOfWeek })}
-                    triggerClassName={cn(
-                      fieldControlClass,
-                      'min-h-11',
-                      isOutside && 'border-[#f3c58b] bg-[#fff6ea]'
-                    )}
+                    triggerClassName={cn(fieldControlClass, isOutside && 'border-badge-warning-icon-color bg-badge-warning-background')}
                     options={WEEKDAYS_ORDERED.map((w) => ({ id: w.value, label: w.label }))}
                   />
                 </div>
@@ -97,7 +95,7 @@ export default function WizardStepSlots({
                   value={slot.startTime}
                   onChange={(next) => updateSlot(index, { startTime: next })}
                 />
-                <span aria-hidden="true" className="text-center text-[#526984]">
+                <span aria-hidden="true" className="text-center text-text-tertiary">
                   –
                 </span>
                 <ClockSelect
@@ -105,27 +103,29 @@ export default function WizardStepSlots({
                   value={slot.endTime}
                   onChange={(next) => updateSlot(index, { endTime: next })}
                 />
-                <button
-                  type="button"
+                <Button
+                  size="icon"
+                  appearance="ghost"
                   aria-label={`Xóa khung ${index + 1}`}
                   disabled={slots.length === 1}
                   onClick={() => onSlotsChange(slots.filter((_, i) => i !== index))}
-                  className="inline-flex size-11 items-center justify-center rounded-xl border border-card-border bg-card-background text-[#526984] hover:bg-background-gray-secondary disabled:opacity-40"
                 >
                   <Trash2 size={16} aria-hidden="true" />
-                </button>
+                </Button>
               </div>
             )
           })}
 
           {uniqueOutsideDays.length > 0 && (
-            <p className="m-0 text-[13px] text-[#7a3d00]">
+            <p className="text-xs text-text-secondary">
               {uniqueOutsideDays.join(', ')} nằm ngoài giờ rảnh của {teacherName}
             </p>
           )}
 
-          <button
-            type="button"
+          <Button
+            size="sm"
+            appearance="outline"
+            className="self-start"
             onClick={() =>
               onSlotsChange([
                 ...slots,
@@ -136,15 +136,14 @@ export default function WizardStepSlots({
                 },
               ])
             }
-            className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl border border-dashed border-[#a9c3e0] bg-card-background px-4 text-sm font-semibold text-[#0b3a82] hover:bg-[#f6f9ff]"
           >
             <Plus size={16} aria-hidden="true" />
             Thêm khung giờ
-          </button>
+          </Button>
         </fieldset>
 
-        <label className="flex max-w-[200px] flex-col gap-1.5 text-sm font-medium text-text-primary">
-          Số chỗ mỗi buổi
+        <div className="max-w-[200px]">
+        <Field label="Số chỗ mỗi buổi">
           <input
             type="number"
             min="1"
@@ -153,37 +152,35 @@ export default function WizardStepSlots({
             placeholder="Không giới hạn"
             value={capacity}
             onChange={(e) => onCapacityChange(e.target.value)}
-            className={cn(fieldControlClass, 'min-h-11')}
+            className={fieldControlClass}
           />
-        </label>
+        </Field>
+        </div>
       </div>
 
       <aside
         aria-label="Dự kiến"
-        className="flex flex-col gap-3.5 self-start rounded-2xl border border-card-border bg-[#f8faff] p-4.5"
+        className="flex flex-col gap-3.5 self-start rounded-xl border border-card-border bg-background-gray-secondary p-4"
       >
-        <h2 className="m-0 text-[15px] font-semibold text-text-primary">Dự kiến</h2>
-        <div className="text-[40px] leading-none font-bold text-[#0b3a82]">
+        <h2 className="text-sm font-medium text-text-primary">Dự kiến</h2>
+        <div className="text-4xl leading-none font-semibold text-text-primary">
           {projected.count}{' '}
-          <span className="text-base font-semibold text-text-primary">buổi</span>
+          <span className="text-base font-medium text-text-secondary">buổi</span>
         </div>
-        <dl className="m-0 grid grid-cols-[92px_minmax(0,1fr)] gap-x-2 gap-y-2 text-[13px]">
-          <dt className="text-[#526984]">Buổi đầu</dt>
+        <dl className="m-0 grid grid-cols-[92px_minmax(0,1fr)] gap-x-2 gap-y-2 text-sm">
+          <dt className="text-text-tertiary">Buổi đầu</dt>
           <dd className="m-0 text-text-primary">
             {projected.firstDate ? `${shortDayLabel(projected.firstDate)} ${formatDdMmYyyy(projected.firstDate)}` : '—'}
           </dd>
-          <dt className="text-[#526984]">Buổi cuối</dt>
+          <dt className="text-text-tertiary">Buổi cuối</dt>
           <dd className="m-0 text-text-primary">
             {projected.lastDate ? `${shortDayLabel(projected.lastDate)} ${formatDdMmYyyy(projected.lastDate)}` : '—'}
           </dd>
-          <dt className="text-[#526984]">Phòng Zoom</dt>
+          <dt className="text-text-tertiary">Phòng Zoom</dt>
           <dd className="m-0 text-text-primary">Tạo riêng mỗi buổi</dd>
         </dl>
         {projected.outsideCount > 0 && (
-          <div className="flex items-center gap-2 rounded-xl border border-[#f3c58b] bg-[#fff6ea] px-3 py-2.5 text-[13px] text-[#7a3d00]">
-            <AlertTriangle size={16} className="shrink-0" aria-hidden="true" />
-            {projected.outsideCount} buổi ngoài giờ rảnh
-          </div>
+          <Notice tone="warning">{projected.outsideCount} buổi ngoài giờ rảnh</Notice>
         )}
       </aside>
     </div>

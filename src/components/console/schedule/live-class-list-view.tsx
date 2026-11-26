@@ -1,4 +1,4 @@
-import { AlertTriangle } from '../icons'
+import { ArrowUpRight, CalendarClock } from '../icons'
 import type { ConsoleLiveClass } from '../../../services/liveClassService'
 import {
   dateKeyOfInstant,
@@ -7,6 +7,9 @@ import {
   fullDayLabel,
 } from '../../../lib/liveScheduleFormat'
 import { cn } from '../../../lib/cn'
+import Button from '../button'
+import Status from '../status'
+import LiveClassStatus from './live-class-status'
 
 interface Props {
   classes: ConsoleLiveClass[]
@@ -23,68 +26,74 @@ export default function LiveClassListView({
 }: Props) {
   if (!classes.length) {
     return (
-      <div className="flex-1 rounded-2xl border border-dashed border-card-border bg-card-background px-5 py-12 text-center">
-        <p className="m-0 text-sm font-medium text-text-tertiary">{emptyMessage}</p>
+      <div className="rounded-xl border border-card-border bg-card-background px-5 py-12 text-center text-sm text-text-tertiary">
+        {emptyMessage}
       </div>
     )
   }
 
-  return (
-    <section aria-label="Danh sách buổi học" className="min-w-0 flex-1 space-y-2">
-      {classes.map((item) => {
-        const dateKey = dateKeyOfInstant(item.startTime)
-        const isCancelled = item.status === 'CANCELLED'
-        const isAttention = !isCancelled && item.status !== 'COMPLETED' && Boolean(item.needsAttention)
-        const isSelected = selectedId === item.id
-        const seatsLabel = item.capacity ? `${item.bookedCount ?? 0} / ${item.capacity} chỗ` : `${item.bookedCount ?? 0} giữ chỗ`
+  const grouped = new Map<string, ConsoleLiveClass[]>()
+  for (const item of classes) {
+    const key = dateKeyOfInstant(item.startTime)
+    grouped.set(key, [...(grouped.get(key) ?? []), item])
+  }
 
-        return (
-          <button
-            key={item.id}
-            type="button"
-            aria-pressed={isSelected}
-            onClick={() => onSelect(item)}
-            className={cn(
-              'flex w-full min-h-14 flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-colors',
-              isSelected
-                ? 'border-[#0b3a82] bg-[#edf5ff]'
-                : isAttention
-                  ? 'border-[#f3c58b] bg-[#fffaf3] hover:bg-[#fff6ea]'
-                  : 'border-card-border bg-card-background hover:bg-background-gray-secondary'
-            )}
-          >
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <strong className={cn('text-sm font-semibold text-text-primary', isCancelled && 'line-through text-text-tertiary')}>
-                  {item.title}
-                </strong>
-                {isAttention && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#fff1dc] px-2.5 py-0.5 text-xs font-medium text-[#7a3d00]">
-                    <AlertTriangle size={12} aria-hidden="true" />
-                    Ngoài giờ rảnh
+  return (
+    <div aria-label="Danh sách buổi học" className="flex flex-col gap-5">
+      {[...grouped.entries()].map(([dateKey, dayClasses]) => (
+        <section key={dateKey} aria-labelledby={'live-date-' + dateKey}>
+          <h2 id={'live-date-' + dateKey} className="mb-2 text-sm font-medium text-text-tertiary">
+            {fullDayLabel(dateKey)}, {formatDdMmYyyy(dateKey)}
+          </h2>
+          <div className="flex flex-col gap-2">
+            {dayClasses.map((item) => {
+              const isCancelled = item.status === 'CANCELLED'
+              const isAttention = !isCancelled && item.status !== 'COMPLETED' && Boolean(item.needsAttention)
+              const seatsLabel = item.capacity
+                ? `${item.bookedCount ?? 0} / ${item.capacity} chỗ`
+                : `${item.bookedCount ?? 0} giữ chỗ`
+              return (
+                <article
+                  key={item.id}
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl border bg-card-background p-4 sm:gap-4',
+                    selectedId === item.id ? 'border-brand-500' : 'border-card-border'
+                  )}
+                >
+                  <span className="grid size-11 shrink-0 place-items-center rounded-full bg-badge-blue-background text-badge-blue-icon-color">
+                    <CalendarClock size={19} aria-hidden="true" />
                   </span>
-                )}
-                {isCancelled && (
-                  <span className="rounded-full bg-[#f3f5f8] px-2.5 py-0.5 text-xs font-medium text-[#526984]">
-                    Đã hủy
-                  </span>
-                )}
-                {item.status === 'LIVE' && (
-                  <span className="rounded-full bg-[#0b3a82] px-2.5 py-0.5 text-xs font-medium text-white">
-                    Đang dạy
-                  </span>
-                )}
-              </div>
-              <p className="m-0 text-xs text-text-tertiary">
-                {fullDayLabel(dateKey)}, {formatDdMmYyyy(dateKey)} · {formatTimeRangeFromInstants(item.startTime, item.endTime)}
-                {item.teacherName ? ` · ${item.teacherName}` : ''}
-                {item.courseTitle ? ` · ${item.courseTitle}` : ''}
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-[#526984]">{seatsLabel}</span>
-          </button>
-        )
-      })}
-    </section>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className={cn('truncate text-sm font-medium text-text-primary', isCancelled && 'line-through')}>
+                        {item.title}
+                      </h3>
+                      <LiveClassStatus status={item.status} />
+                      {isAttention && <Status tone="warning">Ngoài giờ rảnh</Status>}
+                    </div>
+                    <p className="mt-1 truncate text-sm text-text-tertiary">
+                      {[item.teacherName, item.courseTitle].filter(Boolean).join(' · ')}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-tertiary">
+                      <time dateTime={item.startTime}>{formatTimeRangeFromInstants(item.startTime, item.endTime)}</time>
+                      <span>{seatsLabel}</span>
+                    </div>
+                  </div>
+                  <Button
+                    size="icon"
+                    appearance="ghost"
+                    aria-label={'Xem chi tiết ' + item.title}
+                    aria-pressed={selectedId === item.id}
+                    onClick={() => onSelect(item)}
+                  >
+                    <ArrowUpRight size={17} />
+                  </Button>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
   )
 }

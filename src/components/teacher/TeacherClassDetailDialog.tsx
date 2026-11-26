@@ -1,5 +1,8 @@
 import ConsoleDialog from '../console/dialog'
 import Button from '../console/button'
+import Notice from '../console/notice'
+import DetailSection from '../console/detail/detail-section'
+import KeyFacts from '../console/detail/key-facts'
 import type { ConsoleLiveClass } from '../../services/liveClassService'
 import {
   canTeacherStartOrJoin,
@@ -65,33 +68,35 @@ export default function TeacherClassDetailDialog({
         </div>
       }
     >
-      <div className="space-y-4">
-        <dl className="m-0 grid grid-cols-[100px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
-          <dt className="text-[#526984]">Thời gian</dt>
-          <dd className="m-0 text-text-primary">
-            {fullDayLabel(dateKey)}, {formatDdMmYyyy(dateKey)} ·{' '}
-            {formatTimeRangeFromInstants(liveClass.startTime, liveClass.endTime)}
-          </dd>
-          <dt className="text-[#526984]">Khóa học</dt>
-          <dd className="m-0 text-text-primary">{liveClass.courseTitle || '—'}</dd>
-          <dt className="text-[#526984]">Giữ chỗ</dt>
-          <dd className="m-0 text-text-primary">
-            {liveClass.capacity
-              ? `${liveClass.bookedCount ?? 0} / ${liveClass.capacity}`
-              : `${liveClass.bookedCount ?? 0}`}
-          </dd>
-          {liveClass.description && (
-            <>
-              <dt className="text-[#526984]">Nội dung</dt>
-              <dd className="m-0 whitespace-pre-wrap text-text-primary">{liveClass.description}</dd>
-            </>
-          )}
-        </dl>
-        {liveClass.needsAttention && liveClass.attentionReason && (
-          <div className="rounded-xl border border-[#f3c58b] bg-[#fff6ea] p-3 text-[13px] text-[#7a3d00]">
-            {liveClass.attentionReason}
-          </div>
+      <div className="flex flex-col gap-4">
+        <KeyFacts
+          facts={[
+            {
+              label: 'Thời gian',
+              required: true,
+              value: (
+                <>
+                  {fullDayLabel(dateKey)}, {formatDdMmYyyy(dateKey)}
+                  <span className="mt-1 block text-xs font-normal text-text-tertiary">
+                    {formatTimeRangeFromInstants(liveClass.startTime, liveClass.endTime)}
+                  </span>
+                </>
+              ),
+            },
+            { label: 'Khóa học', value: liveClass.courseTitle },
+            {
+              label: 'Giữ chỗ',
+              required: true,
+              value: liveClass.capacity ? `${liveClass.bookedCount ?? 0} / ${liveClass.capacity}` : liveClass.bookedCount ?? 0,
+            },
+          ]}
+        />
+        {liveClass.description && (
+          <DetailSection title="Nội dung">
+            <p className="text-sm whitespace-pre-wrap text-text-primary">{liveClass.description}</p>
+          </DetailSection>
         )}
+        {liveClass.needsAttention && liveClass.attentionReason && <Notice tone="warning">{liveClass.attentionReason}</Notice>}
       </div>
     </ConsoleDialog>
   )

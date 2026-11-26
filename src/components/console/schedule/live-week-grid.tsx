@@ -3,14 +3,14 @@ import { AlertTriangle } from '../icons'
 import type { ConsoleLiveClass } from '../../../services/liveClassService'
 import {
   dateKeyOfInstant,
-  formatClockFromInstant,
   formatTimeRangeFromInstants,
   minutesFromInstant,
   WEEKDAYS_ORDERED,
 } from '../../../lib/liveScheduleFormat'
 import { addLocalDays, localToday } from '../../../lib/scheduling'
 import { cn } from '../../../lib/cn'
-import '../../../styles/scheduling/live-schedule.css'
+import LiveClassLegend from './live-class-legend'
+import { hourLinesStyle, LIVE_CLASS_TONE_CLASS, selectedRing, WEEK_COLUMNS, type LiveClassTone } from './live-class-tones'
 
 interface Props {
   weekStart: string
@@ -21,10 +21,20 @@ interface Props {
   minHour?: number
   maxHour?: number
   showLegend?: boolean
+  /** Drops the card border when the grid sits inside another card. */
+  bare?: boolean
 }
 
 const SLOT_MINUTES = 30
 const ROW_HEIGHT_PX = 24
+
+function toneOf(item: ConsoleLiveClass): LiveClassTone {
+  if (item.status === 'CANCELLED') return 'cancelled'
+  if (item.status === 'LIVE') return 'live'
+  if (item.status !== 'COMPLETED' && item.needsAttention) return 'attention'
+  if (item.status === 'COMPLETED') return 'completed'
+  return 'upcoming'
+}
 
 export default function LiveWeekGrid({
   weekStart,
@@ -35,6 +45,7 @@ export default function LiveWeekGrid({
   minHour = 7,
   maxHour = 22,
   showLegend = true,
+  bare = false,
 }: Props) {
   const todayKey = localToday()
   const weekDates = useMemo(
@@ -65,69 +76,67 @@ export default function LiveWeekGrid({
   }, [startHour, endHour, mode])
 
   return (
-    <section aria-label="Lịch tuần" className="ls-week-shell min-w-0 flex-1">
-      <div className="ls-week-inner">
-        <div className="ls-week-header">
+    <section
+      aria-label="Lịch tuần"
+      className={cn(
+        'min-w-0 flex-1 overflow-x-auto',
+        !bare && 'rounded-xl border border-card-border bg-card-background'
+      )}
+    >
+      <div className="min-w-[720px] px-3 pt-3 pb-4">
+        <div className={cn(WEEK_COLUMNS, 'border-b border-card-border pb-2')}>
           <div />
           {weekDates.map((dateKey, idx) => {
             const isToday = mode === 'teacher' && dateKey === todayKey
-            const dayNum = dateKey.slice(8, 10)
             return (
               <div
                 key={dateKey}
                 aria-current={isToday ? 'date' : undefined}
-                className={cn(
-                  'text-center text-[13px]',
-                  isToday ? 'font-semibold text-[#0b3a82]' : 'text-[#526984]'
-                )}
+                className={cn('text-center text-xs', isToday ? 'font-semibold text-brand-500' : 'text-text-tertiary')}
               >
                 {WEEKDAYS_ORDERED[idx].short}
-                {isToday ? (
-                  <strong className="mx-auto mt-0.5 block size-8 rounded-full bg-[#0b3a82] text-base leading-8 text-white">
-                    {dayNum}
-                  </strong>
-                ) : (
-                  <strong className="block text-lg font-bold text-text-primary">{dayNum}</strong>
-                )}
+                <strong
+                  className={cn(
+                    'mx-auto mt-0.5 block text-base',
+                    isToday
+                      ? 'size-8 rounded-full bg-brand-500 leading-8 text-white'
+                      : 'font-semibold text-text-primary'
+                  )}
+                >
+                  {dateKey.slice(8, 10)}
+                </strong>
               </div>
             )
           })}
         </div>
 
         <div
-          className="ls-week-grid"
-          style={{
-            gridTemplateRows: `repeat(${totalRows}, ${ROW_HEIGHT_PX}px)`,
-            backgroundSize: `100% ${ROW_HEIGHT_PX * 2}px`,
-          }}
+          className={cn(WEEK_COLUMNS, 'relative')}
+          style={{ gridTemplateRows: `repeat(${totalRows}, ${ROW_HEIGHT_PX}px)`, ...hourLinesStyle(ROW_HEIGHT_PX * 2) }}
         >
-          {hours.map((hour) => {
-            const row = (hour - startHour) * 2 + 1
-            return (
-              <div
-                key={hour}
-                style={{ gridColumn: 1, gridRow: `${row} / span 2` }}
-                className="pr-2 pt-0.5 text-right text-[11px] text-[#526984]"
-              >
-                {String(hour).padStart(2, '0')}:00
-              </div>
-            )
-          })}
+          {hours.map((hour) => (
+            <div
+              key={hour}
+              style={{ gridColumn: 1, gridRow: `${(hour - startHour) * 2 + 1} / span 2` }}
+              className="pt-0.5 pr-2 text-right text-xs text-text-tertiary"
+            >
+              {String(hour).padStart(2, '0')}:00
+            </div>
+          ))}
 
           {weekDates.map((dateKey, idx) => (
             <div
               key={dateKey}
               style={{ gridColumn: idx + 2, gridRow: `1 / span ${totalRows}` }}
               className={cn(
-                'ls-week-col',
-                mode === 'teacher' && dateKey === todayKey && 'ls-week-col-today'
+                'border-l border-card-border',
+                mode === 'teacher' && dateKey === todayKey && 'bg-badge-blue-background/40'
               )}
             />
           ))}
 
           {classes.map((item) => {
-            const dateKey = dateKeyOfInstant(item.startTime)
-            const dayIndex = weekDates.indexOf(dateKey)
+            const dayIndex = weekDates.indexOf(dateKeyOfInstant(item.startTime))
             if (dayIndex === -1) return null
 
             const startMin = minutesFromInstant(item.startTime)
@@ -137,35 +146,18 @@ export default function LiveWeekGrid({
             const clampedSpan = Math.min(spanRows, totalRows - startRow + 1)
             if (clampedSpan <= 0) return null
 
-            const isCancelled = item.status === 'CANCELLED'
-            const isCompleted = item.status === 'COMPLETED'
-            const isLive = item.status === 'LIVE'
-            const isAttention = !isCancelled && !isCompleted && Boolean(item.needsAttention)
+            const tone = toneOf(item)
             const isSelected = selectedId === item.id
-
-            const cardClass = cn(
-              'ls-event-btn',
-              isCancelled
-                ? 'ls-event-cancelled'
-                : isLive
-                  ? 'ls-event-live'
-                  : isAttention
-                    ? 'ls-event-attention'
-                    : isCompleted
-                      ? 'ls-event-completed'
-                      : 'ls-event-upcoming',
-              isSelected && (isAttention ? 'ls-event-selected' : 'ls-event-selected-blue')
-            )
+            const unmarked = mode === 'teacher' && tone === 'completed' && !item.attendanceTaken
 
             const secondaryLine = (() => {
-              if (isCancelled) return 'Đã hủy'
-              if (isAttention) return 'Ngoài giờ rảnh'
+              if (tone === 'cancelled') return 'Đã hủy'
+              if (tone === 'attention') return 'Ngoài giờ rảnh'
+              if (tone === 'live') return 'Đang dạy'
               if (mode === 'teacher') {
-                if (isCompleted) return item.attendanceTaken ? 'Đã dạy · đã điểm danh' : 'Chưa điểm danh'
-                if (isLive) return 'Đang dạy'
+                if (tone === 'completed') return item.attendanceTaken ? 'Đã dạy · đã điểm danh' : 'Chưa điểm danh'
                 return item.courseTitle || ''
               }
-              if (isLive) return 'Đang dạy'
               return item.teacherName || ''
             })()
 
@@ -175,34 +167,25 @@ export default function LiveWeekGrid({
                 type="button"
                 aria-pressed={isSelected}
                 onClick={() => onSelect(item)}
-                style={{
-                  gridColumn: dayIndex + 2,
-                  gridRow: `${startRow} / span ${clampedSpan}`,
-                }}
-                className={cardClass}
+                style={{ gridColumn: dayIndex + 2, gridRow: `${startRow} / span ${clampedSpan}` }}
+                className={cn(
+                  'z-1 mx-[3px] my-0.5 flex cursor-pointer flex-col gap-px overflow-hidden rounded-lg px-[7px] py-1 text-left text-xs leading-tight transition-shadow focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-500',
+                  LIVE_CLASS_TONE_CLASS[tone],
+                  selectedRing(isSelected, tone === 'attention')
+                )}
               >
-                <strong className={cn('flex items-center gap-1 text-xs leading-tight', isCancelled && 'line-through')}>
-                  {isAttention && (
-                    <AlertTriangle size={13} className="shrink-0 text-[#a35400]" aria-hidden="true" />
+                <strong className={cn('flex items-center gap-1 font-semibold', tone === 'cancelled' && 'line-through')}>
+                  {tone === 'attention' && (
+                    <AlertTriangle size={13} className="shrink-0 text-badge-warning-icon-color" aria-hidden="true" />
                   )}
                   <span className="truncate">{item.title}</span>
                 </strong>
-                <span>
-                  <span className="block whitespace-nowrap text-[11px]">
-                    {formatTimeRangeFromInstants(item.startTime, item.endTime)}
-                  </span>
-                </span>
+                <span className="whitespace-nowrap">{formatTimeRangeFromInstants(item.startTime, item.endTime)}</span>
                 {secondaryLine && (
                   <span
                     className={cn(
                       'truncate',
-                      isAttention
-                        ? 'text-[#7a3d00]'
-                        : isLive
-                          ? 'text-[#dbeafe]'
-                          : mode === 'teacher' && isCompleted && !item.attendanceTaken
-                            ? 'font-semibold text-[#0b3a82]'
-                            : 'text-[#526984]'
+                      tone === 'live' ? 'opacity-85' : unmarked ? 'font-semibold text-brand-500' : 'text-text-secondary'
                     )}
                   >
                     {secondaryLine}
@@ -213,26 +196,7 @@ export default function LiveWeekGrid({
           })}
         </div>
 
-        {showLegend && (
-          <div className="flex flex-wrap gap-4 pt-3 text-xs text-[#526984]">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-3 rounded-xs border border-[#a9d4ff] bg-[#edf5ff]" />
-              Sắp diễn ra
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-3 rounded-xs border-2 border-[#c46a00] bg-[#fff6ea]" />
-              Cần xem
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-3 rounded-xs bg-[#0b3a82]" />
-              Đang dạy
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-3 rounded-xs border border-dashed border-[#9fb3c8] bg-[#f3f5f8]" />
-              Đã hủy
-            </span>
-          </div>
-        )}
+        {showLegend && <LiveClassLegend className="pt-3" />}
       </div>
     </section>
   )

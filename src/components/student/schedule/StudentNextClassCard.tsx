@@ -1,4 +1,8 @@
 import { Video } from '../../console/icons'
+import AppLink from '../../landing-page/AppLink'
+import Button from '../../ui/Button'
+import Card from '../../ui/Card'
+import StatusBadge from '../../ui/StatusBadge'
 import type { ConsoleLiveClass } from '../../../services/liveClassService'
 import {
   dateKeyOfInstant,
@@ -8,7 +12,6 @@ import {
   relativeDayLabel,
 } from '../../../lib/liveScheduleFormat'
 import { localToday } from '../../../lib/scheduling'
-import AppLink from '../../landing-page/AppLink'
 
 interface Props {
   liveClass: ConsoleLiveClass
@@ -19,65 +22,43 @@ interface Props {
   onBook: () => void
 }
 
-export default function StudentNextClassCard({
-  liveClass,
-  nowMs,
-  canJoin,
-  joinUrl,
-  bookingBusy,
-  onBook,
-}: Props) {
-  const todayKey = localToday()
+export default function StudentNextClassCard({ liveClass, nowMs, canJoin, joinUrl, bookingBusy, onBook }: Props) {
   const dateKey = dateKeyOfInstant(liveClass.startTime)
-  const dayText = `${relativeDayLabel(dateKey, todayKey)}, ${formatDdMm(dateKey)}`
+  const dayText = `${relativeDayLabel(dateKey, localToday())}, ${formatDdMm(dateKey)}`
   const timeText = formatTimeRangeFromInstants(liveClass.startTime, liveClass.endTime)
 
   return (
-    <section
-      aria-label="Buổi tiếp theo"
-      className="flex flex-wrap items-center gap-4.5 rounded-[20px] bg-[#1e88ff] px-6 py-5.5 text-white"
-    >
-      <div className="flex min-w-[260px] flex-1 flex-col gap-1.5">
-        <span className="text-[13px] text-[#e3f0ff]">
+    <Card as="section" variant="live" padding="lg" aria-label="Buổi tiếp theo" className="flex flex-wrap items-center gap-4">
+      <div className="flex min-w-64 flex-1 flex-col gap-1.5">
+        <StatusBadge tone="live" size="sm">
           Buổi tiếp theo · {formatStartsIn(liveClass.startTime, nowMs)}
-        </span>
-        <h2 className="m-0 text-[22px] font-bold text-white">{liveClass.title}</h2>
-        <span className="text-[15px] text-white/95">
+        </StatusBadge>
+        <h2 className="text-lg font-semibold text-text-heading">{liveClass.title}</h2>
+        <p className="text-sm text-text-secondary">
           {dayText} · {timeText}
           {liveClass.teacherName ? ` · ${liveClass.teacherName}` : ''}
-        </span>
+        </p>
       </div>
 
       {liveClass.booked ? (
         canJoin && joinUrl ? (
-          <AppLink
-            href={joinUrl}
-            className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-6.5 text-base font-bold text-[#1565c0] no-underline hover:bg-[#e3f0ff]"
-          >
-            <Video size={20} aria-hidden="true" />
-            Vào lớp
-          </AppLink>
+          <Button asChild shape="pill">
+            <AppLink href={joinUrl}>
+              <Video aria-hidden="true" />
+              Vào lớp
+            </AppLink>
+          </Button>
         ) : (
-          <button
-            type="button"
-            disabled
-            title="Mở trước giờ bắt đầu 15 phút"
-            className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white/85 px-6.5 text-base font-bold text-[#1565c0] opacity-70"
-          >
-            <Video size={20} aria-hidden="true" />
+          <Button shape="pill" disabled title="Mở trước giờ bắt đầu 15 phút">
+            <Video aria-hidden="true" />
             Vào lớp
-          </button>
+          </Button>
         )
       ) : (
-        <button
-          type="button"
-          disabled={bookingBusy || liveClass.seatsLeft === 0}
-          onClick={onBook}
-          className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-6.5 text-base font-bold text-[#1565c0] hover:bg-[#e3f0ff] disabled:opacity-60"
-        >
+        <Button shape="pill" disabled={bookingBusy || liveClass.seatsLeft === 0} onClick={onBook}>
           {liveClass.seatsLeft === 0 ? 'Hết chỗ' : bookingBusy ? 'Đang giữ chỗ…' : 'Giữ chỗ'}
-        </button>
+        </Button>
       )}
-    </section>
+    </Card>
   )
 }
