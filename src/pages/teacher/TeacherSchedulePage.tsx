@@ -1,11 +1,12 @@
-import { ChevronLeft, ChevronRight } from '../../components/console/icons'
-import Button from '../../components/console/button'
+import { FilterToolbar } from '../../components/console/filter-toolbar'
 import Notice from '../../components/console/notice'
 import TeacherPageHeader from '../../components/teacher/TeacherPageHeader'
 import TeacherNextClassCard from '../../components/teacher/TeacherNextClassCard'
 import TeacherTodoPanel from '../../components/teacher/TeacherTodoPanel'
 import TeacherZoomCard from '../../components/teacher/TeacherZoomCard'
 import TeacherClassDetailDialog from '../../components/teacher/TeacherClassDetailDialog'
+import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
+import WeekNavigator from '../../components/console/schedule/week-navigator'
 import LiveScheduleSkeleton from '../../components/console/schedule/live-schedule-skeleton'
 import LiveWeekGrid from '../../components/console/schedule/live-week-grid'
 import LiveClassContentDialog from '../../components/console/schedule/live-class-content-dialog'
@@ -26,15 +27,8 @@ export default function TeacherSchedulePage() {
 
       {t.status === 'loading' ? (
         <LiveScheduleSkeleton variant="teacher" />
-      ) : t.status === 'error' || t.status === 'forbidden' ? (
-        <Notice tone={t.status === 'forbidden' ? 'warning' : 'danger'}>
-          {t.errorMessage || 'Không tải được lịch dạy.'}
-          <Button size="sm" appearance="outline" onClick={t.reloadAll}>
-            Thử lại
-          </Button>
-        </Notice>
       ) : (
-        <>
+        <ScheduleResourceState status={t.status} errorMessage={t.errorMessage || 'Không tải được lịch dạy.'} onRetry={t.reloadAll}>
           {t.errorMessage && <Notice tone="danger">{t.errorMessage}</Notice>}
 
           {t.nextClass && (
@@ -50,50 +44,25 @@ export default function TeacherSchedulePage() {
           )}
 
           <div className="flex flex-col items-start gap-5 lg:flex-row">
-            <div className="flex w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-card-border bg-card-background">
-              <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-card-border px-4 py-3.5">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label="Tuần trước"
-                    onClick={t.goPrevWeek}
-                    className="inline-flex size-11 items-center justify-center rounded-xl border border-card-border bg-card-background text-text-primary hover:bg-background-gray-secondary"
-                  >
-                    <ChevronLeft size={16} aria-hidden="true" />
-                  </button>
-                  <strong className="min-w-[170px] text-center text-[15px] text-text-primary">
-                    {weekLabel}
-                  </strong>
-                  <button
-                    type="button"
-                    aria-label="Tuần sau"
-                    onClick={t.goNextWeek}
-                    className="inline-flex size-11 items-center justify-center rounded-xl border border-card-border bg-card-background text-text-primary hover:bg-background-gray-secondary"
-                  >
-                    <ChevronRight size={16} aria-hidden="true" />
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={t.goThisWeek}
-                  className="min-h-11 rounded-xl border border-card-border bg-card-background px-4 text-sm text-text-primary hover:bg-background-gray-secondary"
-                >
-                  Tuần này
-                </button>
-              </div>
-
-              <div className="[&>section]:rounded-none [&>section]:border-0">
-                <LiveWeekGrid
-                  weekStart={t.weekStart}
-                  classes={t.weekClasses}
-                  selectedId={t.selectedClass?.id}
-                  onSelect={(item) => t.setSelectedClass(item)}
-                  mode="teacher"
-                  showLegend={false}
+            <section className="w-full min-w-0 flex-1 overflow-hidden rounded-xl border border-card-border bg-card-background">
+              <FilterToolbar>
+                <WeekNavigator
+                  label={weekLabel}
+                  onPrev={t.goPrevWeek}
+                  onNext={t.goNextWeek}
+                  onThisWeek={t.goThisWeek}
                 />
-              </div>
-            </div>
-
+              </FilterToolbar>
+              <LiveWeekGrid
+                bare
+                weekStart={t.weekStart}
+                classes={t.weekClasses}
+                selectedId={t.selectedClass?.id}
+                onSelect={(item) => t.setSelectedClass(item)}
+                mode="teacher"
+                showLegend={false}
+              />
+            </section>
             <div className="flex w-full shrink-0 flex-col gap-5 lg:w-[320px]">
               <TeacherZoomCard
                 zoomAccount={t.zoomAccount}
@@ -109,7 +78,7 @@ export default function TeacherSchedulePage() {
               />
             </div>
           </div>
-        </>
+        </ScheduleResourceState>
       )}
 
       {t.selectedClass && (

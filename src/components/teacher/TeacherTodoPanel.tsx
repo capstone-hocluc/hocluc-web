@@ -1,3 +1,5 @@
+import Button from '../console/button'
+import Panel from '../console/panel'
 import type { TeacherTodoItem } from '../../hooks/useTeacherSchedule'
 import type { ConsoleLiveClass } from '../../services/liveClassService'
 import {
@@ -19,59 +21,39 @@ export default function TeacherTodoPanel({ todos, onOpenAttendance, onOpenConten
   const todayKey = localToday()
 
   return (
-    <aside
-      aria-label="Cần làm"
-      className="flex w-full shrink-0 flex-col gap-3.5 rounded-2xl border border-card-border bg-card-background p-5 lg:w-[320px]"
-    >
-      <h2 className="m-0 text-[17px] font-bold text-text-primary">Cần làm</h2>
-
+    <Panel title="Cần làm" className="w-full">
       {todos.length === 0 ? (
-        <p className="m-0 text-sm text-text-tertiary">Không có việc cần xử lý.</p>
+        <p className="text-sm text-text-tertiary">Không có việc cần xử lý.</p>
       ) : (
-        todos.map((item) => {
-          const dateKey = dateKeyOfInstant(item.liveClass.startTime)
-          if (item.kind === 'attendance') {
+        <ul className="flex flex-col gap-3">
+          {todos.map((item) => {
+            const dateKey = dateKeyOfInstant(item.liveClass.startTime)
+            const attendance = item.kind === 'attendance'
             return (
-              <div
-                key={`att-${item.liveClass.id}`}
-                className="flex flex-col gap-2.5 rounded-xl border border-[#e0e9f5] p-3.5"
+              <li
+                key={`${item.kind}-${item.liveClass.id}`}
+                className="flex flex-col gap-2 rounded-xl border border-card-border p-3"
               >
-                <strong className="text-sm text-text-primary">{item.liveClass.title}</strong>
-                <span className="text-[13px] text-[#526984]">
-                  {relativeDayLabel(dateKey, todayKey)}, {formatDdMm(dateKey)} ·{' '}
-                  {formatTimeRangeFromInstants(item.liveClass.startTime, item.liveClass.endTime)}
+                <strong className="text-sm font-medium text-text-primary">{item.liveClass.title}</strong>
+                <span className="text-xs text-text-tertiary">
+                  {attendance
+                    ? `${relativeDayLabel(dateKey, todayKey)}, ${formatDdMm(dateKey)} · ${formatTimeRangeFromInstants(item.liveClass.startTime, item.liveClass.endTime)}`
+                    : `${shortDayLabel(dateKey)} ${formatDdMm(dateKey)} · chưa có nội dung buổi`}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => onOpenAttendance(item.liveClass)}
-                  className="min-h-11 self-start rounded-xl bg-[#0b3a82] px-4 text-sm font-semibold text-white hover:bg-[#082e68]"
-                >
-                  Điểm danh
-                </button>
-              </div>
+                {attendance ? (
+                  <Button size="sm" className="self-start" onClick={() => onOpenAttendance(item.liveClass)}>
+                    Điểm danh
+                  </Button>
+                ) : (
+                  <Button size="sm" appearance="outline" className="self-start" onClick={() => onOpenContent(item.liveClass)}>
+                    Thêm nội dung
+                  </Button>
+                )}
+              </li>
             )
-          }
-
-          return (
-            <div
-              key={`cnt-${item.liveClass.id}`}
-              className="flex flex-col gap-2.5 rounded-xl border border-[#e0e9f5] p-3.5"
-            >
-              <strong className="text-sm text-text-primary">{item.liveClass.title}</strong>
-              <span className="text-[13px] text-[#526984]">
-                {shortDayLabel(dateKey)} {formatDdMm(dateKey)} · chưa có nội dung buổi
-              </span>
-              <button
-                type="button"
-                onClick={() => onOpenContent(item.liveClass)}
-                className="min-h-11 self-start rounded-xl border border-card-border bg-card-background px-4 text-sm font-semibold text-text-primary hover:bg-background-gray-secondary"
-              >
-                Thêm nội dung
-              </button>
-            </div>
-          )
-        })
+          })}
+        </ul>
       )}
-    </aside>
+    </Panel>
   )
 }

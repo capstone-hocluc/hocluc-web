@@ -3,7 +3,9 @@ import { Plus, X } from '../console/icons'
 import ConsoleDialog from '../console/dialog'
 import DateField from '../console/date-field'
 import Button from '../console/button'
-import { fieldControlClass } from '../console/form-field'
+import Field, { fieldControlClass } from '../console/form-field'
+import Notice from '../console/notice'
+import Panel from '../console/panel'
 import type { ConsoleLiveClass } from '../../services/liveClassService'
 import type { AvailabilityExceptionResponse, AvailabilitySlot } from '../../types/scheduling'
 import {
@@ -61,16 +63,12 @@ export default function BusyDaysPanel({
   }
 
   return (
-    <aside
-      aria-label="Ngày bận"
-      className="flex w-full shrink-0 flex-col gap-3.5 rounded-2xl border border-card-border bg-card-background p-5 lg:w-[320px]"
-    >
-      <h2 className="m-0 text-[17px] font-bold text-text-primary">Ngày bận</h2>
-
+    <Panel title="Ngày bận" className="w-full shrink-0 lg:w-[320px]">
+      <div className="flex flex-col gap-3">
       {busyDays.length === 0 ? (
-        <p className="m-0 text-sm text-text-tertiary">Chưa có ngày bận.</p>
+        <p className="text-sm text-text-tertiary">Chưa có ngày bận.</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        <ul className="flex flex-col gap-2">
           {busyDays.map((ex) => {
             const timePart =
               ex.startTime && ex.endTime
@@ -79,47 +77,40 @@ export default function BusyDaysPanel({
             return (
               <li
                 key={ex.id}
-                className="flex items-center justify-between gap-2.5 rounded-xl border border-[#e0e9f5] px-3 py-2.5 text-sm text-text-primary"
+                className="flex items-center justify-between gap-2.5 rounded-xl border border-card-border px-3 py-2.5 text-sm text-text-primary"
               >
                 <div className="min-w-0">
                   <div>
                     {shortDayLabel(ex.exceptionDate)} {formatDdMmYyyy(ex.exceptionDate)} · {timePart}
                   </div>
-                  {ex.reason && <div className="truncate text-xs text-[#526984]">{ex.reason}</div>}
+                  {ex.reason && <div className="truncate text-xs text-text-tertiary">{ex.reason}</div>}
                 </div>
-                <button
-                  type="button"
+                <Button
+                  size="icon"
+                  appearance="ghost"
                   disabled={busy}
                   aria-label={`Xóa ngày bận ${formatDdMmYyyy(ex.exceptionDate)}`}
                   onClick={() => onRemoveBusyDay(ex.id)}
-                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#f6f9ff] text-[#526984] hover:bg-[#e8eff8] disabled:opacity-50"
                 >
                   <X size={16} aria-hidden="true" />
-                </button>
+                </Button>
               </li>
             )
           })}
         </ul>
       )}
 
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => setAddOpen(true)}
-        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-dashed border-[#a9c3e0] bg-card-background text-sm font-semibold text-[#0b3a82] hover:bg-[#f6f9ff] disabled:opacity-50"
-      >
+      <Button appearance="outline" disabled={busy} onClick={() => setAddOpen(true)}>
         <Plus size={16} aria-hidden="true" />
         Thêm ngày bận
-      </button>
+      </Button>
 
       {outsideClass && (
-        <div
-          role="note"
-          className="rounded-xl border border-[#f3c58b] bg-[#fff6ea] p-3 text-[13px] leading-relaxed text-[#7a3d00]"
-        >
+        <Notice tone="warning">
           {fullDayLabel(dateKeyOfInstant(outsideClass.startTime))} có buổi học nằm ngoài giờ rảnh. Thêm giờ rảnh hoặc báo staff dời buổi.
-        </div>
+        </Notice>
       )}
+      </div>
 
       <ConsoleDialog
         open={addOpen}
@@ -147,8 +138,7 @@ export default function BusyDaysPanel({
             disabled={busy}
             required
           />
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-            Ghi chú (không bắt buộc)
+          <Field label="Ghi chú (không bắt buộc)">
             <input
               type="text"
               value={reason}
@@ -156,9 +146,9 @@ export default function BusyDaysPanel({
               disabled={busy}
               className={fieldControlClass}
             />
-          </label>
+          </Field>
         </div>
       </ConsoleDialog>
-    </aside>
+    </Panel>
   )
 }

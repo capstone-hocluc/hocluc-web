@@ -1,4 +1,5 @@
 import { Check } from '../icons'
+import Button from '../button'
 import ConsoleDialog from '../dialog'
 import Notice from '../notice'
 import type { Course } from '../../../services/courseService'
@@ -50,71 +51,45 @@ function LiveTimetableWizardBody({
       {wizard.step === 1 ? (
         <div />
       ) : (
-        <button
-          type="button"
+        <Button
+          appearance="outline"
           disabled={wizard.busy}
           onClick={() => {
             wizard.setErrorMessage('')
             wizard.setStep(wizard.step === 3 ? 2 : 1)
           }}
-          className="min-h-11 rounded-xl border border-card-border bg-card-background px-5 text-[15px] font-semibold text-text-primary hover:bg-background-gray-secondary disabled:opacity-50"
         >
           Quay lại
-        </button>
+        </Button>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {wizard.step === 1 && (
-          <button
-            type="button"
-            disabled={wizard.busy}
-            onClick={onClose}
-            className="min-h-11 rounded-xl border border-card-border bg-card-background px-5 text-[15px] font-semibold text-text-primary hover:bg-background-gray-secondary"
-          >
-            Hủy
-          </button>
+          <>
+            <Button appearance="outline" disabled={wizard.busy} onClick={onClose}>
+              Hủy
+            </Button>
+            <Button disabled={wizard.busy || wizard.subjectsLoading || wizard.zoomMissing} onClick={wizard.goToStep2}>
+              Tiếp tục
+            </Button>
+          </>
         )}
-
-        {wizard.step === 1 && (
-          <button
-            type="button"
-            disabled={wizard.busy || wizard.subjectsLoading || wizard.zoomMissing}
-            onClick={wizard.goToStep2}
-            className="min-h-11 rounded-xl bg-[#0b3a82] px-6 text-[15px] font-semibold text-white hover:bg-[#082e68] disabled:opacity-50"
-          >
-            Tiếp tục
-          </button>
-        )}
-
         {wizard.step === 2 && (
-          <button
-            type="button"
-            disabled={wizard.busy}
-            onClick={() => void wizard.runPreview()}
-            className="min-h-11 rounded-xl bg-[#0b3a82] px-6 text-[15px] font-semibold text-white hover:bg-[#082e68] disabled:opacity-50"
-          >
+          <Button disabled={wizard.busy} onClick={() => void wizard.runPreview()}>
             {wizard.busy ? 'Đang kiểm tra…' : 'Xem trước'}
-          </button>
+          </Button>
         )}
-
         {wizard.step === 3 && (
-          <button
-            type="button"
-            disabled={
-              wizard.busy ||
-              wizard.includedCount === 0 ||
-              wizard.previewBlockingErrors.length > 0
-            }
+          <Button
+            disabled={wizard.busy || wizard.includedCount === 0 || wizard.previewBlockingErrors.length > 0}
             onClick={() => void wizard.submitCreate()}
-            className="min-h-11 rounded-xl bg-[#0b3a82] px-6 text-[15px] font-semibold text-white hover:bg-[#082e68] disabled:opacity-50"
           >
             {wizard.busy ? 'Đang tạo…' : `Tạo ${wizard.includedCount} buổi`}
-          </button>
+          </Button>
         )}
       </div>
     </div>
   )
-
   return (
     <ConsoleDialog
       open={open}
@@ -139,21 +114,17 @@ function LiveTimetableWizardBody({
                 aria-current={active ? 'step' : undefined}
                 className={cn(
                   'flex flex-1 items-center gap-2.5 text-sm',
-                  active
-                    ? 'font-semibold text-[#0b3a82]'
-                    : done
-                      ? 'text-[#0b3a82]'
-                      : 'text-[#526984]'
+                  active ? 'font-semibold text-brand-500' : done ? 'text-brand-500' : 'text-text-tertiary'
                 )}
               >
                 <span
                   className={cn(
-                    'inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[13px]',
+                    'inline-flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
                     active
-                      ? 'bg-[#0b3a82] text-white'
+                      ? 'bg-brand-500 text-white'
                       : done
-                        ? 'bg-[#edf5ff] text-[#0b3a82]'
-                        : 'border border-[#c3d3e6] text-[#526984]'
+                        ? 'bg-badge-blue-background text-brand-500'
+                        : 'border border-card-border text-text-tertiary'
                   )}
                 >
                   {done ? <Check size={14} aria-hidden="true" /> : item.id}

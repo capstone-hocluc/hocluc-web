@@ -201,7 +201,7 @@ export function useTeacherSchedule() {
     weekStart,
     nowMs,
     weekClasses: weekResource.data ?? [],
-    status: weekResource.status === 'loading' || summaryResource.status === 'loading' ? 'loading' : weekResource.status,
+    status: weekResource.status === 'loading' || summaryResource.status === 'loading' ? ('loading' as const) : weekResource.status,
     errorMessage: errorMessage || weekResource.errorMessage,
     notice,
     nextClass,

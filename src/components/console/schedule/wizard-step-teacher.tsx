@@ -1,6 +1,6 @@
 import Notice from '../notice'
 import SelectField from '../select-field'
-import { fieldControlClass } from '../form-field'
+import Field, { fieldControlClass } from '../form-field'
 import type { Course } from '../../../services/courseService'
 import type { TeachableSubject, TeacherZoomAccount } from '../../../services/liveClassService'
 import type { UserSummary } from '../../../services/userService'
@@ -62,50 +62,45 @@ export default function WizardStepTeacher({
       )}
       <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_310px]">
       <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-          Tên lớp
+        <Field label="Tên lớp">
           <input
             type="text"
             value={title}
             maxLength={400}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="Ví dụ: Toán tối thứ Hai, thứ Năm"
-            className={cn(fieldControlClass, 'min-h-11')}
+            className={fieldControlClass}
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-          Khóa học
+        <Field label="Khóa học">
           <SelectField
             ariaLabel="Khóa học"
             value={courseId}
             onChange={onCourseChange}
             disabled={!courses.length}
             placeholder="Chọn khóa học"
-            triggerClassName={cn(fieldControlClass, 'min-h-11')}
             options={courses.map((c) => ({ id: c.id, label: c.title }))}
           />
-        </label>
+        </Field>
 
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-          Giảng viên
+        <Field label="Giảng viên">
           <SelectField
             ariaLabel="Giảng viên"
             value={teacherId}
             onChange={onTeacherChange}
             disabled={!teachers.length}
             placeholder="Chọn giảng viên"
-            triggerClassName={cn(fieldControlClass, 'min-h-11')}
             options={teachers.map((t) => ({ id: t.id, label: formatTeacherLabel(t) }))}
           />
-        </label>
+        </Field>
 
         <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
           <legend className="mb-1 p-0 text-sm font-medium text-text-primary">Môn học</legend>
           {subjectsLoading ? (
             <p className="m-0 text-sm text-text-tertiary">Đang tải môn giảng viên dạy được…</p>
           ) : subjects.length === 0 ? (
-            <p className="m-0 text-sm text-[#a3261a]">
+            <p className="m-0 text-sm text-danger">
               {teacherName
                 ? `${teacherName} chưa được phân công quyền dạy môn nào.`
                 : 'Chọn giảng viên để xem môn dạy được.'}
@@ -118,9 +113,9 @@ export default function WizardStepTeacher({
                   <label
                     key={subject.id}
                     className={cn(
-                      'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-4 text-sm transition-colors',
+                      'inline-flex h-9 cursor-pointer items-center gap-2 rounded-full px-4 text-sm transition-colors',
                       selected
-                        ? 'border-2 border-[#0b3a82] bg-[#edf5ff] font-semibold text-[#0b3a82]'
+                        ? 'border border-brand-500 bg-badge-blue-background font-medium text-brand-500'
                         : 'border border-card-border bg-card-background text-text-primary hover:bg-background-gray-secondary'
                     )}
                   >
@@ -129,7 +124,7 @@ export default function WizardStepTeacher({
                       name="wizard-subject"
                       checked={selected}
                       onChange={() => onSubjectChange(subject.id)}
-                      className="accent-[#0b3a82]"
+                      className="accent-brand-500"
                     />
                     {subject.name}
                   </label>
@@ -138,7 +133,7 @@ export default function WizardStepTeacher({
             </div>
           )}
           {teacherName && subjects.length > 0 && (
-            <p className="m-0 text-[13px] text-[#526984]">Chỉ hiện môn {teacherName} dạy được</p>
+            <p className="text-xs text-text-tertiary">Chỉ hiện môn {teacherName} dạy được</p>
           )}
         </fieldset>
       </div>

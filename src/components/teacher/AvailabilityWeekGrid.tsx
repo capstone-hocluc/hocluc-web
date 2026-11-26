@@ -11,7 +11,7 @@ import {
   WEEKDAYS_ORDERED,
 } from '../../lib/liveScheduleFormat'
 import { cn } from '../../lib/cn'
-import '../../styles/scheduling/live-schedule.css'
+import { hourLinesStyle, LIVE_CLASS_TONE_CLASS, WEEK_COLUMNS } from '../console/schedule/live-class-tones'
 
 interface Props {
   slots: AvailabilitySlot[]
@@ -96,44 +96,44 @@ export default function AvailabilityWeekGrid({
   return (
     <section
       aria-label="Giờ rảnh hàng tuần"
-      className="min-w-0 flex-1 overflow-x-auto rounded-2xl border border-card-border bg-card-background"
+      className="min-w-0 flex-1 overflow-x-auto rounded-xl border border-card-border bg-card-background"
       onPointerUp={commitDrag}
       onPointerCancel={() => setDragState(null)}
     >
-      <div className="flex min-w-[680px] flex-wrap items-center justify-between gap-2.5 border-b border-card-border px-4 py-3.5 text-[13px] text-[#526984]">
+      <div className="flex min-w-[680px] flex-wrap items-center justify-between gap-2.5 border-b border-card-border px-4 py-3 text-sm text-text-tertiary">
         <span>Kéo trên lưới để thêm giờ rảnh, bấm vào khối để xóa</span>
         <div className="flex flex-wrap gap-3.5">
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-3 rounded-xs bg-[#cfe5ff]" />
+            <span aria-hidden="true" className="size-3 rounded-xs bg-badge-blue-background" />
             Giờ rảnh
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-3 rounded-xs bg-[#0b3a82]" />
+            <span aria-hidden="true" className={cn('size-3 rounded-xs', LIVE_CLASS_TONE_CLASS.live)} />
             Buổi tuần này
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="size-3 rounded-xs border-2 border-[#c46a00] bg-[#fff6ea]" />
+            <span aria-hidden="true" className={cn('size-3 rounded-xs', LIVE_CLASS_TONE_CLASS.attention)} />
             Buổi ngoài giờ rảnh
           </span>
         </div>
       </div>
 
       <div className="min-w-[680px] px-3 pt-2.5 pb-4">
-        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-card-border pb-2 text-center text-sm font-semibold text-text-primary">
+        <div className={cn(WEEK_COLUMNS, 'border-b border-card-border pb-2 text-center text-sm font-semibold text-text-primary')}>
           <div />
           {WEEKDAYS_ORDERED.map((d) => (
             <div key={d.value}>{d.short}</div>
           ))}
         </div>
 
-        <div className="ls-avail-grid" style={{ gridTemplateRows: `repeat(${totalRows}, 18px)` }}>
+        <div className={cn(WEEK_COLUMNS, 'relative touch-none select-none')} style={{ gridTemplateRows: `repeat(${totalRows}, 18px)`, ...hourLinesStyle(36) }}>
           {labelHours.map((hour) => {
             const row = (hour - startHour) * 2 + 1
             return (
               <div
                 key={hour}
                 style={{ gridColumn: 1, gridRow: `${row} / span 2` }}
-                className="pr-2 pt-0.5 text-right text-[11px] text-[#526984]"
+                className="pt-0.5 pr-2 text-right text-xs text-text-tertiary"
               >
                 {String(hour).padStart(2, '0')}:00
               </div>
@@ -147,7 +147,7 @@ export default function AvailabilityWeekGrid({
                 role="gridcell"
                 aria-label={`${day.label} ${formatMinutesClock(startHour * 60 + row * 30)}`}
                 style={{ gridColumn: dayIdx + 2, gridRow: row + 1 }}
-                className="ls-avail-cell"
+                className="cursor-crosshair border-l border-card-border hover:bg-badge-blue-background/60"
                 onPointerDown={(e) => {
                   e.preventDefault()
                   handlePointerDown(day.value, row)
@@ -163,7 +163,7 @@ export default function AvailabilityWeekGrid({
                 gridColumn: previewRowSpan.dayIdx + 2,
                 gridRow: `${previewRowSpan.startRow} / span ${previewRowSpan.span}`,
               }}
-              className="pointer-events-none z-2 mx-0.5 rounded-md border border-dashed border-[#0b3a82] bg-[#cfe5ff]/75"
+              className="pointer-events-none z-2 mx-0.5 rounded-md border border-dashed border-brand-500 bg-badge-blue-background/75"
             />
           )}
 
@@ -185,7 +185,7 @@ export default function AvailabilityWeekGrid({
                 aria-label={`Giờ rảnh ${dayMeta.label} ${startLabel} đến ${endLabel}`}
                 onClick={() => onRemoveSlot(slot)}
                 style={{ gridColumn: dayIdx + 2, gridRow: `${startRow} / span ${span}` }}
-                className="ls-avail-block"
+                className="z-2 mx-[3px] flex cursor-pointer items-start justify-between rounded-md bg-badge-blue-background px-1.5 py-1 text-left text-xs font-semibold text-badge-blue-text hover:bg-badge-blue-icon-color/25 focus-visible:outline-2 focus-visible:outline-brand-500"
               >
                 <span>
                   {startLabel} – {endLabel}
@@ -221,7 +221,7 @@ export default function AvailabilityWeekGrid({
               <div
                 key={item.id}
                 style={{ gridColumn: dayIdx + 2, gridRow: `${startRow} / span ${span}` }}
-                className={cn(isOutside ? 'ls-avail-class-warn' : 'ls-avail-class-ok')}
+                className={cn('pointer-events-none z-3 my-0.5 overflow-hidden rounded-md px-1.5 py-[3px] text-xs', isOutside ? cn('mx-1.5', LIVE_CLASS_TONE_CLASS.attention) : cn('mr-1.5 ml-3.5', LIVE_CLASS_TONE_CLASS.live))}
               >
                 {item.subjectName || item.title} · {clockStart}
               </div>
