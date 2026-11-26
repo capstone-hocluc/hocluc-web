@@ -6,6 +6,7 @@ export const CHAT_ID_2 = 'd0000000-0000-0000-0000-000000000002'
 export const MENTOR_ID = '40000000-0000-0000-0000-000000000003'
 
 export const SUBJECT_ID = '20000000-0000-0000-0000-000000000001'
+export const SUBJECT_ID_2 = '20000000-0000-0000-0000-000000000002'
 const tokens: Record<string, Record<string, unknown>> = {
   STUDENT: { sub: 'student', role: 'STUDENT' },
   MENTOR: { sub: MENTOR_ID, role: 'MENTOR' },
@@ -49,6 +50,30 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
     unavailable: false, loseSendResponse: false, loseSendAfterCommit: false, conflictAssignment: false,
     slowAuth: false, sendDelayMs: 0, listDelayMs: 0, conversationPageSize: 0 as number,
     listDelayBySearch: {} as Record<string, number>, loseCreateResponse: false, role,
+    createDelayMs: 0,
+    subjects: [
+      { id: SUBJECT_ID, name: 'Toán' },
+      { id: SUBJECT_ID_2, name: 'Vật lý' },
+    ],
+    createResponses: [] as Array<
+      | { kind: 'abort' }
+      | {
+          kind: 'error'
+          status: number
+          message: string
+          code?: string
+          codeField?: 'code' | 'errorCode'
+          data?: unknown
+        }
+      | {
+          kind: 'success'
+          status?: 'OPEN' | 'IN_PROGRESS'
+          subjectName?: string
+          subjectCategoryId?: string
+          mentor?: { id: string; displayName: string } | null
+          assignedMentor?: { id: string; displayName: string } | null
+        }
+    >,
     attachmentsEnabled: true, maxFileBytes: 10 * 1024 * 1024, maxAttachments: 3,
     failUpload: false, uploadDelayMs: 0, uploadFailAt: -1, assignmentDelayMs: 0,
     beforeDelayMs: 0,
@@ -162,8 +187,19 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
     const body = request.postDataJSON() ?? {}
     const authorization = request.headers()['authorization'] ?? null
     state.requests.push({ method, path, query: Object.fromEntries(url.searchParams.entries()), body, authorization })
-    const answer = (data: unknown, status = 200, message = 'OK') => route.fulfill({ status,
-      contentType: 'application/json', body: JSON.stringify({ success: status < 400, status, message, data }) })
+    const answer = (
+      data: unknown,
+      status = 200,
+      message = 'OK',
+      extra?: { code?: string; codeField?: 'code' | 'errorCode' }
+    ) => route.fulfill({ status,
+      contentType: 'application/json', body: JSON.stringify({
+        success: status < 400,
+        status,
+        message,
+        data,
+        ...(extra?.code ? { [extra.codeField ?? 'code']: extra.code } : {}),
+      }) })
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
     // No live notifications here: an empty answer stops the bell from following them.
     if (path === '/api/v1/notifications/stream') return route.fulfill({ status: 204 })
@@ -203,7 +239,7 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
       reason: state.canCreate ? (state.canSend ? undefined : state.canSendReason) : 'Khóa học đã hết hiệu lực.',
       attachmentsEnabled: state.attachmentsEnabled,
       maxFileBytes: state.maxFileBytes, maxAttachments: state.maxAttachments })
-    if (path === '/api/v1/chat/subjects') return answer([{ id: SUBJECT_ID, name: 'Toán' }])
+    if (path === '/api/v1/chat/subjects') return answer(state.subjects)
     if (path === '/api/v1/chat/management/mentors') {
       const search = url.searchParams.get('search') ?? ''
       const filtered = state.mentors.filter(mentor => !search || mentor.displayName.includes(search))
@@ -228,8 +264,36 @@ export async function installChatFixture(page: Page, role = 'STUDENT', options: 
     if (path === '/api/v1/auth/logout') return answer(null)
     if (path === '/api/v1/chat/conversations' || path === '/api/v1/chat/management/conversations') {
       if (method === 'POST') {
+        if (state.createDelayMs) await sleep(state.createDelayMs)
         if (state.loseCreateResponse) { state.loseCreateResponse = false; return route.abort('connectionfailed') }
-        const created = row('d0000000-0000-0000-0000-000000000003', String(body.title))
+        const scripted = state.createResponses.shift()
+        if (scripted?.kind === 'abort') return route.abort('connectionfailed')
+        if (scripted?.kind === 'error') {
+          return answer(scripted.data ?? null, scripted.status, scripted.message, {
+            code: scripted.code,
+            codeField: scripted.codeField,
+          })
+        }
+        const createdId = `d0000000-0000-0000-0000-${String(rows.size + 1).padStart(12, '0')}`
+        const pickedSubjectId = typeof body.subjectCategoryId === 'string' ? body.subjectCategoryId : ''
+        const matchedSubject = state.subjects.find(item => item.id === pickedSubjectId)
+        const created: ChatConversation = {
+          ...row(createdId, String(body.title)),
+          status: scripted?.status ?? 'IN_PROGRESS',
+          subjectCategoryId: scripted?.subjectCategoryId ?? (pickedSubjectId || SUBJECT_ID),
+          subjectName: scripted?.subjectName ?? matchedSubject?.name ?? 'Toán',
+        }
+        if (scripted && 'mentor' in scripted) {
+          created.mentor = scripted.mentor ?? undefined
+        }
+        if (scripted && 'assignedMentor' in scripted) {
+          if (!('mentor' in scripted)) delete created.mentor
+          created.assignedMentor = scripted.assignedMentor ?? undefined
+        }
+        if (created.status === 'OPEN' && !scripted?.mentor && !scripted?.assignedMentor) {
+          delete created.mentor
+          delete created.assignedMentor
+        }
         rows.set(created.id, created); transcripts.set(created.id, [message(created.id, 1, 'Học viên QA', String(body.initialMessage))])
         return answer(created)
       }
