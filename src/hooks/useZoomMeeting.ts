@@ -87,12 +87,12 @@ export function useZoomMeeting(room: LiveRoom | null) {
         } finally { ZoomMtgEmbedded.destroyClient() }
       }
       const initResult = await init
-      if (typeof initResult === 'object') throw initResult
+      if (typeof initResult === 'object' && initResult !== null) throw initResult
       if (disposed) return
       zoom.on('connection-change', onConnectionChange)
       joinStarted = true
       const joinResult = await zoom.join({ signature, meetingNumber, password: passcode ?? '', userName, userEmail: userEmail ?? undefined, zak: role === 1 ? zak ?? undefined : undefined, tk: registrantToken ?? undefined })
-      if (typeof joinResult === 'object') throw joinResult
+      if (typeof joinResult === 'object' && joinResult !== null) throw joinResult
       if (disposed || closed) return
       observer.observe(root)
       document.addEventListener('fullscreenchange', resize)
