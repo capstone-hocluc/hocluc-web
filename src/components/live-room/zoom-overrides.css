@@ -1,0 +1,32 @@
+.hocluc-zoom-room [aria-label="Zoom app container"] {
+  width: 100%;
+  height: 100%;
+}
+.hocluc-zoom-room [aria-label="Zoom Web SDK Widget"] {
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.hocluc-zoom-room.hocluc-zoom-custom .zoommtg-drag-video {
+  display: none !important;
+}
+.hocluc-zoom-room [aria-label="Zoom app container"] > .react-draggable,
+.hocluc-zoom-room [aria-label="Zoom app container"] > .react-draggable > div,
+.hocluc-zoom-room [aria-label="Zoom app container"] .react-resizable,
+.hocluc-zoom-room [aria-label="Zoom Web SDK Widget"] {
+  width: 100% !important;
+  height: 100% !important;
+}
+.hocluc-zoom-room [aria-label="Zoom Web SDK Widget"] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.hocluc-zoom-room [aria-label="Zoom Web SDK Widget"] > :first-child {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.hocluc-zoom-room.hocluc-zoom-custom [aria-label="Zoom Web SDK Widget"] > :last-child {
+  position: absolute;
+  visibility: hidden;
+}

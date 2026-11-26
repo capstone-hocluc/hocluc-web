@@ -45,7 +45,7 @@ export function useZoomMeeting(room: LiveRoom | null) {
         clearTimeout(resizeTimer)
         resizeTimer = setTimeout(() => {
           const size = videoSize()
-          if (!disposed && !closed && size.width && size.height) zoom.updateVideoOptions({ viewSizes: { default: size } })
+          if (!disposed && !closed && size.width && size.height) zoom.updateVideoOptions({ viewSizes: { default: size, ribbon: size } })
         }, 100)
       }
       const observer = new ResizeObserver(resize)
@@ -59,7 +59,7 @@ export function useZoomMeeting(room: LiveRoom | null) {
       const popper = { anchorElement: root, placement: 'top-end' as const, disableDraggable: true }
       const init = Promise.resolve().then(() => zoom.init({
         zoomAppRoot: root,
-        language: 'vi-VN',
+        language: 'en-US',
         patchJsMedia: true,
         leaveOnPageUnload: true,
         customize: {
@@ -67,7 +67,7 @@ export function useZoomMeeting(room: LiveRoom | null) {
           video: {
             isResizable: false,
             popper: { disableDraggable: true },
-            viewSizes: { default: videoSize() },
+            viewSizes: { default: videoSize(), ribbon: videoSize() },
             defaultViewType: (role === 1 ? 'gallery' : 'speaker') as SuspensionViewType,
           },
           participants: { popper }, setting: { popper }, chat: { popper }, meeting: { popper }, activeApps: { popper },
@@ -96,12 +96,16 @@ export function useZoomMeeting(room: LiveRoom | null) {
       if (disposed || closed) return
       observer.observe(root)
       document.addEventListener('fullscreenchange', resize)
+      // Speaker view can be unavailable when the browser lacks multi-video support.
+      // A view preference must never prevent a participant from joining.
+      await zoom.setViewType(role === 1 ? 'gallery' : 'speaker').catch(() => zoom.setViewType('gallery'))
       resize()
       if (role === 1) endMeetingRef.current = () => zoom.endMeeting()
       setClient(zoom)
       setStatus('ready')
     }
-    void previousCleanup.then(connect).catch(() => {
+    void previousCleanup.then(connect).catch((error) => {
+      console.warn('Zoom connection failed', error instanceof Error ? error.message : error?.reason)
       if (!disposed) setStatus('failed')
       release()
     })

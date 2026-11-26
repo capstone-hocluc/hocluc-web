@@ -26,8 +26,8 @@ export default function ClassPanel({ client, state }: { client: typeof EmbeddedC
           <Button size="sm" appearance="outline" onClick={() => void (async () => { if (await action(() => client.lockMeeting(!locked))) setLocked(!locked) })()}>{locked ? 'Mở khóa phòng' : 'Khóa phòng'}</Button>
         </div>
         {inClass.map((person) => <div key={person.userId} className="flex flex-wrap items-center justify-between gap-1 border-b border-card-border py-2">
-          <span className="min-w-0 flex-1 truncate">{person.userName}</span>
-          <Button size="sm" appearance="ghost" onClick={() => void action(() => client.mute(!person.muted, person.userId))}>{person.muted ? 'Bật mic' : 'Tắt mic'}</Button>
+          <span className="min-w-0 flex-1 truncate">{person.userName}{person.audio && (person.muted ? ' · Đã tắt mic' : ' · Đang bật mic')}</span>
+          <Button size="sm" appearance="ghost" disabled={!person.audio} title={!person.audio ? 'Chưa kết nối âm thanh' : undefined} onClick={() => void action(() => person.userId === currentUserId ? client.mute(!person.muted) : client.mute(!person.muted, person.userId))}>{person.muted ? 'Bật mic' : 'Tắt mic'}</Button>
           {person.userId !== currentUserId && <Button size="sm" variant="danger" appearance="ghost" onClick={() => setExpelling(person)}>Mời ra</Button>}
         </div>)}
       </section>

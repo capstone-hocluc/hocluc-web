@@ -6,6 +6,11 @@ import AppLink from '../components/landing-page/AppLink'
 import LiveRoomSkeleton from '../components/live-room/LiveRoomSkeleton'
 import { Skeleton } from '../components/tailgrids/core/skeleton'
 import ClassPanel from '../components/live-room/ClassPanel'
+import ChatPanel from '../components/live-room/ChatPanel'
+import RoomControls from '../components/live-room/RoomControls'
+import '../components/live-room/zoom-overrides.css'
+import { useRoomChat } from '../hooks/useRoomChat'
+import { useRoomControls } from '../hooks/useRoomControls'
 import { useClassParticipants } from '../hooks/useClassParticipants'
 import { useRoomDisplay } from '../hooks/useRoomDisplay'
 import { useZoomMeeting } from '../hooks/useZoomMeeting'
@@ -54,7 +59,9 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
   const { rootRef, mobile, status: meetingStatus, client, endZoomMeeting } = useZoomMeeting(room)
   const participants = useClassParticipants(client)
   const { roomRef, fullscreen, toggleFullscreen, elapsed } = useRoomDisplay(meetingStatus === 'ready')
-  const [panelOpen, setPanelOpen] = useState(() => window.matchMedia('(min-width: 768px)').matches)
+  const [panel, setPanel] = useState<'class' | 'chat' | null>(null)
+  const controls = useRoomControls(client, rootRef, teacher)
+  const chat = useRoomChat(client, panel === 'chat')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -125,10 +132,8 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {teacher && client && <Button size="sm" appearance="outline" onClick={() => setPanelOpen(!panelOpen)}>Lớp học ({participants.inClass.length})</Button>}
               <Button size="sm" appearance="outline" onClick={() => void toggleFullscreen()}>{fullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}</Button>
-              <Button size="sm" appearance="outline" onClick={onLeave} disabled={ending}>Rời lớp</Button>
-              {teacher && room && <Button size="sm" variant="danger" onClick={() => setConfirmEnd(true)} disabled={connecting || ending}>Kết thúc buổi</Button>}
+              {!client && <Button size="sm" appearance="outline" onClick={onLeave} disabled={ending}>Rời lớp</Button>}
             </div>
           </header>
           {endError && <Notice tone="danger">{endError}</Notice>}
@@ -139,14 +144,17 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
                 : (!code || code === 'LIVE_CLASS_NOT_OPEN_YET') && <Button size="sm" appearance="outline" onClick={() => { setResult(null); setAttempt((value) => value + 1) }}>Thử lại</Button>}
             </Notice>
           ) : (
-            <div className="relative flex min-h-0 flex-1" aria-busy={connecting}>
+            <div className="flex min-h-0 flex-1 flex-col"><div className="relative flex min-h-0 flex-1" aria-busy={connecting}>
               <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-                <div ref={rootRef} className="absolute inset-0" />
+                <div ref={rootRef} className={`hocluc-zoom-room absolute inset-0 ${controls.custom ? 'hocluc-zoom-custom' : ''}`} />
                 {connecting && <Skeleton role="status" aria-label="Đang kết nối với Zoom" className="pointer-events-none absolute inset-0 h-full w-full rounded-none" />}
                 {fallbackMessage && <Notice tone="warning" className="relative m-4">{fallbackMessage}{fallbackUrl ? <Button size="sm" onClick={() => openZoom(fallbackUrl)}>Mở bằng Zoom</Button> : ' Chưa có đường dẫn Zoom cho buổi học này.'}</Notice>}
                 {meetingStatus === 'closed' && !fallbackMessage && <Notice className="relative m-4">Bạn đã rời phòng Zoom.</Notice>}
               </div>
-              {teacher && client && panelOpen && <div className="absolute inset-y-0 right-0 z-10 flex w-full max-w-80 md:static md:w-auto md:max-w-none"><ClassPanel client={client} state={participants} /></div>}
+              {client && panel && <div className="absolute inset-y-0 right-0 z-10 flex w-full max-w-80 md:static md:w-auto md:max-w-none">{panel === 'class' && teacher ? <ClassPanel client={client} state={participants} /> : <ChatPanel chat={chat} currentUserId={participants.currentUserId} />}</div>}
+            </div>
+            {controls.notice && <Notice tone="warning">{controls.notice}</Notice>}
+            {client && <RoomControls controls={controls} teacher={teacher} unread={chat.unread} onChat={() => { chat.clearUnread(); setPanel(panel === 'chat' ? null : 'chat') }} onParticipants={() => setPanel(panel === 'class' ? null : 'class')} onLeave={onLeave} onEnd={() => setConfirmEnd(true)} />}
             </div>
           )}
         </>

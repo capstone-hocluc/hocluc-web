@@ -32,8 +32,9 @@ export function useClassParticipants(client: Client | null) {
       const result = await operation()
       if (typeof result === 'object' && result !== null) throw result
       return true
-    } catch {
-      setNotice('Thao tác không thành công.')
+    } catch (error) {
+      const reason = typeof error === 'object' && error !== null && 'reason' in error ? String(error.reason) : error instanceof Error ? error.message : ''
+      setNotice(reason || 'Thao tác không thành công.')
       return false
     }
   }, [])
