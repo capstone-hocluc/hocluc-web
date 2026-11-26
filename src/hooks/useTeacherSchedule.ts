@@ -155,16 +155,22 @@ export function useTeacherSchedule() {
   }
 
   const handleStart = async (liveClass: ConsoleLiveClass) => {
-    const popup = window.open('about:blank', '_blank', 'noopener,noreferrer')
+    // Open the tab before the request so it counts as user-initiated. The "noopener" feature
+    // would make window.open return null, leaving no handle to send the tab to Zoom, so the
+    // opener link is cut by hand instead.
+    const popup = window.open('', '_blank')
+    if (popup) popup.opener = null
     setBusy(true)
     setErrorMessage('')
     try {
       const started = await startLiveClass(liveClass.id)
       const url = started.startUrl || started.meetingUrl
-      if (url && popup) {
+      if (!url) {
+        popup?.close()
+      } else if (popup) {
         popup.location.href = url
       } else {
-        popup?.close()
+        window.location.assign(url)
       }
       setNotice('Đã mở phòng dạy.')
       reloadAll()
