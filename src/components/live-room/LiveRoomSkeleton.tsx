@@ -1,23 +1,20 @@
-import Card from '../console/card'
 import Button from '../console/button'
 import { Skeleton } from '../tailgrids/core/skeleton'
 
 export default function LiveRoomSkeleton({ teacher, onLeave }: { teacher: boolean; onLeave: () => void }) {
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background-gray-secondary" role="status" aria-label="Đang tải phòng học">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-card-border p-3">
         <div className="space-y-2" aria-hidden="true">
-          <Skeleton className="h-8 w-48 sm:w-72" />
+          <Skeleton className="h-5 w-48" />
           <Skeleton className="h-4 w-40" />
         </div>
         <div className="flex gap-2">
-          <Button appearance="outline" onClick={onLeave}>Rời lớp</Button>
-          {teacher && <Skeleton className="h-10 w-32 rounded-lg" aria-hidden="true" />}
+          <Button size="sm" appearance="outline" onClick={onLeave}>Rời lớp</Button>
+          {teacher && <Skeleton className="h-8 w-32" aria-hidden="true" />}
         </div>
       </div>
-      <Card padding="none" className="flex min-h-96 flex-1" role="status" aria-label="Đang tải phòng học">
-        <Skeleton className="h-auto w-full rounded-xl" aria-hidden="true" />
-      </Card>
+      <Skeleton className="min-h-0 w-full flex-1 rounded-none" aria-hidden="true" />
     </div>
   )
 }
