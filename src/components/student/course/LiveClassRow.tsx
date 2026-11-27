@@ -1,4 +1,5 @@
 import type { CourseStudyLiveClass } from '../../../services/courseService'
+import StatusBadge from '../../ui/StatusBadge'
 import CourseListRow from './CourseListRow'
 import LiveClassActions from './LiveClassActions'
 import LiveClassMeta from './LiveClassMeta'
@@ -7,15 +8,20 @@ interface LiveClassRowProps {
   liveClass: CourseStudyLiveClass
 }
 
-// Compact row for upcoming/past lists (NextLiveClassCard is used for the
-// highlighted "next" item). Book/join/replay rules come from backend fields
-// alone - never gated by which list an item came from.
+// Compact row for upcoming/past lists (NextLiveClassCard is used for the highlighted "next" item).
 function LiveClassRow({ liveClass }: LiveClassRowProps) {
   return (
     <CourseListRow
       title={liveClass.title}
       meta={<LiveClassMeta liveClass={liveClass} className="gap-x-2.5 gap-y-0" />}
-      actions={<LiveClassActions liveClass={liveClass} />}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          {liveClass.status === 'COMPLETED' && liveClass.refunded && (
+            <StatusBadge size="sm" tone="warning">Đã hoàn Sao</StatusBadge>
+          )}
+          <LiveClassActions liveClass={liveClass} />
+        </div>
+      }
     />
   )
 }

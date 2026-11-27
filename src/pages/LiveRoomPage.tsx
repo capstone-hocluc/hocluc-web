@@ -26,7 +26,6 @@ type RoomState = { room: LiveRoom } | { error: unknown } | null
 const roomErrors: Record<string, string> = {
   ZOOM_RECONNECT_REQUIRED: 'Giảng viên cần kết nối lại Zoom trước khi bạn có thể vào lớp.',
   COURSE_NOT_PURCHASED: 'Bạn chưa mua khóa học này.',
-  LIVE_CLASS_NOT_BOOKED: 'Bạn cần giữ chỗ trước khi vào lớp.',
   LIVE_CLASS_NOT_OPEN_YET: 'Phòng học chưa mở. Bạn có thể vào lớp từ 15 phút trước giờ bắt đầu.',
   LIVE_CLASS_STATUS_INVALID: 'Buổi học không còn mở. Hãy kiểm tra lại lịch học.',
 }
@@ -50,6 +49,10 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
   const [zoomEnded, setZoomEnded] = useState(false)
   const [endError, setEndError] = useState('')
   const requestRef = useRef<AbortController | null>(null)
+  const onLeaveRef = useRef(onLeave)
+  useEffect(() => {
+    onLeaveRef.current = onLeave
+  }, [onLeave])
   const room = result && 'room' in result ? result.room : null
   const { rootRef, mobile, status: meetingStatus, client, endZoomMeeting } = useZoomMeeting(room)
   const participants = useClassParticipants(client)
@@ -66,11 +69,17 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
         const room = await getLiveRoom(liveClassId, controller.signal)
         if (!controller.signal.aborted) setResult({ room })
       } catch (error) {
-        if (!controller.signal.aborted) setResult({ error })
+        if (!controller.signal.aborted) {
+          if (!teacher && error instanceof ApiError && error.code === 'LIVE_CLASS_NOT_ADMITTED') {
+            onLeaveRef.current()
+            return
+          }
+          setResult({ error })
+        }
       }
     })
     return () => controller.abort()
-  }, [attempt, liveClassId])
+  }, [attempt, liveClassId, teacher])
 
   const handleEnd = async () => {
     if (ending) return

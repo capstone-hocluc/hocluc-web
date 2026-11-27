@@ -65,8 +65,8 @@ function CourseLiveClassCard({ item, past, next }: { item: CourseStudyLiveClass;
         <div className="flex flex-wrap items-center gap-1.5">
           <StatusBadge size="sm" tone={past ? 'success' : 'primary'}>{statusLabels[item.status] || 'Chưa rõ trạng thái'}</StatusBadge>
           {next && !past && item.status !== 'LIVE' && <StatusBadge size="sm" tone="primary">Gần nhất</StatusBadge>}
+          {past && item.refunded && <StatusBadge size="sm" tone="warning">Đã hoàn Sao</StatusBadge>}
         </div>
-        {/* A student joins with their own link once booked, so seats, joining and replays come from the booking. */}
         <LiveClassActions liveClass={item} />
       </div>
     </article>

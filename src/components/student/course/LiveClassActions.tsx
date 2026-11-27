@@ -1,46 +1,23 @@
 import { useEffect, useState } from 'react'
 import Button from '../../ui/Button'
-import { ApiError } from '../../../lib/api'
 import { safeExternalUrl } from '../../../lib/scheduling'
-import { studentRoutes } from '../../../lib/studentRoutes'
-import AppLink from '../../landing-page/AppLink'
 import {
-  bookLiveClass,
-  cancelLiveClassBooking,
   getLiveClassRecordings,
   type CourseStudyLiveClass,
 } from '../../../services/courseService'
+import LiveClassJoinButton from '../live/LiveClassJoinButton'
 
 interface LiveClassActionsProps {
   liveClass: CourseStudyLiveClass
   size?: 'sm' | 'md'
-  joinLabel?: string
-}
-
-function bookingError(error: unknown, fallback: string) {
-  if (error instanceof ApiError) {
-    if (error.code === 'LIVE_CLASS_FULL') return 'Lớp đã hết chỗ.'
-    if (error.code === 'LIVE_CLASS_BOOKING_CLOSED') return 'Lớp đã đóng giữ chỗ.'
-    if (error.code === 'COURSE_NOT_PURCHASED') return 'Bạn chưa mua khóa học này.'
-  }
-  return fallback
 }
 
 /**
- * A student's actions on one live class: book or give back a seat before it starts, join with
- * the room once it opens, or replay it after it ends.
+ * A student's actions on one live class: join with pay-per-session once live,
+ * or replay it after it ends.
  */
-function LiveClassActions({ liveClass, size = 'sm', joinLabel = 'Tham gia' }: LiveClassActionsProps) {
-  const [booked, setBooked] = useState(Boolean(liveClass.booked))
-  const [seatsLeft, setSeatsLeft] = useState(liveClass.seatsLeft ?? null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+function LiveClassActions({ liveClass, size = 'sm' }: LiveClassActionsProps) {
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
-
-  const [loadedAt] = useState(() => Date.now())
-  const notStarted = liveClass.status === 'SCHEDULED' && new Date(liveClass.startTime).getTime() > loadedAt
-  const canJoin = booked && liveClass.joinable
-  // anyone studying the course replays a class held, booked or not
   const canReplay = liveClass.status === 'COMPLETED'
 
   useEffect(() => {
@@ -55,66 +32,16 @@ function LiveClassActions({ liveClass, size = 'sm', joinLabel = 'Tham gia' }: Li
     return () => { alive = false }
   }, [canReplay, liveClass.id])
 
-  const run = async (action: () => Promise<{ seatsLeft?: number | null }>, nextBooked: boolean, fallback: string) => {
-    setBusy(true)
-    setError('')
-    try {
-      const result = await action()
-      setBooked(nextBooked)
-      setSeatsLeft(result.seatsLeft ?? null)
-    } catch (caught) {
-      setError(bookingError(caught, fallback))
-    } finally {
-      setBusy(false)
-    }
+  if (canReplay) {
+    if (!recordingUrl) return null
+    return (
+      <Button asChild size={size} appearance="outline">
+        <a href={recordingUrl} target="_blank" rel="noreferrer">Xem bản ghi</a>
+      </Button>
+    )
   }
 
-  const full = !booked && seatsLeft === 0
-  const showBook = !booked && notStarted
-  const showCancel = booked && notStarted && !liveClass.joinable
-
-  if (!canJoin && !(canReplay && recordingUrl) && !showBook && !showCancel && !error) return null
-
-  return (
-    <div className="flex flex-col items-start gap-1.5">
-      <div className="flex flex-wrap items-center gap-2.5">
-        {canJoin && (
-          <Button asChild size={size}>
-            <AppLink href={studentRoutes.liveRoom(liveClass.id)}>{joinLabel}</AppLink>
-          </Button>
-        )}
-        {canReplay && recordingUrl && (
-          <Button asChild size={size} appearance="outline">
-            <a href={recordingUrl} target="_blank" rel="noreferrer">Xem bản ghi</a>
-          </Button>
-        )}
-        {showBook && (
-          <Button
-            size={size}
-            disabled={busy || full}
-            onClick={() => void run(() => bookLiveClass(liveClass.id), true, 'Không giữ được chỗ. Hãy thử lại.')}
-          >
-            {full ? 'Hết chỗ' : 'Giữ chỗ'}
-          </Button>
-        )}
-        {showCancel && (
-          <Button
-            size={size}
-            appearance="outline"
-            disabled={busy}
-            onClick={() => void run(() => cancelLiveClassBooking(liveClass.id), false, 'Không hủy được chỗ. Hãy thử lại.')}
-          >
-            Hủy giữ chỗ
-          </Button>
-        )}
-        {booked && notStarted && <span className="text-sm font-semibold text-text-secondary">Đã giữ chỗ</span>}
-        {showBook && !full && seatsLeft !== null && (
-          <span className="text-sm text-text-secondary">Còn {seatsLeft} chỗ</span>
-        )}
-      </div>
-      {error && <p className="text-sm text-danger" role="alert">{error}</p>}
-    </div>
-  )
+  return <LiveClassJoinButton liveClass={liveClass} size={size} />
 }
 
 export default LiveClassActions
