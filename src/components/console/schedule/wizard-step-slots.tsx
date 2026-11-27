@@ -4,7 +4,7 @@ import DateField from '../date-field'
 import SelectField from '../select-field'
 import Button from '../button'
 import Notice from '../notice'
-import Field, { fieldControlClass } from '../form-field'
+import { fieldControlClass } from '../form-field'
 import type { LiveTimetableSlot } from '../../../services/liveClassService'
 import type { AvailabilityExceptionResponse, AvailabilitySlot, DayOfWeek } from '../../../types/scheduling'
 import {
@@ -23,8 +23,6 @@ interface Props {
   onEndDateChange: (next: string) => void
   slots: LiveTimetableSlot[]
   onSlotsChange: (next: LiveTimetableSlot[]) => void
-  capacity: string
-  onCapacityChange: (next: string) => void
   recurringAvailability: AvailabilitySlot[]
   exceptions: AvailabilityExceptionResponse[]
 }
@@ -37,8 +35,6 @@ export default function WizardStepSlots({
   onEndDateChange,
   slots,
   onSlotsChange,
-  capacity,
-  onCapacityChange,
   recurringAvailability,
   exceptions,
 }: Props) {
@@ -141,21 +137,6 @@ export default function WizardStepSlots({
             Thêm khung giờ
           </Button>
         </fieldset>
-
-        <div className="max-w-[200px]">
-        <Field label="Số chỗ mỗi buổi">
-          <input
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            placeholder="Không giới hạn"
-            value={capacity}
-            onChange={(e) => onCapacityChange(e.target.value)}
-            className={fieldControlClass}
-          />
-        </Field>
-        </div>
       </div>
 
       <aside

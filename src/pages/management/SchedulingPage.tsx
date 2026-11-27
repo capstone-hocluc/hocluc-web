@@ -10,6 +10,8 @@ import LiveWeekGrid from '../../components/console/schedule/live-week-grid'
 import LiveClassListView from '../../components/console/schedule/live-class-list-view'
 import LiveClassDetailPanel from '../../components/console/schedule/live-class-detail-panel'
 import LiveTimetableWizardDialog from '../../components/console/schedule/live-timetable-wizard-dialog'
+import LiveClassAttendanceDialog from '../../components/console/schedule/live-class-attendance-dialog'
+import LiveClassRefundDialog from '../../components/console/schedule/live-class-refund-dialog'
 import RescheduleLiveClassDialog from '../../components/console/schedule/reschedule-live-class-dialog'
 import ChangeTeacherDialog from '../../components/console/schedule/change-teacher-dialog'
 import ScheduleResourceState from '../../components/console/schedule/schedule-resource-state'
@@ -17,6 +19,7 @@ import ScheduleViewToggle from '../../components/console/schedule/schedule-view-
 import WeekNavigator from '../../components/console/schedule/week-navigator'
 import { useManagementSchedule } from '../../hooks/useManagementSchedule'
 import { formatWeekRangeLabel } from '../../lib/liveScheduleFormat'
+import { can } from '../../lib/permissions'
 import type { ManagementRole } from '../../components/management/ManagementRouteGuard'
 
 interface Props {
@@ -31,6 +34,7 @@ function teacherNameOf(t: { displayName?: string; firstName?: string; lastName?:
 export default function SchedulingPage({ role, navigation }: Props) {
   const s = useManagementSchedule()
   const canSchedule = role === 'STAFF' || role === 'MANAGER'
+  const canEditAttendance = can(role, 'ATTENDANCE_WRITE')
 
   return (
     <section className="flex flex-col gap-5">
@@ -132,9 +136,12 @@ export default function SchedulingPage({ role, navigation }: Props) {
       {s.selectedClass && (
         <LiveClassDetailPanel
           liveClass={s.selectedClass}
-          bookings={s.bookings}
-          bookingsLoading={s.bookingsLoading}
+          admissions={s.admissions}
+          admissionsLoading={s.admissionsLoading}
+          admissionsError={s.admissionsError}
+          onRetryAdmissions={s.reloadAdmissions}
           canManage={canSchedule}
+          canEditAttendance={canEditAttendance}
           onClose={() => s.setSelectedId(null)}
           onReschedule={() => {
             s.setMutationError('')
@@ -149,6 +156,16 @@ export default function SchedulingPage({ role, navigation }: Props) {
           onCancel={() => {
             s.setMutationError('')
             s.setCancelTarget(s.selectedClass)
+            s.setSelectedId(null)
+          }}
+          onOpenAttendance={() => {
+            s.setMutationError('')
+            s.setAttendanceTarget(s.selectedClass)
+            s.setSelectedId(null)
+          }}
+          onRefund={() => {
+            s.setMutationError('')
+            s.setRefundTarget(s.selectedClass)
             s.setSelectedId(null)
           }}
         />
@@ -194,10 +211,36 @@ export default function SchedulingPage({ role, navigation }: Props) {
         />
       )}
 
+      {s.attendanceTarget && (
+        <LiveClassAttendanceDialog
+          liveClass={s.attendanceTarget}
+          onClose={() => s.setAttendanceTarget(null)}
+          onSaved={() => {
+            s.setAttendanceTarget(null)
+            s.setNotice('Đã lưu điểm danh.')
+            s.reloadClasses()
+            s.reloadAdmissions()
+          }}
+        />
+      )}
+
+      {s.refundTarget && (
+        <LiveClassRefundDialog
+          liveClass={s.refundTarget}
+          busy={s.mutationBusy}
+          errorMessage={s.mutationError}
+          onClose={() => {
+            s.setRefundTarget(null)
+            s.setMutationError('')
+          }}
+          onSubmit={(reason) => void s.runRefund(reason)}
+        />
+      )}
+
       {s.cancelTarget && (
         <ConfirmDialog
           title="Hủy buổi học này?"
-          description={<>Buổi “{s.cancelTarget.title}” sẽ bị hủy và gửi thông báo tới học viên đã giữ chỗ.</>}
+          description={<>Buổi “{s.cancelTarget.title}” sẽ bị hủy và không thể tiếp tục tham gia.</>}
           cancelLabel="Giữ lại"
           confirmLabel="Hủy buổi"
           variant="danger"

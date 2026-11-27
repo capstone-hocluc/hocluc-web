@@ -169,8 +169,6 @@ function LiveTimetableWizardBody({
             onEndDateChange={wizard.setEndDate}
             slots={wizard.slots}
             onSlotsChange={wizard.setSlots}
-            capacity={wizard.capacity}
-            onCapacityChange={wizard.setCapacity}
             recurringAvailability={wizard.availability?.recurringSlots ?? []}
             exceptions={wizard.availability?.exceptions ?? []}
           />
@@ -181,7 +179,6 @@ function LiveTimetableWizardBody({
             title={wizard.title.trim()}
             teacherName={wizard.teacherName}
             subjectName={wizard.subjectName}
-            capacity={wizard.capacity}
             sessions={wizard.previewSessions}
             blockingErrors={wizard.previewBlockingErrors}
             warnings={wizard.previewWarnings}

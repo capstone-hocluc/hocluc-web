@@ -96,7 +96,7 @@ export default function LiveClassAttendanceDialog({ liveClass, onClose, onSaved 
           </Notice>
         ) : records.length === 0 ? (
           <div className="rounded-xl border border-dashed border-card-border px-4 py-8 text-center text-sm text-text-tertiary">
-            Chưa có học viên nào giữ chỗ hoặc tham gia buổi học này.
+            Chưa có học viên nào tham gia buổi học này.
           </div>
         ) : (
           <div className="divide-y divide-card-border rounded-xl border border-card-border">

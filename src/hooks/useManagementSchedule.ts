@@ -4,14 +4,16 @@ import { getMainCourses, type Course } from '../services/courseService'
 import { getUsers, type UserSummary } from '../services/userService'
 import {
   cancelLiveClass,
-  getLiveClassBookings,
+  getLiveClassAdmissions,
   getLiveClassesInRange,
+  refundLiveClass,
   updateLiveClass,
   zoomErrorMessage,
   type ConsoleLiveClass,
 } from '../services/liveClassService'
 import { addLocalDays, localDateTimeToInstant, localToday, startOfLocalWeek } from '../lib/scheduling'
 import { getErrorMessage } from '../lib/errors'
+import { ApiError } from '../lib/api'
 
 async function loadMainCourses(): Promise<Course[]> {
   const res = await getMainCourses()
@@ -40,6 +42,8 @@ export function useManagementSchedule() {
   const [rescheduleTarget, setRescheduleTarget] = useState<ConsoleLiveClass | null>(null)
   const [changeTeacherTarget, setChangeTeacherTarget] = useState<ConsoleLiveClass | null>(null)
   const [cancelTarget, setCancelTarget] = useState<ConsoleLiveClass | null>(null)
+  const [attendanceTarget, setAttendanceTarget] = useState<ConsoleLiveClass | null>(null)
+  const [refundTarget, setRefundTarget] = useState<ConsoleLiveClass | null>(null)
   const [mutationBusy, setMutationBusy] = useState(false)
   const [mutationError, setMutationError] = useState('')
   const [notice, setNotice] = useState('')
@@ -63,7 +67,7 @@ export function useManagementSchedule() {
     () => getLiveClassesInRange(range)
   )
 
-  const allClasses = classesResource.data ?? []
+  const allClasses = useMemo(() => classesResource.data ?? [], [classesResource.data])
   const attentionClasses = useMemo(
     () => allClasses.filter((c) => c.status !== 'CANCELLED' && c.status !== 'COMPLETED' && c.needsAttention),
     [allClasses]
@@ -78,9 +82,9 @@ export function useManagementSchedule() {
     [allClasses, selectedId]
   )
 
-  const bookingsResource = useScheduleResource(
-    selectedClass ? `live-class-bookings:${selectedClass.id}` : null,
-    () => getLiveClassBookings(selectedClass!.id)
+  const admissionsResource = useScheduleResource(
+    selectedClass ? `live-class-admissions:${selectedClass.id}` : null,
+    () => getLiveClassAdmissions(selectedClass!.id)
   )
 
   const goPrevWeek = () => {
@@ -137,10 +141,31 @@ export function useManagementSchedule() {
     try {
       await cancelLiveClass(cancelTarget.id)
       setCancelTarget(null)
-      setNotice('Đã hủy buổi học và thông báo tới học viên.')
+      setNotice('Đã hủy buổi học.')
       classesResource.reload()
     } catch (error) {
       setMutationError(getErrorMessage(error))
+    } finally {
+      setMutationBusy(false)
+    }
+  }
+
+  const runRefund = async (reason: string) => {
+    if (!refundTarget) return
+    setMutationBusy(true)
+    setMutationError('')
+    try {
+      const res = await refundLiveClass(refundTarget.id, { reason })
+      setRefundTarget(null)
+      setNotice(`Đã hoàn ${res.refundedAmount} Sao cho ${res.refundedCount} học viên.`)
+      classesResource.reload()
+      admissionsResource.reload()
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'LIVE_CLASS_STATUS_INVALID') {
+        setMutationError('Không thể hoàn Sao cho buổi học ở trạng thái này.')
+      } else {
+        setMutationError(getErrorMessage(error))
+      }
     } finally {
       setMutationBusy(false)
     }
@@ -168,8 +193,10 @@ export function useManagementSchedule() {
     reloadClasses: classesResource.reload,
     selectedClass,
     setSelectedId,
-    bookings: bookingsResource.data ?? [],
-    bookingsLoading: bookingsResource.status === 'loading',
+    admissions: admissionsResource.data ?? [],
+    admissionsLoading: admissionsResource.status === 'loading',
+    admissionsError: admissionsResource.status === 'error' ? admissionsResource.errorMessage : undefined,
+    reloadAdmissions: admissionsResource.reload,
     wizardOpen,
     setWizardOpen,
     rescheduleTarget,
@@ -178,6 +205,10 @@ export function useManagementSchedule() {
     setChangeTeacherTarget,
     cancelTarget,
     setCancelTarget,
+    attendanceTarget,
+    setAttendanceTarget,
+    refundTarget,
+    setRefundTarget,
     mutationBusy,
     mutationError,
     setMutationError,
@@ -189,5 +220,6 @@ export function useManagementSchedule() {
     runReschedule,
     runChangeTeacher,
     runCancel,
+    runRefund,
   }
 }
