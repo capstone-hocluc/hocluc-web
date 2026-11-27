@@ -1,13 +1,28 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { SendHorizontal } from 'lucide-react'
 import Button from '../console/button'
+import Notice from '../console/notice'
+import { Input } from '../tailgrids/core/input'
+import RoomChatMessage from './RoomChatMessage'
 import { useRoomChat } from '../../hooks/useRoomChat'
 
 export default function ChatPanel({ chat, currentUserId }: { chat: ReturnType<typeof useRoomChat>; currentUserId?: number }) {
   const [text, setText] = useState('')
-  return <aside className="flex h-full w-full flex-col border-l border-card-border bg-card-background p-3 md:w-80" aria-label="Trò chuyện">
-    <h2 className="font-semibold">Trò chuyện</h2>
-    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto py-3">{chat.messages.map((message) => <div key={message.id} className={message.senderId === currentUserId ? 'text-right' : 'text-left'}><div className="text-xs text-text-tertiary">{message.sender} · {new Date(message.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div><p className="whitespace-pre-wrap break-words">{message.text}</p></div>)}</div>
-    {chat.error && <p role="alert">{chat.error}</p>}
-    <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); void chat.send(text).then((sent) => { if (sent) setText('') }) }}><input className="min-w-0 flex-1 rounded border border-card-border bg-card-background p-2" aria-label="Tin nhắn" maxLength={2000} value={text} onChange={(event) => setText(event.target.value)} /><Button size="sm" type="submit">Gửi</Button></form>
-  </aside>
+  const endRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }) }, [chat.messages.length])
+  return (
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        {chat.messages.length === 0
+          ? <p className="py-10 text-center text-sm text-text-tertiary">Chưa có tin nhắn</p>
+          : <div className="space-y-4">{chat.messages.map((message) => <RoomChatMessage key={message.id} message={message} outgoing={message.senderId === currentUserId} />)}</div>}
+        {chat.error && <Notice tone="danger" className="mt-3">{chat.error}</Notice>}
+        <div ref={endRef} />
+      </div>
+      <form className="flex shrink-0 items-center gap-2 border-t border-card-border p-3" onSubmit={(event) => { event.preventDefault(); void chat.send(text).then((sent) => { if (sent) setText('') }) }}>
+        <Input className="min-w-0 flex-1 py-2" aria-label="Tin nhắn" placeholder="Nhắn cho cả lớp" maxLength={2000} value={text} onChange={(event) => setText(event.target.value)} />
+        <Button size="icon" shape="pill" type="submit" aria-label="Gửi" disabled={!text.trim()}><SendHorizontal size={18} /></Button>
+      </form>
+    </>
+  )
 }
