@@ -41,9 +41,6 @@ import { PageTabs, PageTabsList } from '../console/page-tabs'
 import { roleHome } from '../../lib/role-home'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
-const AttendanceManagementPage = lazy(
-  () => import('../../pages/management/AttendanceManagementPage')
-)
 
 interface ManagementScreenProps {
   role: ManagementRole
@@ -132,12 +129,6 @@ export function ManagementScreen({
         return (
           <Suspense fallback={<SchedulingPageFallback title={title} />}>
             <SchedulingPage role={role === 'MANAGER' ? 'MANAGER' : 'STAFF'} navigation={navigation} />
-          </Suspense>
-        )
-      case 'attendance':
-        return (
-          <Suspense fallback={<SchedulingPageFallback title={title} />}>
-            <AttendanceManagementPage title={title} navigation={navigation} />
           </Suspense>
         )
       case 'students':

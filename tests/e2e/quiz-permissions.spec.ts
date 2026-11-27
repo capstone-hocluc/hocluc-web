@@ -304,24 +304,20 @@ test('Quiz type and hierarchy changes preserve content and clear invalid child t
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('Teacher can combine quiz type, status and search filters without write controls', async ({ page }) => {
+test('Teacher redirects to home when opening removed quiz, exam or attempt URLs', async ({ page }) => {
+  test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
-  state.quizzes.push({ ...state.quizzes[0], id: 'lesson-fixture', type: 'LESSON', title: 'Cuối bài QA', status: 'PUBLISHED' })
-  state.quizzes.push({ ...state.quizzes[0], id: 'chapter-fixture', type: 'CHAPTER', title: 'Cuối chương QA', lessonId: null, lessonTitle: null })
-  await page.goto('/console/teacher/quizzes')
-  await select(page, 'Lọc loại bài kiểm tra', 'Kiểm tra cuối bài')
-  await expect(page.getByRole('heading', { name: 'Cuối bài QA', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Quiz được giao', exact: true })).toHaveCount(0)
-  await select(page, 'Lọc trạng thái', 'Bản nháp')
-  await expect(page.getByRole('heading', { name: 'Cuối bài QA', exact: true })).toHaveCount(0)
-  await select(page, 'Lọc trạng thái', 'Đã xuất bản')
-  await page.getByRole('searchbox').fill('không có')
-  await expect(page.getByRole('heading', { name: 'Cuối bài QA', exact: true })).toHaveCount(0)
-  await page.getByRole('searchbox').fill('Chương nháp')
-  await page.getByRole('button', { name: 'Xem nội dung', exact: true }).click()
-  await expect(page.getByText('Kiểm tra cuối bài', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Chỉnh sửa|Xuất bản|Tạo bài kiểm tra/ })).toHaveCount(0)
-  expect(writes(state)).toEqual([])
+  for (const url of [
+    '/console/teacher/quizzes',
+    '/console/teacher/mock-exams',
+    '/console/teacher/attempts',
+    `/console/teacher/quizzes/${QUIZ_IDS.quiz}`,
+  ]) {
+    await page.goto(url)
+    await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
+    await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toHaveCount(0)
+  }
+  expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/quizzes') || r.path.startsWith('/api/v1/teacher/questions') || r.path.startsWith('/api/v1/teacher/attempts'))).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
@@ -343,43 +339,20 @@ for (const [type, reason, message] of [
   })
 }
 
-test('Teacher reads quiz/exam/questions/attempts with no write controls or write requests', async ({ page }) => {
-  test.setTimeout(60_000)
-  const state = await installQuizFixture(page, 'TEACHER')
-  state.quizzes[0].attemptCount = 1
-  await page.goto('/console/teacher/quizzes')
-  await expect(page.getByRole('heading', { name: 'Quiz được giao', exact: true })).toBeVisible()
-  await expect(page.getByText('Quiz ngoài phân công', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /Tạo bài kiểm tra|Chỉnh sửa|Xuất bản|Thao tác khác/ })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Xem nội dung', exact: true }).click()
-  // The quiz opens on its A4 sheet; the list beside it carries each answer and its explanation.
-  await expect(page.locator('.exam-doc-sheet')).toBeVisible()
-  await page.getByRole('tab', { name: 'Danh sách', exact: true }).click()
-  await expect(page.getByText('Giải thích được phép đọc', { exact: true })).toBeVisible()
-  await expect(page.locator('main input,main textarea')).toHaveCount(0)
-  await page.goto('/console/teacher/mock-exams')
-  await expect(page.getByRole('heading', { name: 'Đề thi được giao', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Tạo đề|Chỉnh sửa|Xuất bản|Thao tác khác/ })).toHaveCount(0)
-  await page.goto('/console/teacher/attempts')
-  // the attempts screen loads its rows after the console chunk, which is slow when the whole suite runs
-  await expect(page.getByText('Student QA', { exact: true })).toBeVisible({ timeout: 20_000 })
-  expect(writes(state)).toEqual([])
-  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
-})
-
-test('Teacher course list uses BE assignment scope and the course quiz shortcut stays read-only', async ({ page }) => {
+test('Teacher course list uses BE assignment scope and stays read-only without quiz or assignment actions', async ({ page }) => {
   const state = await installQuizFixture(page, 'TEACHER')
   await page.goto('/console/teacher/courses')
   await page.getByRole('button', { name: /Khóa được phân công/ }).click()
-  await page.locator('main').getByRole('button', { name: 'Bài kiểm tra', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Quiz được giao', exact: true })).toBeVisible()
+  await expect(page.getByText('Chương nháp', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Bài kiểm tra', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Bài tập', exact: true })).toHaveCount(0)
   expect(state.requests.some(r => r.path === '/api/v1/admin/courses')).toBe(true)
   expect(state.requests.some(r => r.path === '/api/v1/courses/main')).toBe(false)
   expect(writes(state)).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-test('Teacher direct editor URLs, including the legacy URL, fail before mounting editors', async ({ page }) => {
+test('Teacher direct editor URLs, including the legacy URL, redirect home before mounting editors', async ({ page }) => {
   // five full page loads, each fetching every dev module through the fixture's route
   test.setTimeout(60_000)
   const state = await installQuizFixture(page, 'TEACHER')
@@ -387,19 +360,11 @@ test('Teacher direct editor URLs, including the legacy URL, fail before mounting
     '/console/teacher/mock-exams/new', `/console/teacher/mock-exams/${QUIZ_IDS.exam}/edit`,
     `/console/teacher/my-courses/${QUIZ_IDS.course}/quiz/new`]) {
     await page.goto(url)
-    await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toBeVisible()
+    await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
+    await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toHaveCount(0)
   }
-  expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/'))).toEqual([])
+  expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/quizzes') || r.path.startsWith('/api/v1/teacher/questions') || r.path.startsWith('/api/v1/teacher/attempts'))).toEqual([])
   expect(state.pageErrors).toEqual([])
-})
-
-test('Teacher read URL honors BE 403 and does not retain foreign quiz content', async ({ page }) => {
-  const state = await installQuizFixture(page, 'TEACHER')
-  await page.goto(`/console/teacher/quizzes/${QUIZ_IDS.otherQuiz}`)
-  await expect(page.getByText('Tài khoản chưa được cấp quyền xem dữ liệu này.')).toBeVisible()
-  await expect(page.getByText('Câu hỏi được phân công', { exact: true })).toHaveCount(0)
-  expect(writes(state)).toEqual([])
-  expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
 test('BE write 403 is displayed; the client does not retry it or report success', async ({ page }) => {
@@ -438,7 +403,7 @@ test('a late save after the role changed is discarded and sends no follow-up que
   release()
   await (await lateResponse).finished()
   await page.goto('/console/teacher/quizzes')
-  await expect(page.getByRole('heading', { name: 'Bài kiểm tra', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
   expect(writes(state)).toHaveLength(1)
   expect(state.pageErrors).toEqual([])
 })
@@ -447,7 +412,7 @@ test('Mentor cannot open quiz screens even with direct console URLs', async ({ p
   const state = await installQuizFixture(page, 'MENTOR')
   await page.goto('/console/mentor/quizzes')
   await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toBeVisible()
-  expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/'))).toEqual([])
+  expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/quizzes') || r.path.startsWith('/api/v1/teacher/questions') || r.path.startsWith('/api/v1/teacher/attempts'))).toEqual([])
 })
 
 test('Student quiz detail adapts its history and score columns as the sidebar and viewport change', async ({ page }) => {
@@ -641,8 +606,8 @@ test('Student auto-submits at the deadline when an answer could not be saved', a
 
 test('Teacher write service backstop rejects every mutation before any HTTP request', async ({ page }) => {
   const state = await installQuizFixture(page, 'TEACHER')
-  await page.goto('/console/teacher/quizzes')
-  await expect(page.getByRole('heading', { name: 'Quiz được giao', exact: true })).toBeVisible()
+  await page.goto('/console/teacher/dashboard')
+  await expect(page.getByRole('heading', { name: 'Không gian giảng dạy', exact: true })).toBeVisible()
   const statuses = await page.evaluate(async ids => {
     const modulePath = '/src/services/teacherQuizService.ts'
     const service = await import(modulePath)
@@ -675,11 +640,11 @@ test('Student cannot enter a console quiz editor through a direct URL', async ({
   const state = await installQuizFixture(page, 'STUDENT')
   await page.goto(`/console/staff/quizzes/${QUIZ_IDS.quiz}/edit`)
   await expect(page.getByRole('heading', { name: 'Bạn không có quyền truy cập', exact: true })).toBeVisible()
-  expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/'))).toEqual([])
+  expect(state.requests.filter(r => r.path.startsWith('/api/v1/teacher/quizzes') || r.path.startsWith('/api/v1/teacher/questions') || r.path.startsWith('/api/v1/teacher/attempts'))).toEqual([])
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
-for (const role of ['STAFF', 'TEACHER'] as const) {
+for (const role of ['STAFF'] as const) {
   for (const width of [1440, 390]) {
     test(`${role}: quiz UI fits ${width}px and uses the shared list and detail components`, async ({ page }, testInfo) => {
       // This visual pass visits up to four pages and captures each one; keep its
@@ -693,7 +658,6 @@ for (const role of ['STAFF', 'TEACHER'] as const) {
         await expect(page.getByRole('heading', { name: screen === 'quizzes' ? 'Quiz được giao' : 'Đề thi được giao', exact: true })).toBeVisible()
         await expect(page.getByRole('table')).toBeVisible()
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-        if (role === 'TEACHER') await expect(page.getByText('Chế độ xem', { exact: true })).toBeVisible()
         await page.screenshot({ path: testInfo.outputPath(`${screen}-${width}.png`), fullPage: true })
       }
       await page.goto(`/console/${area}/quizzes/${QUIZ_IDS.quiz}`, { waitUntil: 'domcontentloaded' })

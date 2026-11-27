@@ -18,7 +18,6 @@ interface Props {
   title: string
   teacherName: string
   subjectName: string
-  capacity: string
   sessions: WizardEditableSession[]
   blockingErrors: string[]
   warnings: string[]
@@ -31,7 +30,6 @@ export default function WizardStepPreview({
   title,
   teacherName,
   subjectName,
-  capacity,
   sessions,
   blockingErrors,
   warnings,
@@ -82,12 +80,7 @@ export default function WizardStepPreview({
       <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm">
         <strong className="text-base text-text-primary">{title}</strong>
         <span className="text-text-tertiary">
-          {[
-            teacherName,
-            subjectName,
-            firstTimeRange,
-            capacity ? `${capacity} chỗ` : 'Không giới hạn chỗ',
-          ]
+          {[teacherName, subjectName, firstTimeRange]
             .filter(Boolean)
             .join(' · ')}
         </span>

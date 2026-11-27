@@ -1,115 +1,189 @@
 import { expect, test, type Page } from '@playwright/test'
 import { installQuizFixture, QUIZ_IDS } from './quiz-permissions-fixture'
-import type { ClassSessionResponse, ScheduleResponse } from '../../src/types/scheduling'
+import type { ConsoleLiveClass } from '../../src/services/liveClassService'
 
-const course = { id: QUIZ_IDS.course, title: 'Khóa Toán QA' }
-const schedule: ScheduleResponse = {
-  id: 'schedule-qa', courseId: course.id, courseName: course.title,
-  instructorId: QUIZ_IDS.user, instructorName: 'Giáo viên QA', title: 'Lịch đơn QA',
-  startTime: '2026-11-09T07:00:00Z', endTime: '2026-11-09T08:00:00Z', timezone: 'Asia/Ho_Chi_Minh',
-  deliveryMode: 'OFFLINE', location: 'Phòng QA', status: 'COMPLETED',
-}
-const session: ClassSessionResponse = {
-  id: 'session-qa', recurringClassId: 'series-qa', courseId: course.id,
-  teacherId: QUIZ_IDS.user, teacherName: 'Giáo viên QA', title: 'Buổi định kỳ QA', sessionDate: '2026-11-10',
-  startTime: '2026-11-10T07:00:00Z', endTime: '2026-11-10T08:00:00Z',
-  mode: 'ONLINE', meetingProvider: 'ZOOM', meetingLink: 'https://example.invalid/join', status: 'SCHEDULED', overridden: false,
-}
-const sessionPath = (courseId: string) => `/api/v1/courses/${courseId}/class-sessions`
+const HOUR = 60 * 60 * 1000
 
-async function installSchedule(page: Page, courses = [course]) {
-  await installQuizFixture(page, 'STUDENT')
-  await page.clock.setFixedTime(new Date('2026-11-09T09:00:00Z'))
-  const mock = async (path: string, data: unknown) => page.route(
-    (url) => url.pathname === path,
-    (route) => route.fulfill({ json: { success: true, data } })
+function makeClass(id: string, overrides: Partial<ConsoleLiveClass> = {}): ConsoleLiveClass {
+  const start = Date.now() + 24 * HOUR
+  return {
+    id,
+    title: `Buổi ${id}`,
+    startTime: new Date(start).toISOString(),
+    endTime: new Date(start + 2 * HOUR).toISOString(),
+    status: 'SCHEDULED',
+    courseId: QUIZ_IDS.course,
+    courseTitle: 'Khóa Toán QA',
+    teacherName: 'Giáo viên QA',
+    joinable: false,
+    joinPrice: 2,
+    admitted: false,
+    refunded: false,
+    ...overrides,
+  }
+}
+
+interface ScheduleOptions {
+  classes: ConsoleLiveClass[]
+  balance?: number
+  insufficientCredits?: boolean
+  notAdmittedOnRoom?: boolean
+}
+
+async function installStudentSchedule(page: Page, options: ScheduleOptions) {
+  const state = await installQuizFixture(page, 'STUDENT')
+  let balance = options.balance ?? 20
+  const calls = { join: [] as string[], room: [] as string[] }
+  const answer = (data: unknown, status = 200, code?: string) => ({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify({ success: status < 400, status, code, message: code || 'OK', data }),
+  })
+
+  await page.route('**/api/v1/credits/me', (route) =>
+    route.fulfill(answer({ available: balance, bonus: 0, paid: balance, held: 0 }))
   )
-  await mock('/api/v1/schedules/student', [schedule])
-  await mock('/api/v1/courses/my', courses.map((item) => ({ course: item })))
-  await mock(`/api/v1/courses/${course.id}/attendances/student`, {
-    totalSchedules: 1, presentCount: 1, absentCount: 0, lateCount: 0, excusedCount: 0, attendanceRate: 100,
+  await page.route('**/api/v1/live-classes/my-attendance-summary', (route) =>
+    route.fulfill(answer({ totalClasses: 3, presentCount: 2, lateCount: 1, absentCount: 0, excusedCount: 0, attendanceRate: 100 }))
+  )
+  await page.route((url) => url.pathname === '/api/v1/live-classes', (route) =>
+    route.fulfill(answer(options.classes))
+  )
+  await page.route('**/api/v1/live-classes/**', async (route) => {
+    const request = route.request()
+    const [, id, action] = new URL(request.url()).pathname.replace('/api/v1/live-classes', '').split('/')
+    if (action === 'join' && request.method() === 'POST') {
+      calls.join.push(id)
+      if (options.insufficientCredits) {
+        return route.fulfill(answer(null, 402, 'INSUFFICIENT_CREDITS'))
+      }
+      balance = Math.max(0, balance - 2)
+      return route.fulfill(
+        answer({ liveClassId: id, paidAmount: 2, paidAt: new Date().toISOString(), alreadyAdmitted: false, balance })
+      )
+    }
+    if (action === 'room' && request.method() === 'POST') {
+      calls.room.push(id)
+      if (options.notAdmittedOnRoom) {
+        return route.fulfill(answer(null, 403, 'LIVE_CLASS_NOT_ADMITTED'))
+      }
+      return route.fulfill(
+        answer({
+          liveClassId: id,
+          title: `Buổi ${id}`,
+          startTime: new Date().toISOString(),
+          endTime: new Date(Date.now() + HOUR).toISOString(),
+          embedded: false,
+          sdkKey: null,
+          signature: null,
+          meetingNumber: null,
+          passcode: null,
+          userName: null,
+          userEmail: null,
+          role: 0,
+          zak: null,
+          registrantToken: null,
+          fallbackUrl: 'https://zoom.us/j/123456',
+        })
+      )
+    }
+    return route.fulfill(answer(null, 501))
   })
-  return mock
+
+  return { state, calls, getBalance: () => balance }
 }
 
-test('Student sees both weekly sources, session changes and scoped recordings', async ({ page }) => {
-  const mock = await installSchedule(page)
-  let sessions = [session, session, {
-    ...session, id: 'outside-week', title: 'Buổi tuần sau', sessionDate: '2026-11-16',
-    startTime: '2026-11-16T07:00:00Z', endTime: '2026-11-16T08:00:00Z',
-  }]
-  await page.route((url) => url.pathname === sessionPath(course.id), (route) => {
-    const query = new URL(route.request().url()).searchParams
-    expect(query.get('startDate')).toBe('2026-11-09')
-    expect(query.get('endDate')).toBe('2026-11-15')
-    return route.fulfill({ json: { success: true, data: sessions } })
+test('student schedule shows join states, refunded past classes and confirms paid join', async ({ page }) => {
+  const now = Date.now()
+  const liveStart = new Date(now - 10 * 60 * 1000).toISOString()
+  const liveEnd = new Date(now + 90 * 60 * 1000).toISOString()
+  const pastStart = new Date(now - 48 * HOUR).toISOString()
+  const pastEnd = new Date(now - 46 * HOUR).toISOString()
+
+  const { state, calls, getBalance } = await installStudentSchedule(page, {
+    balance: 20,
+    classes: [
+      makeClass('upcoming-1', { status: 'SCHEDULED', joinable: false, joinPrice: 2 }),
+      makeClass('live-unpaid', { startTime: liveStart, endTime: liveEnd, status: 'LIVE', joinable: true, joinPrice: 2, admitted: false }),
+      makeClass('live-admitted', { startTime: liveStart, endTime: liveEnd, status: 'LIVE', joinable: true, joinPrice: 2, admitted: true }),
+      makeClass('past-refunded', { startTime: pastStart, endTime: pastEnd, status: 'COMPLETED', refunded: true }),
+    ],
   })
-  await mock(`/api/v1/schedules/${schedule.id}/my-attendance`, { status: 'PRESENT', attendanceMinutes: 60 })
-  await mock(`/api/v1/class-sessions/${session.id}/recordings`, [
-    { id: 'valid', title: 'Bản ghi có link', streamUrl: 'https://example.invalid/recording' },
-    { id: 'invalid', title: 'Bản ghi thiếu link hợp lệ', videoUrl: 'javascript:void(0)' },
-  ])
-  const paths: string[] = []
-  page.on('request', (request) => paths.push(new URL(request.url()).pathname))
 
   await page.goto('/student/schedule')
-  const detail = page.getByRole('dialog', { name: 'Chi tiết lịch học' })
-  const openSession = page.getByRole('button', { name: 'Xem chi tiết ' + session.title })
-  await page.getByRole('button', { name: 'Xem chi tiết ' + schedule.title }).click()
-  await expect(detail.getByText('Có mặt', { exact: true })).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(detail).toBeHidden()
+  await expect(page.getByRole('button', { name: /Giữ chỗ|Hủy giữ chỗ|Hết chỗ/ })).toHaveCount(0)
 
-  await expect(openSession).toHaveCount(1)
-  await expect(page.getByText('Buổi tuần sau', { exact: true })).toHaveCount(0)
-  const search = page.getByLabel('Tìm lịch theo tên buổi hoặc lớp')
-  await search.fill('Khóa Toán định kỳ')
-  await expect(openSession).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Xem chi tiết ' + schedule.title })).toHaveCount(0)
-  await search.clear()
-  await openSession.click()
-  await expect(detail.getByRole('link', { name: 'Vào lớp' })).toHaveAttribute('href', session.meetingLink!)
-  await detail.getByRole('button', { name: 'Bản ghi buổi học' }).click()
-  await expect(detail.getByRole('link', { name: 'Xem bản ghi' })).toHaveAttribute('href', 'https://example.invalid/recording')
-  await expect(detail.getByText('Chưa có link xem')).toBeVisible()
-  await expect(detail.getByRole('button', { name: 'Điểm danh buổi học' })).toHaveCount(0)
-  expect(paths).not.toContain(`/api/v1/schedules/${session.id}/my-attendance`)
-  await page.keyboard.press('Escape')
-  await expect(detail).toBeHidden()
+  const agenda = page.getByRole('region', { name: 'Lịch 7 ngày tới' })
+  await expect(agenda.getByRole('button', { name: /^Bắt đầu / })).toBeDisabled()
+  await expect(agenda.getByRole('button', { name: 'Tham gia · 2 Sao', exact: true })).toBeEnabled()
+  await expect(agenda.getByRole('button', { name: 'Tham gia', exact: true })).toBeEnabled()
 
-  const reload = page.getByRole('button', { name: 'Tải lại', exact: true })
-  sessions = [{ ...session, startTime: '2026-11-10T09:00:00Z', endTime: '2026-11-10T10:00:00Z', overridden: true }]
-  await reload.click()
-  await expect(page.getByText('16:00 – 17:00', { exact: true })).toBeVisible()
-  await expect(page.getByText('Đã điều chỉnh', { exact: true })).toBeVisible()
+  await agenda.getByRole('button', { name: 'Đã học', exact: true }).click()
+  await expect(agenda.getByText('Đã hoàn Sao', { exact: true })).toBeVisible()
 
-  sessions = [{ ...sessions[0], status: 'CANCELLED' }]
-  await reload.click()
-  await openSession.click()
-  await expect(detail.getByText('Đã hủy', { exact: true })).toBeVisible()
-  await expect(detail.getByRole('link', { name: 'Vào lớp' })).toHaveCount(0)
+  await agenda.getByRole('button', { name: 'Sắp tới', exact: true }).click()
+  await agenda.getByRole('button', { name: 'Tham gia · 2 Sao', exact: true }).click()
+
+  const dialog = page.getByRole('alertdialog', { name: 'Tham gia buổi học?' })
+  await expect(dialog).toContainText('2 Sao')
+  await dialog.getByRole('button', { name: 'Tham gia · 2 Sao', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/student\/live-classes\/live-unpaid\/room$/)
+  expect(calls.join).toEqual(['live-unpaid'])
+  expect(getBalance()).toBe(18)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
 })
 
-test('Student keeps available schedules if a course request fails and can retry', async ({ page }) => {
-  const secondCourse = { id: QUIZ_IDS.otherCourse, title: 'Khóa thứ hai' }
-  const revokedCourse = { id: 'revoked-course', title: 'Khóa hết quyền' }
-  const mock = await installSchedule(page, [course, secondCourse, revokedCourse])
-  await mock(sessionPath(course.id), [session])
-  await page.route((url) => url.pathname === sessionPath(revokedCourse.id), (route) =>
-    route.fulfill({ status: 403, json: { success: false, code: 'COURSE_NOT_PURCHASED' } })
-  )
-  let fail = true
-  await page.route((url) => url.pathname === sessionPath(secondCourse.id), (route) => fail
-    ? route.fulfill({ status: 503, json: { success: false } })
-    : route.fulfill({ json: { success: true, data: [{ ...session, id: 'second-session', courseId: secondCourse.id, title: 'Buổi phục hồi' }] } })
-  )
+test('student schedule shows insufficient Sao dialog and redirects to wallet', async ({ page }) => {
+  const now = Date.now()
+  const { state } = await installStudentSchedule(page, {
+    balance: 1,
+    insufficientCredits: true,
+    classes: [
+      makeClass('live-unpaid', {
+        startTime: new Date(now - 10 * 60 * 1000).toISOString(),
+        endTime: new Date(now + 90 * 60 * 1000).toISOString(),
+        status: 'LIVE',
+        joinable: true,
+        joinPrice: 2,
+        admitted: false,
+      }),
+    ],
+  })
 
   await page.goto('/student/schedule')
-  await expect(page.getByText('Chưa tải được đầy đủ lịch học.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Xem chi tiết ' + schedule.title })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Xem chi tiết ' + session.title })).toBeVisible()
-  fail = false
-  await page.getByRole('button', { name: 'Thử tải lại lịch' }).click()
-  await expect(page.getByRole('button', { name: 'Xem chi tiết Buổi phục hồi' })).toBeVisible()
-  await expect(page.getByText('Chưa tải được đầy đủ lịch học.')).toHaveCount(0)
+  const nextCard = page.getByRole('region', { name: 'Buổi tiếp theo' })
+  await nextCard.getByRole('button', { name: 'Tham gia · 2 Sao', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Tham gia · 2 Sao', exact: true }).click()
+
+  const insufficient = page.getByRole('alertdialog', { name: 'Không đủ Sao' })
+  await expect(insufficient).toBeVisible()
+  await insufficient.getByRole('button', { name: 'Mua gói Sao', exact: true }).click()
+  await expect(page).toHaveURL(/\/student\/wallet$/)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
+test('entering live room without admission sends student back to schedule', async ({ page }) => {
+  const now = Date.now()
+  const { state } = await installStudentSchedule(page, {
+    notAdmittedOnRoom: true,
+    classes: [
+      makeClass('live-unpaid', {
+        startTime: new Date(now - 10 * 60 * 1000).toISOString(),
+        endTime: new Date(now + 90 * 60 * 1000).toISOString(),
+        status: 'LIVE',
+        joinable: true,
+        joinPrice: 2,
+        admitted: false,
+      }),
+    ],
+  })
+
+  await page.goto('/student/live-classes/live-unpaid/room')
+  await expect(page).toHaveURL(/\/student\/schedule$/)
+  await expect(page.getByRole('button', { name: 'Tham gia · 2 Sao', exact: true }).first()).toBeVisible()
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
 })

@@ -279,10 +279,10 @@ export interface CourseStudyLiveClass {
   recordingUrl?: string | null
   recordings?: { id: string; recordingUrl: string; recordingType?: string | null; fileType?: string | null }[]
   joinable: boolean
-  /** The student holds a seat: only then do they get a join link and the replay. */
-  booked?: boolean
-  /** Null when the class has no seat limit. */
-  seatsLeft?: number | null
+  joinPrice?: number
+  admitted?: boolean
+  admittedCount?: number
+  refunded?: boolean
 }
 
 export interface CourseStudy {
@@ -336,39 +336,6 @@ export async function getCourseLiveClasses(courseId: string): Promise<CourseLive
   )
   if (!response.data) throw new Error('Không thể tải lịch học trực tuyến.')
   return response.data
-}
-
-export interface LiveClassBooking {
-  liveClassId: string
-  status: 'BOOKED' | 'CANCELLED'
-  seatsLeft?: number | null
-}
-
-export async function bookLiveClass(liveClassId: string): Promise<LiveClassBooking> {
-  const response = await request<LiveClassBooking>(
-    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/bookings`,
-    { method: 'POST', auth: true }
-  )
-  if (!response.data) throw new Error('Không giữ được chỗ.')
-  return response.data
-}
-
-export async function cancelLiveClassBooking(liveClassId: string): Promise<LiveClassBooking> {
-  const response = await request<LiveClassBooking>(
-    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/bookings/me`,
-    { method: 'DELETE', auth: true }
-  )
-  if (!response.data) throw new Error('Không hủy được chỗ.')
-  return response.data
-}
-
-/** The student's own Zoom link; the API opens it 15 minutes before the class starts. */
-export async function getLiveClassJoinLink(liveClassId: string): Promise<string | null> {
-  const response = await request<{ joinUrl?: string | null }>(
-    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/join-link`,
-    { auth: true }
-  )
-  return response.data?.joinUrl ?? null
 }
 
 export interface LiveClassRecording {

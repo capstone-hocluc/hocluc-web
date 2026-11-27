@@ -18,7 +18,7 @@ function NextLiveClassCard({ liveClass }: NextLiveClassCardProps) {
 
       <LiveClassMeta liveClass={liveClass} className="mb-3" />
 
-      <LiveClassActions liveClass={liveClass} size="md" joinLabel="Tham gia buổi học" />
+      <LiveClassActions liveClass={liveClass} size="md" />
     </Card>
   )
 }

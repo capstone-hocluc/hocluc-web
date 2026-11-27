@@ -41,7 +41,7 @@ const ROLE_COPY: Record<PersonnelRole, { title: string; description: string }> =
   },
   TEACHER: {
     title: 'Không gian giảng dạy',
-    description: 'Chuẩn bị bài học, theo dõi lịch dạy và đồng hành cùng lớp của bạn.',
+    description: 'Theo dõi lịch dạy, kết nối Zoom và xem các lớp của bạn.',
   },
   MENTOR: {
     title: 'Đồng hành cùng học viên',
@@ -55,9 +55,9 @@ export function RoleDashboardWelcome({ role }: { role: PersonnelRole }) {
 
 const ACTIONS: Record<PersonnelRole, string[]> = {
   ADMINISTRATOR: ['users', 'learners', 'courses', 'orders'],
-  MANAGER: ['courses', 'schedules', 'attendance', 'enrollments'],
+  MANAGER: ['courses', 'schedules', 'enrollments'],
   STAFF: ['learners', 'enrollments', 'orders', 'schedules'],
-  TEACHER: ['courses', 'schedule', 'availability', 'quizzes'],
+  TEACHER: ['schedule', 'availability', 'courses'],
   MENTOR: ['chat'],
 }
 
@@ -68,10 +68,8 @@ const ACTION_DESCRIPTIONS: Record<string, string> = {
   orders: 'Thanh toán và đối soát đơn hàng',
   schedules: 'Sắp xếp các buổi học',
   schedule: 'Các buổi dạy của bạn',
-  attendance: 'Theo dõi tham gia buổi học',
   enrollments: 'Đăng ký và quyền học tập',
   availability: 'Cập nhật thời gian có thể dạy',
-  quizzes: 'Xem bài kiểm tra và bài làm trong khóa được phân công',
   chat: 'Trao đổi cùng học viên',
 }
 

@@ -15,8 +15,6 @@ export default function StudentSchedulePage() {
     <StudentPageContainer width="wide" className="max-w-[1040px] space-y-5">
       <StudentPageHeader title="Lịch học" />
 
-      {s.notice && <Notice tone="info">{s.notice}</Notice>}
-
       {s.status === 'loading' ? (
         <LiveScheduleSkeleton variant="student" />
       ) : s.status === 'error' || s.status === 'forbidden' ? (
@@ -28,16 +26,10 @@ export default function StudentSchedulePage() {
         </Notice>
       ) : (
         <>
-          {s.errorMessage && <Notice tone="danger">{s.errorMessage}</Notice>}
-
           {s.nextClass && (
             <StudentNextClassCard
               liveClass={s.nextClass}
               nowMs={s.nowMs}
-              canJoin={s.nextCanJoin}
-              joinUrl={s.joinUrl}
-              bookingBusy={s.bookingBusyId === s.nextClass.id}
-              onBook={() => void s.handleBook(s.nextClass!.id)}
             />
           )}
 
@@ -46,8 +38,6 @@ export default function StudentSchedulePage() {
             onTabChange={s.setTab}
             upcoming={s.upcoming7Days}
             past={s.pastClasses}
-            bookingBusyId={s.bookingBusyId}
-            onBook={(id) => void s.handleBook(id)}
           />
 
           <StudentAttendanceBar summary={s.attendance} />

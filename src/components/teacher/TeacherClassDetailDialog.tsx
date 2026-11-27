@@ -1,9 +1,12 @@
 import ConsoleDialog from '../console/dialog'
 import Button from '../console/button'
 import Notice from '../console/notice'
+import Status from '../console/status'
 import DetailSection from '../console/detail/detail-section'
 import KeyFacts from '../console/detail/key-facts'
-import type { ConsoleLiveClass } from '../../services/liveClassService'
+import LiveClassAdmissionsSection from '../console/schedule/live-class-admissions-section'
+import { useScheduleResource } from '../../hooks/useScheduleResource'
+import { getLiveClassAdmissions, type ConsoleLiveClass } from '../../services/liveClassService'
 import {
   canTeacherStartOrJoin,
   dateKeyOfInstant,
@@ -20,7 +23,6 @@ interface Props {
   onStart: () => void
   onEnd: () => void
   onOpenContent: () => void
-  onOpenAttendance: () => void
 }
 
 export default function TeacherClassDetailDialog({
@@ -31,12 +33,16 @@ export default function TeacherClassDetailDialog({
   onStart,
   onEnd,
   onOpenContent,
-  onOpenAttendance,
 }: Props) {
   const dateKey = dateKeyOfInstant(liveClass.startTime)
   const canStart = canTeacherStartOrJoin(liveClass.startTime, liveClass.endTime, liveClass.status, nowMs)
   const isLive = liveClass.status === 'LIVE'
   const isOver = liveClass.status === 'COMPLETED'
+  const admissionsResource = useScheduleResource(
+    `teacher-live-class-admissions:${liveClass.id}`,
+    () => getLiveClassAdmissions(liveClass.id)
+  )
+  const admissions = admissionsResource.data ?? []
 
   return (
     <ConsoleDialog
@@ -44,7 +50,7 @@ export default function TeacherClassDetailDialog({
       onClose={onClose}
       dismissable={!busy}
       title={liveClass.title}
-      maxWidth={500}
+      maxWidth={540}
       footer={
         <div className="flex flex-wrap justify-end gap-2">
           {!isOver && liveClass.status !== 'CANCELLED' && (
@@ -52,9 +58,6 @@ export default function TeacherClassDetailDialog({
               Nội dung buổi
             </Button>
           )}
-          <Button type="button" appearance="outline" disabled={busy} onClick={onOpenAttendance}>
-            Điểm danh
-          </Button>
           {isLive && (
             <Button type="button" variant="danger" appearance="outline" disabled={busy} onClick={onEnd}>
               Kết thúc buổi
@@ -69,6 +72,11 @@ export default function TeacherClassDetailDialog({
       }
     >
       <div className="flex flex-col gap-4">
+        {liveClass.refunded && (
+          <div>
+            <Status tone="warning">Đã hoàn Sao</Status>
+          </div>
+        )}
         <KeyFacts
           facts={[
             {
@@ -85,9 +93,9 @@ export default function TeacherClassDetailDialog({
             },
             { label: 'Khóa học', value: liveClass.courseTitle },
             {
-              label: 'Giữ chỗ',
+              label: 'Đã vào lớp',
               required: true,
-              value: liveClass.capacity ? `${liveClass.bookedCount ?? 0} / ${liveClass.capacity}` : liveClass.bookedCount ?? 0,
+              value: liveClass.admittedCount ?? admissions.length,
             },
           ]}
         />
@@ -97,6 +105,12 @@ export default function TeacherClassDetailDialog({
           </DetailSection>
         )}
         {liveClass.needsAttention && liveClass.attentionReason && <Notice tone="warning">{liveClass.attentionReason}</Notice>}
+        <LiveClassAdmissionsSection
+          admissions={admissions}
+          loading={admissionsResource.status === 'loading'}
+          errorMessage={admissionsResource.status === 'error' ? admissionsResource.errorMessage : undefined}
+          onRetry={admissionsResource.reload}
+        />
       </div>
     </ConsoleDialog>
   )

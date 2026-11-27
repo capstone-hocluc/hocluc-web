@@ -13,6 +13,7 @@ export const CREDIT_ENTRY_LABELS: Record<CreditEntryType, string> = {
   CAPTURE: 'Đã dùng',
   RELEASE: 'Hoàn lại',
   SPEND: 'Đã dùng',
+  REFUND: 'Hoàn Sao',
   ADMIN_ADJUST: 'Điều chỉnh',
   EXPIRE: 'Hết hạn',
   MIGRATION_GRANT: 'Quà tặng',
@@ -27,6 +28,8 @@ export function creditEntryPurpose(refType: string | null): string | null {
       return 'AI giải bài'
     case 'STREAK_FREEZE':
       return 'Đóng băng chuỗi'
+    case 'LIVE_CLASS':
+      return 'Buổi học trực tiếp'
     default:
       return null
   }

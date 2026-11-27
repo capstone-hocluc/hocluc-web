@@ -35,9 +35,7 @@ export default function TeacherNextClassCard({
   const dateKey = dateKeyOfInstant(liveClass.startTime)
   const dayText = `${relativeDayLabel(dateKey, localToday())}, ${formatDdMm(dateKey)}`
   const timeText = formatTimeRangeFromInstants(liveClass.startTime, liveClass.endTime)
-  const seatsText = liveClass.capacity
-    ? `${liveClass.bookedCount ?? 0}/${liveClass.capacity} học viên giữ chỗ`
-    : `${liveClass.bookedCount ?? 0} học viên giữ chỗ`
+  const admittedText = `${liveClass.admittedCount ?? 0} học viên đã vào lớp`
   const canStart = canTeacherStartOrJoin(liveClass.startTime, liveClass.endTime, liveClass.status, nowMs)
   const isLive = liveClass.status === 'LIVE'
 
@@ -57,7 +55,7 @@ export default function TeacherNextClassCard({
         </div>
         <h2 className="text-lg leading-7 font-medium text-text-primary">{liveClass.title}</h2>
         <p className="text-sm text-text-tertiary">
-          {dayText} · {timeText} · {seatsText}
+          {dayText} · {timeText} · {admittedText}
         </p>
         {(zoomMissing || liveClass.hostZoomReconnectRequired) && (
           <a

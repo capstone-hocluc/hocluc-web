@@ -149,14 +149,13 @@ export default function LiveWeekGrid({
 
             const tone = toneOf(item)
             const isSelected = selectedId === item.id
-            const unmarked = mode === 'teacher' && tone === 'completed' && !item.attendanceTaken
 
             const secondaryLine = (() => {
               if (tone === 'cancelled') return 'Đã hủy'
               if (tone === 'attention') return 'Ngoài giờ rảnh'
               if (tone === 'live') return 'Đang dạy'
               if (mode === 'teacher') {
-                if (tone === 'completed') return item.attendanceTaken ? 'Đã dạy · đã điểm danh' : 'Chưa điểm danh'
+                if (tone === 'completed') return 'Đã dạy'
                 return item.courseTitle || ''
               }
               return item.teacherName || ''
@@ -189,7 +188,7 @@ export default function LiveWeekGrid({
                   <span
                     className={cn(
                       'truncate',
-                      tone === 'live' ? 'opacity-85' : unmarked ? 'font-semibold text-brand-500' : 'text-text-secondary'
+                      tone === 'live' ? 'opacity-85' : 'text-text-secondary'
                     )}
                   >
                     {secondaryLine}

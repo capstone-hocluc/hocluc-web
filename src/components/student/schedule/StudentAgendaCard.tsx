@@ -1,6 +1,7 @@
 import Button from '../../ui/Button'
 import Card, { CardTitle } from '../../ui/Card'
 import StatusBadge from '../../ui/StatusBadge'
+import LiveClassJoinButton from '../live/LiveClassJoinButton'
 import type { ConsoleLiveClass } from '../../../services/liveClassService'
 import {
   dateKeyOfInstant,
@@ -15,8 +16,6 @@ interface Props {
   onTabChange: (tab: 'upcoming' | 'past') => void
   upcoming: ConsoleLiveClass[]
   past: ConsoleLiveClass[]
-  bookingBusyId: string | null
-  onBook: (liveClassId: string) => void
 }
 
 const TABS = [
@@ -24,7 +23,7 @@ const TABS = [
   { id: 'past' as const, label: 'Đã học' },
 ]
 
-export default function StudentAgendaCard({ tab, onTabChange, upcoming, past, bookingBusyId, onBook }: Props) {
+export default function StudentAgendaCard({ tab, onTabChange, upcoming, past }: Props) {
   const todayKey = localToday()
   const list = tab === 'upcoming' ? upcoming : past
 
@@ -58,11 +57,7 @@ export default function StudentAgendaCard({ tab, onTabChange, upcoming, past, bo
           {list.map((item) => {
             const dateKey = dateKeyOfInstant(item.startTime)
             const timeText = formatTimeRangeFromInstants(item.startTime, item.endTime)
-            const isFull = !item.booked && item.seatsLeft === 0
-            const subtext =
-              !item.booked && item.seatsLeft != null
-                ? `${timeText} · còn ${item.seatsLeft} chỗ`
-                : [timeText, item.courseTitle].filter(Boolean).join(' · ')
+            const subtext = [timeText, item.courseTitle].filter(Boolean).join(' · ')
 
             return (
               <li key={item.id} className="grid grid-cols-[88px_minmax(0,1fr)] gap-x-4 border-t border-line py-3.5">
@@ -76,18 +71,12 @@ export default function StudentAgendaCard({ tab, onTabChange, upcoming, past, bo
                     <span className="text-sm text-text-secondary">{subtext}</span>
                   </div>
                   {tab === 'past' ? (
-                    <StatusBadge tone="neutral">Đã học</StatusBadge>
-                  ) : item.booked ? (
-                    <StatusBadge tone="primary">Đã giữ chỗ</StatusBadge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <StatusBadge tone="neutral">Đã học</StatusBadge>
+                      {item.refunded && <StatusBadge tone="warning">Đã hoàn Sao</StatusBadge>}
+                    </div>
                   ) : (
-                    <Button
-                      size="sm"
-                      shape="pill"
-                      disabled={bookingBusyId === item.id || isFull}
-                      onClick={() => onBook(item.id)}
-                    >
-                      {isFull ? 'Hết chỗ' : bookingBusyId === item.id ? 'Đang giữ…' : 'Giữ chỗ'}
-                    </Button>
+                    <LiveClassJoinButton liveClass={item} size="sm" shape="pill" />
                   )}
                 </div>
               </li>

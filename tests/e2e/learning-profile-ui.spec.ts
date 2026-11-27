@@ -196,35 +196,27 @@ test('Course live cards respect joinability, timezone, recordings, filters and p
   await installProfile(page)
   const base: CourseStudyLiveClass = { id: 'session-next', title: 'Buổi học gần nhất', startTime: '2026-11-17T03:00:00Z',
     endTime: '2026-11-17T04:00:00Z', timezone: 'Asia/Ho_Chi_Minh', status: 'SCHEDULED',
-    provider: 'ZOOM', instructorName: 'Giảng viên QA', joinable: false, meetingUrl: null, booked: true,
+    provider: 'ZOOM', instructorName: 'Giảng viên QA', joinable: false, meetingUrl: null, admitted: false, joinPrice: 0,
     type: 'COURSE', seriesName: 'Luyện đề tổng hợp', dayNumber: 1 }
-  let joinNext = false
+  let liveNext = false
   let status = 200
-  // A student never gets the class's own link: a booked student asks for theirs, and replays come from the class.
-  const ownLinks: Record<string, string | null> = {
-    'session-next': 'https://example.invalid/next',
-    'session-live': 'https://example.invalid/join',
-    'session-no-url': null,
-    'session-invalid-url': 'javascript:alert(1)',
-  }
   const replays: Record<string, string[]> = {
     'past-with-recording': ['https://example.invalid/recording'],
     'past-multiple': ['https://example.invalid/recording-one', 'https://example.invalid/recording-two'],
   }
-  await page.route(url => /^\/api\/v1\/live-classes\/[^/]+\/(join-link|recordings)$/.test(url.pathname), route => {
-    const [, , , , id, action] = new URL(route.request().url()).pathname.split('/')
-    const data = action === 'join-link' ? { liveClassId: id, joinUrl: ownLinks[id] ?? null }
-      : (replays[id] ?? []).map((recordingUrl, index) => ({ id: `${id}-${index}`, status: 'READY', recordingUrl }))
+  await page.route(url => /^\/api\/v1\/live-classes\/[^/]+\/recordings$/.test(url.pathname), route => {
+    const [, , , , id] = new URL(route.request().url()).pathname.split('/')
+    const data = (replays[id] ?? []).map((recordingUrl, index) => ({ id: `${id}-${index}`, status: 'READY', recordingUrl }))
     return route.fulfill({ json: { success: true, data } })
   })
   await page.route(url => url.pathname === `/api/v1/courses/${QUIZ_IDS.course}/live-classes`, route => route.fulfill({
     status, json: status === 200 ? { success: true, data: { courseId: QUIZ_IDS.course, courseTitle: 'Khóa QA',
-      next: { ...base, joinable: joinNext }, upcoming: [
-        { ...base, joinable: joinNext },
-        { ...base, id: 'session-live', title: 'Buổi đang diễn ra', status: 'LIVE', joinable: true },
-        { ...base, id: 'session-later', title: 'Buổi chưa được tham gia' },
-        { ...base, id: 'session-no-url', title: 'Buổi chưa có liên kết', joinable: true },
-        { ...base, id: 'session-invalid-url', title: 'Buổi có liên kết không hợp lệ', joinable: true },
+      next: { ...base, status: liveNext ? 'LIVE' : 'SCHEDULED', joinable: liveNext, admitted: liveNext }, upcoming: [
+        { ...base, status: liveNext ? 'LIVE' : 'SCHEDULED', joinable: liveNext, admitted: liveNext },
+        { ...base, id: 'session-live', title: 'Buổi đang diễn ra', status: 'LIVE', joinable: true, admitted: true },
+        { ...base, id: 'session-later', title: 'Buổi chưa được tham gia', joinPrice: 2 },
+        { ...base, id: 'session-paid-live', title: 'Buổi đang diễn ra có phí', status: 'LIVE', joinable: true, joinPrice: 2 },
+        { ...base, id: 'session-free-live', title: 'Buổi miễn phí đang diễn ra', status: 'LIVE', joinable: true, joinPrice: 0 },
       ], past: [
         { ...base, id: 'past-with-recording', title: 'Buổi có bản ghi', status: 'COMPLETED' },
         { ...base, id: 'past-no-recording', title: 'Buổi chưa có bản ghi', status: 'COMPLETED' },
@@ -241,12 +233,11 @@ test('Course live cards respect joinability, timezone, recordings, filters and p
   await expect(cards.nth(0).getByText('10:00 – 11:00', { exact: true })).toBeVisible()
   await expect(cards.nth(0).getByText('Giờ học · GMT+7', { exact: true })).toBeVisible()
   await expect(cards.nth(0).getByText('Giảng viên QA', { exact: true })).toBeVisible()
-  await expect(cards.nth(0).getByRole('link')).toHaveCount(0)
-  await expect(cards.nth(1).getByRole('link', { name: 'Tham gia', exact: true })).toHaveAttribute('href', 'https://example.invalid/join')
-  await expect(cards.nth(2).getByRole('link')).toHaveCount(0)
-  await expect(cards.nth(3).getByRole('button', { name: 'Tham gia', exact: true })).toBeDisabled()
-  await expect(cards.nth(4).getByRole('button', { name: 'Tham gia', exact: true })).toBeDisabled()
-  await expect(cards.nth(4).getByRole('link')).toHaveCount(0)
+  await expect(cards.nth(0).getByRole('button', { name: /^Bắt đầu / })).toBeDisabled()
+  await expect(cards.nth(1).getByRole('button', { name: 'Tham gia', exact: true })).toBeEnabled()
+  await expect(cards.nth(2).getByRole('button', { name: /^Bắt đầu / })).toBeDisabled()
+  await expect(cards.nth(3).getByRole('button', { name: 'Tham gia · 2 Sao', exact: true })).toBeEnabled()
+  await expect(cards.nth(4).getByRole('button', { name: 'Tham gia', exact: true })).toBeEnabled()
   await expect(cards.nth(5).getByRole('link', { name: 'Xem bản ghi', exact: true })).toHaveAttribute('href', 'https://example.invalid/recording')
   await page.screenshot({ path: testInfo.outputPath('course-live-cards-desktop.png'), fullPage: true })
   await page.getByRole('button', { name: 'Trang lớp học sau', exact: true }).click()
@@ -263,9 +254,9 @@ test('Course live cards respect joinability, timezone, recordings, filters and p
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   await page.screenshot({ path: testInfo.outputPath('course-live-cards-mobile.png'), fullPage: true })
   await page.getByRole('tab', { name: /^Sắp tới/ }).click()
-  joinNext = true
+  liveNext = true
   await page.getByRole('button', { name: 'Tải lại lịch học trực tuyến', exact: true }).click()
-  await expect(cards.nth(0).getByRole('link', { name: 'Tham gia', exact: true })).toHaveAttribute('href', 'https://example.invalid/next')
+  await expect(cards.nth(0).getByRole('button', { name: 'Tham gia', exact: true })).toBeEnabled()
   status = 403
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByText('Bạn chưa có quyền tham gia lớp học của khóa này', { exact: true })).toBeVisible()

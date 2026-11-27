@@ -88,7 +88,6 @@ function App() {
     if (path === '/manager/students') return 'manager-students'
     if (path === '/manager/enrollments') return 'manager-enrollments'
     if (path === '/manager/schedules') return 'manager-schedules'
-    if (path === '/manager/attendance') return 'manager-attendance'
     if (path === '/manager/tuition') return 'manager-tuition'
     if (path === '/manager/invoices') return 'manager-invoices'
     if (path === '/manager/payments') return 'manager-payments'
@@ -112,7 +111,6 @@ function App() {
     if (path === '/staff/students/hs-24091') return 'staff-detail'
     if (path === '/staff/enrollments') return 'staff-enrollments'
     if (path === '/staff/schedules') return 'staff-schedules'
-    if (path === '/staff/attendance') return 'staff-attendance'
     if (path === '/staff/tuition') return 'staff-tuition'
     if (path === '/staff/invoices') return 'staff-invoices'
     if (path === '/staff/payments') return 'staff-payments'
@@ -252,7 +250,6 @@ function App() {
         detail: '/staff/students/hs-24091',
         enrollments: '/staff/enrollments',
         schedules: '/staff/schedules',
-        attendance: '/staff/attendance',
         tuition: '/staff/tuition',
         invoices: '/staff/invoices',
         payments: '/staff/payments',
@@ -266,7 +263,6 @@ function App() {
         students: '/manager/students',
         enrollments: '/manager/enrollments',
         schedules: '/manager/schedules',
-        attendance: '/manager/attendance',
         tuition: '/manager/tuition',
         invoices: '/manager/invoices',
         payments: '/manager/payments',
@@ -285,16 +281,15 @@ function App() {
     })
   }
 
-  const navigateTeacher = (page) => {
-    const paths = {
+  const navigateTeacher = (page: string) => {
+    const paths: Record<string, string> = {
       dashboard: '/teacher/dashboard',
       profile: '/teacher/profile',
       courses: '/teacher/my-courses',
       schedule: '/teacher/schedule',
       availability: '/teacher/availability',
-      'mock-exams': '/teacher/mock-exams',
     }
-    const path = toConsolePath(page.startsWith('quiz-new-') ? `/teacher/my-courses/${page.replace('quiz-new-', '')}/quiz/new` : page.startsWith('quiz-') ? `/teacher/my-courses/${page.replace('quiz-', '')}/quiz` : page.startsWith('assignments-') ? `/teacher/my-courses/${page.replace('assignments-', '')}/assignments` : paths[page] ?? `/teacher/${quizPagePath(page)}`)
+    const path = toConsolePath(paths[page] ?? `/teacher/${page}`)
     runWithUnsavedActionGuard(() => {
       pushHistoryEntry({}, path)
       setAuthMode(`teacher-${page}`)
@@ -531,7 +526,7 @@ function App() {
             key={authMode}
             page={authMode.replace('teacher-', '')}
             onNavigate={navigateTeacher}
-            onBack={backToLanding}
+            onRedirectHome={() => navigateTo(roleHome('TEACHER'), {}, { replace: true })}
             onLogout={handleLogout}
             logoutLoading={logoutLoading}
           />

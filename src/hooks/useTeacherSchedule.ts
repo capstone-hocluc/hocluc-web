@@ -18,7 +18,7 @@ import { ApiError } from '../lib/api'
 import { teacherLiveRoomPath } from '../lib/console-routes'
 
 export interface TeacherTodoItem {
-  kind: 'attendance' | 'content'
+  kind: 'content'
   liveClass: ConsoleLiveClass
 }
 
@@ -28,7 +28,6 @@ export function useTeacherSchedule() {
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [selectedClass, setSelectedClass] = useState<ConsoleLiveClass | null>(null)
   const [contentTarget, setContentTarget] = useState<ConsoleLiveClass | null>(null)
-  const [attendanceTarget, setAttendanceTarget] = useState<ConsoleLiveClass | null>(null)
   const [busy, setBusy] = useState(false)
   const [zoomBusy, setZoomBusy] = useState(false)
   const [initialZoomFeedback] = useState(() => {
@@ -98,7 +97,7 @@ export function useTeacherSchedule() {
     }
   }, [weekResource.status, summaryResource.status, zoomResource.status])
 
-  const summaryClasses = summaryResource.data ?? []
+  const summaryClasses = useMemo(() => summaryResource.data ?? [], [summaryResource.data])
 
   const nextClass = useMemo(() => {
     const candidates = summaryClasses.filter((c) => {
@@ -111,11 +110,6 @@ export function useTeacherSchedule() {
 
   const todos = useMemo<TeacherTodoItem[]>(() => {
     const list: TeacherTodoItem[] = []
-    for (const item of summaryClasses) {
-      if (item.status === 'COMPLETED' && !item.attendanceTaken) {
-        list.push({ kind: 'attendance', liveClass: item })
-      }
-    }
     for (const item of summaryClasses) {
       if (
         (item.status === 'SCHEDULED' || item.status === 'LIVE') &&
@@ -210,8 +204,6 @@ export function useTeacherSchedule() {
     setSelectedClass,
     contentTarget,
     setContentTarget,
-    attendanceTarget,
-    setAttendanceTarget,
     busy,
     zoomAccount: zoomResource.data,
     zoomLoading: zoomResource.status === 'loading' || zoomResource.status === 'idle',

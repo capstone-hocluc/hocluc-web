@@ -49,9 +49,7 @@ export default function LiveClassListView({
             {dayClasses.map((item) => {
               const isCancelled = item.status === 'CANCELLED'
               const isAttention = !isCancelled && item.status !== 'COMPLETED' && Boolean(item.needsAttention)
-              const seatsLabel = item.capacity
-                ? `${item.bookedCount ?? 0} / ${item.capacity} chỗ`
-                : `${item.bookedCount ?? 0} giữ chỗ`
+              const admittedLabel = `${item.admittedCount ?? 0} học viên đã vào lớp`
               return (
                 <article
                   key={item.id}
@@ -69,6 +67,7 @@ export default function LiveClassListView({
                         {item.title}
                       </h3>
                       <LiveClassStatus status={item.status} />
+                      {item.refunded && <Status tone="warning">Đã hoàn Sao</Status>}
                       {isAttention && <Status tone="warning">Ngoài giờ rảnh</Status>}
                       {item.hostZoomReconnectRequired && <Status tone="danger">Zoom GV cần kết nối lại</Status>}
                     </div>
@@ -77,7 +76,7 @@ export default function LiveClassListView({
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-tertiary">
                       <time dateTime={item.startTime}>{formatTimeRangeFromInstants(item.startTime, item.endTime)}</time>
-                      <span>{seatsLabel}</span>
+                      <span>{admittedLabel}</span>
                     </div>
                   </div>
                   <Button

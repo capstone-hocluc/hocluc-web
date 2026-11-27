@@ -47,7 +47,6 @@ export function useLiveTimetableWizard({
   const [slots, setSlots] = useState<LiveTimetableSlot[]>([
     { dayOfWeek: 'MONDAY', startTime: '19:30', endTime: '21:30' },
   ])
-  const [capacity, setCapacity] = useState('20')
   const [previewSessions, setPreviewSessions] = useState<WizardEditableSession[]>([])
   const [previewBlockingErrors, setPreviewBlockingErrors] = useState<string[]>([])
   const [previewWarnings, setPreviewWarnings] = useState<string[]>([])
@@ -148,7 +147,6 @@ export function useLiveTimetableWizard({
     setBusy(true)
     setErrorMessage('')
     try {
-      const capNum = capacity.trim() ? Number(capacity.trim()) : undefined
       const res = await previewLiveTimetable({
         courseId,
         teacherId,
@@ -157,7 +155,6 @@ export function useLiveTimetableWizard({
         startDate,
         endDate,
         slots,
-        ...(capNum && Number.isFinite(capNum) && capNum >= 1 ? { capacity: capNum } : {}),
       })
       setPreviewSessions(mapPreviewSessions(res.sessions))
       setPreviewBlockingErrors(res.blockingErrors)
@@ -181,7 +178,6 @@ export function useLiveTimetableWizard({
     setBusy(true)
     setErrorMessage('')
     try {
-      const capNum = capacity.trim() ? Number(capacity.trim()) : undefined
       const res = await previewLiveTimetable({
         courseId,
         teacherId,
@@ -190,7 +186,6 @@ export function useLiveTimetableWizard({
         startDate,
         endDate,
         slots,
-        ...(capNum && Number.isFinite(capNum) && capNum >= 1 ? { capacity: capNum } : {}),
         sessions: active.map((s) => ({
           date: s.date,
           start: s.start.slice(0, 5),
@@ -240,7 +235,6 @@ export function useLiveTimetableWizard({
     setBusy(true)
     setErrorMessage('')
     try {
-      const capNum = capacity.trim() ? Number(capacity.trim()) : undefined
       let num = 0
       await createLiveTimetable(courseId, {
         teacherId,
@@ -249,7 +243,6 @@ export function useLiveTimetableWizard({
         startDate,
         endDate,
         slots,
-        ...(capNum && Number.isFinite(capNum) && capNum >= 1 ? { capacity: capNum } : {}),
         sessions: chosen.map((s) => {
           num += 1
           return {
@@ -295,8 +288,6 @@ export function useLiveTimetableWizard({
     setEndDate,
     slots,
     setSlots,
-    capacity,
-    setCapacity,
     previewSessions,
     previewBlockingErrors,
     previewWarnings,

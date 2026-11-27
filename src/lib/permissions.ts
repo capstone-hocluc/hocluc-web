@@ -61,14 +61,7 @@ const ALL_PERMISSIONS: Permission[] = [
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   STUDENT: [],
   MENTOR: ['SOLUTION_APPROVE', 'REVIEW_QUEUE_HANDLE', 'SUPPORT_HANDLE'],
-  TEACHER: [
-    'COURSE_READ',
-    'QUIZ_READ',
-    'CONTENT_WRITE',
-    'SOLUTION_APPROVE',
-    'REVIEW_QUEUE_HANDLE',
-    'ATTENDANCE_WRITE',
-  ],
+  TEACHER: ['COURSE_READ'],
   STAFF: [
     'BANK_AUTHOR',
     'BANK_REVIEW',
