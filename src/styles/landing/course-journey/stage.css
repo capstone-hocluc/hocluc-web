@@ -1,0 +1,126 @@
+/* A stage: its name on the left, its courses as tickets on the right, the road between them. */
+.course-page .cj-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 220ms ease,
+    visibility 0s linear 220ms;
+}
+.course-page .cj-stage.is-on {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 300ms ease,
+    visibility 0s;
+}
+.course-page .cj-head,
+.course-page .cj-side {
+  position: absolute;
+  /* Centred in the room under the progress bar. */
+  top: calc(50% + 30px);
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+.course-page .cj-head {
+  left: clamp(28px, 5.5cqw, 88px);
+  width: min(390px, 30cqw);
+}
+/* A soft patch of sky colour behind the text, so trees and grid lines do not cross it. */
+.course-page .cj-head::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -70px -90px;
+  background: radial-gradient(closest-side, rgb(243 248 255 / 96%) 35%, rgb(243 248 255 / 0%));
+}
+.course-page .cj-side {
+  right: clamp(28px, 5.5cqw, 88px);
+  width: min(470px, 34cqw);
+}
+.course-page .cj-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 13px;
+  border-radius: 999px;
+  background: var(--cj-c);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--cj-on);
+}
+.course-page .cj-head h3 {
+  margin-top: 14px;
+  font-size: clamp(36px, min(4.4cqw, 8.6cqh), 62px);
+  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.course-page .cj-head h3 span {
+  display: block;
+}
+.course-page .cj-head p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  margin-top: 14px;
+  max-width: 34ch;
+  font-size: 16px;
+}
+.course-page .cj-stats {
+  display: flex;
+  gap: 28px;
+  margin-top: 22px;
+}
+.course-page .cj-stats > div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.course-page .cj-stats dd {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.course-page .cj-stats dt {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.course-page .cj-companions {
+  display: grid;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #d3e0f2;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.course-page .cj-companions li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.course-page .cj-companions .ui-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--cj-k);
+}
+.course-page .cj-companions a {
+  display: block;
+  font-weight: 700;
+  color: var(--ink);
+}
+.course-page .cj-companions a:hover {
+  color: var(--blue-text);
+}

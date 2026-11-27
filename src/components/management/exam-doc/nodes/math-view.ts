@@ -1,10 +1,11 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { EditorView, NodeView } from '@tiptap/pm/view'
-import { loadKatex } from '../../../ui/katex-loader'
+import { loadedKatex, loadKatex, type Katex } from '../../../ui/katex-loader'
 
 type OnEdit = (pos: number, value: { latex: string; display: boolean }) => void
 
-const SELECTED = ['ring-2', 'ring-input-primary-focus-border']
+/** Tints only the formula (exam-doc.css); a ring around the inline box covered the words beside it. */
+const SELECTED = 'exam-doc-math-selected'
 
 /**
  * A formula set by KaTeX straight into the DOM. A React node view per formula made a long exam slow to fill: every
@@ -48,22 +49,37 @@ export class MathView implements NodeView {
   private render() {
     const { latex, display } = this
     this.dom.className = `exam-doc-math cursor-pointer rounded-sm${display ? ' block text-center' : ''}`
-    // Until KaTeX arrives the formula shows as typed, marked pending so printing can wait until every formula is set.
+    const ready = loadedKatex()
+    if (ready) {
+      this.set(ready, latex, display)
+      return
+    }
+    // Until KaTeX arrives a shimmer about the formula's size holds its place (never the `$…$` typed), marked pending so
+    // printing can wait until every formula is set.
     const pending = document.createElement('span')
     pending.setAttribute('data-math-pending', '')
-    pending.textContent = display ? `$$${latex}$$` : `$${latex}$`
+    pending.setAttribute('aria-label', latex)
+    pending.className = 'inline-block h-[1.1em] animate-pulse-custom rounded-md bg-skeleton-gradient-50 align-middle'
+    pending.style.width = `${Math.min(Math.max(latex.length * 0.5, 2), display ? 24 : 12)}em`
     this.dom.replaceChildren(pending)
+    const current = () => this.live && this.latex === latex && this.display === display
     loadKatex().then(
       (katex) => {
-        if (!this.live || this.latex !== latex || this.display !== display) return
-        // relative: KaTeX's hidden MathML copy is absolutely placed and must stay inside the formula's box
-        const set = document.createElement('span')
-        set.className = 'relative'
-        katex.render(latex, set, { displayMode: display, throwOnError: false, strict: 'ignore', output: 'htmlAndMathml' })
-        this.dom.replaceChildren(set)
+        if (current()) this.set(katex, latex, display)
       },
-      () => undefined
+      () => {
+        // KaTeX could not be fetched: the formula as typed, readable, and no longer pending.
+        if (current()) this.dom.replaceChildren(display ? `$$${latex}$$` : `$${latex}$`)
+      }
     )
+  }
+
+  private set(katex: Katex, latex: string, display: boolean) {
+    // relative: KaTeX's hidden MathML copy is absolutely placed and must stay inside the formula's box
+    const set = document.createElement('span')
+    set.className = 'relative'
+    katex.render(latex, set, { displayMode: display, throwOnError: false, strict: 'ignore', output: 'htmlAndMathml' })
+    this.dom.replaceChildren(set)
   }
 
   update(node: ProseMirrorNode) {
@@ -75,11 +91,11 @@ export class MathView implements NodeView {
   }
 
   selectNode() {
-    this.dom.classList.add(...SELECTED)
+    this.dom.classList.add(SELECTED)
   }
 
   deselectNode() {
-    this.dom.classList.remove(...SELECTED)
+    this.dom.classList.remove(SELECTED)
   }
 
   /** KaTeX rewrites the inside; that is not an edit of the document. */

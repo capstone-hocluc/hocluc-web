@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import BundleCourses from '../../components/course/BundleCourses'
+import BuyAction from '../../components/course/BuyAction'
 import ChapterList from '../../components/course/ChapterList'
 import CourseAbout from '../../components/course/CourseAbout'
+import { courseFacts } from '../../components/course/course-facts'
+import CourseJourney from '../../components/course/journey/CourseJourney'
+import { buildJourney } from '../../components/course/journey/journey-content'
+import { useJourneyScreen } from '../../components/course/journey/use-journey-screen'
+import CourseReviews from '../../components/course/reviews/CourseReviews'
+import IntroVideo from '../../components/course/IntroVideo'
+import SmallCourseOverview from '../../components/course/small-course/SmallCourseOverview'
+import SmallCourseStats from '../../components/course/small-course/SmallCourseStats'
+import SmallCourseTags from '../../components/course/small-course/SmallCourseTags'
+import { smallCourseContent } from '../../components/course/small-course/small-course-content'
 import {
+  courseNameWithoutTagline,
   ownChapters,
   parseDescription,
   shortCourseName,
@@ -11,15 +23,12 @@ import {
 import AuthLink from '../../components/landing-page/AuthLink'
 import Icon from '../../components/landing-page/Icon'
 import LandingLink from '../../components/landing-page/LandingLink'
-import {
-  courseDate,
-  formatCoursePrice,
-  parseCourseDate,
-} from '../../components/landing-page/landing-course-format'
+import { formatCoursePrice } from '../../components/landing-page/landing-course-format'
 import { PublicFooter, PublicHeader } from '../../components/landing-page/PublicChrome'
 import { landingHero } from '../../data/landing-content'
 import { ApiError } from '../../lib/api'
-import { formatDuration, formatExamLabel } from '../../lib/courseFormat'
+import { formatExamLabel } from '../../lib/courseFormat'
+import { introVideoSource } from '../../lib/introVideo'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast, showSuccessToast } from '../../lib/toastBus'
 import { addCartItem } from '../../services/cartService'
@@ -33,6 +42,8 @@ import {
 } from '../../services/courseService'
 import '../../styles/landing/landing-page.css'
 import '../../styles/landing/course-page.css'
+import '../../styles/landing/course-page-bundle.css'
+import '../../styles/landing/small-course.css'
 
 interface CourseDetailPageProps {
   courseId: string
@@ -42,10 +53,8 @@ interface CourseDetailPageProps {
   onGoToCart: () => void
 }
 
-const day = (value?: string) => {
-  const date = parseCourseDate(value)
-  return date ? courseDate.format(date) : null
-}
+// Where "Xem lộ trình" in the hero scrolls to: the road, or the list of courses that stands in for it.
+const ROADMAP_ID = 'cd-roadmap'
 
 function GiftCard({ gift }: { gift: GiftCourse }) {
   return (
@@ -102,47 +111,17 @@ function Roadmap({ phases }: { phases: CoursePhase[] }) {
 
 function Chapters({ chapters, purchased }: { chapters: CourseChapter[]; purchased: boolean }) {
   return (
-    <section className="cd-block" aria-labelledby="cd-content-title">
+    <section className="cd-block cd-curriculum" aria-labelledby="cd-content-title">
       <h2 id="cd-content-title">Nội dung khóa học</h2>
       <ChapterList chapters={chapters} purchased={purchased} />
     </section>
   )
 }
 
-function BuyAction({
-  course,
-  adding,
-  onAdd,
-  onStart,
-  onCart,
-}: {
-  course: CourseDetail
-  adding: boolean
-  onAdd: () => void
-  onStart: () => void
-  onCart: () => void
-}) {
-  if (course.purchased)
-    return (
-      <button type="button" className="btn btn-primary" onClick={onStart}>
-        Vào học <Icon name="arrow-right" />
-      </button>
-    )
-  if (course.inCart)
-    return (
-      <button type="button" className="btn btn-secondary" onClick={onCart}>
-        <Icon name="shopping-cart" /> Xem giỏ hàng
-      </button>
-    )
-  return (
-    <button type="button" className="btn btn-primary" onClick={onAdd} disabled={adding}>
-      <Icon name="shopping-cart" /> {adding ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
-    </button>
-  )
-}
-
 // Public course page in the landing look, ordered as a purchase decision: what it is and what it
 // costs, who it is for, the roadmap with the courses that come with it, then help to decide.
+// A course made of smaller courses in stages tells that roadmap as a road across the whole page
+// (CourseJourney) where the screen has room for it, and as a list of the courses everywhere else.
 function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCart }: CourseDetailPageProps) {
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'not-found'>('loading')
@@ -150,6 +129,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
   const [addingToCart, setAddingToCart] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [coverFailed, setCoverFailed] = useState(false)
+  const journeyScreen = useJourneyScreen()
 
   useEffect(() => {
     let cancelled = false
@@ -205,16 +185,29 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
     )
     const giftLessons = gifts.reduce((sum, gift) => sum + gift.lessonCount, 0)
     const chapters = ownChapters(course)
+    // Made only of smaller courses (it teaches no chapters itself): shown as the set it is.
+    const bundle = gifts.length > 0 && chapters.length === 0
+    // Any other course shows its description part by part, its fact line as tags in the hero.
+    const small = bundle ? null : smallCourseContent(about)
+    const lessons = (course.lessonCount ?? 0) + giftLessons
+    const weeks = weeksBetween(course.startDate, course.endDate)
     return {
       gifts,
       phases,
-      // Made only of smaller courses (it teaches no chapters itself): shown as the set it is.
-      bundle: gifts.length > 0 && chapters.length === 0,
+      bundle,
+      journey: bundle ? buildJourney(course) : null,
       stages,
       about,
+      small,
       chapters,
-      lessons: (course.lessonCount ?? 0) + giftLessons,
-      weeks: weeksBetween(course.startDate, course.endDate),
+      facts: courseFacts(course, {
+        bundle,
+        giftCount: gifts.length,
+        chapterCount: chapters.length,
+        lessonCount: lessons,
+        weeks,
+        hours: small?.hours ?? null,
+      }),
     }
   }, [course])
 
@@ -228,6 +221,7 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
     />
   )
   const price = course ? formatCoursePrice(course.price) : null
+  const journey = journeyScreen ? (view?.journey ?? null) : null
 
   return (
     <>
@@ -286,74 +280,62 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                   <span aria-current="page">{shortCourseName(course.title)}</span>
                 </nav>
 
-                <div className="cd-layout">
+                <div className={`cd-layout${view.bundle ? ' is-bundle' : ''}${journey ? ' is-before-road' : ''}`}>
                   <div className="cd-main">
                     <header className="cd-hero">
-                      {formatExamLabel(course.targetExam) && (
-                        <span className="eyebrow">{formatExamLabel(course.targetExam)}</span>
+                      {view.small ? (
+                        <SmallCourseTags exam={formatExamLabel(course.targetExam) || null} tags={view.small.tags} />
+                      ) : (
+                        formatExamLabel(course.targetExam) && (
+                          <span className="eyebrow">{formatExamLabel(course.targetExam)}</span>
+                        )
                       )}
                       <h1>{course.title}</h1>
                       {course.shortIntroduction && <p className="cd-lead">{course.shortIntroduction}</p>}
-                      <dl className="cd-facts">
-                        {view.bundle && (
-                          <div>
-                            <dt>Gồm</dt>
-                            <dd>{view.gifts.length} khóa học</dd>
-                          </div>
-                        )}
-                        {day(course.startDate) && (
-                          <div>
-                            <dt>Khai giảng</dt>
-                            <dd>
-                              {day(course.startDate)}
-                              {day(course.endDate) && ` – ${day(course.endDate)}`}
-                              {view.weeks && <span className="cd-facts-note"> · {view.weeks} tuần</span>}
-                            </dd>
-                          </div>
-                        )}
-                        {day(course.examSessionDate) && (
-                          <div>
-                            <dt>Ngày thi</dt>
-                            <dd>
-                              {course.examSession && `${course.examSession.name} · `}
-                              {day(course.examSessionDate)}
-                              {course.examSession && !course.examSession.dateConfirmed && ' (dự kiến)'}
-                            </dd>
-                          </div>
-                        )}
-                        {course.estimatedDurationMinutes ? (
-                          <div>
-                            <dt>Thời lượng</dt>
-                            <dd>{formatDuration(course.estimatedDurationMinutes * 60)}</dd>
-                          </div>
-                        ) : null}
-                        {view.gifts.length > 0 && !view.bundle && (
-                          <div>
-                            <dt>Khóa đi kèm</dt>
-                            <dd>{view.gifts.length} khóa</dd>
-                          </div>
-                        )}
-                        {view.lessons > 0 && (
-                          <div>
-                            <dt>Bài học</dt>
-                            <dd>{view.lessons} bài</dd>
-                          </div>
-                        )}
-                      </dl>
+                      {view.small?.intro.map((line, index) => (
+                        <p key={index} className="sc-intro">
+                          {line}
+                        </p>
+                      ))}
+                      {view.small ? (
+                        <SmallCourseStats facts={view.facts} />
+                      ) : (
+                        <dl className="cd-facts">
+                          {view.facts.map((fact) => (
+                            <div key={fact.key}>
+                              <dt>{fact.label}</dt>
+                              <dd>
+                                {fact.value}
+                                {fact.note && <span className="cd-facts-note"> · {fact.note}</span>}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                      {view.bundle && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary cd-hero-jump"
+                          onClick={() => document.getElementById(ROADMAP_ID)?.scrollIntoView({ block: 'start' })}
+                        >
+                          Xem lộ trình <Icon name="chevron-down" />
+                        </button>
+                      )}
                     </header>
 
-                    {view.about.length > 0 && (
-                      <CourseAbout
-                        blocks={view.about}
-                        startDate={course.startDate}
-                        includedCount={view.bundle ? view.gifts.length : 0}
-                      />
+                    {view.small ? (
+                      <SmallCourseOverview content={view.small} outcomes={course.outcomes ?? []} />
+                    ) : (
+                      <>
+                        {view.about.length > 0 && (
+                          <CourseAbout blocks={view.about} startDate={course.startDate} includedCount={view.gifts.length} />
+                        )}
+                        {course.outcomes && course.outcomes.length > 0 && <Outcomes outcomes={course.outcomes} />}
+                      </>
                     )}
 
-                    {course.outcomes && course.outcomes.length > 0 && <Outcomes outcomes={course.outcomes} />}
-
-                    {view.bundle ? (
-                      <BundleCourses phases={view.phases} purchased={Boolean(course.purchased)} />
+                    {journey ? null : view.bundle ? (
+                      <BundleCourses id={ROADMAP_ID} phases={view.phases} purchased={Boolean(course.purchased)} />
                     ) : view.stages ? (
                       <Roadmap phases={view.stages} />
                     ) : (
@@ -372,12 +354,16 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                     {view.chapters.length > 0 && (
                       <Chapters chapters={view.chapters} purchased={Boolean(course.purchased)} />
                     )}
+
+                    {!journey && <CourseReviews courseId={course.id} />}
                   </div>
 
                   <aside className="cd-aside" aria-label="Đăng ký khóa học">
                     <div className="cd-buy">
                       <div className="cd-buy-cover">
-                        {course.imageUrl && !coverFailed ? (
+                        {introVideoSource(course.videoUrl) ? (
+                          <IntroVideo url={course.videoUrl} title={course.title} poster={course.imageUrl} />
+                        ) : course.imageUrl && !coverFailed ? (
                           <img src={course.imageUrl} alt="" onError={() => setCoverFailed(true)} />
                         ) : (
                           <div className="course-cover-fallback">
@@ -409,6 +395,27 @@ function CourseDetailPage({ courseId, onBackToCatalog, onStartLearning, onGoToCa
                   </aside>
                 </div>
               </div>
+
+              {journey && (
+                <>
+                  <CourseJourney
+                    id={ROADMAP_ID}
+                    journey={journey}
+                    offer={{
+                      title: courseNameWithoutTagline(course.title),
+                      cover: course.imageUrl,
+                      price,
+                      owned: Boolean(course.purchased),
+                    }}
+                    buy={buy}
+                  />
+                  <div className="cd-after-road">
+                    <div className="container">
+                      <CourseReviews courseId={course.id} />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <section className="closing-cta cd-closing" aria-labelledby="cd-help-title">
                 <div className="container closing-cta-inner">

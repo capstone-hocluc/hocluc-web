@@ -47,7 +47,8 @@ function ColorGlyph({ kind, value }: { kind: ColorKind; value: string | null }) 
       <span
         className={cn(
           'h-[3px] w-4 rounded-full ring-1 ring-card-border',
-          !value && (kind === 'text' ? 'bg-text-primary' : 'bg-transparent')
+          // No colour set: the sheet's own ink.
+          !value && (kind === 'text' ? 'bg-[#111]' : 'bg-transparent')
         )}
         style={value ? { backgroundColor: value } : undefined}
       />

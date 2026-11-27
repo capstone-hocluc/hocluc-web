@@ -35,16 +35,35 @@ type Source = Record<string, unknown> & { status: string }
 const source = (status: string, questionCount = 0): Source => ({
   id: 'src-1', code: '2021-mau', title: 'Đề mẫu 2021', year: 2021, round: 'mẫu', answerSource: 'REFERENCE_KEY', status,
   progress: status === 'DONE' ? null : 'Đang đọc đề', error: null, questionCount, duplicateCount: 0, needsReviewCount: 0,
-  unlabelledCount: 0, createdAt: '2026-10-17T00:00:00Z', finishedAt: null, retryable: true,
+  // Loaded long ago, its reading begun 42 seconds before the page asked.
+  unlabelledCount: 0, createdAt: '2026-10-17T00:00:00Z', startedAt: new Date(Date.now() - 42_000).toISOString(), finishedAt: null,
+  retryable: true,
 })
 const failed = (retryable: boolean): Source => ({
   ...source('FAILED'), progress: null, retryable,
   error: "The model did not return valid JSON: Unrecognized token '$'",
 })
 
-/** The read-only sheet of the AI workspace a paper opens on, and the run's progress beside it. */
+/** The read-only sheet of the AI workspace a paper opens on, and the run's progress pinned in the chat beside it. */
 const readingSheet = (page: Page) => page.locator('[aria-label="Đề đang đọc (chỉ đọc)"]')
-const readingPanel = (page: Page) => page.getByRole('complementary', { name: 'Tiến trình đọc đề' })
+/** The reading of the open paper: the latest turn of the assistant's chat beside it. */
+const readingPanel = (page: Page) =>
+  page
+    .getByRole('complementary', { name: 'Trợ lý AI' })
+    .locator('[data-slot="aui_assistant-message-root"]')
+    .filter({ has: page.getByRole('group', { name: /^Đọc đề / }) })
+
+/** Opens the reading's folded steps: its stages and the parts of the paper read. */
+async function openReadingSteps(page: Page) {
+  const triggers = readingPanel(page).locator('[data-slot="reasoning-trigger"], [data-slot="tool-group-trigger"]')
+  await expect(triggers.first()).toBeVisible()
+  for (let index = 0; index < (await triggers.count()); index++) {
+    const trigger = triggers.nth(index)
+    // A stage with nothing under its title has nothing to open.
+    if (await trigger.isDisabled()) continue
+    if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click()
+  }
+}
 
 /** Opens the first paper of the loaded-papers tab, which shows it in the AI workspace. */
 async function openPaper(page: Page) {
@@ -325,7 +344,8 @@ test('staff load papers in the AI workspace, which the loaded-papers tab links t
 
   await page.getByRole('button', { name: 'Nạp đề trong Trợ lý AI' }).click()
   await expect(page).toHaveURL(/\/console\/staff\/ai-assistant$/)
-  await expect(page.getByRole('button', { name: 'Nạp đề', exact: true })).toBeVisible()
+  // A paper is loaded by attaching it in the chat beside the exam.
+  await expect(page.getByRole('button', { name: 'Đính kèm tệp' })).toBeVisible()
   expect(fixture.state.unmatched).toEqual([]); expect(fixture.state.pageErrors).toEqual([])
 })
 
@@ -346,10 +366,19 @@ test('a paper being read opens in the workspace, written onto the sheet as the A
   await expect(live).toContainText('AI đang đọc đề…')
   await expect(live).toContainText('Câu 2. Tính 2 + 2 bằng')
   const panel = readingPanel(page)
-  await expect(panel.getByText('Đọc cấu trúc đề')).toBeVisible()
-  await expect(panel.getByText('Đọc câu hỏi')).toBeVisible()
+  await expect(panel.getByText('AI đang đọc đề', { exact: true })).toBeVisible()
+  // Timed from when its reading began, not from when the paper was loaded.
+  await expect(panel.locator('[data-slot="run-time"]')).toHaveText(/^Đang làm · 4\d giây$/)
+  await openReadingSteps(page)
+  // Each stage heads its own disclosure.
+  const stage = (title: RegExp) => panel.locator('[data-slot="reasoning-trigger-label"]').filter({ hasText: title })
+  await expect(stage(/^Đọc cấu trúc đề/)).toBeVisible()
+  await expect(stage(/^Đọc câu hỏi/)).toBeVisible()
   await expect(panel.getByText('Phần 1 · câu 1–2')).toBeVisible()
-  await expect(panel.getByText('Đã kết nối, đang theo dõi AI đọc đề')).toBeVisible()
+  // The reading is not the assistant's run: the chat still takes a message while it goes on.
+  const chat = page.getByRole('complementary', { name: 'Trợ lý AI' })
+  await expect(chat.getByRole('button', { name: 'Gửi tin nhắn' })).toBeVisible()
+  await expect(chat.getByRole('button', { name: 'Dừng tạo câu trả lời' })).toHaveCount(0)
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
@@ -365,11 +394,21 @@ test('a stream that ends is not opened again, and the end is told in the log', a
   await openPaper(page)
 
   const panel = readingPanel(page)
-  await expect(panel.getByText('Nạp đề xong')).toBeVisible()
-  await expect(panel.getByText('AI viết xong Phần 1 · câu 1–2: 2 câu')).toBeVisible()
+  await expect(panel.getByText('Đã nạp vào ngân hàng', { exact: true })).toBeVisible()
+  await expect(panel.locator('[data-slot="run-time"]')).toHaveText(/^Đã làm trong 4\d giây$/)
+  await openReadingSteps(page)
+  await expect(panel.getByText('Phần 1 · câu 1–2')).toBeVisible()
   // every question of the paper was labelled, as the label step shows
   await expect(panel.getByText('2/2 câu')).toBeVisible()
   await expect(readingSheet(page)).toContainText('Câu 2. Hai')
+  // Too narrow for the chat beside the paper, the reading sits over the paper, its latest events last.
+  await page.setViewportSize({ width: 900, height: 900 })
+  const card = page.getByRole('region', { name: 'Đọc đề Đề mẫu 2021' })
+  await expect(card.getByText('Đã nạp vào ngân hàng', { exact: true })).toBeVisible()
+  const log = card.getByRole('list', { name: 'Hoạt động gần nhất' })
+  await expect(log.getByText('Nạp đề xong')).toBeVisible()
+  await expect(log.getByText('AI viết xong Phần 1 · câu 1–2: 2 câu')).toBeVisible()
+  await expect(card.getByText('2/2 câu')).toBeVisible()
   // in development React opens it twice (the first is dropped at once); what matters is that it is not opened again
   const opened = fixture.streams()
   await page.waitForTimeout(3000)
@@ -501,7 +540,7 @@ test('without the PDF the paper is laid out from what the AI read, a question it
   await expect(sheet).toContainText('PHẦN 2. TOÁN HỌC')
   await expect(sheet).toContainText('Câu 1. Giải phương trình')
   await expect(sheet).toContainText('Câu 2. (AI chưa đọc được câu này)')
-  await expect(readingPanel(page).getByRole('tab', { name: 'Trang gốc' })).toBeDisabled()
+  await expect(page.getByRole('tab', { name: 'Trang gốc' })).toBeDisabled()
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })
 
@@ -511,7 +550,7 @@ test('a paper with its PDF is laid out from what the AI read, its pages one tab 
 
   await expect(readingSheet(page)).toContainText('Câu 1. Giải phương trình')
   await expect(page.getByRole('img', { name: 'Trang 1 của đề' })).toHaveCount(0)
-  await readingPanel(page).getByRole('tab', { name: 'Trang gốc' }).click()
+  await page.getByRole('tab', { name: 'Trang gốc' }).click()
   await expect(page.getByRole('img', { name: 'Trang 1 của đề' })).toBeVisible()
   expect(state.unmatched).toEqual([]); expect(state.pageErrors).toEqual([])
 })

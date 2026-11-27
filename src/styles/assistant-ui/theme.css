@@ -1,0 +1,34 @@
+/* The colours assistant-ui's installed components are written against (shadcn's names), on the console's own:
+   its `background` is the card, its `foreground` the primary text, its `border` the card border. They follow the
+   console's light and dark theme through the variables they point at. */
+@theme inline {
+  --color-background: var(--card-background);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--card-background);
+  --color-card-foreground: var(--text-primary);
+  --color-popover: var(--card-background);
+  --color-popover-foreground: var(--text-primary);
+  --color-muted: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  --color-muted-foreground: var(--text-tertiary);
+  --color-secondary: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  --color-secondary-foreground: var(--text-primary);
+  --color-destructive: var(--color-danger);
+  --color-border: var(--card-border);
+  --color-input: var(--card-border);
+  --color-ring: color-mix(in srgb, var(--text-primary) 25%, transparent);
+}
+
+/* Inside the chat, `accent` is shadcn's hover wash, not the console's blue. */
+.aui-root {
+  --color-accent: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  --color-accent-foreground: var(--text-primary);
+}
+
+/* shadcn's base: a bare `border` takes the border colour. Kept to the chat, under the utilities. */
+@layer base {
+  .aui-root *,
+  .aui-root ::before,
+  .aui-root ::after {
+    border-color: var(--color-border);
+  }
+}

@@ -1,0 +1,7 @@
+/* A course page that is not a bundle: the hero's tags and fact tiles, each part of the description
+   as a section shaped for what it says, and the chapters as numbered stops on one line. */
+@import './small-course/tones.css';
+@import './small-course/hero.css';
+@import './small-course/parts.css';
+@import './small-course/outcomes.css';
+@import './small-course/curriculum.css';

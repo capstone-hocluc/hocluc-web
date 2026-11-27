@@ -1,38 +1,29 @@
 import { useState } from 'react'
-import {
-  CheckCircle2,
-  Clock,
-  ListChecks,
-  Lock,
-  RotateCcw,
-  Target,
-} from '../../components/console/icons'
-import AssessmentFacts from '../../components/assessment/AssessmentFacts'
+import { Clock, FileText, ListChecks, Lock, RotateCcw, Target } from '../../components/console/icons'
 import QuizAttemptHistory from '../../components/assessment/QuizAttemptHistory'
 import BackLink from '../../components/student/common/BackLink'
 import ResourceState from '../../components/student/common/ResourceState'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import Button from '../../components/ui/Button'
-import Card from '../../components/ui/Card'
 import Notice from '../../components/ui/Notice'
 import Skeleton from '../../components/ui/Skeleton'
-import StatusBadge from '../../components/ui/StatusBadge'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getQuiz, startQuizAttempt, type QuizDetail } from '../../services/assessmentService'
 import { getErrorMessage } from '../../lib/errors'
 import { showErrorToast } from '../../lib/toastBus'
 import { getAssessmentLockMessage } from '../../lib/quizLock'
 import { quizTypeLabel, quizRequirement } from '../../lib/quiz-types'
-import { getQuizKind } from '../../lib/learningType'
+import styles from '../../components/assessment/AssessmentWorkspace.module.css'
 
 interface QuizDetailPageProps {
   quizId: string
   onBack: (quiz: QuizDetail | null) => void
   onStartAttempt: (quizId: string, attemptId: string) => void
   onOpenReview: (attemptId: string) => void
+  onOpenCompetency?: (courseId: string) => void
 }
 
-function QuizDetailPage({ quizId, onBack, onStartAttempt, onOpenReview }: QuizDetailPageProps) {
+function QuizDetailPage({ quizId, onBack, onStartAttempt, onOpenReview, onOpenCompetency }: QuizDetailPageProps) {
   const {
     data: quiz,
     status,
@@ -62,120 +53,40 @@ function QuizDetailPage({ quizId, onBack, onStartAttempt, onOpenReview }: QuizDe
   return (
     <StudentPageContainer width="fluid" spacing="stack">
       {status !== 'loading' && <BackLink onClick={() => onBack(quiz)}>Quay lại</BackLink>}
-      <ResourceState
-        status={status}
-        errorMessage={errorMessage}
-        onRetry={reload}
+      <ResourceState status={status} errorMessage={errorMessage} onRetry={reload}
         loading={<Skeleton className="h-[260px] rounded-xl" />}
         forbidden={{ title: getAssessmentLockMessage(null) }}
-        notFound={{ title: 'Không tìm thấy bài kiểm tra.' }}
-        error={{ title: 'Không thể tải bài kiểm tra.' }}
-      />
-
-      {status === 'ready' && quiz && (
-        <>
-          <Card
-            as="section"
-            variant="panel"
-            padding="none"
-            radius="xl"
-            className="flex flex-col items-start gap-4 p-7 max-[640px]:p-5"
-          >
-            <StatusBadge
-              tone={getQuizKind(quiz.type) === 'assessment' ? 'assessment' : 'practice'}
-              size="sm"
-              className="px-3 py-1 text-xs font-semibold tracking-[0.04em] uppercase"
-            >
-              {quizTypeLabel(quiz.type)}
-            </StatusBadge>
-            <h1 className="text-2xl leading-tight font-bold tracking-[-0.3px] text-text-heading max-[640px]:text-[22px]">
-              {quiz.title}
-            </h1>
-            {quiz.description && (
-              <p className="text-base leading-[1.6] text-text-body">{quiz.description}</p>
-            )}
-            {quizRequirement(quiz.type) && <p className="text-sm leading-6 text-text-body">{quizRequirement(quiz.type)}</p>}
-
-            <AssessmentFacts
-              className="grid-cols-[repeat(auto-fit,minmax(min(180px,100%),1fr))]"
-              facts={[
-                {
-                  icon: ListChecks,
-                  label: 'Số câu hỏi',
-                  value: `${quiz.questionCount} câu`,
-                  tone: 'primary',
-                },
-                ...(quiz.durationMinutes > 0
-                  ? [
-                      {
-                        icon: Clock,
-                        label: 'Thời gian',
-                        value: `${quiz.durationMinutes} phút`,
-                        tone: 'assessment' as const,
-                      },
-                    ]
-                  : []),
-                ...(quiz.passingPercentage != null
-                  ? [
-                      {
-                        icon: Target,
-                        label: 'Điểm đạt',
-                        value: `${quiz.passingPercentage}%`,
-                        tone: 'practice' as const,
-                      },
-                    ]
-                  : []),
-                {
-                  icon: RotateCcw,
-                  label: 'Lượt làm',
-                  value: `${quiz.attemptsUsed}/${quiz.maxAttempts}`,
-                  tone: 'live',
-                },
-              ]}
-            />
-
-            {quiz.passed && (
-              <StatusBadge tone="success" className="gap-1.5 px-3.5 py-1.5 text-sm font-bold">
-                <CheckCircle2 size={16} />
-                Đã đạt
-                {quiz.bestPercentage != null && ` · Kết quả tốt nhất ${quiz.bestPercentage}%`}
-              </StatusBadge>
-            )}
-
-            {quiz.locked ? (
-              <Notice tone="danger" className="flex-nowrap self-stretch">
-                <Lock size={16} className="shrink-0" />
-                {getAssessmentLockMessage(quiz.lockReason)}
-              </Notice>
-            ) : quiz.inProgressAttemptId ? (
-              <Button
-                shape="pill"
-                size="lg"
-                className="px-8 text-base font-semibold max-[640px]:w-full"
-                onClick={handleContinue}
-              >
-                Tiếp tục làm bài
-              </Button>
-            ) : (
-              <Button
-                shape="pill"
-                size="lg"
-                className="px-8 text-base font-semibold max-[640px]:w-full"
-                onClick={handleStart}
-                disabled={starting}
-              >
-                {starting ? 'Đang bắt đầu...' : 'Bắt đầu làm bài'}
-              </Button>
-            )}
-          </Card>
-
-          <QuizAttemptHistory
-            attempts={quiz.attempts}
-            allowReview={quiz.showAnswers}
-            onOpenReview={onOpenReview}
-          />
-        </>
-      )}
+        notFound={{ title: 'Không tìm thấy bài kiểm tra.' }} error={{ title: 'Không thể tải bài kiểm tra.' }} />
+      {status === 'ready' && quiz && <div className={styles.overview}>
+        <section className={styles.intro} aria-label="Thông tin bài thi">
+          <div className={styles.introBanner}>
+          <header className={styles.introTitle}><span className={styles.introIcon}><FileText size={20} /></span><div><p className={styles.type}>{quizTypeLabel(quiz.type)}</p><h1>{quiz.title}</h1></div></header>
+          {quiz.description && <p className="text-sm leading-relaxed text-text-body">{quiz.description}</p>}
+          <div className={styles.metadata}>
+            <span><ListChecks size={16} />{quiz.questionCount} câu hỏi</span>
+            <span><Clock size={16} />{quiz.durationMinutes ? quiz.durationMinutes + ' phút' : 'Không giới hạn thời gian'}</span>
+            <span><RotateCcw size={16} />Lượt làm: {quiz.attemptsUsed}/{quiz.maxAttempts}</span>
+            {quiz.passingPercentage != null && <span><Target size={16} />Điểm đạt: {quiz.passingPercentage}%</span>}
+          </div>
+          <div className={styles.introAction}>{quiz.locked ? <Notice tone="danger"><Lock size={16} />{getAssessmentLockMessage(quiz.lockReason)}</Notice>
+            : quiz.inProgressAttemptId ? (!quiz.attempts.some(attempt => attempt.attemptId === quiz.inProgressAttemptId) && <Button size="sm" shape="pill" onClick={handleContinue}>Tiếp tục làm bài</Button>)
+            : <Button size="sm" shape="pill" onClick={handleStart} disabled={starting}>{starting ? 'Đang bắt đầu...' : 'Bắt đầu làm bài'}</Button>}</div>
+          </div>
+          <QuizAttemptHistory attempts={quiz.attempts} allowReview={quiz.type === 'PLACEMENT' || quiz.showAnswers} onOpenReview={onOpenReview}
+            inProgressAttemptId={quiz.inProgressAttemptId} onContinue={!quiz.locked ? handleContinue : undefined} />
+        </section>
+        <aside className={styles.scoreAside} aria-label="Điểm số bài thi">
+          <div className={styles.scoreHighlight}>
+          <div className={styles.scoreNote}><p>Điểm cập nhật theo lần thi chính thức có kết quả cao nhất.</p><img src="/mascot/07.png" alt="" width={148} height={112} /></div>
+          <section className={styles.scoreCard}><h2>Điểm số</h2><div className={styles.scoreValue}><span>Kết quả cao nhất</span><strong>{quiz.bestPercentage == null ? '–' : quiz.bestPercentage + '%'}</strong></div>
+            {quiz.bestPercentage == null && <p className="text-xs text-text-secondary">Chưa có kết quả thi chính thức.</p>}
+            {quiz.passed && <p className="text-sm font-semibold text-badge-success-text">Đã đạt yêu cầu</p>}
+          </section>
+          </div>
+          {quizRequirement(quiz.type) && <p className="px-2 text-xs leading-relaxed text-text-secondary">{quizRequirement(quiz.type)}</p>}
+          {quiz.type === 'PLACEMENT' && quiz.sectionCourseId && onOpenCompetency && <Button appearance="outline" size="sm" onClick={() => onOpenCompetency(quiz.sectionCourseId!)}>Xem đánh giá năng lực</Button>}
+        </aside>
+      </div>}
     </StudentPageContainer>
   )
 }

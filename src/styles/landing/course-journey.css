@@ -1,0 +1,14 @@
+/* A bundle course's roadmap told as a road the page scrolls along (/courses/:id). The scene is a
+   screen-sized box pinned under the site header while its tall parent scrolls past; the script in
+   components/course/journey paints the floor and moves the landmarks. Sizes inside the scene are
+   in container units (cqw, cqh), so they follow the scene rather than the window. */
+@import './course-journey/scene.css';
+@import './course-journey/landmarks.css';
+@import './course-journey/progress.css';
+@import './course-journey/intro.css';
+@import './course-journey/stage.css';
+@import './course-journey/tickets.css';
+@import './course-journey/finale.css';
+@import './course-journey/motion.css';
+/* Last: its rules for a shorter scene replace the sizes set above. */
+@import './course-journey/compact.css';

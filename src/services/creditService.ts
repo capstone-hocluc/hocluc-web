@@ -17,6 +17,7 @@ export type CreditEntryType =
   | 'CAPTURE'
   | 'RELEASE'
   | 'SPEND'
+  | 'REFUND'
   | 'ADMIN_ADJUST'
   | 'EXPIRE'
   | 'MIGRATION_GRANT'

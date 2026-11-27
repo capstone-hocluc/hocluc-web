@@ -1,5 +1,6 @@
 export type ChatStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED'
 export interface ChatPerson { id: string; displayName: string }
+export interface ChatSubjectOption { id: string; name: string }
 export interface ChatCapabilities {
   canCreate: boolean; canSend?: boolean; reason?: string; attachmentsEnabled: boolean
   maxFileBytes?: number; maxAttachments?: number
@@ -12,7 +13,7 @@ export interface ChatContextSnapshot {
   courseId?: string; groupId?: string; lessonId?: string
 }
 export interface ChatConversation {
-  id: string; title: string; status: ChatStatus; student: ChatPerson; mentor?: ChatPerson
+  id: string; title: string; status: ChatStatus; student: ChatPerson; mentor?: ChatPerson; assignedMentor?: ChatPerson
   subjectCategoryId: string; subjectName?: string; lastMessagePreview?: string
   lastSequence: number; lastReadSequence: number; unreadCount: number
   canSend: boolean; sendDisabledReason?: string; assignmentVersion: number
@@ -33,7 +34,7 @@ export interface ChatConversationFilters {
   subjectCategoryId?: string; limit?: number
 }
 export interface CreateChatConversation {
-  title: string; subjectCategoryId: string; initialMessage: string; clientRequestId: string
+  title: string; subjectCategoryId?: string; initialMessage: string; clientRequestId: string
   contextSnapshot?: ChatContextSnapshot; attachmentIds?: string[]
 }
 export interface SendChatMessage { body: string; clientMessageId: string; attachmentIds?: string[] }

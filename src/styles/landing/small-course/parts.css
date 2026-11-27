@@ -1,0 +1,137 @@
+/* Each part is a container, so its columns follow the width of the column it sits in. */
+.course-page .sc-part {
+  container: sc-part / inline-size;
+}
+.course-page .sc-lines {
+  margin: -8px 0 20px;
+  max-width: 62ch;
+}
+/* Sentences after a part, quiet under it. */
+.course-page .sc-notes {
+  margin-top: 14px;
+  max-width: 62ch;
+  font-size: var(--small);
+}
+.course-page .sc-notes p + p {
+  margin-top: 4px;
+}
+
+/* Khóa dành cho ai: one tinted card per kind of student. */
+.course-page .sc-audience {
+  display: grid;
+  grid-template-columns: repeat(var(--sc-columns, 3), minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.course-page .sc-audience li {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 20px;
+  background: var(--sc-soft);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.course-page .sc-audience-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--sc-ink);
+  box-shadow: 0 8px 18px -12px rgb(11 35 72 / 45%);
+}
+.course-page .sc-audience-icon .ui-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Bạn sẽ học: ticked items in two columns on a tinted panel. */
+.course-page .sc-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 32px;
+  margin: 0;
+  padding: 28px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-size: 0.9375rem;
+}
+.course-page .sc-checklist.is-tinted {
+  border-color: transparent;
+  background:
+    radial-gradient(circle at 94% 8%, rgb(28 176 246 / 16%), transparent 40%),
+    linear-gradient(135deg, var(--blue-soft), #f6fbff 70%);
+}
+.course-page .sc-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--ink);
+  line-height: 1.6;
+}
+.course-page .sc-checklist li:only-child {
+  grid-column: 1 / -1;
+}
+
+/* Cách học: one card per way of studying, each with its own icon. */
+.course-page .sc-method {
+  display: grid;
+  grid-template-columns: repeat(var(--sc-columns, 3), minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.course-page .sc-method li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.course-page .sc-method-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--sc-soft);
+  color: var(--sc-ink);
+}
+.course-page .sc-method-icon .ui-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* One card per row: the icon sits beside its text. */
+@container sc-part (max-width: 640px) {
+  .course-page .sc-audience,
+  .course-page .sc-method {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .course-page .sc-audience li {
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    padding: 18px 20px;
+  }
+}
+@container sc-part (max-width: 520px) {
+  .course-page .sc-checklist {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 22px;
+  }
+}

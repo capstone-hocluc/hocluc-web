@@ -6,6 +6,22 @@
 //   /console/{admin|manager|staff|teacher|mentor}/<page>
 
 export const CONSOLE_LOGIN_PATH = '/console/login'
+export const TEACHER_SCHEDULE_PATH = '/console/teacher/schedule'
+export const TEACHER_ZOOM_CARD_PATH = `${TEACHER_SCHEDULE_PATH}#teacher-zoom-card`
+
+export function teacherLiveRoomPath(liveClassId: string) {
+  return `/console/teacher/live-classes/${encodeURIComponent(liveClassId)}/room`
+}
+
+export function teacherLiveRoomId(path: string) {
+  const match = stripConsolePrefix(path.split(/[?#]/, 1)[0]).match(/^\/teacher\/live-classes\/([^/]+)\/room$/)
+  if (!match) return null
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    return null
+  }
+}
 
 /** Convert the console's quiz page keys into reloadable URLs. */
 export function quizPagePath(page: string): string {

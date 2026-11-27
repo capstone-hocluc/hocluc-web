@@ -8,6 +8,7 @@ import type {
   CourseStudySection,
   GiftCourse,
 } from '../../src/services/courseService'
+import type { CourseReviewSummary } from '../../src/services/courseReviewService'
 import type { LessonDetail } from '../../src/services/lessonService'
 
 // Mutable copies live inside installRoadmapFixture; these helpers only build the NEW API shape
@@ -235,6 +236,30 @@ export function roadmapStudy(): CourseStudy {
   }
 }
 
+/**
+ * The study of a gift course a seeded study lists: the gift opens on its own lessons, so it answers with one section.
+ * When the parent continues inside this gift, that lesson is the gift's lesson.
+ */
+function giftStudy(courseId: string, title: string, parent: CourseStudy): CourseStudy {
+  const continues = parent.continueSectionCourseId === courseId && parent.continueLessonId
+  const lesson = continues
+    ? studyLesson(parent.continueLessonId!, parent.continueLessonTitle ?? title, 1)
+    : studyLesson(`${courseId}-lesson`, `Bài của ${title}`, 1)
+  return {
+    courseId,
+    title,
+    courseType: 'SECTION',
+    totalLessons: 1,
+    completedLessons: 0,
+    progressPercentage: 0,
+    continueLessonId: null,
+    continueLessonTitle: null,
+    continueSectionCourseId: null,
+    nextLiveClass: null,
+    phases: [studyPhase({ id: `${courseId}-phase`, name: title, sections: [studySection(courseId, title, [lesson])] })],
+  }
+}
+
 /** A course whose content is entirely unphased: no "Xuyên suốt lộ trình" heading. */
 export function unphasedStudy(): CourseStudy {
   return {
@@ -282,7 +307,8 @@ export function roadmapLesson(): LessonDetail {
     chapterTitle: null,
     sectionCourseId: ROADMAP_IDS.giftB,
     sectionCourseTitle: 'Quà giai đoạn 2 · B',
-    owned: false,
+    // The student owns the roadmap, and with it every gift it hands out.
+    owned: true,
     progress: null,
     quizzes: [],
     previousLessonId: null,
@@ -311,6 +337,8 @@ export interface RoadmapSeed {
   courses?: Record<string, CourseDetail>
   studies?: Record<string, CourseStudy>
   lessons?: Record<string, LessonDetail>
+  /** What /reviews/summary answers for every course. */
+  reviewSummary?: CourseReviewSummary
 }
 
 // Fail-closed API boundary: every /api/ call is answered here; anything else is either the local
@@ -320,6 +348,13 @@ export async function installRoadmapFixture(page: Page, seed: RoadmapSeed = {}) 
     courses: seed.courses ?? {},
     studies: seed.studies ?? {},
     lessons: seed.lessons ?? {},
+    reviewSummary: seed.reviewSummary ?? {
+      averageRating: null,
+      reviewCount: 0,
+      distribution: [0, 0, 0, 0, 0],
+      eligibility: 'NO_LESSON_COMPLETED',
+      mine: null,
+    },
     requests: [] as CapturedRequest[],
     unmatchedRequests: [] as string[],
     pageErrors: [] as string[],
@@ -369,12 +404,13 @@ export async function installRoadmapFixture(page: Page, seed: RoadmapSeed = {}) 
         firstName: 'Học viên',
         lastName: 'QA',
         role: 'STUDENT',
-        roles: ['STUDENT'],
         status: 'ACTIVE',
         emailVerified: true,
         onboardingState: 'COMPLETED',
       })
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
+    // No live notifications here: an empty answer stops the bell from following them.
+    if (path === '/api/v1/notifications/stream') return route.fulfill({ status: 204 })
     // Every student page shows the star balance and the streak in its top bar.
     if (path === '/api/v1/credits/me') return answer({ available: 0, bonus: 0, paid: 0, held: 0 })
     if (path === '/api/v1/credits/streak') return answer({ current: 0, longest: 0, doneToday: false, freezesAvailable: 0, maxFreezes: 2, freezePrice: 10, today: '2026-11-05', days: [] })
@@ -387,9 +423,16 @@ export async function installRoadmapFixture(page: Page, seed: RoadmapSeed = {}) 
         totalPages: 0,
         last: true,
       })
+    // Course pages and the study page ask for the course's reviews; none in these tests.
+    if (path.startsWith('/api/v1/courses/') && path.endsWith('/reviews/summary') && method === 'GET')
+      return answer(state.reviewSummary)
+    if (path.startsWith('/api/v1/courses/') && path.endsWith('/reviews') && method === 'GET')
+      return answer({ content: [], pageNumber: 0, pageSize: 10, totalElements: 0, totalPages: 0, last: true })
     if (path.startsWith('/api/v1/courses/') && path.endsWith('/study') && method === 'GET') {
       const id = decodeURIComponent(path.split('/')[4] ?? '')
-      const study = state.studies[id]
+      const parent = Object.values(state.studies).find((study) => study.phases.some((phase) => phase.gifts.some((item) => item.courseId === id)))
+      const gift = parent?.phases.flatMap((phase) => phase.gifts).find((item) => item.courseId === id)
+      const study = state.studies[id] ?? (parent && gift && giftStudy(id, gift.title, parent))
       return study ? answer(study) : answer(null, 404, 'Study not found.')
     }
     if (path.startsWith('/api/v1/courses/') && method === 'GET') {

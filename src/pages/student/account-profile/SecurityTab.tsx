@@ -118,7 +118,7 @@ function SecurityTab() {
 
   return (
     <AccountPanel title="Đổi mật khẩu" subtitle="Bảo mật tài khoản của bạn">
-      <div className="max-w-[520px]">
+      <div className="mx-auto w-full max-w-[520px]">
         <AccountForm>
           <Field full label="Mật khẩu hiện tại" error={errors.oldPassword}>
             <PasswordInput
@@ -182,6 +182,7 @@ function SecurityTab() {
             </ul>
           </div>
 
+          <div className="col-span-full flex justify-center">
           <SaveBar
             saving={saving}
             saved={saved}
@@ -189,6 +190,7 @@ function SecurityTab() {
             savedLabel="Đã cập nhật mật khẩu"
             onSubmit={submit}
           />
+          </div>
         </AccountForm>
       </div>
     </AccountPanel>

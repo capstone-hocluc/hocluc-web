@@ -12,6 +12,7 @@
 @import './styles/student/student-app.css';
 @import './styles/student/student-app-responsive.css';
 @import './styles/components/shared.css';
+@import './styles/components/credit-effects.css';
 @import './styles/scheduling/scheduling.css';
 
 /* New styles added after the split above go here. */
@@ -22,4 +23,30 @@
 @import './styles/tailgrids/tailgrids-default.css';
 @import './styles/tailgrids/tailgrids-dark.css';
 @import './styles/base/dashboard-brand.css';
+@import "tw-animate-css";
+@import "tw-shimmer";
+@import './styles/assistant-ui/theme.css';
 @custom-variant dark (&:where(html[data-theme='dark'], html[data-theme='dark'] *));
+
+@custom-variant data-open (&:where([data-state="open"], [data-open]:not([data-open="false"])));
+
+@custom-variant data-closed (&:where([data-state="closed"], [data-closed]:not([data-closed="false"])));
+
+@theme inline {
+  @keyframes collapsible-down {
+  from {
+    height: 0;
+    }
+  to {
+    height: var(--radix-collapsible-content-height, var(--collapsible-panel-height, auto));
+    }
+  }
+  @keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height, var(--collapsible-panel-height, auto));
+    }
+  to {
+    height: 0;
+    }
+  }
+}

@@ -4,6 +4,8 @@ export interface Toast {
   id: number
   variant: 'error' | 'success' | 'info'
   message: string
+  /** Makes the message a button, named by `label`, that runs `onClick` and closes the toast. */
+  action?: { label: string; onClick: () => void }
 }
 
 type Listener = (toast: Toast) => void
@@ -27,6 +29,10 @@ export function showErrorToast(message: string) {
 
 export function showSuccessToast(message: string) {
   emitToast({ id: Date.now() + Math.random(), variant: 'success', message })
+}
+
+export function showInfoToast(message: string, action?: Toast['action']) {
+  emitToast({ id: Date.now() + Math.random(), variant: 'info', message, action })
 }
 
 // Runs once per page load (module-level, not a React effect) so it isn't

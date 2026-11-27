@@ -1,0 +1,135 @@
+/* A course sold as a set of smaller courses (/courses/:id), on a screen wide enough for its roadmap
+   road (CourseJourney). The page reads as one column from the title down to the reviews: the hero
+   and the purchase card share the first row, every section below spans the page, and the page
+   fades into the road's sky before it and out of its ground after it. Narrower screens keep the
+   two columns of course-page.css. */
+@media (min-width: 1200px) {
+  .course-page .cd-layout.is-bundle {
+    position: relative;
+    isolation: isolate;
+    gap: 72px 64px;
+    padding-bottom: 96px;
+  }
+  /* The sections of the main column become rows of the page's own grid. */
+  .course-page .cd-layout.is-bundle .cd-main {
+    display: contents;
+  }
+  .course-page .cd-layout.is-bundle .cd-main > * {
+    grid-column: 1 / -1;
+  }
+  .course-page .cd-layout.is-bundle .cd-main > .cd-hero {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  /* The card stays beside the title. The road ends on its own card to buy from. */
+  .course-page .cd-layout.is-bundle .cd-aside {
+    position: static;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* The description's tiles as one family of cards, three to a row. */
+  .course-page .is-bundle .ab-bento {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .course-page .is-bundle .ab-tile {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: inherit;
+  }
+  .course-page .is-bundle .ab-tile h3 {
+    color: var(--ink);
+  }
+  .course-page .is-bundle .ab-tile li {
+    color: var(--muted);
+  }
+  .course-page .is-bundle .ab-kicker {
+    display: none;
+  }
+  .course-page .is-bundle .ab-audience {
+    grid-column: auto;
+    display: block;
+  }
+  .course-page .is-bundle .ab-audience img {
+    display: none;
+  }
+  .course-page .is-bundle .ab-audience li {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .course-page .is-bundle .ab-audience li:hover {
+    transform: none;
+  }
+  .course-page .is-bundle .ab-get-icon.tone-0 {
+    background: rgb(28 176 246 / 0.14);
+    color: #0b78b8;
+  }
+  .course-page .is-bundle .ab-get-icon.tone-1 {
+    background: rgb(52 211 153 / 0.18);
+    color: #0f8a5f;
+  }
+  .course-page .is-bundle .ab-get-icon.tone-2 {
+    background: rgb(251 191 36 / 0.2);
+    color: #a66a00;
+  }
+  .course-page .is-bundle .ab-get-icon.tone-3 {
+    background: rgb(244 114 182 / 0.16);
+    color: #c2327e;
+  }
+  /* Timing: a strip under the three cards, its heading beside its lines. */
+  .course-page .is-bundle .ab-time-copy {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 24px;
+  }
+  .course-page .is-bundle .ab-time h3 {
+    margin-bottom: 0;
+  }
+  .course-page .is-bundle .ab-time ul {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 8px 32px;
+  }
+
+  /* The reviews keep a readable measure on the page's left edge. */
+  .course-page .is-bundle #cd-reviews-title ~ div,
+  .course-page .cd-after-road #cd-reviews-title ~ div {
+    max-width: 880px;
+  }
+
+  /* Before the road: the page fades into the sky the road opens on. The band is as wide as the
+     window; the page clips what reaches past it. */
+  .landing-page.course-page {
+    overflow-x: clip;
+  }
+  .course-page .cd-layout.is-before-road::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    bottom: 0;
+    left: calc(50% - 50vw);
+    width: 100vw;
+    height: 360px;
+    background: linear-gradient(to bottom, rgb(215 232 253 / 0%), var(--cj-sky));
+  }
+}
+
+/* After the road: the reviews start on the road's ground and fade back to the page. */
+.course-page .cd-after-road {
+  position: relative;
+  padding-block: 72px;
+  background: linear-gradient(to bottom, var(--cj-air), var(--paper) 240px);
+}
+/* The last strip of the road dissolves into its ground, so the scene does not end on a cut. */
+.course-page .cd-after-road::before {
+  content: '';
+  position: absolute;
+  inset: auto 0 100%;
+  height: 40px;
+  background: linear-gradient(to bottom, rgb(243 248 255 / 0%), var(--cj-air));
+  pointer-events: none;
+}

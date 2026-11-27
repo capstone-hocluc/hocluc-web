@@ -93,11 +93,3 @@ export function liveDraftView(text: string): LiveDraftView {
   const passage = words(value.passage)
   return { passage: passage || null, questions }
 }
-
-/** The last words written, for a one-line progress note. */
-export function liveDraftTail(view: LiveDraftView, length = 70): string {
-  const last = view.questions[view.questions.length - 1]
-  const text = last ? (last.options[last.options.length - 1] ?? last.stem) : (view.passage ?? '')
-  const flat = text.replace(/\s+/g, ' ').trim()
-  return flat.length > length ? `…${flat.slice(-length)}` : flat
-}

@@ -15,7 +15,8 @@ import OrderManagement from './crud/order-management'
 import CreditManagement from './crud/credit-management'
 import EnrollmentManagement from './crud/enrollment-management'
 import ManagerOverview from './ManagerOverview'
-import SchedulingPageFallback from '../scheduling/SchedulingPageFallback'
+import MentorOverview from './MentorOverview'
+import SchedulingPageFallback from '../console/schedule/scheduling-page-fallback'
 import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
@@ -40,9 +41,6 @@ import { PageTabs, PageTabsList } from '../console/page-tabs'
 import { roleHome } from '../../lib/role-home'
 
 const SchedulingPage = lazy(() => import('../../pages/management/SchedulingPage'))
-const AttendanceManagementPage = lazy(
-  () => import('../../pages/management/AttendanceManagementPage')
-)
 
 interface ManagementScreenProps {
   role: ManagementRole
@@ -96,7 +94,9 @@ export function ManagementScreen({
                 onNavigate={onNavigate}
                 areaLabel={role === 'ADMINISTRATOR' ? 'quản trị' : 'vận hành'}
               />
-            ) : null}
+            ) : (
+              <MentorOverview />
+            )}
             <DashboardActions role={role} onNavigate={onNavigate} />
           </>
         )
@@ -129,12 +129,6 @@ export function ManagementScreen({
         return (
           <Suspense fallback={<SchedulingPageFallback title={title} />}>
             <SchedulingPage role={role === 'MANAGER' ? 'MANAGER' : 'STAFF'} navigation={navigation} />
-          </Suspense>
-        )
-      case 'attendance':
-        return (
-          <Suspense fallback={<SchedulingPageFallback title={title} />}>
-            <AttendanceManagementPage title={title} navigation={navigation} />
           </Suspense>
         )
       case 'students':

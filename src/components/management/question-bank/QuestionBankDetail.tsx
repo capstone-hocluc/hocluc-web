@@ -153,7 +153,7 @@ function LabelPanel({
           {lessons.status === 'ready' && lessons.data?.length === 0 && <span className="text-text-tertiary">Chưa có bài học</span>}
           {lessons.data && [...new Map(lessons.data.map((lesson) => [lesson.lessonId, lesson])).values()].map((lesson) => (
             <a key={lesson.lessonId} className="break-words text-sm text-brand-500 hover:underline"
-              href={consoleTracePath('courses', { courseId: lesson.courseId })}>
+              href={consoleTracePath('courses', { courseId: lesson.courseId, tab: 'content' })}>
               {lesson.courseTitle} › {lesson.chapterTitle} › {lesson.lessonTitle}
             </a>
           ))}
@@ -410,6 +410,8 @@ export default function QuestionBankDetail({
       open={id !== null}
       onClose={onClose}
       maxWidth={1120}
+      // One size for every question: a short one leaves room below, a long one scrolls inside.
+      height={820}
       title={question ? dialogTitle(question) : 'Câu hỏi'}
     >
       {question ? (

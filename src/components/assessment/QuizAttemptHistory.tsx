@@ -1,69 +1,39 @@
-import { Eye } from '../console/icons'
+import { useState } from 'react'
 import type { QuizAttemptSummary } from '../../services/assessmentService'
 import { getAttemptStatusLabel } from '../../lib/attemptStatus'
-import { formatDateTime, formatDuration } from '../../lib/courseFormat'
+import { formatDateTime } from '../../lib/courseFormat'
 import Button from '../ui/Button'
-import Card, { CardTitle } from '../ui/Card'
+import styles from './AssessmentWorkspace.module.css'
 
 interface QuizAttemptHistoryProps {
   attempts: QuizAttemptSummary[]
   allowReview: boolean
   onOpenReview: (attemptId: string) => void
+  inProgressAttemptId?: string | null
+  onContinue?: () => void
 }
 
-function QuizAttemptHistory({ attempts, allowReview, onOpenReview }: QuizAttemptHistoryProps) {
-  if (attempts.length === 0) return null
-
-  const sorted = [...attempts].sort((a, b) => b.attemptNumber - a.attemptNumber)
-
-  return (
-    <Card as="section" variant="panel" padding="none" radius="xl" className="p-6 max-[640px]:p-5">
-      <CardTitle className="mb-4 text-xl">Lịch sử làm bài</CardTitle>
-      <div className="flex flex-col gap-3">
-        {sorted.map((attempt) => {
-          const hasResult = attempt.status === 'GRADED'
-          return (
-            <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-card bg-surface-sky px-4 py-3.5"
-              key={attempt.attemptId}
-            >
-              <div className="flex min-w-[96px] flex-col gap-0.5">
-                <span className="text-base font-semibold text-text-heading">
-                  Lần {attempt.attemptNumber}
-                </span>
-                <span className="text-sm text-text-secondary">
-                  {getAttemptStatusLabel(attempt.status)}
-                </span>
-              </div>
-              <div className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
-                {attempt.status !== 'IN_PROGRESS' && (
-                  <strong className="text-base font-bold text-primary-text">
-                    {attempt.percentage}%
-                  </strong>
-                )}
-                {attempt.timeSpentSeconds > 0 && (
-                  <span>{formatDuration(attempt.timeSpentSeconds)}</span>
-                )}
-                <span>{formatDateTime(attempt.submittedAt || attempt.startedAt || '')}</span>
-              </div>
-              {hasResult && (
-                <Button
-                  appearance="outline"
-                  shape="pill"
-                  size="sm"
-                  className="h-auto border-primary px-4 py-2 text-sm font-semibold"
-                  onClick={() => onOpenReview(attempt.attemptId)}
-                >
-                  <Eye size={16} />
-                  {allowReview ? 'Xem lại' : 'Xem kết quả'}
-                </Button>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </Card>
-  )
+function QuizAttemptHistory({ attempts, allowReview, onOpenReview, inProgressAttemptId, onContinue }: QuizAttemptHistoryProps) {
+  const [showAll, setShowAll] = useState(false)
+  const sorted = [...attempts].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt) || b.attemptNumber - a.attemptNumber)
+  const open = sorted.find(attempt => attempt.attemptId === inProgressAttemptId)
+  const pinned = open ? [open, ...sorted.filter(attempt => attempt !== open)] : sorted
+  return <section className={styles.history} aria-label="Lịch sử làm bài">
+    <h2>Lịch sử làm bài</h2>
+    {pinned.length ? <ul>{(showAll ? pinned : pinned.slice(0, 2)).map(attempt => {
+      const graded = attempt.status === 'GRADED'
+      return <li key={attempt.attemptId} className={styles.attemptRow}>
+        <span className={styles.attemptScore} data-graded={graded || undefined}>{graded && attempt.percentage != null ? attempt.percentage + '%' : '–'}</span>
+        <div className={styles.attemptMeta}>
+          <h3>Làm bài lần {attempt.attemptNumber}{attempt.mode === 'PRACTICE' ? ' · Luyện tập' : ''}</h3>
+          <p>{graded ? 'Đã nộp: ' + formatDateTime(attempt.submittedAt || attempt.startedAt) : attempt.status === 'IN_PROGRESS' ? 'Bạn chưa nộp bài' : getAttemptStatusLabel(attempt.status)}</p>
+        </div>
+        {graded ? <Button appearance="ghost" size="sm" onClick={() => onOpenReview(attempt.attemptId)}>{allowReview ? 'Xem lại' : 'Xem kết quả'}</Button>
+          : attempt.attemptId === inProgressAttemptId && onContinue ? <Button appearance="outline" shape="pill" size="sm" onClick={onContinue}>Tiếp tục làm bài</Button> : null}
+      </li>
+    })}</ul> : <p className="py-4 text-sm text-text-secondary">Bạn chưa có lượt làm. Bắt đầu bài thi khi đã sẵn sàng.</p>}
+    {pinned.length > 2 && <div className={styles.showAll}><Button appearance="ghost" size="sm" onClick={() => setShowAll(value => !value)}>{showAll ? 'Thu gọn' : 'Xem tất cả (' + pinned.length + ')'}</Button></div>}
+  </section>
 }
 
 export default QuizAttemptHistory

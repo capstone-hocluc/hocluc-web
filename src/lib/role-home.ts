@@ -10,7 +10,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 const ROLE_HOME: Record<UserRole, string> = {
-  STUDENT: '/student/dashboard',
+  STUDENT: '/student/learning-profile',
   MENTOR: '/console/mentor/dashboard',
   TEACHER: '/console/teacher/dashboard',
   STAFF: '/console/staff/dashboard',
@@ -24,9 +24,3 @@ export function roleHome(role: UserRole) {
 
 export const PERSONNEL_ROLES: readonly UserRole[] = ['ADMINISTRATOR', 'MANAGER', 'STAFF', 'TEACHER', 'MENTOR']
 
-/** Student is exclusive; old servers may only return role. */
-export function grantedRoles(profile: { role: UserRole; roles?: UserRole[] }): UserRole[] {
-  if (profile.role === 'STUDENT') return ['STUDENT']
-  const assigned = new Set(profile.roles ?? [profile.role])
-  return PERSONNEL_ROLES.filter((role) => assigned.has(role))
-}

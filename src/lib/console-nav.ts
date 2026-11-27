@@ -69,13 +69,15 @@ const GROUP_LABELS: Record<NavGroupId, string | null> = {
   system: 'Hệ thống',
 }
 
-// From the work a role does every day down to what it opens now and then.
+// From the work a role does every day down to what it opens now and then: the courses, tests and question bank first,
+// the learners and their payments next, the people and their roles last, for the administrator too. A teacher's own
+// classes (only a teacher has them) come before them.
 const GROUP_ORDER: NavGroupId[] = [
   'overview',
-  'operations',
   'classes',
-  'learners',
   'training',
+  'learners',
+  'operations',
   'support',
   'system',
 ]
@@ -85,23 +87,12 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
   { page: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard, group: 'overview' },
   {
     page: 'schedules',
-    label: 'Lịch học',
-    tabLabel: 'Lịch học',
+    label: 'Lịch dạy',
     icon: CalendarDays,
     group: 'operations',
     permission: 'SCHEDULE_READ',
     writePermission: 'SCHEDULE_WRITE',
     roles: ['STAFF', 'MANAGER'],
-  },
-  {
-    page: 'attendance',
-    tabOf: 'schedules',
-    label: 'Điểm danh',
-    tabLabel: 'Điểm danh',
-    icon: ClipboardCheck,
-    group: 'operations',
-    permission: 'ATTENDANCE_WRITE',
-    roles: ['STAFF'],
   },
   {
     page: 'chat-queue',
@@ -277,15 +268,6 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
   },
   {
-    // A teacher has no bank page to reach the assistant through, so it is a menu entry of its own.
-    page: 'ai-assistant',
-    label: 'Trợ lý AI',
-    icon: Sparkles,
-    group: 'training',
-    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
-    roles: ['TEACHER'],
-  },
-  {
     page: 'solution-queue',
     label: 'Duyệt lời giải AI',
     icon: Sparkles,
@@ -402,13 +384,7 @@ export interface ConsoleNavGroup {
 
 export function buildNav(role: UserRole): ConsoleNavGroup[] {
   const visible = CONSOLE_NAV.filter((item) => !item.tabOf && allows(role, item) && isOffered(item))
-  // The administrator works on the system first, right under the overview; for everyone else it is a side
-  // errand, so it goes last.
-  const order: NavGroupId[] =
-    role === 'ADMINISTRATOR'
-      ? ['overview', 'system', ...GROUP_ORDER.filter((id) => id !== 'overview' && id !== 'system')]
-      : GROUP_ORDER
-  return order
+  return GROUP_ORDER
     .map((id) => ({
       id,
       label: GROUP_LABELS[id],

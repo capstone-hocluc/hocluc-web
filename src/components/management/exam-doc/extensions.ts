@@ -338,6 +338,25 @@ export const MathNode = Node.create<MathOptions>({
     const onEdit = this.options.onEdit
     return ({ node, view, getPos }) => new MathView(node, view, getPos, onEdit)
   },
+  addProseMirrorPlugins() {
+    const name = this.name
+    return [
+      new Plugin({
+        key: new PluginKey('mathSelection'),
+        props: {
+          // The browser's range over a formula is read back as text: its glyph boxes were painted with the selection colour
+          // and the formula stopped acting as one piece. A range covering exactly one formula selects the formula.
+          createSelectionBetween(view, $anchor, $head) {
+            const from = Math.min($anchor.pos, $head.pos)
+            const to = Math.max($anchor.pos, $head.pos)
+            const node = view.state.doc.nodeAt(from)
+            if (!node || node.type.name !== name || from + node.nodeSize !== to) return null
+            return NodeSelection.create(view.state.doc, from)
+          },
+        },
+      }),
+    ]
+  },
   addKeyboardShortcuts() {
     const edit = () => {
       const { selection } = this.editor.state

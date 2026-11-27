@@ -14,7 +14,7 @@ Ngày 16/10/2026. Học viên: `/login`. Quản trị/nhân sự: `/console/logi
 
 ## Kiểm tra
 
-- 14/14 E2E trong `playwright.landing.config.ts` đạt: 10 landing và 4 auth.
+- E2E landing và auth chạy trong `playwright.config.ts` (`landing.spec.ts`, `auth-design.spec.ts`).
 - Auth kiểm tra validation, gửi bằng Enter, hiển thị mật khẩu, lỗi đăng nhập, audience học viên/quản trị, chặn profile học viên vào quản trị và xóa token, đổi theme, bố cục tại 1280/1440/1920 cho login/signup/recovery/verify-email.
 - TypeScript ứng dụng và build production đạt. ESLint các file quản trị/khung/test mới đạt; AuthPage còn cảnh báo dependency effect có sẵn ở luồng khôi phục/xác minh.
 - TypeScript E2E toàn repo còn ba lỗi trong `tests/e2e/core-crud-fixture.ts`: thiếu trường review của CourseAdmin; `phaseId` không còn thuộc CourseAdminSection; ChapterAdmin thiếu sectionId/sectionTitle. Không sửa fixture CRUD trong công việc giao diện auth.

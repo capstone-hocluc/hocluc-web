@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import type { UserRole } from '../../src/services/userService'
 import type { TeacherQuizRecord, TeacherQuizQuestion, TeacherQuizType, TeacherQuizSection } from '../../src/services/teacherQuizService'
 
@@ -8,6 +8,7 @@ export const QUIZ_IDS = {
   otherCourse: '10000000-0000-0000-0000-000000000002',
   chapter: '20000000-0000-0000-0000-000000000001',
   lesson: '30000000-0000-0000-0000-000000000001',
+  nextLesson: '30000000-0000-0000-0000-000000000002',
   otherChapter: '20000000-0000-0000-0000-000000000002',
   quiz: '50000000-0000-0000-0000-000000000001',
   exam: '50000000-0000-0000-0000-000000000002',
@@ -39,7 +40,7 @@ const question = (): TeacherQuizQuestion => ({
 })
 
 /** Browser tests with BE-shaped, fail-closed fixtures; never a live BE authorization test. */
-export async function installQuizFixture(page: Page, role: UserRole, { authenticated = true } = {}) {
+export async function installQuizFixture(page: Page, role: UserRole, { authenticated = true, trackLessonProgress = false } = {}) {
   const state = {
     role, deniedQuiz: '', denyNextWrite: false, denyNextOrder: false, nextQuestion: 2,
     denyWriteStatus: 403, denyWriteMessage: 'Không có quyền ghi quiz.',
@@ -53,6 +54,21 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
     writeGate: null as Promise<void> | null,
     studentStatus: 'IN_PROGRESS', studentOption: '', studentLockReason: null as string | null,
     studentShowAnswers: true, studentAnswerFailures: 0, studentDeadline: '2100-01-01T00:00:00Z',
+    completedLessons: new Set<string>(), studentEarnedToday: false,
+  }
+  const lessonIds = trackLessonProgress ? [QUIZ_IDS.lesson, QUIZ_IDS.nextLesson] : [QUIZ_IDS.lesson]
+  const lessonTitle = (id: string) => id === QUIZ_IDS.lesson ? 'Bài học Student' : 'Bài học tiếp theo'
+  const chapterCompleted = () => lessonIds.every(id => state.completedLessons.has(id))
+  const progressOf = (lessonId: string) => {
+    const completed = state.completedLessons.has(lessonId)
+    return { lessonId, status: completed ? 'COMPLETED' : 'IN_PROGRESS', progressPercentage: completed ? 100 : 0,
+      watchDurationSeconds: 0, sectionCourseId: QUIZ_IDS.otherCourse, chapterCompleted: chapterCompleted() }
+  }
+  const lessonQuizzes = (lessonId: string) => {
+    if (!trackLessonProgress) return [state.quizzes[0]]
+    if (lessonId !== QUIZ_IDS.lesson) return []
+    const locked = !state.completedLessons.has(lessonId)
+    return [{ ...state.quizzes[0], type: 'LESSON', locked, lockReason: locked ? 'LESSON_NOT_COMPLETED' : null }]
   }
   page.on('pageerror', error => state.pageErrors.push(error.message))
   if (authenticated) await page.addInitScript((token) => {
@@ -75,37 +91,83 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
       body: JSON.stringify({ success: status < 400, status, data, message }) })
     if (path === '/api/v1/auth/refresh') return answer(null, 401, 'No refresh cookie')
     if (path === '/api/v1/auth/logout') return answer(null)
+    if (path === '/api/v1/free-exams') return answer(state.quizzes.filter(q => q.type === 'PLACEMENT' && q.status === 'PUBLISHED')
+      .sort((a, b) => Date.parse(b.createdAt!) - Date.parse(a.createdAt!)).map(q => ({
+        id: q.id, title: q.title, description: q.description, courseId: q.courseId, courseTitle: q.courseTitle,
+        durationMinutes: q.durationMinutes, questionCount: q.questionCount, maxAttempts: q.maxAttempts,
+        practiceAllowed: q.practiceAllowed, publishedAt: q.createdAt, availableFrom: q.availableFrom, availableUntil: q.availableUntil,
+        attemptsUsed: activeRole === 'STUDENT' ? 0 : null, bestPercentage: null, locked: activeRole === 'STUDENT' ? false : null,
+        lockReason: null, inProgressAttemptId: null,
+      })))
+    if (path === '/api/v1/courses/main') return answer([])
+    // The study page asks whether the student may review the course; not yet in these tests.
+    if (/^\/api\/v1\/courses\/[^/]+\/reviews\/summary$/.test(path)) return answer({
+      averageRating: null, reviewCount: 0, distribution: [0, 0, 0, 0, 0], eligibility: 'NO_LESSON_COMPLETED', mine: null,
+    })
+    if (/^\/api\/v1\/courses\/[^/]+\/competency$/.test(path)) return answer({
+      courseId: path.split('/').at(-2), courseTitle: 'Khóa Student', studentId: QUIZ_IDS.user,
+      examCount: 0, totalQuestions: 0, correctCount: 0, wrongCount: 0, score: null, maxScore: null,
+      overallPercentage: null, timeSpentSeconds: 0, level: null, weakCategoryId: null, weakCategoryName: null,
+      strongCategoryId: null, strongCategoryName: null, categories: [], exams: [], pendingExams: [],
+    })
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
-    // Every student page shows the star balance and the streak in its top bar.
-    if (path === '/api/v1/credits/me') return answer({ available: 0, bonus: 0, paid: 0, held: 0 })
-    if (path === '/api/v1/credits/streak') return answer({ current: 0, longest: 0, doneToday: false, freezesAvailable: 0, maxFreezes: 2, freezePrice: 10, today: '2026-11-05', days: [] })
-    if (path === '/api/v1/users/profiles') return answer({ id: QUIZ_IDS.user, role: activeRole,
-      roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR', 'TEACHER', 'STUDENT'], displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
-      email: 'quiz@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
-    if (path === '/api/v1/auth/switch-role') {
-      state.role = body.role as UserRole
-      return answer({ accessToken: quizToken(state.role) })
+    // No live notifications here: an empty answer stops the bell from following them.
+    if (path === '/api/v1/notifications/stream') return route.fulfill({ status: 204 })
+    if (path === '/api/v1/live-classes' && method === 'GET') return answer([])
+    if (path === '/api/v1/teacher/zoom' && method === 'GET') {
+      return answer({ connected: false, zoomEmail: null, planType: null, zoomEnabled: false, status: null, lastError: null })
     }
+    // Every student page shows the star balance and the streak in its top bar.
+    if (path === '/api/v1/credits/me') {
+      const earned = Number(state.studentEarnedToday)
+      return answer({ available: earned, bonus: earned, paid: 0, held: 0 })
+    }
+    if (path === '/api/v1/credits/streak') {
+      const earned = Number(state.studentEarnedToday)
+      return answer({ current: earned, longest: earned, doneToday: state.studentEarnedToday, freezesAvailable: 0, maxFreezes: 2, freezePrice: 10, today: '2026-11-05', days: [] })
+    }
+    if (path === '/api/v1/credits/packs') return answer([])
+    if (path === '/api/v1/credits/me/history') {
+      const content = state.studentEarnedToday ? [{ id: 'reward', type: 'EARN_STREAK', amount: 1, balanceAfter: 1, createdAt: stamp }] : []
+      return answer({ content, last: true })
+    }
+    if (path === '/api/v1/users/profiles') return answer({ id: QUIZ_IDS.user, role: activeRole,
+      displayName: 'Quiz QA', firstName: 'Quiz', lastName: 'QA',
+      email: 'quiz@example.invalid', status: 'ACTIVE', emailVerified: true, studentProfile: null })
     if (activeRole === 'STUDENT' && method === 'GET') {
       if (path === `/api/v1/courses/${QUIZ_IDS.course}/study`) {
+        const completed = state.completedLessons.size
+        const percent = completed / lessonIds.length * 100
+        const chapterQuizzes = trackLessonProgress ? [{ ...record(QUIZ_IDS.otherQuiz, 'Quiz cuối chương', 'CHAPTER'),
+          locked: !chapterCompleted(), lockReason: chapterCompleted() ? null : 'CHAPTER_NOT_COMPLETED' }] : []
         return answer({ courseId: QUIZ_IDS.course, title: 'Khóa học Student', courseType: 'MAIN',
-          totalLessons: 1, completedLessons: 0, progressPercentage: 0, continueLessonId: QUIZ_IDS.lesson,
+          totalLessons: lessonIds.length, completedLessons: completed, progressPercentage: percent,
+          continueLessonId: lessonIds.find(id => !state.completedLessons.has(id)) ?? null,
           continueSectionCourseId: QUIZ_IDS.otherCourse,
           phases: [{ id: null, sequence: 1, gifts: [], sections: [{ sectionCourseId: QUIZ_IDS.otherCourse, title: 'Nội dung khóa',
-            sequence: 1, lessonCount: 1, completedLessonCount: 0, chapters: [{ id: QUIZ_IDS.chapter, title: 'Chương học',
-              sequence: 1, lessonCount: 1, completedLessonCount: 0, quizzes: [], lessons: [{ id: QUIZ_IDS.lesson,
-                title: 'Bài học Student', contentType: 'TEXT', sequence: 1, status: 'IN_PROGRESS', quizzes: [state.quizzes[0]] }] }] }] }] })
+            sequence: 1, lessonCount: lessonIds.length, completedLessonCount: completed, progressPercentage: percent,
+            chapters: [{ id: QUIZ_IDS.chapter, title: 'Chương học', sequence: 1, lessonCount: lessonIds.length,
+              completedLessonCount: completed, completed: chapterCompleted(), quizzes: chapterQuizzes,
+              lessons: lessonIds.map((id, index) => ({ id, title: lessonTitle(id), contentType: 'TEXT', sequence: index + 1,
+                status: progressOf(id).status, quizzes: lessonQuizzes(id) })) }] }] }] })
       }
       if (path === `/api/v1/courses/${QUIZ_IDS.course}/exams`) return answer([state.quizzes[1]])
-      if (path === `/api/v1/lessons/${QUIZ_IDS.lesson}`) {
-        return answer({ id: QUIZ_IDS.lesson, title: 'Bài học Student', sectionCourseId: QUIZ_IDS.otherCourse,
+      const lessonId = lessonIds.find(id => path === `/api/v1/lessons/${id}`)
+      if (lessonId) {
+        return answer({ id: lessonId, title: lessonTitle(lessonId), sectionCourseId: QUIZ_IDS.otherCourse,
           sectionCourseTitle: 'Khóa học Student', contentType: 'TEXT', content: 'Nội dung học', owned: true,
-          quizzes: [state.quizzes[0]] })
+          progress: progressOf(lessonId), quizzes: lessonQuizzes(lessonId) })
       }
     }
-    if (activeRole === 'STUDENT' && method === 'PUT' && path === `/api/v1/lessons/${QUIZ_IDS.lesson}/progress`) {
-      return answer({ lessonId: QUIZ_IDS.lesson, status: 'IN_PROGRESS', progressPercentage: 0,
-        watchDurationSeconds: 0, sectionCourseId: QUIZ_IDS.otherCourse })
+    if (activeRole === 'STUDENT' && method === 'PUT') {
+      const lessonId = lessonIds.find(id => path === `/api/v1/lessons/${id}/progress`)
+      if (lessonId) {
+        if (body.completed) {
+          state.completedLessons.add(lessonId)
+          state.studentEarnedToday = true
+        }
+        return answer(progressOf(lessonId))
+      }
     }
     if (activeRole === 'STUDENT' && path.startsWith('/api/v1/assessments/')) {
       const placement = state.quizzes.filter(q => q.type === 'PLACEMENT' && q.status === 'PUBLISHED')
@@ -125,7 +187,11 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
         state.studentOption = body.selectedOptionId as string
         return answer(null)
       }
-      if (path.endsWith('/submit')) { state.studentStatus = 'GRADED'; return answer({ attemptId: QUIZ_IDS.attempt, percentage: 100 }) }
+      if (path.endsWith('/submit')) {
+        state.studentStatus = 'GRADED'
+        if (state.studentOption && state.activeStudentQuizId !== placement?.id) state.studentEarnedToday = true
+        return answer({ attemptId: QUIZ_IDS.attempt, percentage: 100 })
+      }
       if (path.endsWith('/review')) {
         if (!state.studentShowAnswers) return answer(null, 409, 'This quiz does not reveal its answer key.')
         return answer({ attemptId: QUIZ_IDS.attempt, quizId: state.activeStudentQuizId, quizTitle: 'Quiz Student', totalQuestions: 1, correctCount: 1, overallPercentage: 100,
@@ -243,13 +309,34 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
     }
     if (path === `/api/v1/teacher/attempts/${QUIZ_IDS.attempt}`) return answer({ attemptId: QUIZ_IDS.attempt,
       quizId: QUIZ_IDS.quiz, quizTitle: 'Quiz được giao', totalQuestions: 1, correctCount: 1, overallPercentage: 100, questions: [] })
+    if (match?.[2] === 'labels' && method === 'GET') {
+      return answer({ labels: [], patterns: [], status: null, progress: null })
+    }
     state.unmatched.push(`${method} ${path}`)
     return answer(null, 501, 'Fixture has no handler')
   })
   return state
 }
 
-/** The exam and placement editors have two steps; open one by its label before touching its fields. */
-export async function showEditorStep(page: Page, label: 'Thông tin và quy định' | 'Các phần và câu hỏi') {
-  await page.getByRole('list', { name: 'Các bước soạn đề' }).getByRole('button', { name: label }).click()
+/** Waits until a quiz editor has loaded its quiz: its top bar then offers the settings. */
+export async function waitForEditor(page: Page) {
+  await expect(page.getByRole('button', { name: 'Thiết lập', exact: true })).toBeVisible()
+}
+
+/** Every quiz editor keeps its settings in a side panel; open it before touching a setting. */
+export async function openEditorSettings(page: Page) {
+  await page.getByRole('button', { name: 'Thiết lập', exact: true }).click()
+}
+
+/**
+ * The settings panel: a column beside the questions in the whole-window editor on a wide screen, a sheet over the editor
+ * inside the console or on a narrow one.
+ */
+export function editorSettings(page: Page) {
+  return page.getByRole('dialog').or(page.getByRole('complementary', { name: /^Thiết lập/ }))
+}
+
+/** Closes the settings panel so the editor behind it can be used again. */
+export async function closeEditorSettings(page: Page) {
+  await editorSettings(page).getByRole('button', { name: 'Xong', exact: true }).click()
 }

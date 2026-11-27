@@ -6,7 +6,7 @@ export type SubjectCapability = 'AUTHOR' | 'REVIEWER' | 'TEACH' | 'MENTOR'
 
 /** The roles that do each kind of work; a capability is only granted to an account holding one of them. */
 export const CAPABILITY_ROLES: Record<SubjectCapability, UserRole[]> = {
-  AUTHOR: ['STAFF', 'TEACHER', 'MANAGER'],
+  AUTHOR: ['STAFF', 'MANAGER'],
   REVIEWER: ['STAFF', 'MANAGER'],
   TEACH: ['TEACHER'],
   MENTOR: ['MENTOR'],

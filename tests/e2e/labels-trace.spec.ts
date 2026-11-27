@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 import { LABEL_IDS, installLabelsTrace, labelsTraceProblems } from './labels-trace-fixture'
 
-const contentUrl = `/console/staff/courses?courseId=${LABEL_IDS.course}`
+const contentUrl = `/console/staff/courses?courseId=${LABEL_IDS.course}&tab=content`
 const area = 'staff'
 const traceHref = (kind: string, code: string) =>
   `/console/${area}/taxonomy?categoryId=${LABEL_IDS.subject}&kind=${kind}&code=${code}`
-const courseHref = `/console/${area}/courses?courseId=${LABEL_IDS.course}`
+const courseHref = `/console/${area}/courses?courseId=${LABEL_IDS.course}&tab=content`
 
 const chapterRow = (page: Page) =>
   page.locator('li').filter({ has: page.getByRole('heading', { name: 'Đọc hiểu', exact: true }) })
@@ -36,22 +36,24 @@ test('course covers keep only http(s) or root images and ?courseId opens the con
 }) => {
   const fixture = await installLabelsTrace(page)
   await page.goto(`/console/${area}/courses`)
-  const row = (title: string) => page.getByRole('row').filter({ hasText: title })
+  // Each course is a card whose title button opens it.
+  const card = (title: string) =>
+    page.getByRole('article').filter({ has: page.getByRole('button', { name: title, exact: true }) })
 
-  await expect(row('Ngữ văn 12').getByRole('img', { name: 'Ngữ văn 12' })).toHaveAttribute(
+  await expect(card('Ngữ văn 12').getByRole('img', { name: 'Ngữ văn 12' })).toHaveAttribute(
     'src',
     /\/cover-ok\.png$/
   )
   // A broken remote image falls back to the subject's first letter; an unsafe or relative URL is
   // never requested at all, so its tile comes from the subject, else the title.
-  await expect(row('Toán nâng cao').getByRole('img', { name: 'Toán nâng cao' })).toHaveText('T')
-  await expect(row('Khóa hình ảnh lạ').getByRole('img', { name: 'Khóa hình ảnh lạ' })).toHaveText('K')
+  await expect(card('Toán nâng cao').getByRole('img', { name: 'Toán nâng cao' })).toHaveText('T')
+  await expect(card('Khóa hình ảnh lạ').getByRole('img', { name: 'Khóa hình ảnh lạ' })).toHaveText('K')
   await expect(
-    row('Khóa đường dẫn tương đối').getByRole('img', { name: 'Khóa đường dẫn tương đối' })
+    card('Khóa đường dẫn tương đối').getByRole('img', { name: 'Khóa đường dẫn tương đối' })
   ).toHaveText('T')
   expect(fixture.external()).toEqual([])
 
-  await row('Ngữ văn 12').getByRole('button', { name: 'Ngữ văn 12', exact: true }).click()
+  await card('Ngữ văn 12').getByRole('button', { name: 'Ngữ văn 12', exact: true }).click()
   await expect(page.getByRole('img', { name: 'Ngữ văn 12' })).toHaveAttribute(
     'src',
     /\/cover-ok\.png$/

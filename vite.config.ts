@@ -32,18 +32,37 @@ function mathliveFonts(): Plugin {
   }
 }
 
+// SharedArrayBuffer is enabled only for dedicated live-room documents.
+function isolateLiveRooms(): Plugin {
+  return {
+    name: 'isolate-live-rooms',
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const pathname = (request.url ?? '').split('?', 1)[0]
+        if (/^\/(?:console\/teacher|student)\/live-classes\/[^/]+\/room\/?$/.test(pathname)) {
+          response.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
+          response.setHeader('Cross-Origin-Embedder-Policy', 'credentialless')
+        }
+        next()
+      })
+    },
+  }
+}
+
 export function createAppConfig({ command, mode, isPreview }: ConfigEnv): UserConfig {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env }
   const useProxy = command === 'serve' && !isPreview && env.VITE_DEV_API_PROXY !== 'false'
   const target = env.VITE_API_BASE_URL || env.VITE_API_URL || 'https://developments.hocluc.com'
 
   return {
-    plugins: [react(), tailwindcss(), mathliveFonts()],
+    plugins: [react(), tailwindcss(), mathliveFonts(), isolateLiveRooms()],
+    // assistant-ui's components import each other from @/
+    resolve: { alias: { '@': resolve(process.cwd(), 'src') } },
     define: { 'import.meta.env.VITE_DEV_API_PROXY': JSON.stringify(String(useProxy)) },
     server: {
       // Playwright and the QA scripts write traces and screenshots inside the repo while a run
       // is going; watching them makes the dev server churn on files no page imports.
-      watch: { ignored: ['**/.pi/**', '**/test-results/**', '**/playwright-report/**', '**/.playwright-mcp/**'] },
+      watch: { ignored: ['**/test-results/**', '**/playwright-report/**', '**/.playwright-mcp/**'] },
       // Keep the browser on the FE origin so the BE's SameSite=Lax cookie works locally.
       // changeOrigin changes Host only; do not rewrite Origin or disable TLS verification.
       ...(useProxy && {

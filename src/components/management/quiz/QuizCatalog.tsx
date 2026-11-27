@@ -55,15 +55,12 @@ export default function QuizCatalog({ items, status, errorMessage, onRetry, read
   // archived ones sink to the bottom
   const filteredItems = stoppedLast(exam || typeFilter === 'ALL' ? items : items.filter(quiz => quiz.type === typeFilter),
     quiz => quiz.status === 'ARCHIVED')
-  const published = placement ? items.filter(quiz => quiz.status === 'PUBLISHED') : []
-  const newestTime = Math.max(...published.map(quiz => Date.parse(quiz.createdAt ?? '')))
-  const newest = published.filter(quiz => Date.parse(quiz.createdAt ?? '') === newestTime)
   const columns: ColumnDef<TeacherQuizRecord>[] = [
     {
       accessorKey: 'title', header: placement ? 'Bài đánh giá' : exam ? 'Đề thi' : 'Bài kiểm tra',
       cell: ({ row: { original: quiz } }) => <div className="min-w-48 max-w-80 space-y-1">
         <h2 className="text-sm font-medium break-words text-text-primary">{quiz.title}</h2>
-        {placement && newest.some(item => item.id === quiz.id) && <Status tone="info">{newest.length === 1 ? 'Đang dùng cho Student' : 'Cùng thời điểm tạo mới nhất'}</Status>}
+        {placement && quiz.status === 'PUBLISHED' && <Status tone="info">Hiển thị trong đề thi miễn phí</Status>}
         {!exam && <Status tone="info">{quizTypeLabel(quiz.type)}</Status>}
         {quiz.status === 'DRAFT' && Boolean(quiz.publishProblems?.length) &&
           <p className="text-xs leading-5 text-text-tertiary">Cần hoàn thiện: {describePublishProblems(quiz.publishProblems)}</p>}
@@ -84,9 +81,8 @@ export default function QuizCatalog({ items, status, errorMessage, onRetry, read
       </div> },
     { accessorKey: 'attemptCount', header: 'Lượt làm', meta: { className: 'text-center' } },
     { accessorKey: 'status', header: 'Trạng thái',
-      cell: ({ row: { original: quiz } }) => <div className="flex flex-col items-start gap-1.5 whitespace-nowrap">
+      cell: ({ row: { original: quiz } }) => <div className="whitespace-nowrap">
         <Status tone={quiz.status === 'PUBLISHED' ? 'success' : quiz.status === 'DRAFT' ? 'warning' : 'neutral'}>{labels[quiz.status]}</Status>
-        {(quiz.locked || quiz.attemptCount > 0) && <span className="text-xs text-text-tertiary">Đã có lượt thi</span>}
       </div> },
     { id: 'actions', header: 'Thao tác', enableSorting: false,
       meta: { className: 'text-right' }, cell: ({ row }) => renderActions(row.original) },

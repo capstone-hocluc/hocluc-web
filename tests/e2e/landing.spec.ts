@@ -148,9 +148,10 @@ test('signup and login actions have matching destinations', async ({ page }) => 
   await expect(page).toHaveURL(/\/signup$/)
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.getByRole('button', { name: 'Đóng', exact: true }).click()
+  // The free exams are public: a guest browses them and signs in to sit one.
   await page.locator('.hero-buttons a[data-auth="login"]').click()
-  await expect(page).toHaveURL(/\/login\?returnTo=%2Fstudent%2Fassessments%2Fplacement$/)
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page).toHaveURL(/\/free-exams$/)
+  await expect(page.getByRole('heading', { name: 'Đề thi thử miễn phí', level: 1 })).toBeVisible()
 })
 
 test('app section introduces the Hocluc app on phones and links to its newest APK', async ({ page }) => {
@@ -550,7 +551,7 @@ test('header course menu works from the keyboard and closes on Esc', async ({ pa
   await expect(button).toBeFocused()
   await expect(panel).toBeHidden()
   await page.keyboard.press('Tab')
-  await expect(page.locator('.nav-links').getByRole('link', { name: 'Ứng dụng' })).toBeFocused()
+  await expect(page.locator('.nav-links').getByRole('link', { name: 'Đề thi thử miễn phí' })).toBeFocused()
 
   // Enter and Space toggle it; Down opens it on its first item.
   await button.focus()

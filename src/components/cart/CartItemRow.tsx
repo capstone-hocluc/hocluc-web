@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { GraduationCap, Trash2 } from '../console/icons'
 import { cartItemIssue, type CartItem } from '../../services/cartService'
-import { formatCoursePrice, formatDate, prettifyEnum } from '../../lib/courseFormat'
+import { formatCoursePrice, formatDate, formatCourseTrack } from '../../lib/courseFormat'
 
 interface Props {
   item: CartItem
@@ -31,7 +31,7 @@ export default function CartItemRow({ item, onRemove, removing, disabled }: Prop
           <a href={'/courses/' + encodeURIComponent(item.courseId)}>{item.title}</a>
         </h2>
         <p className="purchase-muted">
-          {prettifyEnum(item.track)}
+          {formatCourseTrack(item.track)}
           {item.endDate && (
             <>
               {item.track ? ' · ' : ''}Đến {formatDate(item.endDate)}

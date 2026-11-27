@@ -10,7 +10,7 @@ export const COURSE_QUIZ_TYPES: { id: CourseQuizType; label: string }[] = [
 
 const LABELS: Record<TeacherQuizType, string> = {
   QUICK: 'Quiz nhanh', LESSON: 'Kiểm tra cuối bài', CHAPTER: 'Kiểm tra cuối chương',
-  EXAM: 'Đề thi thử', PLACEMENT: 'Đánh giá đầu vào',
+  EXAM: 'Đề thi thử', PLACEMENT: 'Đề thi thử miễn phí',
 }
 
 export function quizTypeLabel(type?: string | null) {
@@ -28,7 +28,7 @@ export function quizRequirement(type: string) {
     case 'LESSON': return 'Học viên cần hoàn thành bài học được gắn trước khi làm bài kiểm tra này.'
     case 'CHAPTER': return 'Chương cần có bài học đã xuất bản. Học viên cần hoàn thành tất cả bài học đã xuất bản trong chương trước khi làm bài kiểm tra này.'
     case 'EXAM': return 'Dành cho học viên có quyền học khóa; áp dụng lịch mở và đóng nếu được cấu hình.'
-    case 'PLACEMENT': return 'Bài đánh giá đầu vào, không gắn với khóa học.'
+    case 'PLACEMENT': return 'Thi thử miễn phí, không cần mua khóa học. Lần thi chính thức đầu tiên đã chấm của mỗi đề được dùng để đánh giá năng lực theo khóa được gắn.'
     default: return ''
   }
 }

@@ -10,6 +10,7 @@ import {
 } from '../../../services/aiAssistantService'
 import { getQuizChapterLessons, getQuizCourseChapters, getQuizCourses } from '../../../services/quizCourseService'
 import type { UserRole } from '../../../services/userService'
+import AppLink from '../../landing-page/AppLink'
 import Button from '../../console/button'
 import ConsoleDialog from '../../console/dialog'
 import DropdownField from '../../console/dropdown-field'
@@ -21,6 +22,7 @@ import { Skeleton } from '../../tailgrids/core/skeleton'
 
 const TARGETS: { id: AiQuizTarget; label: string }[] = [
   { id: 'EXAM', label: quizTypeLabel('EXAM') },
+  { id: 'PLACEMENT', label: 'Bài đánh giá đầu vào' },
   ...COURSE_QUIZ_TYPES,
 ]
 
@@ -30,8 +32,8 @@ interface ExportQuizDialogProps {
   conversationId: string
   /** The exam's name, the quiz's title unless changed. */
   title: string
-  /** The written questions the exam keeps: what the quiz takes. */
-  questionCount: number
+  /** The draft questions the quiz takes, in the exam's order: those the exam shows now. */
+  itemIds: string[]
   /** How many of those the check could not confirm; the quiz keeps them flagged. */
   reviewCount?: number
   numberOf: Map<string, number>
@@ -56,7 +58,7 @@ const failed = (status: string) => status === 'error' || status === 'forbidden' 
 export default function ExportQuizDialog({
   conversationId,
   title,
-  questionCount,
+  itemIds,
   reviewCount = 0,
   numberOf,
   role,
@@ -74,12 +76,14 @@ export default function ExportQuizDialog({
   const [result, setResult] = useState<AiExportedQuiz | null>(null)
 
   const exam = type === 'EXAM'
+  const placement = type === 'PLACEMENT'
+  const courseOnly = exam || placement
   const needsLesson = type === 'LESSON' || type === 'QUICK'
   // A mock exam hangs on a main course; a chapter or lesson quiz on any course the viewer manages.
-  const courses = usePageResource(() => getQuizCourses(exam ? 'MAIN' : undefined), [exam])
+  const courses = usePageResource(() => getQuizCourses(courseOnly ? 'MAIN' : undefined), [courseOnly])
   const course = usePageResource(
-    () => (courseId && !exam ? getQuizCourseChapters(courseId) : Promise.resolve(null)),
-    [courseId, exam]
+    () => (courseId && !courseOnly ? getQuizCourseChapters(courseId) : Promise.resolve(null)),
+    [courseId, courseOnly]
   )
   const chapters = course.status === 'ready' && course.data?.id === courseId ? course.data.chapters : []
   const lessons = usePageResource(
@@ -91,7 +95,7 @@ export default function ExportQuizDialog({
   const minutesValue = minutes.trim() ? Number(minutes) : undefined
   const minutesInvalid =
     minutesValue !== undefined && (!Number.isInteger(minutesValue) || minutesValue < 1 || minutesValue > 600)
-  const targetChosen = exam ? Boolean(courseId) : needsLesson ? Boolean(lessonId) : Boolean(chapterId)
+  const targetChosen = placement || (exam ? Boolean(courseId) : needsLesson ? Boolean(lessonId) : Boolean(chapterId))
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -102,9 +106,10 @@ export default function ExportQuizDialog({
       setResult(
         await exportAiDraftToQuiz(conversationId, {
           type,
-          ...(exam ? { courseId } : needsLesson ? { lessonId } : { chapterId }),
+          ...(courseOnly ? { courseId: courseId || undefined } : needsLesson ? { lessonId } : { chapterId }),
           title: name.trim() || undefined,
           durationMinutes: minutesValue,
+          itemIds,
         })
       )
       onExported?.(exam ? 'EXAM' : 'QUIZ')
@@ -116,8 +121,9 @@ export default function ExportQuizDialog({
   }
 
   if (result) {
+    const section = result.type === 'PLACEMENT' ? 'placements' : result.type === 'EXAM' ? 'mock-exams' : 'quizzes'
     const editor = role
-      ? roleHome(role).replace('/dashboard', `/${result.type === 'EXAM' ? 'mock-exams' : 'quizzes'}/${result.quizId}/edit`)
+      ? roleHome(role).replace('/dashboard', `/${section}/${result.quizId}/edit`)
       : null
     return (
       <ConsoleDialog
@@ -132,9 +138,7 @@ export default function ExportQuizDialog({
             </Button>
             {editor && (
               <Button asChild>
-                <a href={editor} target="_blank" rel="noreferrer">
-                  Mở quiz
-                </a>
+                <AppLink href={editor}>Mở quiz</AppLink>
               </Button>
             )}
           </>
@@ -176,7 +180,7 @@ export default function ExportQuizDialog({
             Huỷ
           </Button>
           <Button type="submit" disabled={!targetChosen || minutesInvalid || busy}>
-            {busy ? 'Đang xuất…' : `Xuất ${questionCount} câu`}
+            {busy ? 'Đang xuất…' : `Xuất ${itemIds.length} câu`}
           </Button>
         </>
       }
@@ -202,7 +206,7 @@ export default function ExportQuizDialog({
           />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Khóa học">
+          <Field label={placement ? "Khóa học (không bắt buộc)" : "Khóa học"}>
             {courses.status === 'loading' ? (
               <FieldSkeleton what="khóa học" />
             ) : (
@@ -224,7 +228,7 @@ export default function ExportQuizDialog({
               />
             )}
           </Field>
-          {!exam && (
+          {!courseOnly && (
             <Field label="Chương">
               {courseId && course.status === 'loading' ? (
                 <FieldSkeleton what="chương" />

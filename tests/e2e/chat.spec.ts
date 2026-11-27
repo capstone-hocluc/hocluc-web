@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { CHAT_ID, CHAT_ID_2, MENTOR_ID, installChatFixture } from './chat-fixture'
+import { CHAT_ID, CHAT_ID_2, MENTOR_ID, SUBJECT_ID, SUBJECT_ID_2, installChatFixture } from './chat-fixture'
 import { mkdir } from 'node:fs/promises'
 
 /** A console select is a button that renders its options only while open. */
@@ -21,8 +21,8 @@ test('NextAdmin mentor chat separates sender bubbles and uses real avatar initia
   await expect(page.locator('article[data-chat-direction="outgoing"]').last()).toContainText('Mentor phản hồi tiếp')
   await expect(page.getByText('Enter để gửi · Shift+Enter để xuống dòng', { exact: true })).toBeVisible()
   await expect(page.getByText('Online', { exact: true })).toHaveCount(0)
-  await mkdir('.pi/qa/chat-ui', { recursive: true })
-  await page.screenshot({ path: '.pi/qa/chat-ui/mentor-desktop.png', fullPage: true })
+  await mkdir('test-results/screens/chat-ui', { recursive: true })
+  await page.screenshot({ path: 'test-results/screens/chat-ui/mentor-desktop.png', fullPage: true })
   expect(state.unmatched).toEqual([])
   expect(state.pageErrors).toEqual([])
 })
@@ -38,12 +38,14 @@ test('NextAdmin mentor filters and mobile back navigation remain functional', as
   await statusTrigger.click()
   await page.getByRole('option', { name: 'Đang hỗ trợ', exact: true }).click()
   await expect(statusTrigger).toContainText('Đang hỗ trợ')
+  // The status list fades out in a layer of its own; measure the page once it has gone.
+  await expect(page.getByRole('listbox')).toHaveCount(0)
   await page.setViewportSize({ width: 375, height: 812 })
   await expect(page.getByLabel('Danh sách hội thoại', { exact: true })).toBeHidden()
   await expect(page.getByLabel('Tin nhắn', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await mkdir('.pi/qa/chat-ui', { recursive: true })
-  await page.screenshot({ path: '.pi/qa/chat-ui/mentor-mobile.png', fullPage: true })
+  await mkdir('test-results/screens/chat-ui', { recursive: true })
+  await page.screenshot({ path: 'test-results/screens/chat-ui/mentor-mobile.png', fullPage: true })
   await page.getByRole('button', { name: 'Quay lại danh sách hội thoại', exact: true }).click()
   await expect(page.getByLabel('Danh sách hội thoại', { exact: true })).toBeVisible()
   expect(state.unmatched).toEqual([])
@@ -181,14 +183,18 @@ test('create request navigates directly without prompting to discard completed f
   await page.goto('/student/chat')
   await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
-  await pick(page, dialog, /Môn học/, 'Toán')
+  await expect(dialog.getByRole('button', { name: /Môn học/ })).toHaveCount(0)
   await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Yêu cầu mới QA')
   await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung bài toán QA')
   await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
   await expect(dialog).toBeHidden()
   await expect(page.getByRole('heading', { name: 'Yêu cầu mới QA', exact: true })).toBeVisible()
+  await expect(page.getByText('Mentor QA · Toán · Đang hỗ trợ', { exact: true })).toBeVisible()
   await expect(page.getByRole('dialog', { name: 'Bỏ bản nháp chưa gửi?' })).toHaveCount(0)
-  expect(state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')).toHaveLength(1)
+  expect(state.requests.filter(request => request.path === '/api/v1/chat/subjects')).toHaveLength(0)
+  const writes = state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')
+  expect(writes).toHaveLength(1)
+  expect('subjectCategoryId' in writes[0].body).toBe(false)
   expect(state.unmatched).toEqual([])
 })
 
@@ -235,11 +241,11 @@ test('student chat desktop and mobile retain readable history without page overf
   await installChatFixture(page)
   await page.goto(`/student/chat/${CHAT_ID}`)
   await expect(page.getByText('Lời giải riêng tư QA', { exact: true })).toBeVisible()
-  await page.screenshot({ path: '.pi/qa/chat/student-chat-desktop.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/screens/chat/student-chat-desktop.png', fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByText('Lời giải riêng tư QA', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.screenshot({ path: '.pi/qa/chat/student-chat-mobile.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/screens/chat/student-chat-mobile.png', fullPage: true })
 })
 
 test('slow 401 from a sibling request retries with the rotated token and one shared refresh', async ({ page }) => {
@@ -530,7 +536,6 @@ test('lost create response retries with the same clientRequestId and navigates o
   await page.goto('/student/chat')
   await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
-  await pick(page, dialog, /Môn học/, 'Toán')
   await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Yêu cầu retry QA')
   await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung retry QA')
   state.loseCreateResponse = true
@@ -542,6 +547,8 @@ test('lost create response retries with the same clientRequestId and navigates o
   const writes = state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')
   expect(writes).toHaveLength(2)
   expect(writes[0].body.clientRequestId).toBe(writes[1].body.clientRequestId)
+  expect('subjectCategoryId' in writes[0].body).toBe(false)
+  expect('subjectCategoryId' in writes[1].body).toBe(false)
   expect(state.unmatched).toEqual([])
 })
 
@@ -1140,10 +1147,10 @@ test('mentor console screen renders from fixture at desktop and mobile', async (
   const state = await installChatFixture(page, 'MENTOR')
   await page.goto(`/mentor/chat?conversationId=${CHAT_ID}`)
   await expect(page.getByText('Lời giải riêng tư QA', { exact: true })).toBeVisible()
-  await page.screenshot({ path: '.pi/qa/chat/mentor-chat-desktop.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/screens/chat/mentor-chat-desktop.png', fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByText('Lời giải riêng tư QA', { exact: true })).toBeVisible()
-  await page.screenshot({ path: '.pi/qa/chat/mentor-chat-mobile.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/screens/chat/mentor-chat-mobile.png', fullPage: true })
   expect(state.pageErrors).toEqual([])
 })
 
@@ -1152,10 +1159,10 @@ test('manager monitoring screen renders from fixture at desktop and mobile', asy
   await page.goto(`/manager/chat-monitoring?conversationId=${CHAT_ID}`)
   await expect(page.getByRole('heading', { name: 'Bài toán xác suất QA', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Bài toán xác suất QA/ })).toBeVisible()
-  await page.screenshot({ path: '.pi/qa/chat/manager-monitoring-desktop.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/screens/chat/manager-monitoring-desktop.png', fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByRole('heading', { name: 'Bài toán xác suất QA', exact: true })).toBeVisible()
-  await page.screenshot({ path: '.pi/qa/chat/manager-monitoring-mobile.png', fullPage: true })
+  await page.screenshot({ path: 'test-results/screens/chat/manager-monitoring-mobile.png', fullPage: true })
   expect(state.pageErrors).toEqual([])
 })
 
@@ -1416,7 +1423,7 @@ test('Sunday midnight split saves and reloads 24:00 exactly without overlap or a
   await expect(dialog.getByLabel('Kết thúc cuối ngày 1', { exact: true })).toBeChecked()
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
-  await dialog.screenshot({ path: '.pi/qa/chat/mentor-hours-midnight-mobile.png' })
+  await dialog.screenshot({ path: 'test-results/screens/chat/mentor-hours-midnight-mobile.png' })
   await dialog.getByRole('button', { name: 'Thêm khoảng giờ', exact: true }).click()
   await pick(page, dialog, /Ngày hỗ trợ 3/, 'CN')
   await dialog.getByLabel('Bắt đầu 3', { exact: true }).fill('23:30')
@@ -1455,3 +1462,316 @@ for (const interval of [
     expect(state.pageErrors).toEqual([])
   })
 }
+
+test('auto-routed conversation displays subjectName, assignedMentor, and OPEN unassigned state', async ({ page }) => {
+  const state = await installChatFixture(page)
+  state.createResponses.push(
+    {
+      kind: 'success',
+      status: 'IN_PROGRESS',
+      subjectName: 'Vật lý',
+      assignedMentor: { id: MENTOR_ID, displayName: 'Mentor Lý QA' },
+    },
+    {
+      kind: 'success',
+      status: 'OPEN',
+      subjectName: 'Hóa học',
+      mentor: null,
+      assignedMentor: null,
+    }
+  )
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Bài toán dao động QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Tính chu kỳ con lắc đơn')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Bài toán dao động QA', exact: true })).toBeVisible()
+  await expect(page.getByText('Mentor Lý QA · Vật lý · Đang hỗ trợ', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Xem hồ sơ Mentor', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Bài toán este QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Cân bằng phương trình xà phòng hóa')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Bài toán este QA', exact: true })).toBeVisible()
+  await expect(page.getByText('Đang chờ phân công Mentor · Hóa học · Chờ hỗ trợ', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Xem hồ sơ Mentor', exact: true })).toHaveCount(0)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
+test('CHAT_SUBJECT_REQUIRED shows subject chips from error data and resends same clientRequestId', async ({ page }) => {
+  const state = await installChatFixture(page)
+  state.createResponses.push({
+    kind: 'error',
+    status: 422,
+    code: 'CHAT_SUBJECT_REQUIRED',
+    codeField: 'errorCode',
+    message: 'Chọn môn cho câu hỏi này.',
+    data: {
+      subjects: [
+        { id: SUBJECT_ID, name: 'Toán' },
+        { id: SUBJECT_ID_2, name: 'Vật lý' },
+      ],
+    },
+  })
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Câu hỏi phân môn QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung cần chọn môn QA')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+
+  await expect(dialog.getByRole('alert')).toContainText('Chọn môn cho câu hỏi này.')
+  await expect(dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })).toBeDisabled()
+  await expect(dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })).toHaveValue('Câu hỏi phân môn QA')
+  await expect(dialog.getByLabel('Nội dung yêu cầu', { exact: true })).toBeDisabled()
+  await expect(dialog.getByLabel('Nội dung yêu cầu', { exact: true })).toHaveValue('Nội dung cần chọn môn QA')
+  expect(state.requests.filter(request => request.path === '/api/v1/chat/subjects')).toHaveLength(0)
+
+  const submit = dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true })
+  await expect(submit).toBeDisabled()
+  const physicsChip = dialog.getByRole('group', { name: 'Môn học', exact: true }).getByRole('button', { name: 'Vật lý', exact: true })
+  await physicsChip.click()
+  await expect(physicsChip).toHaveAttribute('aria-pressed', 'true')
+  await expect(submit).toBeEnabled()
+  await submit.click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Câu hỏi phân môn QA', exact: true })).toBeVisible()
+  await expect(page.getByText('Mentor QA · Vật lý · Đang hỗ trợ', { exact: true })).toBeVisible()
+  const writes = state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')
+  expect(writes).toHaveLength(2)
+  expect('subjectCategoryId' in writes[0].body).toBe(false)
+  expect(writes[1].body.subjectCategoryId).toBe(SUBJECT_ID_2)
+  expect(writes[0].body.clientRequestId).toBe(writes[1].body.clientRequestId)
+  expect(writes[0].body.title).toBe(writes[1].body.title)
+  expect(writes[0].body.initialMessage).toBe(writes[1].body.initialMessage)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
+test('repeating or empty CHAT_SUBJECT_REQUIRED falls back to listSubjects', async ({ page }) => {
+  const state = await installChatFixture(page)
+  state.createResponses.push(
+    {
+      kind: 'error',
+      status: 422,
+      code: 'CHAT_SUBJECT_REQUIRED',
+      codeField: 'errorCode',
+      message: 'Chọn môn cho câu hỏi này.',
+      data: { subjects: [] },
+    },
+    {
+      kind: 'error',
+      status: 422,
+      code: 'CHAT_SUBJECT_REQUIRED',
+      codeField: 'errorCode',
+      message: 'Chọn môn cho câu hỏi này.',
+      data: { subjects: [{ id: SUBJECT_ID, name: 'Toán' }] },
+    }
+  )
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Câu hỏi fallback môn QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung fallback môn QA')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+
+  const group = dialog.getByRole('group', { name: 'Môn học', exact: true })
+  await expect(group.getByRole('button', { name: 'Toán', exact: true })).toBeVisible()
+  await expect(group.getByRole('button', { name: 'Vật lý', exact: true })).toBeVisible()
+  expect(state.requests.filter(request => request.path === '/api/v1/chat/subjects')).toHaveLength(1)
+
+  await group.getByRole('button', { name: 'Toán', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+
+  await expect.poll(() => state.requests.filter(request => request.path === '/api/v1/chat/subjects').length).toBe(2)
+  await expect(dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true })).toBeDisabled()
+  await group.getByRole('button', { name: 'Vật lý', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Câu hỏi fallback môn QA', exact: true })).toBeVisible()
+  const writes = state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')
+  expect(writes).toHaveLength(3)
+  expect(new Set(writes.map(request => request.body.clientRequestId)).size).toBe(1)
+  expect(writes[1].body.subjectCategoryId).toBe(SUBJECT_ID)
+  expect(writes[2].body.subjectCategoryId).toBe(SUBJECT_ID_2)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
+test('CHAT_NO_MENTOR blocks sending until reopened, while 5xx and network errors allow retry with text kept', async ({ page }) => {
+  const state = await installChatFixture(page)
+  state.createResponses.push({
+    kind: 'error',
+    status: 409,
+    code: 'CHAT_NO_MENTOR',
+    codeField: 'errorCode',
+    message: 'Hiện chưa có mentor nhận câu hỏi.',
+  })
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Câu hỏi hết mentor QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung giữ lại khi 409 QA')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+
+  await expect(dialog.getByRole('alert')).toContainText('Hiện chưa có mentor nhận câu hỏi.')
+  await expect(dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })).toHaveValue('Câu hỏi hết mentor QA')
+  await expect(dialog.getByLabel('Nội dung yêu cầu', { exact: true })).toHaveValue('Nội dung giữ lại khi 409 QA')
+  await expect(dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true })).toBeDisabled()
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).press('Enter').catch(() => {})
+  expect(state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')).toHaveLength(1)
+
+  await dialog.getByRole('button', { name: 'Hủy', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Bỏ bản nháp chưa gửi?' }).getByRole('button', { name: 'Bỏ bản nháp', exact: true }).click()
+  await expect(dialog).toBeHidden()
+
+  state.createResponses.push(
+    { kind: 'error', status: 500, message: 'Lỗi máy chủ tạm thời.' },
+    { kind: 'abort' }
+  )
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Câu hỏi lỗi mạng 5xx QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung giữ lại khi 5xx QA')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Lỗi máy chủ tạm thời.')
+  await expect(dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })).toHaveValue('Câu hỏi lỗi mạng 5xx QA')
+  await expect(dialog.getByLabel('Nội dung yêu cầu', { exact: true })).toHaveValue('Nội dung giữ lại khi 5xx QA')
+
+  await dialog.getByRole('button', { name: 'Thử tạo lại', exact: true }).click()
+  await expect(dialog.getByRole('alert')).toContainText('Không thể kết nối máy chủ. Kiểm tra mạng và thử lại.')
+  await expect(dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })).toHaveValue('Câu hỏi lỗi mạng 5xx QA')
+  await expect(dialog.getByLabel('Nội dung yêu cầu', { exact: true })).toHaveValue('Nội dung giữ lại khi 5xx QA')
+
+  await dialog.getByRole('button', { name: 'Thử tạo lại', exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Câu hỏi lỗi mạng 5xx QA', exact: true })).toBeVisible()
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
+test('double-click and Enter spam send a single create request', async ({ page }) => {
+  const state = await installChatFixture(page)
+  state.createDelayMs = 400
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Chống gửi trùng dblclick QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung gửi 1 lần QA')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).dblclick()
+  await expect(dialog.getByRole('button', { name: 'Đang tạo…', exact: true })).toBeDisabled()
+  await expect(dialog).toBeHidden()
+  expect(state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')).toHaveLength(1)
+
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const titleInput = dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })
+  await titleInput.fill('Chống gửi trùng Enter QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung Enter spam QA')
+  await Promise.all([
+    titleInput.press('Enter'),
+    titleInput.press('Enter'),
+    titleInput.press('Enter'),
+  ])
+  await expect(dialog).toBeHidden()
+  expect(state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')).toHaveLength(2)
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
+test('empty or whitespace-only request fields cannot be sent', async ({ page }) => {
+  const state = await installChatFixture(page)
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  const titleInput = dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })
+  const bodyInput = dialog.getByLabel('Nội dung yêu cầu', { exact: true })
+  const submit = dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true })
+
+  await expect(submit).toBeDisabled()
+  await titleInput.fill('   \t  ')
+  await bodyInput.fill('  \n\t ')
+  await expect(submit).toBeDisabled()
+  await titleInput.press('Enter')
+
+  await titleInput.fill('Tiêu đề hợp lệ')
+  await expect(submit).toBeDisabled()
+  await titleInput.fill('   ')
+  await bodyInput.fill('Nội dung hợp lệ')
+  await expect(submit).toBeDisabled()
+  expect(state.requests.filter(request => request.method === 'POST' && request.path === '/api/v1/chat/conversations')).toHaveLength(0)
+  expect(state.pageErrors).toEqual([])
+})
+
+test('pasting text over length limit is capped by maxLength', async ({ page }) => {
+  const state = await installChatFixture(page)
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  const titleInput = dialog.getByLabel('Tiêu đề yêu cầu', { exact: true })
+  const bodyInput = dialog.getByLabel('Nội dung yêu cầu', { exact: true })
+
+  await expect(titleInput).toHaveAttribute('maxlength', '200')
+  await expect(bodyInput).toHaveAttribute('maxlength', '4000')
+  await titleInput.focus()
+  await page.keyboard.insertText('A'.repeat(250))
+  expect((await titleInput.inputValue()).length).toBe(200)
+
+  await bodyInput.focus()
+  await page.keyboard.insertText('B'.repeat(4200))
+  expect((await bodyInput.inputValue()).length).toBe(4000)
+  expect(state.pageErrors).toEqual([])
+})
+
+test('closing or unmounting request modal while sending does not crash', async ({ page }) => {
+  const state = await installChatFixture(page)
+  state.createDelayMs = 450
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Đóng modal khi đang gửi QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung đang gửi QA')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Đóng', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole('heading', { name: 'Đóng modal khi đang gửi QA', exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill('Unmount giữa chừng QA')
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill('Nội dung unmount QA')
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+  await page.evaluate(() => {
+    localStorage.clear()
+    window.dispatchEvent(new StorageEvent('storage', { key: 'hocluc.accessToken' }))
+  })
+  await page.waitForTimeout(600)
+  expect(state.pageErrors).toEqual([])
+})
+
+test('HTML in request title and body renders as text', async ({ page }) => {
+  const state = await installChatFixture(page)
+  await page.goto('/student/chat')
+  await page.getByRole('button', { name: 'Yêu cầu mới', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Tạo yêu cầu hỗ trợ' })
+  const xssTitle = '<img src=x onerror="window.__chatXss=1"><b>Tiêu đề HTML</b>'
+  const xssBody = '<script>window.__chatXss=2</script><em>Nội dung HTML</em>'
+  await dialog.getByLabel('Tiêu đề yêu cầu', { exact: true }).fill(xssTitle)
+  await dialog.getByLabel('Nội dung yêu cầu', { exact: true }).fill(xssBody)
+  await dialog.getByRole('button', { name: 'Tạo yêu cầu', exact: true }).click()
+
+  await expect(dialog).toBeHidden()
+  const heading = page.getByRole('heading', { name: xssTitle, exact: true })
+  await expect(heading).toBeVisible()
+  await expect(page.getByText(xssBody, { exact: true })).toBeVisible()
+  expect(await heading.locator('img, b').count()).toBe(0)
+  expect(await page.locator('article img, article em, article script').count()).toBe(0)
+  expect(await page.evaluate(() => (window as Window & { __chatXss?: number }).__chatXss)).toBeUndefined()
+  expect(state.unmatched).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})

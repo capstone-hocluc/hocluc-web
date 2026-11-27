@@ -52,6 +52,7 @@ export interface ApiResponse<T = unknown> {
   data?: T
   errors?: Record<string, string>
   code?: string
+  errorCode?: string
   path?: string
   timestamp?: string
 }
@@ -110,7 +111,7 @@ function tokenIdentity(token: string | null): string | null {
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
     if (!payload.sub) return null
-    return JSON.stringify([payload.sub, payload.role ?? payload.roles ?? null])
+    return JSON.stringify([payload.sub, payload.role ?? null])
   } catch {
     return null
   }
@@ -229,7 +230,7 @@ export async function request<T = unknown>(
       data?.message || `Request failed with status ${response.status}`,
       response.status,
       data?.errors,
-      data?.code,
+      data?.code || data?.errorCode,
       data?.data
     )
   }
@@ -325,7 +326,7 @@ function getSessionLoginPath() {
   const pathname = window.location.pathname.replace(/\/$/, '') || '/'
   if (isConsolePath(pathname)) return CONSOLE_LOGIN_PATH
   if (safePurchaseReturnTo(pathname + window.location.search)) return purchaseLoginPath()
-  return loginPathFor(pathname)
+  return loginPathFor(pathname + window.location.search)
 }
 
 function handleSessionExpired() {

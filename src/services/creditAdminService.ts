@@ -3,6 +3,12 @@ import type { CreditBalance, CreditEntryType, CreditPack, PageResult } from './c
 
 export type CreditBucket = 'BONUS' | 'PAID'
 
+export interface CreditStudentBalance extends CreditBalance {
+  userId: string
+  displayName: string
+  email: string
+}
+
 /** A ledger row as staff see it: the bucket split and who made a manual change. */
 export interface CreditAdminEntry {
   id: string
@@ -57,6 +63,14 @@ export const creditAdminService = {
       body: input,
     })
     if (!response.data) throw new Error('Không lưu được gói.')
+    return response.data
+  },
+
+  async balances(query: string, page: number): Promise<PageResult<CreditStudentBalance>> {
+    const params = new URLSearchParams({ page: String(page) })
+    if (query) params.set('query', query)
+    const response = await request<PageResult<CreditStudentBalance>>(`/api/v1/admin/credits/users?${params}`, { auth: true })
+    if (!response.data) throw new Error('Không tải được số dư học viên.')
     return response.data
   },
 

@@ -8,12 +8,13 @@ interface MascotStateProps {
   actionLabel?: string
   onAction?: () => void
   className?: string
+  imageSrc?: string
 }
 
 // Shared empty / error state: status icon, title, hint and optional action.
 // The one implementation for "nothing to show" and "something went wrong" -
 // error states pass a retry action, empty states usually don't.
-function MascotState({ title, message, actionLabel, onAction, className }: MascotStateProps) {
+function MascotState({ title, message, actionLabel, onAction, className, imageSrc }: MascotStateProps) {
   return (
     <div
       className={cn(
@@ -21,9 +22,9 @@ function MascotState({ title, message, actionLabel, onAction, className }: Masco
         className
       )}
     >
-      <span className="grid size-12 place-items-center rounded-xl bg-primary-soft text-primary-text">
+      {imageSrc ? <img src={imageSrc} alt="" width={96} height={96} className="size-24 object-contain" /> : <span className="grid size-12 place-items-center rounded-xl bg-primary-soft text-primary-text">
         <Info size={24} aria-hidden="true" />
-      </span>
+      </span>}
       <strong className="text-lg font-bold text-text-heading">{title}</strong>
       {message && <p className="m-0 max-w-lg text-sm leading-relaxed text-text-body">{message}</p>}
       {actionLabel && onAction && (

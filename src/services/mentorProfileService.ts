@@ -143,6 +143,12 @@ export async function updateMyMentorProfile(body: { achievements: string; experi
   return required(response.data, 'Không thể lưu hồ sơ mentor.')
 }
 
+/** The signed-in mentor's own question counts. */
+export async function getMyMentorStats(): Promise<MentorStats> {
+  const response = await request<MentorStats>('/api/v1/mentors/me/stats', { auth: true })
+  return required(response.data, 'Không thể tải thống kê mentor.')
+}
+
 export async function getMentorCard(mentorId: string): Promise<MentorCard> {
   const response = await request<MentorCard>(`/api/v1/mentors/${part(mentorId)}/card`, { auth: true })
   return required(response.data, 'Không thể tải hồ sơ mentor.')

@@ -1,7 +1,7 @@
 import { API_BASE_URL, request, requestBlob } from '../lib/api'
 import type {
   ChatAttachment, ChatCapabilities, ChatConversation, ChatConversationFilters,
-  ChatManagementConversation, ChatMessage, ChatPerson, ChatUploadReservation,
+  ChatManagementConversation, ChatMessage, ChatPerson, ChatSubjectOption, ChatUploadReservation,
   CreateChatConversation, CursorPage, MentorWorkingHours, SendChatMessage,
 } from '../types/chat'
 
@@ -32,7 +32,7 @@ async function downloadAttachmentContent(conversationId: string, attachmentId: s
 }
 
 export const chatService = {
-  listSubjects: () => request<{ id: string; name: string }[]>(`${PREFIX}/subjects`, { auth: true }),
+  listSubjects: () => request<ChatSubjectOption[]>(`${PREFIX}/subjects`, { auth: true }),
   capabilities: () => request<ChatCapabilities>(`${PREFIX}/capabilities`, { auth: true }),
   listConversations: (filters: ChatConversationFilters = {}) =>
     request<CursorPage<ChatConversation>>(`${PREFIX}/conversations${query(filters)}`, { auth: true }),

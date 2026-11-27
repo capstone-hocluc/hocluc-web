@@ -15,13 +15,10 @@ import { useCurrentUser } from '../hooks/useCurrentUser'
 import { ApiError } from '../lib/api'
 import { cn } from '../lib/cn'
 import { getErrorMessage } from '../lib/errors'
-import { showErrorToast } from '../lib/toastBus'
-import { grantedRoles, ROLE_LABELS, roleHome } from '../lib/role-home'
 import {
   googleConsoleAuth,
   login as loginAccount,
   logout,
-  switchRole as switchRoleRequest,
 } from '../services/authService'
 import type { UserProfile, UserRole } from '../services/userService'
 
@@ -134,8 +131,6 @@ function AdminLoginPage({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [roleChoices, setRoleChoices] = useState<UserRole[]>([])
-  const [switchingRole, setSwitchingRole] = useState<UserRole | null>(null)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -170,11 +165,6 @@ function AdminLoginPage({
       const profile = await loadCurrentUser()
 
       if (!allowedRoles.includes(profile.role)) {
-        const available = grantedRoles(profile).filter((role) => allowedRoles.includes(role))
-        if (available.length) {
-          setRoleChoices(available)
-          return
-        }
         try { await logout() } finally { clearCurrentUser() }
         setError(rejectedRoleMessage)
         focusField(formRef.current, 'email', true)
@@ -200,11 +190,6 @@ function AdminLoginPage({
       const profile = await loadCurrentUser()
 
       if (!allowedRoles.includes(profile.role)) {
-        const available = grantedRoles(profile).filter((role) => allowedRoles.includes(role))
-        if (available.length) {
-          setRoleChoices(available)
-          return
-        }
         try { await logout() } finally { clearCurrentUser() }
         setError(rejectedRoleMessage)
         return
@@ -219,85 +204,6 @@ function AdminLoginPage({
       setLoading(false)
     }
   }
-
-  const chooseRole = async (role: UserRole) => {
-    if (loading) return
-    setLoading(true)
-    setSwitchingRole(role)
-    setError('')
-    try {
-      await switchRoleRequest(role)
-      window.location.assign(roleHome(role))
-    } catch (err) {
-      setError(getErrorMessage(err))
-      setSwitchingRole(null)
-      setLoading(false)
-    }
-  }
-
-  const discardRoleSession = async (onDone: () => void) => {
-    if (loading) return
-    setLoading(true)
-    try { await logout() } catch (error) { showErrorToast(getErrorMessage(error)) }
-    finally {
-      clearCurrentUser()
-      setRoleChoices([])
-      setLoading(false)
-      onDone()
-    }
-  }
-
-  if (roleChoices.length)
-    return (
-      <AuthShell onBack={() => void discardRoleSession(onBack)}>
-        <section aria-labelledby="admin-role-title">
-          <h1
-            id="admin-role-title"
-            className="text-center text-2xl leading-8 font-semibold tracking-[-0.5px] text-balance text-text-primary"
-          >
-            Chọn vai trò để tiếp tục
-          </h1>
-          <p className="mt-2 text-center text-sm leading-6 text-text-secondary">
-            Chuyển vai trò sẽ kết thúc các phiên đăng nhập khác.
-          </p>
-          <div className="mt-6 flex flex-col gap-3">
-            {roleChoices.map((role, index) => (
-              <Button
-                key={role}
-                size="lg"
-                className="w-full"
-                disabled={loading}
-                autoFocus={index === 0}
-                onClick={() => void chooseRole(role)}
-              >
-                {switchingRole === role ? (
-                  <>
-                    <LoaderCircle className="motion-safe:animate-spin" aria-hidden="true" />
-                    Đang chuyển...
-                  </>
-                ) : (
-                  ROLE_LABELS[role]
-                )}
-              </Button>
-            ))}
-            <Button
-              appearance="outline"
-              size="lg"
-              className="w-full"
-              disabled={loading}
-              onClick={() => void discardRoleSession(() => undefined)}
-            >
-              Dùng tài khoản khác
-            </Button>
-          </div>
-          {error && (
-            <Notice tone="danger" role="alert" className="mt-4">
-              {error}
-            </Notice>
-          )}
-        </section>
-      </AuthShell>
-    )
 
   return (
     <AuthShell onBack={onBack}>

@@ -3,17 +3,14 @@ import {
   type ApiResponse,
   clearTokens,
   getAccessToken,
-  accessTokenIdentity,
   authSessionStamp,
   authSessionGeneration,
   assertAuthSessionStamp,
-  ensureFreshAccessToken,
   withAuthSessionLock,
   request,
   setTokens,
   type TokenData,
 } from '../lib/api'
-import type { UserRole } from './userService'
 
 export interface RegisterStudentRequest {
   email: string
@@ -146,22 +143,4 @@ export async function logout() {
   } catch {
     throw new Error('Đã đăng xuất trên thiết bị này nhưng chưa xác nhận đăng xuất phía máy chủ. Vui lòng kiểm tra kết nối mạng.')
   }
-}
-
-// Role in use is stored server-side; the response carries fresh tokens for it.
-export async function switchRole(role: UserRole) {
-  const generation = authSessionGeneration()
-  const identity = accessTokenIdentity()
-  if (!await ensureFreshAccessToken() || identity !== accessTokenIdentity()) {
-    throw new ApiError('Phiên đăng nhập đã thay đổi. Vui lòng đăng nhập lại.', 409)
-  }
-  return withAuthSessionLock(async () => {
-    if (identity !== accessTokenIdentity() || generation !== authSessionGeneration()) throw new ApiError('Phiên đăng nhập đã thay đổi.', 409)
-    const stamp = authSessionStamp()
-    const response = await request<TokenData>('/api/v1/auth/switch-role', {
-      method: 'POST', auth: true, retryOnUnauthorized: false, body: { role },
-    })
-    assertAuthSessionStamp(stamp)
-    return ensureTokenData(response, 'Không đổi được vai trò. Máy chủ chưa trả về access token.')
-  })
 }

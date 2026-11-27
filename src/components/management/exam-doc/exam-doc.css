@@ -10,6 +10,19 @@
   font-family: var(--font-sans);
 }
 
+/*
+ * Their words and icons are an editor's neutral ink, not the console's navy: the theme's tokens resolve on the root,
+ * so the light theme's are set again here.
+ */
+html:not([data-theme='dark']) .exam-doc-ui {
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-tertiary: #71717a;
+  --color-icon-primary: #27272a;
+  --color-icon-secondary: #52525b;
+  --color-icon-tertiary: #71717a;
+}
+
 /* Print layout: A4 sheets (sizes must match PAGE in pagination.ts) stacked behind one editable flow. */
 .exam-doc-pages {
   --exam-doc-page-gap: 24px;
@@ -146,6 +159,20 @@
 
 .exam-doc-content img.ProseMirror-selectednode {
   outline: 2px solid #2563eb;
+}
+
+/* A formula is one piece: the page's selection colour would paint each of KaTeX's overlapping glyph boxes. */
+.exam-doc-math ::selection {
+  background: transparent;
+  /* inherit would take the white text of the page's selection; the paper's ink is fixed */
+  color: #111;
+}
+
+/* KaTeX's pieces are as tall as what they set (a fraction is taller than the line), so the tint covers the formula
+   and nothing beside it. Before KaTeX loads, the typed formula is tinted instead. */
+.exam-doc-math-selected .katex-html > .base,
+.exam-doc-math-selected [data-math-pending] {
+  background: rgb(37 99 235 / 0.18);
 }
 
 .exam-doc-content table {

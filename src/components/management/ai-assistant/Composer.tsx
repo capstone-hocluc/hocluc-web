@@ -13,14 +13,10 @@ import type { AiAssistantMode } from '../../../services/aiAssistantService'
 import {
   Check,
   ChevronDown,
-  ClipboardList,
-  FileCheck2,
   Filter,
-  Sparkles,
-  type LucideIcon,
 } from '../../console/icons'
 import { ComposerSend } from '../../assistant-ui/elements/composer'
-import { composerChip, composerTool, floating, paper } from '../../assistant-ui/elements/surfaces'
+import { composerChip, composerTool, floating, paper } from '../../assistant-ui/elements/console-surfaces'
 import Button from '../../console/button'
 import Notice from '../../console/notice'
 import type { SelectOption } from '../../console/select-field'
@@ -28,6 +24,7 @@ import type { AiComposeSettings } from '../../../hooks/useAiAssistant'
 import QuizConfigBar from './QuizConfigBar'
 import { EXAM_FORMATS } from './exam-format'
 import { requestedCount } from './revise-request'
+import { COMPOSER_MODES, modeOf } from './composer-modes'
 import { COMPOSE_COUNTS, MOCK_COUNTS, SOLUTION_STYLES } from './quiz-config-options'
 
 /**
@@ -64,39 +61,6 @@ function useDismiss(
   }
 }
 
-const EXAM_PLACEHOLDER = 'Nhập yêu cầu tạo, sửa, giải đề thi…'
-
-const MODES: {
-  id: AiAssistantMode
-  label: string
-  description: string
-  placeholder: string
-  icon: LucideIcon
-}[] = [
-  {
-    id: 'ask',
-    label: 'Hỏi đáp',
-    description: 'Hỏi kiến thức, bài tập hoặc cách dạy',
-    placeholder: 'Hỏi về khái niệm, bài tập hoặc cách dạy…',
-    icon: Sparkles,
-  },
-  {
-    id: 'compose',
-    label: 'Soạn câu hỏi',
-    description: 'Tạo câu hỏi mới theo cấu hình',
-    // The subjects come from the request's own words, so the hint shows naming one.
-    placeholder: 'Ví dụ: Soạn 10 câu Toán mức trung bình, kèm lời giải…',
-    icon: ClipboardList,
-  },
-  {
-    id: 'mock-exam',
-    label: 'Mô phỏng đề',
-    description: 'Soạn đề mới theo một đề mẫu',
-    placeholder: EXAM_PLACEHOLDER,
-    icon: FileCheck2,
-  },
-]
-
 // The menus open upwards over the composer, as wide as it is (capped): aligned to its right edge under the panel's
 // chips, to its left edge under the bar's, which sit first.
 const MENU = cn(floating, 'absolute right-0 bottom-full left-0 z-50 mb-2 rounded-2xl')
@@ -104,7 +68,8 @@ const menuAt = (compact: boolean) => cn(MENU, compact ? 'mr-auto' : 'ml-auto')
 
 interface ComposerProps {
   mode: AiAssistantMode
-  onModeChange: (mode: AiAssistantMode) => void
+  /** Picks another mode; left out where the assistant answers every message, so there is no mode to pick. */
+  onModeChange?: (mode: AiAssistantMode) => void
   busy: boolean
   /** Stops the run going on (the send button turns into it). */
   onStop: () => void
@@ -151,7 +116,7 @@ export default function Composer({
   trailing,
 }: ComposerProps) {
   const bar = variant === 'bar'
-  const active = MODES.find((item) => item.id === mode) ?? MODES[0]
+  const active = modeOf(mode)
   const missingConfig = mode === 'mock-exam' && !settings.bankSourceId
   const text = useAuiState(({ composer }) => composer.text)
   // Counts the sends; the settings menu is keyed by it, so it closes and does not cover the progress.
@@ -236,7 +201,7 @@ export default function Composer({
           {bar ? (
             <div className="flex min-w-0 items-end gap-0.5 py-1.5 pr-1.5 pl-2">
               <div className="flex shrink-0 items-center gap-0.5">
-                <ModeMenu mode={mode} onModeChange={onModeChange} compact />
+                {onModeChange && <ModeMenu mode={mode} onModeChange={onModeChange} compact />}
                 {settingsMenu}
               </div>
               <div className="min-w-0 flex-1 px-2 py-1">{textarea}</div>
@@ -268,7 +233,7 @@ export default function Composer({
                   </button>
                 </div>
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
-                  <ModeMenu mode={mode} onModeChange={onModeChange} />
+                  {onModeChange && <ModeMenu mode={mode} onModeChange={onModeChange} />}
                   {settingsMenu}
                 </div>
                 {sendButton}
@@ -277,6 +242,38 @@ export default function Composer({
           )}
         </ComposerPrimitive.Root>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The mode menu and the settings chip alone, for a composer that brings its own box and send button (assistant-ui's
+ * Thread takes them as its composer's extra).
+ */
+export function ComposerChips({
+  mode,
+  onModeChange,
+  settings,
+  onSettingsChange,
+  papersError,
+  countFromPrompt,
+}: Pick<ComposerProps, 'mode' | 'onModeChange' | 'settings' | 'onSettingsChange' | 'papersError'> & { countFromPrompt?: boolean }) {
+  const text = useAuiState(({ composer }) => composer.text)
+  const [sends, setSends] = useState(0)
+  useAuiEvent('composer.send', () => setSends((count) => count + 1))
+  return (
+    <div className="flex min-w-0 items-center gap-0.5">
+      {onModeChange && <ModeMenu mode={mode} onModeChange={onModeChange} />}
+      {mode !== 'ask' && (
+        <SettingsMenu
+          key={sends}
+          summary={settingsSummary(mode, settings, requestedCount(text), countFromPrompt)}
+          missing={mode === 'mock-exam' && !settings.bankSourceId}
+          hasError={Boolean(mode === 'mock-exam' && papersError)}
+        >
+          <QuizConfigBar mode={mode === 'revise' ? 'compose' : mode} settings={settings} onChange={onSettingsChange} />
+        </SettingsMenu>
+      )}
     </div>
   )
 }
@@ -293,7 +290,7 @@ function ModeMenu({
 }) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
-  const active = MODES.find((item) => item.id === mode) ?? MODES[0]
+  const active = modeOf(mode)
   const ActiveIcon = active.icon
   const onEscape = useDismiss(open, setOpen, root)
 
@@ -335,7 +332,7 @@ function ModeMenu({
           aria-label="Chế độ trả lời"
           className={cn(menuAt(compact), 'max-w-[328px] p-1.5')}
         >
-          {MODES.map((item) => {
+          {COMPOSER_MODES.map((item) => {
             const Icon = item.icon
             const selected = item.id === mode
             return (
@@ -392,11 +389,12 @@ const labelOf = (options: readonly SelectOption[], id: string) =>
 function settingsSummary(
   mode: Exclude<AiAssistantMode, 'ask'>,
   settings: AiComposeSettings,
-  typedCount: number | null
+  typedCount: number | null,
+  countFromPrompt = false,
 ) {
   const count = typedCount
     ? `${typedCount} câu`
-    : (labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount)) ??
+    : countFromPrompt ? undefined : (labelOf(mode === 'compose' ? COMPOSE_COUNTS : MOCK_COUNTS, String(settings.questionCount)) ??
       (typeof settings.questionCount === 'number' ? `${settings.questionCount} câu` : undefined))
   const format = mode === 'compose' ? labelOf(EXAM_FORMATS, settings.examFormat) : undefined
   const reuse =

@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useScheduleResource } from '../../../hooks/useScheduleResource'
+import { getCategories } from '../../../services/categoryService'
 import { getErrorMessage } from '../../../lib/errors'
 import type { AiBankItem } from '../../../services/aiAssistantService'
 import Button from '../../console/button'
@@ -20,17 +22,18 @@ interface SaveToBankDialogProps {
 }
 
 /**
- * "Lưu vào ngân hàng" for several questions: those of a subject the viewer authors are listed, the kept ones not yet
- * saved picked; each comes back saved, or left out with why.
+ * The kept questions the viewer may save are picked by default; each comes back saved, or left out with why.
  */
 export default function SaveToBankDialog({ questions, numberOf, bank, onClose }: SaveToBankDialogProps) {
-  const listed = questions.filter((question) => bank.authorable(question.id))
-  const savable = listed.filter((question) => bank.canSave(question.id)).map((question) => question.id)
-  const blocked = questions.length - listed.length
+  const subjects = useScheduleResource('save-to-bank-subjects', getCategories)
+  const subjectNames = new Map((subjects.data ?? []).map((subject) => [subject.id, subject.name]))
+  const savable = questions.filter((question) => bank.canSave(question.id)).map((question) => question.id)
+  const blocked = questions.filter((question) => !bank.authorable(question.id)).length
+  const alreadySaved = questions.filter((question) => bank.savedQuestionId(question.id)).length
   // Until the viewer changes it, the pick is every kept question that can still be saved.
   const [picked, setPicked] = useState<ReadonlySet<string> | null>(null)
   const selection =
-    picked ?? new Set(listed.filter((question) => question.kept && bank.canSave(question.id)).map((question) => question.id))
+    picked ?? new Set(questions.filter((question) => question.kept && bank.canSave(question.id)).map((question) => question.id))
   const chosen = savable.filter((id) => selection.has(id))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -86,6 +89,7 @@ export default function SaveToBankDialog({ questions, numberOf, bank, onClose }:
         <QuestionListSkeleton />
       ) : (
         <div className="flex flex-col gap-3">
+          <p className="m-0 text-sm text-text-secondary">{questions.length} câu · {alreadySaved} câu đã lưu</p>
           {error && <Notice tone="danger">{error}</Notice>}
           {savable.length > 0 && (
             <Checkbox
@@ -98,26 +102,38 @@ export default function SaveToBankDialog({ questions, numberOf, bank, onClose }:
               Chọn tất cả
             </Checkbox>
           )}
-          <ul className="flex flex-col divide-y divide-card-border rounded-lg border border-card-border">
-            {listed.map((question) => {
+          <ul className="max-h-80 overflow-y-auto divide-y divide-card-border rounded-lg border border-card-border">
+            {questions.map((question) => {
               const saved = Boolean(bank.savedQuestionId(question.id))
+              const subjectId = bank.subjectId(question.id)
+              const subject = subjectId ? subjectNames.get(subjectId) : null
+              const unavailable = !bank.authorable(question.id)
+              const status = saved
+                ? { label: 'Đã lưu', tone: 'info' as const }
+                : unavailable
+                  ? { label: 'Không thể lưu', tone: 'warning' as const }
+                  : { label: question.kept ? 'Đã giữ' : 'Đã bỏ', tone: 'neutral' as const }
               return (
                 <li key={question.id} className="flex min-w-0 items-center gap-3 px-3 py-2">
                   <Checkbox
                     isSelected={saved || selection.has(question.id)}
-                    isDisabled={saved || busy}
+                    isDisabled={!bank.canSave(question.id) || busy}
                     onChange={(on) => toggle(question.id, on)}
                     className="min-w-0 flex-1 text-sm text-text-primary"
                   >
-                    <span className="min-w-0 truncate">
-                      <strong>{label(question.id)}.</strong> <MathText>{question.prompt}</MathText>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="flex flex-wrap items-baseline gap-x-2">
+                        <strong>{label(question.id)}.</strong>
+                        {subjects.status === 'loading' && subjectId ? (
+                          <Skeleton className="h-3 w-16 self-center" />
+                        ) : (
+                          <span className="text-xs text-text-tertiary">{subject ?? (subjectId ? 'Môn đã gắn' : 'Chưa xác định môn')}</span>
+                        )}
+                      </span>
+                      <span className="truncate"><MathText>{question.prompt.split(/\r?\n/, 1)[0]}</MathText></span>
                     </span>
                   </Checkbox>
-                  {saved ? (
-                    <Status tone="info">Đã lưu</Status>
-                  ) : (
-                    !question.kept && <Status tone="neutral">Đã bỏ</Status>
-                  )}
+                  <Status tone={status.tone}>{status.label}</Status>
                 </li>
               )
             })}
@@ -159,13 +175,17 @@ function SaveResults({ results, label }: { results: AiBankItem[]; label: (id: st
 function QuestionListSkeleton() {
   return (
     <div aria-hidden className="flex flex-col gap-3">
+      <Skeleton className="h-5 w-44" />
       <Skeleton className="h-5 w-28" />
       <div className="flex flex-col divide-y divide-card-border rounded-lg border border-card-border">
         {[0, 1, 2, 3, 4].map((row) => (
           <div key={row} className="flex items-center gap-3 px-3 py-2.5">
             <Skeleton className="size-4 shrink-0 rounded" />
-            <Skeleton className="h-4 w-12 shrink-0" />
-            <Skeleton className="h-4 flex-1" />
+            <div className="min-w-0 flex-1 space-y-1">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+            <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
           </div>
         ))}
       </div>

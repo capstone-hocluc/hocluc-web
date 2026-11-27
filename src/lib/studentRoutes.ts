@@ -13,12 +13,13 @@ const enc = encodeURIComponent
 export const studentRoutes = {
   dashboard: () => '/student/dashboard',
   schedule: () => '/student/schedule',
+  liveRoom: (liveClassId: string) => `/student/live-classes/${enc(liveClassId)}/room`,
   chat: (id?: string) => id ? `/student/chat/${enc(id)}` : '/student/chat',
   learningProfile: () => '/student/learning-profile',
   roadmap: () => '/student/roadmap',
   tutor: () => '/student/tutor',
   wallet: () => '/student/wallet',
-  profile: (section?: 'student') =>
+  profile: (section?: 'personal' | 'student' | 'security' | 'wallet' | 'orders') =>
     section ? `/student/profile?section=${enc(section)}` : '/student/profile',
   courses: () => '/student/courses',
   courseDetail: (courseId: string) => `/student/courses/${enc(courseId)}`,
@@ -32,7 +33,13 @@ export const studentRoutes = {
   quizAttempt: (quizId: string, attemptId: string) =>
     `/student/assessments/quizzes/${enc(quizId)}/attempts/${enc(attemptId)}`,
   attemptReview: (attemptId: string) => `/student/assessments/attempts/${enc(attemptId)}/review`,
-  placement: () => '/student/assessments/placement',
+  assessments: (tab?: 'course' | 'free', courseId?: string) => {
+    const query = new URLSearchParams()
+    if (tab) query.set('tab', tab)
+    if (courseId) query.set('course', courseId)
+    return `/student/assessments${query.size ? `?${query}` : ''}`
+  },
+  placement: () => '/free-exams',
   placementResult: () => '/student/assessments/placement/result',
   placementAttempt: (attemptId: string) =>
     `/student/assessments/placement/attempts/${enc(attemptId)}`,
@@ -43,6 +50,7 @@ export const studentRoutes = {
 export type StudentRoute =
   | { name: 'dashboard' }
   | { name: 'schedule' }
+  | { name: 'live-room'; liveClassId: string }
   | { name: 'chat'; conversationId?: string }
   | { name: 'learning-profile' }
   | { name: 'roadmap' }
@@ -57,6 +65,7 @@ export type StudentRoute =
   | { name: 'quiz'; quizId: string }
   | { name: 'quiz-attempt'; quizId: string; attemptId: string }
   | { name: 'attempt-review'; attemptId: string }
+  | { name: 'assessments' }
   | { name: 'placement' }
   | { name: 'placement-result' }
   | { name: 'placement-attempt'; attemptId: string }
@@ -100,6 +109,8 @@ export function parseStudentRoute(path: string): StudentRoute | null {
         ? { name: 'chat', conversationId: a } : null
     case 'schedule':
       return rest.length === 0 ? { name: 'schedule' } : null
+    case 'live-classes':
+      return rest.length === 2 && b === 'room' ? { name: 'live-room', liveClassId: a } : null
     case 'learning-profile':
       return rest.length === 0 ? { name: 'learning-profile' } : null
     case 'roadmap':
@@ -123,6 +134,7 @@ export function parseStudentRoute(path: string): StudentRoute | null {
       return null
     }
     case 'assessments': {
+      if (rest.length === 0) return { name: 'assessments' }
       if (a === 'quizzes' && rest.length === 2) return { name: 'quiz', quizId: b }
       if (a === 'quizzes' && rest.length === 4 && c === 'attempts')
         return { name: 'quiz-attempt', quizId: b, attemptId: d }
@@ -141,4 +153,8 @@ export function parseStudentRoute(path: string): StudentRoute | null {
     default:
       return null
   }
+}
+
+export function isStudentAssessmentsPath(value: unknown): value is string {
+  return typeof value === 'string' && !value.includes('\\') && /^\/student\/assessments(?:\?[^#]*)?$/.test(value)
 }

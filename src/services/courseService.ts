@@ -22,6 +22,9 @@ export interface Course {
   elapsedPercentage?: number
   recommended?: boolean
   purchased?: boolean
+  /** Average stars over visible reviews (one decimal); null while the course has none. */
+  averageRating?: number | null
+  reviewCount?: number
 }
 
 export interface MyCourseEnrollment {
@@ -133,6 +136,9 @@ export interface CourseDetail {
   price?: number
   /** Study time the author states, in minutes. */
   estimatedDurationMinutes?: number | null
+  /** FIXED_END_DATE: study until endDate (open-ended without one); DAYS_FROM_PURCHASE: accessDays from paying. */
+  accessMode?: 'FIXED_END_DATE' | 'DAYS_FROM_PURCHASE' | null
+  accessDays?: number | null
   purchased?: boolean
   inCart?: boolean
   phaseCount?: number
@@ -263,9 +269,20 @@ export interface CourseStudyLiveClass {
   status: string
   provider?: string | null
   instructorName?: string | null
+  teacherName?: string | null
+  type?: 'COURSE' | 'OVERALL_PRACTICE' | string | null
+  seriesName?: string | null
+  dayNumber?: number | null
+  lessonId?: string | null
+  lessonTitle?: string | null
   meetingUrl?: string | null
   recordingUrl?: string | null
+  recordings?: { id: string; recordingUrl: string; recordingType?: string | null; fileType?: string | null }[]
   joinable: boolean
+  joinPrice?: number
+  admitted?: boolean
+  admittedCount?: number
+  refunded?: boolean
 }
 
 export interface CourseStudy {
@@ -283,6 +300,10 @@ export interface CourseStudy {
   continueLessonTitle: string | null
   continueSectionCourseId: string | null
   nextLiveClass: CourseStudyLiveClass | null
+  /** Included by the current BE; optional for older deployments. */
+  exams?: CourseExamSummary[]
+  placementExams?: CourseExamSummary[]
+  showPlacementReminder?: boolean
   phases: CourseStudyPhase[]
 }
 
@@ -317,6 +338,20 @@ export async function getCourseLiveClasses(courseId: string): Promise<CourseLive
   return response.data
 }
 
+export interface LiveClassRecording {
+  id: string
+  status?: string | null
+  recordingUrl?: string | null
+}
+
+export async function getLiveClassRecordings(liveClassId: string): Promise<LiveClassRecording[]> {
+  const response = await request<LiveClassRecording[]>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/recordings`,
+    { auth: true }
+  )
+  return response.data ?? []
+}
+
 export interface CatchUpRecording {
   liveClassId: string
   title: string
@@ -325,13 +360,10 @@ export interface CatchUpRecording {
 }
 
 export interface SectionOrderItem {
-  sectionCourseId: string
-  sectionCourseTitle: string
-  phaseName: string
+  contentSectionId: string
+  title: string
+  phaseName: string | null
   sequence: number
-  categoryId: string | null
-  categoryName: string | null
-  priority: boolean
 }
 
 export interface EnrollmentPlan {
@@ -339,7 +371,7 @@ export interface EnrollmentPlan {
   branch: string
   message: string | null
   // Course-timeline-elapsed, NOT student lesson/learning progress.
-  elapsedPercentage: number
+  elapsedPercentage: number | null
   // Same Course shape as /courses/main - reused as-is.
   recommendedCourse: Course | null
   catchUpRecordings: CatchUpRecording[]

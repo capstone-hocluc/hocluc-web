@@ -247,7 +247,10 @@ html[data-console] :where(nav button, label, th) {
 .dashboard-layout [data-ui-button][data-variant='primary'][data-appearance='fill']:hover {
   background: var(--color-primary-dark);
 }
-.dashboard-layout :focus-visible {
+/* react-aria components track keyboard focus themselves (data-focus-visible), so focus that returns
+   to a trigger after a mouse pick stays quiet; the browser's :focus-visible would ring it. */
+.dashboard-layout :focus-visible:not([data-rac]),
+.dashboard-layout [data-rac][data-focus-visible] {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 4px;
 }

@@ -1,0 +1,60 @@
+/* Opening title */
+.course-page .cj-intro {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: max(84px, 10.5cqh);
+  padding: 0 24px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-14px);
+  transition:
+    opacity 300ms ease,
+    transform 500ms ease;
+}
+.course-page .cj-intro.is-on {
+  opacity: 1;
+  transform: none;
+}
+.course-page .cj-intro h2 {
+  font-size: clamp(32px, min(4cqw, 6.2cqh), 56px);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.course-page .cj-intro p {
+  margin-top: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.course-page .cj-hint {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 12px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 10px 26px -14px rgb(11 35 72 / 45%);
+  font-size: 13.5px;
+  font-weight: 700;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.course-page .cj-hint.is-on {
+  opacity: 1;
+}
+.course-page .cj-hint .ui-icon {
+  width: 16px;
+  height: 16px;
+  color: #f47b20;
+  animation: cj-nudge 1.6s ease-in-out infinite;
+}

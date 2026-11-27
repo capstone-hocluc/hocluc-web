@@ -30,7 +30,6 @@ The UI references the official NextAdmin Chats layout (<https://demo.nextadmin.c
 
 Fixture verification uses `npm run test:e2e:chat` and `npm run test:e2e:core-crud`, without a database connection. Fixture success alone does not prove live transport, storage or authorization.
 
-Real integration is owned by `scripts/chat-live-browser-test.ps1`, `playwright.live.config.ts` and `tests/e2e/chat-live.spec.ts`, paired with the backend's `scripts/chat-live-test.ps1 -Browser`. `vite.live.config.ts` forwards same-origin API/STOMP traffic to the fresh disposable backend; private storage requests remain real. Deliberate pacing respects the shared loopback IP's existing quota. This topology is not evidence that compressed cross-origin/shared-NAT workloads avoid 429.
 
 Phase 5 gate after audit fixes (2026-10-11, HEAD `0041c127637cfe6c5da99aede6ebda1768e05bb1`, code uncommitted): `npx tsc -b`, `npx tsc --noEmit -p tsconfig.e2e.json`, `npm run build` pass; `npm run lint` 0 errors (3 baseline warnings outside chat); `npm run test:e2e:chat` 61 passed and `npm run test:e2e:core-crud` 28 passed. Independent review found no remaining blocker. Catch-up uses a request-local cursor and commits it with the complete valid batch, so failed later pages and stale selections cannot skip messages. Background inbox reconciliation reloads the loaded page depth with the active filter and replaces rows/cursor together. Lost-response coverage now commits on the fixture server before aborting, proving same-key retry does not duplicate the committed message.
 

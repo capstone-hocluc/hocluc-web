@@ -13,7 +13,14 @@ import { MenuContent, MenuItem } from '../exam-doc/menubar/menu-ui'
 import AiOrb from './AiOrb'
 import type { ChatPanelProps } from './ChatPanel'
 import AssistantSources from './chat/AssistantSources'
-import { ChatTurn } from './chat/ChatThread'
+import { ThreadMessageById } from '@/components/assistant-ui/elements/thread.aui'
+import { TooltipProvider } from '@/components/assistant-ui/ui/tooltip'
+import { StageGroup } from './chat/stage-group'
+import { RunStepsGroup } from './chat/RunStepsGroup'
+import { StageNote } from './chat/stage-note'
+import { StepCall } from './chat/step-call'
+
+const BAR_PARTS = { ReasoningGroup: StageGroup, ChainOfThought: RunStepsGroup, Reasoning: StageNote, ToolFallback: StepCall }
 import Composer from './Composer'
 
 const ICON_BUTTON =
@@ -173,7 +180,9 @@ export default function ChatBar({
               </button>
             </div>
             <div className="max-h-[min(45vh,420px)] overflow-y-auto px-4 pb-3">
-              <ChatTurn messageId={answer.id} />
+              <TooltipProvider>
+                <ThreadMessageById messageId={answer.id} components={BAR_PARTS} />
+              </TooltipProvider>
             </div>
           </div>
         )}

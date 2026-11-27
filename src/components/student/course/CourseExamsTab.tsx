@@ -1,13 +1,20 @@
-import { ArrowRight, CheckCircle2, Clock3, FileQuestion } from '../../console/icons'
-import { formatDate } from '../../../lib/courseFormat'
+import { useState } from 'react'
 import { getCourseExams } from '../../../services/courseService'
 import { usePageResource } from '../../../hooks/usePageResource'
 import MascotState from '../../common/MascotState'
 import ResourceState from '../common/ResourceState'
-import Button from '../../ui/Button'
-import Card, { CardTitle } from '../../ui/Card'
+import Card from '../../ui/Card'
 import Skeleton from '../../ui/Skeleton'
-import StatusBadge from '../../ui/StatusBadge'
+import styles from './CourseStudyAppearance.module.css'
+import examStyles from './CourseExams.module.css'
+import CourseExamCard from './CourseExamCard'
+import { hasCompletedExam } from './courseExamState'
+import { Tabs, TabsList, TabsTrigger } from '../../ui/Tabs'
+import Button from '../../ui/Button'
+import { ChevronLeft, ChevronRight } from '../../console/icons'
+
+const PAGE_SIZE = 6
+type ExamFilter = 'all' | 'todo' | 'done'
 
 interface CourseExamsTabProps {
   courseId: string
@@ -15,24 +22,47 @@ interface CourseExamsTabProps {
 }
 
 function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
+  const [filter, setFilter] = useState<ExamFilter>(() => {
+    const value = new URLSearchParams(window.location.search).get('examFilter')
+    return value === 'todo' || value === 'done' ? value : 'all'
+  })
+  const [page, setPage] = useState(() => {
+    const value = Number(new URLSearchParams(window.location.search).get('examPage'))
+    return Number.isSafeInteger(value) && value > 0 ? value : 1
+  })
   const {
     data: exams,
     status,
     errorMessage,
     reload,
   } = usePageResource(() => getCourseExams(courseId), [courseId])
+  const doneCount = exams?.filter(hasCompletedExam).length ?? 0
+  const filtered = (exams ?? []).filter((exam) => filter === 'all' || (filter === 'done' ? hasCompletedExam(exam) : !hasCompletedExam(exam)))
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pages)
+  const visibleExams = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const updateView = (nextFilter: ExamFilter, nextPage: number) => {
+    setFilter(nextFilter)
+    setPage(nextPage)
+    const search = new URLSearchParams(window.location.search)
+    if (nextFilter === 'all') search.delete('examFilter')
+    else search.set('examFilter', nextFilter)
+    if (nextPage === 1) search.delete('examPage')
+    else search.set('examPage', String(nextPage))
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${search.size ? `?${search}` : ''}${window.location.hash}`)
+  }
 
   return (
     <>
-      <ResourceState
+      <ResourceState imageSrc="/mascot/03.png"
         status={status}
         errorMessage={errorMessage}
         onRetry={reload}
         loading={
-          <div className="flex flex-col gap-3" aria-label="Đang tải danh sách bài thi">
-            <Skeleton className="h-[86px]" />
-            <Skeleton className="h-[86px]" />
-            <Skeleton className="h-[86px]" />
+          <div className={examStyles.grid} aria-label="Đang tải danh sách bài thi">
+            <Skeleton className="h-64 rounded-2xl" />
+            <Skeleton className="h-64 rounded-2xl" />
+            <Skeleton className="h-64 rounded-2xl" />
           </div>
         }
         forbidden={{
@@ -44,107 +74,35 @@ function CourseExamsTab({ courseId, onOpenQuiz }: CourseExamsTabProps) {
       />
 
       {status === 'ready' && exams && (
-        <Card as="section" padding="lg" radius="xl" aria-labelledby="course-exams-title">
-          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <CardTitle id="course-exams-title" className="mb-1 text-xl">
-                Bài thi của khóa học
-              </CardTitle>
-              <p className="m-0 text-[15px] text-text-body">
-                Theo dõi lượt làm và tiếp tục bài thi còn dang dở.
-              </p>
-            </div>
-            <span
-              className="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-semibold text-primary-text"
-              aria-live="polite"
-            >
-              {exams.length} bài thi
-            </span>
+        <Card as="section" padding="lg" radius="xl" className="border-0 p-0 shadow-none" aria-label="Bài thi của khóa học">
+          <div className={examStyles.toolbar}>
+            <Tabs value={filter} onValueChange={(value) => updateView(value as ExamFilter, 1)}>
+              <TabsList data-pill-tabs="" aria-label="Lọc bài thi" className={examStyles.filters}>
+                <TabsTrigger value="all">Tất cả <span>{exams.length}</span></TabsTrigger>
+                <TabsTrigger value="todo">Chưa làm <span>{exams.length - doneCount}</span></TabsTrigger>
+                <TabsTrigger value="done">Đã làm <span>{doneCount}</span></TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <span className="text-xs text-text-secondary" aria-live="polite">{filtered.length} bài thi</span>
           </div>
 
-          {exams.length === 0 ? (
-            <MascotState
-              title="Khóa học chưa có bài thi"
-              message="Khi có bài thi mới, nội dung sẽ xuất hiện tại đây."
-              className="min-h-[220px]"
+          {filtered.length === 0 ? (
+            <MascotState imageSrc="/mascot/03.png"
+              title={exams.length === 0 ? 'Khóa học chưa có bài thi' : filter === 'done' ? 'Bạn chưa hoàn thành bài thi nào' : 'Không còn bài thi chưa làm'}
+              message={exams.length === 0 ? 'Khi có bài thi mới, nội dung sẽ xuất hiện tại đây.' : filter === 'done' ? 'Các đề có kết quả chính thức sẽ xuất hiện tại đây.' : 'Bạn có thể xem lại các đề trong tab Đã làm.'}
+              className={styles.emptyState}
             />
           ) : (
-            <div
-              className="mt-2 divide-y-[1.5px] divide-line"
-              role="list"
-              aria-label="Danh sách bài thi"
-            >
-              {exams.map((exam) => {
-                const state = exam.locked
-                  ? { label: 'Chưa khả dụng', tone: 'locked' as const }
-                  : exam.inProgressAttemptId
-                    ? { label: 'Đang làm', tone: 'primary' as const }
-                    : exam.passed
-                      ? { label: 'Đã đạt', tone: 'success' as const }
-                      : exam.attemptsUsed > 0
-                        ? { label: 'Đã làm', tone: 'info' as const }
-                        : { label: 'Chưa làm', tone: 'neutral' as const }
-                const availability = [
-                  exam.availableFrom ? `Mở từ ${formatDate(exam.availableFrom)}` : '',
-                  exam.availableUntil ? `Đến ${formatDate(exam.availableUntil)}` : '',
-                ].filter(Boolean)
-
-                return (
-                  <article
-                    key={exam.id}
-                    role="listitem"
-                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4 first:pt-3 last:pb-1"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <h3 className="m-0 text-base font-semibold text-text-heading">
-                        {exam.title}
-                      </h3>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm font-semibold text-text-secondary">
-                        <span className="inline-flex items-center gap-1">
-                          <FileQuestion size={16} aria-hidden="true" />
-                          {exam.questionCount} câu hỏi
-                        </span>
-                        {exam.durationMinutes != null && exam.durationMinutes > 0 && (
-                          <span className="inline-flex items-center gap-1">
-                            <Clock3 size={16} aria-hidden="true" />
-                            {exam.durationMinutes} phút
-                          </span>
-                        )}
-                        {exam.attemptsUsed > 0 && (
-                          <span>
-                            {exam.attemptsUsed}/{exam.maxAttempts} lượt
-                          </span>
-                        )}
-                        {availability.map((item) => (
-                          <span key={item}>{item}</span>
-                        ))}
-                        {exam.passed && exam.bestPercentage != null && (
-                          <span className="inline-flex items-center gap-1 font-semibold text-badge-success-text">
-                            <CheckCircle2 size={16} aria-hidden="true" />
-                            Kết quả tốt nhất {exam.bestPercentage}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex min-h-11 w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
-                      <StatusBadge tone={state.tone} size="sm" className="text-xs">
-                        {state.label}
-                      </StatusBadge>
-                      <Button
-                        size="sm"
-                        className="min-h-11 sm:min-h-8.5"
-                        onClick={() => onOpenQuiz(exam.id)}
-                        aria-label={`${exam.inProgressAttemptId ? 'Tiếp tục' : 'Xem'} bài thi ${exam.title}`}
-                      >
-                        {exam.inProgressAttemptId ? 'Tiếp tục' : 'Xem bài thi'}
-                        <ArrowRight size={16} aria-hidden="true" />
-                      </Button>
-                    </div>
-                  </article>
-                )
-              })}
+            <div className={examStyles.grid} role="list" aria-label="Danh sách bài thi">
+              {visibleExams.map((exam) => <CourseExamCard key={exam.id} exam={exam} onOpenQuiz={onOpenQuiz} />)}
             </div>
+          )}
+          {pages > 1 && (
+            <nav className={examStyles.pagination} aria-label="Phân trang bài thi">
+              <span aria-live="polite">Trang {currentPage}/{pages}</span>
+              <Button appearance="outline" size="icon" aria-label="Trang bài thi trước" disabled={currentPage === 1} onClick={() => updateView(filter, currentPage - 1)}><ChevronLeft size={18} /></Button>
+              <Button appearance="outline" size="icon" aria-label="Trang bài thi sau" disabled={currentPage === pages} onClick={() => updateView(filter, currentPage + 1)}><ChevronRight size={18} /></Button>
+            </nav>
           )}
         </Card>
       )}

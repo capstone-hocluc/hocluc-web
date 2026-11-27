@@ -1,0 +1,91 @@
+/* The page's own chapters as numbered stops on one line, each stop in the next tint. The chapter
+   list inside a bundle's course cards keeps its plain look. */
+.course-page .cd-curriculum .cd-chapter {
+  position: relative;
+  margin-left: 56px;
+}
+.course-page .cd-curriculum .cd-chapter:nth-child(4n + 1) {
+  --sc-soft: #eaf3ff;
+  --sc-ink: #0b5f9e;
+}
+.course-page .cd-curriculum .cd-chapter:nth-child(4n + 2) {
+  --sc-soft: #e7f6ee;
+  --sc-ink: #0f7a55;
+}
+.course-page .cd-curriculum .cd-chapter:nth-child(4n + 3) {
+  --sc-soft: #fff2de;
+  --sc-ink: #955a07;
+}
+.course-page .cd-curriculum .cd-chapter:nth-child(4n + 4) {
+  --sc-soft: #fdebf2;
+  --sc-ink: #b2306c;
+}
+.course-page .cd-curriculum .cd-chapter summary {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 60px;
+}
+.course-page .cd-curriculum .cd-chapter-index {
+  position: absolute;
+  top: 10px;
+  left: -56px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--sc-soft);
+  color: var(--sc-ink);
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: box-shadow 200ms var(--ease);
+}
+.course-page .cd-curriculum .cd-chapter[open] .cd-chapter-index {
+  box-shadow:
+    0 0 0 3px var(--paper),
+    0 0 0 5px currentColor;
+}
+/* The number alone shows; "Chương" stays for screen readers. */
+.course-page .cd-curriculum .cd-chapter-word {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* The line from each stop down to the next one. */
+.course-page .cd-curriculum .cd-chapter > summary::before {
+  content: '';
+  position: absolute;
+  top: 56px;
+  bottom: -18px;
+  left: -37px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--line);
+}
+.course-page .cd-curriculum .cd-chapter:last-child > summary::before {
+  content: none;
+}
+
+@media (max-width: 760px) {
+  .course-page .cd-curriculum .cd-chapter {
+    margin-left: 44px;
+  }
+  .course-page .cd-curriculum .cd-chapter summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .course-page .cd-curriculum .cd-chapter-index {
+    top: 13px;
+    left: -44px;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  .course-page .cd-curriculum .cd-chapter > summary::before {
+    top: 51px;
+    left: -29px;
+  }
+}

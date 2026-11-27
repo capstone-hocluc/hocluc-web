@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../lib/api'
 import { getErrorMessage } from '../lib/errors'
 
@@ -14,7 +14,7 @@ interface Options<T> {
 
 // Loading / ready / error / forbidden / not-found for one page-level request.
 // Owns the cancelled-flag effect and the retry counter that every Student page
-// used to copy by hand. `load` runs again when `deps` change or `reload()` is called.
+// used to copy by hand. A background reload keeps the current data visible and reports transient errors separately.
 export function usePageResource<T>(
   load: () => Promise<T>,
   deps: readonly unknown[],
@@ -23,10 +23,14 @@ export function usePageResource<T>(
   const [data, setData] = useState<T | null>(null)
   const [status, setStatus] = useState<ResourceStatus>('loading')
   const [errorMessage, setErrorMessage] = useState('')
-  const [reloadKey, setReloadKey] = useState(0)
+  const [reloadRequest, setReloadRequest] = useState<{ background: boolean } | null>(null)
+  const lastRefresh = useRef<typeof reloadRequest>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState('')
 
   useEffect(() => {
     let cancelled = false
+    const background = reloadRequest?.background && lastRefresh.current !== reloadRequest
     load()
       .then((result) => {
         if (cancelled) return
@@ -44,19 +48,42 @@ export function usePageResource<T>(
           setStatus('not-found')
           return
         }
-        setErrorMessage(getErrorMessage(error))
-        setStatus('error')
+        const message = getErrorMessage(error)
+        if (background) {
+          setRefreshError(message)
+        } else {
+          setErrorMessage(message)
+          setStatus('error')
+        }
+      })
+      .finally(() => {
+        if (!cancelled && background) {
+          lastRefresh.current = reloadRequest
+          setRefreshing(false)
+        }
       })
     return () => {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, reloadKey])
+  }, [...deps, reloadRequest])
 
   const reload = useCallback(() => {
     setStatus('loading')
-    setReloadKey((current) => current + 1)
+    setRefreshing(false)
+    setRefreshError('')
+    setReloadRequest({ background: false })
   }, [])
 
-  return { data, setData, status, errorMessage, reload }
+  const reloadInBackground = useCallback(() => {
+    if (status !== 'ready') {
+      reload()
+      return
+    }
+    setRefreshing(true)
+    setRefreshError('')
+    setReloadRequest({ background: true })
+  }, [reload, status])
+
+  return { data, setData, status, errorMessage, reload, reloadInBackground, refreshing, refreshError }
 }

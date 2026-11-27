@@ -30,7 +30,7 @@ export interface AiSuggestion extends AiEditRange {
   reason?: string
   /** A short name of the kind of change, shown before the reason ("Chính tả"). */
   label?: string
-  source: 'rewrite' | 'proofread'
+  source: 'rewrite'
 }
 
 export interface AiSuggestionsState {

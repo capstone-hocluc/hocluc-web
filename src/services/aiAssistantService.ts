@@ -1,5 +1,7 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import { API_BASE_URL, getAccessToken, refreshAfterUnauthorized, request } from '../lib/api'
+import type { BankSource } from './questionBankService'
+import { assertQuizWriteAccess } from './teacherQuizService'
 
 /** 'revise' is a compose run that rewrites named questions ("Sửa câu 2"); the composer never offers it as a mode. */
 export type AiAssistantMode = 'ask' | 'compose' | 'mock-exam' | 'revise'
@@ -9,6 +11,7 @@ export type AiDraftSource = 'AI' | 'BANK' | 'MANUAL'
 
 export interface AiConversation {
   id: string
+  quizId?: string | null
   ownerId?: string
   title: string
   subjectId: string | null
@@ -41,19 +44,64 @@ export interface AiAgentStep {
   resultSize?: number | null
 }
 
+/** An image or PDF the teacher attached to an ask question, as the server stored it. */
+export interface AiAttachment {
+  key: string
+  name: string
+  contentType: string
+  size: number
+}
+
+/** One step of a finished run, kept with its reply: a stage, tool or slot event of its stream and when it was written. */
+export interface AiRunStep {
+  type: string
+  /** Epoch milliseconds. */
+  at: number
+  data: unknown
+}
+
 export interface AiMessage {
   id: string
+  /** The message this one follows; none on messages older than versions, which follow the one before them. */
+  parentId?: string | null
   conversationId?: string
   role: 'USER' | 'ASSISTANT'
   mode?: AiAssistantMode | string | null
   content: string
   trace?: AiAgentStep[] | string[] | null
+  /** The steps of the run behind this reply, as its stream showed them; none on replies older than these. */
+  steps?: AiRunStep[] | null
+  /** What the teacher might ask next, once proposed for an ask answer. */
+  suggestions?: string[] | null
+  attachments?: AiAttachment[] | null
+  /** The files of the exam the assistant prepared in this reply, because the teacher asked for them. */
+  files?: AiExamFile[] | null
+  /** A request the assistant proposed, sent for the teacher once they agreed; not their own words. */
+  agreed?: boolean | null
+  permission?: AiReadingPermission | null
   createdAt: string
+}
+
+/**
+ * The answer key written again (`guide` false: the answer table alone; no `solutions`: the exam's), or its solutions
+ * (`guide`) or the whole of it (`all`) taken off.
+ */
+export type AiAnswerKeyAsk =
+  | { action: 'write'; solutions?: AiSolutionStyle; guide?: boolean }
+  | { action: 'remove'; part: 'guide' | 'all' }
+
+/** A file of the exam the assistant offers: the page makes it from the sheet when it is downloaded. */
+export interface AiExamFile {
+  format: 'word' | 'pdf'
+  /** With the answer key and solutions after the exam; false: the exam alone. */
+  answers: boolean
 }
 
 export interface AiSent {
   messageId: string
   jobId: string | null
+  /** The run replaces the exam (a new one); false when it changes the exam there is (the assistant, a revise). */
+  replaced?: boolean
 }
 
 export interface AiQuestionOption {
@@ -161,6 +209,7 @@ export interface AiCheckResult {
 
 export interface AiDraftItem {
   id: string
+  addedToQuizId?: string | null
   draftId?: string
   sectionCode: string
   groupKey: string | null
@@ -188,7 +237,8 @@ export interface AiExamDraftRecord {
 
 /** A compose run still queued or going when the draft was read. */
 export interface AiActiveRun {
-  mode: 'compose' | 'mock-exam'
+  /** 'agent': the assistant changing the exam there is (a compose request on an exam with questions). */
+  mode: 'compose' | 'mock-exam' | 'revise' | 'agent'
   status: 'PENDING' | 'RUNNING'
   progress: string | null
   /** The conversation's last event before the run began: following the stream from it replays this run only. */
@@ -199,6 +249,8 @@ export interface AiDraftResponse {
   draft: AiExamDraftRecord
   items: AiDraftItem[]
   run?: AiActiveRun | null
+  /** A request on an exam that has questions goes to the assistant that reads and changes it, not to a new exam. */
+  composeAgent?: boolean
 }
 
 export interface AiSendConfig {
@@ -215,6 +267,137 @@ export interface AiSendConfig {
   items?: AiRevisedItem[]
   /** Ask mode: the exam on the sheet. */
   document?: AiSheetDocument
+  /** Compose mode: the exam on the sheet, for the assistant that changes it. */
+  sheet?: AiExamSheet
+  /** The teacher agreed to replace the exam on the sheet with a new one. */
+  confirmed?: boolean
+}
+
+export type AiReadingPermissionAnswer = 'ALLOWED' | 'DECLINED'
+
+export interface AiReadingPermission {
+  kind: 'READING_PASSAGES'
+  parts: string[]
+  passages: number
+  request: string
+  mode: 'compose' | 'mock-exam'
+  config: AiSendConfig
+  answer: AiReadingPermissionAnswer | null
+}
+
+export interface AiReadingPermissionConfig extends AiSendConfig {
+  confirmed: true
+  agreed: true
+  permissionMessageId: string
+  allowReadingPassages: boolean
+}
+
+/** The questions on the sheet as the assistant that changes the exam reads them, by the numbers the sheet prints. */
+export interface AiExamSheet {
+  outline: string
+  questions: Array<{ number: number; text: string; itemId?: string; part?: string; group?: string; context?: string }>
+  /** The lines outside the questions (header, title, instructions, headings); `cut`: only their first words. */
+  blocks?: Array<{
+    id: string
+    kind: 'header' | 'heading' | 'paragraph'
+    text: string
+    cut?: boolean
+    part?: string
+    /** The heading a part starts at: the questions after it are placed by it. */
+    opensPart?: boolean
+    align?: string
+    bold?: boolean
+    italic?: boolean
+  }>
+}
+
+/**
+ * A change to the order of the exam the assistant made, for the page to make on the sheet: the questions by their draft
+ * item (or, for one the teacher typed, the number the sheet printed before the change).
+ */
+export interface AiQuestionEdit {
+  editId: string
+  op: 'remove' | 'move'
+  numbers: number[]
+  items: Array<string | null>
+  /** move: the question the moved ones go after (its number before the change, and its item), or 0 for first in `part`. */
+  after?: number
+  afterItem?: string
+  part?: string
+}
+
+/** A line of the sheet outside its questions, as the assistant read it: found by its words, the id breaking a tie. */
+export interface AiSheetLine {
+  block: string
+  from: string
+  /** Only the line's first words were read. */
+  cut?: boolean
+}
+
+/** How a line the assistant writes is set out; what it leaves out stays as it was. */
+export interface AiLineFormat {
+  align?: 'left' | 'center' | 'right' | 'justify'
+  bold?: boolean
+  italic?: boolean
+}
+
+/** A change to the words outside the questions, or found and replaced in them. */
+export type AiTextEdit = { editId: string } & (
+  | ({ op: 'text'; text: string } & AiSheetLine & AiLineFormat)
+  | ({
+      op: 'insert'
+      text: string
+      kind: 'header' | 'heading' | 'paragraph'
+      /** After a line (`block`, `from`), after question `number` (its `item`), or at the start. */
+      after: 'start' | 'block' | 'question'
+      block?: string
+      from?: string
+      cut?: boolean
+      number?: number
+      item?: string
+    } & AiLineFormat)
+  | { op: 'removeText'; blocks: AiSheetLine[] }
+  | { op: 'header' }
+  | { op: 'replace'; find: string; replace: string; numbers: number[]; items: Array<string | null>; blocks: AiSheetLine[] }
+)
+
+/** A change the assistant made on the exam, for the page to make on the sheet. */
+export type AiSheetEdit = AiQuestionEdit | AiTextEdit
+
+/** What the assistant left for the teacher to agree to before it changes the exam. */
+export type AiConfirmRequest =
+  | { action: 'compose'; total: number; kept: number; content: string }
+  /** A mock of a paper the bank has read: `sourceId` is that paper, `content` the teacher's request for it. */
+  | { action: 'mock'; sourceId: string; name: string; total: number; content: string }
+  | ({ action: 'remove' } & AiQuestionEdit)
+  | ({ action: 'import' } & AiPaperImport)
+
+/** A paper attached in the chat to load into the bank: its PDF, its answer key's, and the details printed on it. */
+export interface AiPaperImport {
+  exam: AiAttachment
+  key?: AiAttachment
+  title?: string
+  year?: number
+  round?: string
+  answerSource?: 'PUBLISHED_KEY' | 'REFERENCE_KEY'
+}
+
+/** Loads into the bank a paper attached in this conversation, as the assistant proposed and the teacher agreed. */
+export async function importAiPaper(conversationId: string, paper: AiPaperImport): Promise<BankSource> {
+  return requireData(
+    await request<BankSource>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/papers`, {
+      auth: true,
+      method: 'POST',
+      body: {
+        exam: paper.exam,
+        ...(paper.key ? { key: paper.key, answerSource: paper.answerSource ?? 'REFERENCE_KEY' } : {}),
+        ...(paper.title ? { title: paper.title } : {}),
+        ...(paper.year ? { year: paper.year } : {}),
+        ...(paper.round ? { round: paper.round } : {}),
+      },
+    }),
+    'Chưa nạp được đề.'
+  )
 }
 
 /**
@@ -239,6 +422,7 @@ export type AiSolutionStyle = 'full' | 'short'
 export interface CreateAiConversation {
   title: string
   subjectId?: string
+  quizId?: string
 }
 
 export type AiStreamStage = 'explore' | 'plan' | 'write' | 'Tra cứu' | string
@@ -255,9 +439,13 @@ export type AiStreamEvent =
         mimic?: boolean | null
         /** What the plan changed about the request, e.g. a count cut to the exam's size. */
         notes?: string[] | null
+        /** When the server stored this step, in epoch milliseconds (absent from an older server). */
+        at?: number
       }
     }
-  | { type: 'tool'; data: { tool: string; iteration?: number | null; arguments?: unknown } }
+  | { type: 'tool'; data: { tool: string; iteration?: number | null; arguments?: unknown; at?: number } }
+  /** The words of an ask answer as they are written: all of model turn `turn` so far. */
+  | { type: 'text'; data: { turn: number; text: string } }
   | {
       type: 'slot'
       data: {
@@ -265,6 +453,8 @@ export type AiStreamEvent =
         status?: 'running' | string
         index: number
         total: number
+        /** How many questions the run has saved, this one included; `index` is its place on the paper. */
+        done?: number | null
         position?: number | null
         section?: string | null
         group?: string | null
@@ -274,6 +464,8 @@ export type AiStreamEvent =
         /** A revise run's slot: the question being rewritten, by its printed number. */
         revise?: boolean
         number?: number
+        /** When the server stored this step, in epoch milliseconds (absent from an older server). */
+        at?: number
       }
     }
   | {
@@ -318,12 +510,23 @@ export type AiStreamEvent =
         written?: number | null
         reused?: number | null
         needsReview?: number | null
+        /** The run was stopped and the server put back the exam it replaced (questions and sheet). */
+        restored?: boolean
+        /** The assistant's turn ended on a change the teacher must agree to first. */
+        confirm?: AiConfirmRequest | null
+        /** The files of the exam the teacher asked the assistant for. */
+        files?: AiExamFile[] | null
+        /** What the teacher asked done to the answer key after the exam. */
+        answerKey?: AiAnswerKeyAsk | null
       }
     }
-  | { type: 'error'; data: { message: string } }
+  /** The assistant changed the order of the exam: the page makes the same change on the sheet. */
+  | { type: 'edit'; data: AiSheetEdit }
+  /** `restored`: the run wrote nothing and the server put back the exam it replaced. */
+  | { type: 'error'; data: { message: string; restored?: boolean } }
 
 const BASE = '/api/v1/ai-assistant'
-const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'item', 'rewrite', 'answer', 'end', 'error'])
+const EVENT_TYPES = new Set(['stage', 'tool', 'slot', 'draft', 'text', 'item', 'rewrite', 'edit', 'answer', 'end', 'error'])
 const MAX_RETRIES = 5
 const RETRY_MS = 2000
 
@@ -332,9 +535,11 @@ const requireData = <T>(response: { data?: T }, message: string): T => {
   return response.data
 }
 
-export async function getAiConversations(page = 0, size = 50): Promise<AiConversationPage> {
+export async function getAiConversations(page = 0, size = 50, quizId?: string): Promise<AiConversationPage> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (quizId) params.set('quizId', quizId)
   return requireData(
-    await request<AiConversationPage>(`${BASE}/conversations?page=${page}&size=${size}`, { auth: true }),
+    await request<AiConversationPage>(`${BASE}/conversations?${params}`, { auth: true }),
     'Không tải được danh sách cuộc trò chuyện.'
   )
 }
@@ -380,9 +585,35 @@ export async function getAiMessages(conversationId: string): Promise<AiMessage[]
   )
 }
 
+/** What the teacher might ask after the ask answer `messageId`: proposed the first time, then kept with it. */
+export async function getAiSuggestions(conversationId: string, messageId: string): Promise<string[]> {
+  return requireData(
+    await request<string[]>(
+      `${BASE}/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/suggestions`,
+      { auth: true, method: 'POST' }
+    ),
+    'Không tải được gợi ý.'
+  )
+}
+
+/** Stores an image or PDF for the next ask question of the conversation; the question names it when sent. */
+export async function uploadAiAttachment(conversationId: string, file: File): Promise<AiAttachment> {
+  const form = new FormData()
+  form.append('file', file)
+  return requireData(
+    await request<AiAttachment>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/attachments`, {
+      auth: true,
+      method: 'POST',
+      body: form,
+      timeoutMs: 60_000,
+    }),
+    'Không tải tệp lên được.'
+  )
+}
+
 export async function sendAiMessage(
   conversationId: string,
-  body: { content: string; mode: AiAssistantMode; config?: AiSendConfig }
+  body: { content: string; mode: AiAssistantMode; config?: AiSendConfig; attachments?: AiAttachment[]; parentId?: string }
 ): Promise<AiSent> {
   return requireData(
     await request<AiSent>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/messages`, {
@@ -471,20 +702,6 @@ export async function rewriteAiSelection(
   return result.text
 }
 
-export type ProofreadKind = 'SPELLING' | 'MATH' | 'OPTION' | 'WORDING' | 'CONSISTENCY'
-export interface ProofreadUnitInput { ref: string; kind: 'QUESTION' | 'PASSAGE'; text: string; context?: string }
-export interface ProofreadSuggestion { ref: string; find: string; replace: string; reason: string; kind: ProofreadKind }
-
-export async function proofreadAiSheet(conversationId: string, units: ProofreadUnitInput[], signal: AbortSignal): Promise<ProofreadSuggestion[]> {
-  const result = requireData(
-    await request<{ suggestions: ProofreadSuggestion[] }>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/proofread`, {
-      auth: true, method: 'POST', body: { units }, signal,
-    }),
-    'Trợ lý AI chưa soát được đề.'
-  )
-  return result.suggestions
-}
-
 export async function setAiDraftItemKept(
   conversationId: string,
   itemId: string,
@@ -569,7 +786,7 @@ export async function saveAiDraftToBank(conversationId: string, itemIds?: string
   return result.items ?? []
 }
 
-export type AiQuizTarget = 'EXAM' | 'CHAPTER' | 'LESSON' | 'QUICK'
+export type AiQuizTarget = 'PLACEMENT' | 'EXAM' | 'CHAPTER' | 'LESSON' | 'QUICK'
 
 /** Where the new quiz hangs (EXAM: a main course; CHAPTER: a chapter; LESSON, QUICK: a lesson) and what it takes. */
 export interface AiQuizExport {
@@ -584,18 +801,31 @@ export interface AiQuizExport {
 }
 
 /** The draft quiz made from the exam, and the questions left out with why. */
-export interface AiExportedQuiz {
+interface AiAppendedQuiz {
   quizId: string
-  type: AiQuizTarget
-  title: string
   questionCount: number
   skipped: Array<{ itemId: string; reason: string }>
 }
 
-export async function exportAiDraftToQuiz(conversationId: string, body: AiQuizExport): Promise<AiExportedQuiz> {
+export interface AiExportedQuiz extends AiAppendedQuiz {
+  type: AiQuizTarget
+  title: string
+}
+
+export interface AiQuizAppend {
+  quizId: string
+  itemIds: string[]
+}
+
+export function exportAiDraftToQuiz(conversationId: string, body: AiQuizExport): Promise<AiExportedQuiz>
+export function exportAiDraftToQuiz(conversationId: string, body: AiQuizAppend): Promise<AiAppendedQuiz>
+export async function exportAiDraftToQuiz(conversationId: string, body: AiQuizExport | AiQuizAppend): Promise<AiAppendedQuiz> {
+  const append = 'quizId' in body
+  if (append) assertQuizWriteAccess()
   return requireData(
-    await request<AiExportedQuiz>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/quiz`, {
+    await request<AiAppendedQuiz>(`${BASE}/conversations/${encodeURIComponent(conversationId)}/draft/quiz`, {
       auth: true,
+      guardIdentity: append,
       method: 'POST',
       body,
       timeoutMs: 120_000,

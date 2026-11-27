@@ -7,9 +7,31 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   // tailgrids is vendored from the NextAdmin kit and kept close to upstream.
-  // .deepcode holds vendored agent tooling (its own scripts and rules), not app source - linting it
-  // made `npm run lint` report errors nobody here can fix.
-  globalIgnores(['dist', 'src/components/tailgrids', '.deepcode']),
+  globalIgnores(['dist', 'src/components/tailgrids']),
+  // assistant-ui's components are installed from its registry (components.json) and kept as they come, so a
+  // reinstall or an upgrade replaces them cleanly.
+  globalIgnores([
+    'src/components/assistant-ui/ui',
+    'src/components/assistant-ui/utils',
+    'src/hooks/use-attachment-src.ts',
+    'src/hooks/use-copy-to-clipboard.ts',
+    'src/lib/utils.ts',
+    'src/components/assistant-ui/elements/attachment-state.ts',
+    'src/components/assistant-ui/elements/attachment.aui.tsx',
+    'src/components/assistant-ui/elements/collapsible-root.tsx',
+    'src/components/assistant-ui/elements/file.tsx',
+    'src/components/assistant-ui/elements/follow-up-suggestions.aui.tsx',
+    'src/components/assistant-ui/elements/image.tsx',
+    'src/components/assistant-ui/elements/markdown-text.tsx',
+    'src/components/assistant-ui/elements/media-player.tsx',
+    'src/components/assistant-ui/elements/reasoning.aui.tsx',
+    'src/components/assistant-ui/elements/reasoning.tsx',
+    'src/components/assistant-ui/elements/surfaces.tsx',
+    'src/components/assistant-ui/elements/thread.aui.tsx',
+    'src/components/assistant-ui/elements/tool-fallback.aui.tsx',
+    'src/components/assistant-ui/elements/tool-group.aui.tsx',
+    'src/components/assistant-ui/elements/tooltip-icon-button.tsx',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

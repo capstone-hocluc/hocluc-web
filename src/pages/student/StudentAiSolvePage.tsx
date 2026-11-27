@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import StudentPageContainer from '../../components/student/layout/StudentPageContainer'
 import StudentPageHeader from '../../components/student/layout/StudentPageHeader'
+import BackLink from '../../components/student/common/BackLink'
 import SectionHeader from '../../components/student/common/SectionHeader'
 import MascotState from '../../components/common/MascotState'
 import Card from '../../components/ui/Card'
@@ -26,10 +27,11 @@ const POLL_MS = 2500
 
 interface StudentAiSolvePageProps {
   onOpenWallet: () => void
+  onBack: () => void
 }
 
 /** "Gia sư AI": the student photographs one problem and gets a step-by-step solution. */
-function StudentAiSolvePage({ onOpenWallet }: StudentAiSolvePageProps) {
+function StudentAiSolvePage({ onOpenWallet, onBack }: StudentAiSolvePageProps) {
   const [current, setCurrent] = useState<SolveRequest | null>(null)
   const [historyVersion, setHistoryVersion] = useState(0)
 
@@ -54,6 +56,7 @@ function StudentAiSolvePage({ onOpenWallet }: StudentAiSolvePageProps) {
 
   return (
     <StudentPageContainer width="narrow" className="pb-10">
+      <BackLink onClick={onBack}>Quay lại học tập</BackLink>
       <StudentPageHeader title="Gia sư AI" />
       <div className="flex flex-col gap-8">
         <AskCard

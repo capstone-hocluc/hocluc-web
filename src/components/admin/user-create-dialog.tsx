@@ -19,7 +19,6 @@ import { ROLE_LABELS, getErrorMessage } from './user-labels'
 type CreateUserForm = Required<Pick<CreateUserRequest, 'email' | 'password' | 'firstName' | 'lastName' | 'role'>> & {
   displayName: string
   phone: string
-  roles: UserRole[]
 }
 
 type AccountType = 'STUDENT' | 'PERSONNEL'
@@ -32,7 +31,6 @@ const emptyForm = (type: AccountType): CreateUserForm => ({
   displayName: '',
   phone: '',
   role: type === 'STUDENT' ? 'STUDENT' : 'STAFF',
-  roles: type === 'STUDENT' ? ['STUDENT'] : ['STAFF'],
 })
 
 interface UserCreateDialogProps {
@@ -48,7 +46,7 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
   const [mentorSubjects, setMentorSubjects] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const mentor = form.roles.includes('MENTOR')
+  const mentor = form.role === 'MENTOR'
   const subjects = useScheduleResource(open && mentor ? 'create-user:subjects' : null, async () => subjectRows(await getCategories()))
 
   const set = <K extends keyof CreateUserForm>(key: K, value: CreateUserForm[K]) =>
@@ -69,10 +67,6 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (loading) return
-    if (!form.roles.length || !form.roles.includes(form.role)) {
-      setError('Chọn ít nhất một vai trò và vai trò khởi đầu trong danh sách đã chọn.')
-      return
-    }
     if (mentor && !mentorSubjects.length) {
       setError('Chọn ít nhất một môn cho Mentor.')
       return
@@ -146,28 +140,15 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
         {form.role === 'STUDENT' ? (
           <p className="text-sm text-text-tertiary">Học sinh chỉ có vai trò Học viên.</p>
         ) : (
-          <fieldset disabled={loading} className="flex flex-col gap-3">
-            <legend className="mb-2 text-sm font-medium text-text-primary">Vai trò được cấp</legend>
-            <div className="flex flex-wrap gap-4">
-              {PERSONNEL_ROLES.map((role) => (
-                <Checkbox key={role} isSelected={form.roles.includes(role)} isDisabled={loading}
-                  onChange={(checked) => setForm((current) => {
-                    const roles = checked ? [...current.roles, role] : current.roles.filter((item) => item !== role)
-                    return { ...current, roles, role: roles.includes(current.role) ? current.role : roles[0] ?? current.role }
-                  })}>{ROLE_LABELS[role]}</Checkbox>
-              ))}
-            </div>
-            <SelectField ariaLabel="Vai trò khởi đầu" options={form.roles.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
-              value={form.roles.includes(form.role) ? form.role : ''} disabled={loading || !form.roles.length}
-              placeholder="Chọn vai trò khởi đầu" onChange={(value) => set('role', value as UserRole)} />
-          </fieldset>
+          <SelectField ariaLabel="Vai trò" options={PERSONNEL_ROLES.map((role) => ({ id: role, label: ROLE_LABELS[role] }))}
+            value={form.role} disabled={loading} onChange={(value) => set('role', value as UserRole)} />
         )}
 
         {mentor && (
           <fieldset disabled={loading} className="flex flex-col gap-2">
-            <legend className="mb-2 text-sm font-medium text-text-primary">Môn phụ trách</legend>
+            <legend className="mb-2 text-sm font-medium text-text-primary">Chuyên môn</legend>
             {subjects.status === 'ready' && subjects.data ? (
-              <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-lg border border-card-border p-3">
+              <div className="grid max-h-56 content-start gap-2 overflow-y-auto rounded-lg border border-card-border p-3">
                 {subjects.data.map(({ category, child }) => (
                   <Checkbox key={category.id} className={child ? 'pl-6' : undefined}
                     isSelected={mentorSubjects.includes(category.id)} isDisabled={loading}

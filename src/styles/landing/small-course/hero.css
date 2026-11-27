@@ -1,0 +1,59 @@
+/* Tags above the title: the exam first, then the short pieces of the description's fact line. */
+.course-page .sc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+.course-page .sc-tags li {
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: var(--small);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.course-page .sc-tags li.is-exam {
+  border-color: transparent;
+  background: var(--blue-soft);
+  color: var(--blue-text);
+}
+.course-page .sc-intro {
+  margin-top: 12px;
+  max-width: 62ch;
+}
+
+/* The facts as tinted tiles that grow to fill their row. */
+.course-page .sc-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 28px 0 0;
+}
+.course-page .sc-stat {
+  flex: 1 1 auto;
+  min-width: 112px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--sc-soft);
+}
+.course-page .sc-stat dt {
+  font-size: var(--small);
+  color: var(--muted);
+}
+.course-page .sc-stat dd {
+  margin: 4px 0 0;
+  color: var(--sc-ink);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+.course-page .sc-stat-note {
+  font-size: var(--small);
+  font-weight: 500;
+}

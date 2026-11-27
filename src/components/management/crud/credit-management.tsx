@@ -6,29 +6,26 @@ import ConsoleDialog from '../../console/dialog'
 import Field, { fieldControlClass } from '../../console/form-field'
 import Notice from '../../console/notice'
 import PageHeading from '../../console/page-heading'
-import SearchSelectField from '../../console/search-select-field'
 import Status from '../../console/status'
 import { ConsoleTabs, ConsoleTabsContent, ConsoleTabsList, ConsoleTabsTrigger } from '../../console/tabs'
 import ScheduleResourceState from '../../console/schedule/schedule-resource-state'
-import { Pencil, Plus } from '../../console/icons'
+import { ArrowLeft, Pencil, Plus } from '../../console/icons'
 import { IconAction, RowActions } from '../../console/icon-action'
 import { Pagination } from '../../tailgrids/core/pagination'
 import { CreditAmount } from '../../credits/CreditIcon'
 import { useScheduleResource } from '../../../hooks/useScheduleResource'
 import { CREDIT_ENTRY_LABELS, CREDIT_UNIT, creditEntryPurpose } from '../../../lib/credits'
-import { getUsers } from '../../../services/userService'
 import type { CreditPack } from '../../../services/creditService'
 import {
   creditAdminService,
   type CreditAdminEntry,
   type CreditBucket,
   type CreditPackInput,
+  type CreditStudentBalance,
 } from '../../../services/creditAdminService'
+import CreditStudentList from './credit-student-list'
 import { crudError } from './crud-errors'
 import { EMPTY, formatDateTime, formatVnd } from './crud-format'
-
-const studentLabel = (student: { displayName?: string; firstName?: string; lastName?: string; email?: string }) =>
-  student.displayName || `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() || student.email || ''
 
 /**
  * Stars: the packs on sale and each learner's balance. Managers and administrators edit packs; only an
@@ -111,18 +108,20 @@ function PackTable({ canEdit }: { canEdit: boolean }) {
   )
 
   return (
-    <section className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+    <section className="flex flex-col gap-3">
       {canEdit && (
-        <div className="flex justify-end border-b border-card-border px-5 py-3">
+        <div className="flex justify-end">
           <Button size="sm" onClick={() => setEditing('new')}>
             <Plus size={16} />
             Thêm gói
           </Button>
         </div>
       )}
-      <ScheduleResourceState skeleton="table" inset status={resource.status} errorMessage={resource.errorMessage} onRetry={resource.reload}>
-        <DataTable columns={columns} data={resource.data ?? []} getRowKey={(pack) => pack.id} emptyMessage="Chưa có gói nào." />
-      </ScheduleResourceState>
+      <div className="overflow-hidden rounded-xl border border-card-border bg-card-background">
+        <ScheduleResourceState skeleton="table" inset status={resource.status} errorMessage={resource.errorMessage} onRetry={resource.reload}>
+          <DataTable columns={columns} data={resource.data ?? []} getRowKey={(pack) => pack.id} emptyMessage="Chưa có gói nào." />
+        </ScheduleResourceState>
+      </div>
       {editing && (
         <PackDialog
           pack={editing === 'new' ? null : editing}
@@ -213,7 +212,8 @@ function PackDialog({ pack, onClose, onSaved }: { pack: CreditPack | null; onClo
 }
 
 function Balances({ canAdjust }: { canAdjust: boolean }) {
-  const [studentId, setStudentId] = useState('')
+  const [student, setStudent] = useState<CreditStudentBalance | null>(null)
+  const studentId = student?.userId
   const [page, setPage] = useState(0)
   const [version, setVersion] = useState(0)
   const [adjusting, setAdjusting] = useState(false)
@@ -260,26 +260,14 @@ function Balances({ canAdjust }: { canAdjust: boolean }) {
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <SearchSelectField
-          ariaLabel="Học viên"
-          value={studentId}
-          onChange={(value) => {
-            setStudentId(value)
-            setPage(0)
-          }}
-          placeholder="Chọn học viên"
-          searchPlaceholder="Tìm học viên theo tên hoặc email"
-          className="w-full max-w-md"
-          triggerClassName="w-full"
-          loadPage={(term, pageIndex) =>
-            getUsers({ role: 'STUDENT', query: term, page: pageIndex, size: 20, sort: 'displayName,asc' }).then((result) => ({
-              options: result.content.map((student) => ({ id: student.id, label: studentLabel(student) })),
-              last: result.last,
-            }))
-          }
-        />
+        {student && (
+          <div className="flex min-w-0 items-center gap-2">
+            <IconAction label="Quay lại danh sách học viên" icon={ArrowLeft} onClick={() => setStudent(null)} />
+            <h2 className="truncate text-base font-semibold text-text-primary">{student.displayName}</h2>
+          </div>
+        )}
         {canAdjust && (
-          <div className="flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
             {studentId && (
               <Button appearance="outline" size="sm" onClick={() => setAdjusting(true)}>
                 Điều chỉnh số dư
@@ -290,6 +278,13 @@ function Balances({ canAdjust }: { canAdjust: boolean }) {
             </Button>
           </div>
         )}
+      </div>
+
+      <div hidden={Boolean(student)}>
+        <CreditStudentList version={version} onSelect={(student) => {
+          setStudent(student)
+          setPage(0)
+        }} />
       </div>
 
       {studentId && (

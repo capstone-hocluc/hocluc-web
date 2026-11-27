@@ -149,7 +149,7 @@ export function LandingFooter({ onLanding = true }: { onLanding?: boolean }) {
           </div>
           <nav className="footer-nav" aria-label="Điều hướng cuối trang">
             {landingFooterNav.map((link) => (
-              <LandingLink key={link.href} href={onLanding ? link.href : (link.pageHref ?? `/${link.href}`)}>
+              <LandingLink key={link.href} href={link.pageHref === '/free-exams' ? link.pageHref : onLanding ? link.href : (link.pageHref ?? `/${link.href}`)}>
                 {link.label}
               </LandingLink>
             ))}
