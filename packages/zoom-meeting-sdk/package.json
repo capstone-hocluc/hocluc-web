@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": "./index.ts",
+  "_comment": "Keep Zoom pinned: the live room depends on the 6.10.5 component DOM.",
   "dependencies": {
     "@zoom/meetingsdk": "6.10.5",
     "react": "18.3.1",

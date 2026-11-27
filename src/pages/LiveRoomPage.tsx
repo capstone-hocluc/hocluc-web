@@ -6,6 +6,16 @@ import AppLink from '../components/landing-page/AppLink'
 import LiveRoomSkeleton from '../components/live-room/LiveRoomSkeleton'
 import { Skeleton } from '../components/tailgrids/core/skeleton'
 import ClassPanel from '../components/live-room/ClassPanel'
+import ChatPanel from '../components/live-room/ChatPanel'
+import RoomControls from '../components/live-room/RoomControls'
+import RoomControlsSkeleton from '../components/live-room/RoomControlsSkeleton'
+import RoomHeader from '../components/live-room/RoomHeader'
+import RoomSidePanel, { type RoomTab } from '../components/live-room/RoomSidePanel'
+import RoomSidePanelSkeleton from '../components/live-room/RoomSidePanelSkeleton'
+import '../components/live-room/zoom-overrides.css'
+import { useActiveSpeakers } from '../hooks/useActiveSpeakers'
+import { useRoomChat } from '../hooks/useRoomChat'
+import { useRoomControls } from '../hooks/useRoomControls'
 import { useClassParticipants } from '../hooks/useClassParticipants'
 import { useRoomDisplay } from '../hooks/useRoomDisplay'
 import { useZoomMeeting } from '../hooks/useZoomMeeting'
@@ -54,10 +64,15 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
     onLeaveRef.current = onLeave
   }, [onLeave])
   const room = result && 'room' in result ? result.room : null
-  const { rootRef, mobile, status: meetingStatus, client, endZoomMeeting } = useZoomMeeting(room)
+  const { rootRef, stageRef, mobile, status: meetingStatus, client, endZoomMeeting, setView } = useZoomMeeting(room)
   const participants = useClassParticipants(client)
-  const { roomRef, fullscreen, toggleFullscreen, elapsed } = useRoomDisplay(meetingStatus === 'ready')
-  const [panelOpen, setPanelOpen] = useState(() => window.matchMedia('(min-width: 768px)').matches)
+  const { fullscreen, toggleFullscreen, elapsed } = useRoomDisplay(meetingStatus === 'ready')
+  // The side panel starts open where there is room beside the video: the class list for teachers, chat for students.
+  const [panel, setPanel] = useState<RoomTab | null>(() => window.matchMedia('(min-width: 768px)').matches ? (teacher ? 'class' : 'chat') : null)
+  const controls = useRoomControls(client, rootRef, teacher, setView)
+  const chat = useRoomChat(client, panel === 'chat')
+  const speaking = useActiveSpeakers(client)
+  const selfSpeaking = Boolean(controls.self && !controls.self.muted && speaking.has(controls.self.userId))
 
   useEffect(() => {
     const controller = new AbortController()
@@ -81,6 +96,13 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
     return () => controller.abort()
   }, [attempt, liveClassId, teacher])
 
+  const handleLeave = async () => {
+    if (client) {
+      try { await client.leaveMeeting() } catch { /* Navigation must remain available if Zoom has disconnected. */ }
+    }
+    onLeave()
+  }
+
   const handleEnd = async () => {
     if (ending) return
     const signal = requestRef.current?.signal
@@ -89,10 +111,11 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
     setEndError('')
     try {
       if (!ended) {
-        await endZoomMeeting()
+        // Only the device holding Zoom's host role can close the room from here. On another device
+        // (the teacher's second tab or computer) this fails, and the backend closes the room when the class ends.
+        ended = await endZoomMeeting().then(() => true, () => false)
         if (signal?.aborted) return
-        ended = true
-        setZoomEnded(true)
+        if (ended) setZoomEnded(true)
       }
       await endLiveClass(liveClassId)
       if (!signal?.aborted) onLeave()
@@ -119,44 +142,68 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
   )
   const fallbackUrl = fallbackMessage ? safeExternalUrl(room?.fallbackUrl) : null
   const connecting = Boolean(room && !fallbackMessage && meetingStatus === 'connecting')
+  // Covers Zoom until the HocLuc controls take over, so its own toolbar never shows first.
+  const loading = connecting || (!fallbackMessage && controls.pending)
+  // In class the video tiles sit straight on the page; Zoom's dark backdrop stays only for its own waiting screens.
+  const inClass = controls.custom && !loading && !controls.self?.isHold
   const time = room && `${formatDdMmYyyy(dateKeyOfInstant(room.startTime))} · ${formatTimeRangeFromInstants(room.startTime, room.endTime)}`
 
+  const showTab = (tab: RoomTab) => { if (tab === 'chat') chat.clearUnread(); setPanel(tab) }
+  const toggleTab = (tab: RoomTab) => { if (panel === tab) setPanel(null); else showTab(tab) }
+
   return (
-    <main ref={roomRef} className="flex h-dvh flex-col overflow-hidden bg-background-gray-secondary">
-      {!result ? <LiveRoomSkeleton teacher={teacher} onLeave={onLeave} /> : (
+    <main className="flex h-dvh flex-col overflow-hidden bg-background-gray-secondary">
+      {!result ? <LiveRoomSkeleton teacher={teacher} onLeave={() => void handleLeave()} /> : (
         <>
-          <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-card-border bg-card-background px-3 py-2">
-            <div className="min-w-0">
-              <h1 className="truncate font-semibold">{room?.title ?? 'Phòng học trực tuyến'}</h1>
-              <div className="flex flex-wrap gap-x-3 text-sm text-text-tertiary">
-                {time && <time dateTime={room!.startTime}>{time}</time>}
-                {meetingStatus === 'ready' && <><span>{elapsed}</span><span>{participants.inClass.length} người</span></>}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {teacher && client && <Button size="sm" appearance="outline" onClick={() => setPanelOpen(!panelOpen)}>Lớp học ({participants.inClass.length})</Button>}
-              <Button size="sm" appearance="outline" onClick={() => void toggleFullscreen()}>{fullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}</Button>
-              <Button size="sm" appearance="outline" onClick={onLeave} disabled={ending}>Rời lớp</Button>
-              {teacher && room && <Button size="sm" variant="danger" onClick={() => setConfirmEnd(true)} disabled={connecting || ending}>Kết thúc buổi</Button>}
-            </div>
-          </header>
-          {endError && <Notice tone="danger">{endError}</Notice>}
+          {!fullscreen && <RoomHeader
+            title={room?.title ?? 'Phòng học trực tuyến'}
+            time={time ? { start: room!.startTime, label: time } : null}
+            live={meetingStatus === 'ready' ? { elapsed, people: participants.inClass.length } : null}
+          >
+            {(!client || controls.pending) && <Button size="sm" shape="pill" variant="danger" appearance="outline" onClick={() => void handleLeave()} disabled={ending}>Rời lớp</Button>}
+          </RoomHeader>}
+          {endError && <Notice tone="danger" className="mx-3 mt-3">{endError}</Notice>}
           {!room ? (
-            <Notice tone="danger">
-              {needsReconnect ? zoomErrorMessage(error, roomError) : roomError}
-              {needsReconnect ? <Button asChild size="sm" appearance="outline"><AppLink href={TEACHER_ZOOM_CARD_PATH}>Kết nối lại Zoom</AppLink></Button>
-                : (!code || code === 'LIVE_CLASS_NOT_OPEN_YET') && <Button size="sm" appearance="outline" onClick={() => { setResult(null); setAttempt((value) => value + 1) }}>Thử lại</Button>}
-            </Notice>
-          ) : (
-            <div className="relative flex min-h-0 flex-1" aria-busy={connecting}>
-              <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-                <div ref={rootRef} className="absolute inset-0" />
-                {connecting && <Skeleton role="status" aria-label="Đang kết nối với Zoom" className="pointer-events-none absolute inset-0 h-full w-full rounded-none" />}
-                {fallbackMessage && <Notice tone="warning" className="relative m-4">{fallbackMessage}{fallbackUrl ? <Button size="sm" onClick={() => openZoom(fallbackUrl)}>Mở bằng Zoom</Button> : ' Chưa có đường dẫn Zoom cho buổi học này.'}</Notice>}
-                {meetingStatus === 'closed' && !fallbackMessage && <Notice className="relative m-4">Bạn đã rời phòng Zoom.</Notice>}
-              </div>
-              {teacher && client && panelOpen && <div className="absolute inset-y-0 right-0 z-10 flex w-full max-w-80 md:static md:w-auto md:max-w-none"><ClassPanel client={client} state={participants} /></div>}
+            <div className="grid min-h-0 flex-1 place-items-center p-6">
+              <Notice tone="danger" className="max-w-xl">
+                {needsReconnect ? zoomErrorMessage(error, roomError) : roomError}
+                {needsReconnect ? <Button asChild size="sm" appearance="outline"><AppLink href={TEACHER_ZOOM_CARD_PATH}>Kết nối lại Zoom</AppLink></Button>
+                  : (!code || code === 'LIVE_CLASS_NOT_OPEN_YET') && <Button size="sm" appearance="outline" onClick={() => { setResult(null); setAttempt((value) => value + 1) }}>Thử lại</Button>}
+              </Notice>
             </div>
+          ) : (
+            <>
+              <div className={`relative flex min-h-0 flex-1 ${fullscreen ? '' : 'gap-3 p-3'}`} aria-busy={loading}>
+                <div ref={stageRef} className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center">
+                  <div ref={rootRef} className={`hocluc-zoom-room relative shrink-0 overflow-hidden ${inClass ? 'hocluc-zoom-clear' : `bg-neutral-800 ${fullscreen ? '' : 'rounded-2xl'}`} ${controls.zoomToolbar ? '' : 'hocluc-zoom-custom'} ${loading ? 'opacity-0' : ''}`} />
+                  {loading && <Skeleton role="status" aria-label="Đang kết nối với Zoom" className={`absolute inset-0 h-full w-full ${fullscreen ? 'rounded-none' : 'rounded-2xl'}`} />}
+                  {(fallbackMessage || meetingStatus === 'closed') && (
+                    <div className="absolute inset-0 grid place-items-center p-6">
+                      {fallbackMessage
+                        ? <Notice tone="warning" className="max-w-xl">{fallbackMessage}{fallbackUrl ? <Button size="sm" onClick={() => openZoom(fallbackUrl)}>Mở bằng Zoom</Button> : ' Chưa có đường dẫn Zoom cho buổi học này.'}</Notice>
+                        : <Notice className="max-w-xl">Bạn đã rời phòng Zoom.</Notice>}
+                    </div>
+                  )}
+                </div>
+                {loading && panel && <RoomSidePanelSkeleton teacher={teacher} />}
+                {client && !loading && panel && (
+                  <div className={`absolute z-10 flex md:static md:inset-auto ${fullscreen ? 'inset-0' : 'inset-3'}`}>
+                    <RoomSidePanel
+                      active={panel}
+                      onChange={showTab}
+                      onClose={() => setPanel(null)}
+                      tabs={[
+                        ...(teacher ? [{ value: 'class' as const, label: `Lớp học (${participants.inClass.length})`, content: <ClassPanel client={client} state={participants} speaking={speaking} /> }] : []),
+                        { value: 'chat' as const, label: 'Trò chuyện', badge: chat.unread, content: <ChatPanel chat={chat} currentUserId={participants.currentUserId} /> },
+                      ]}
+                    />
+                  </div>
+                )}
+              </div>
+              {controls.notice && <Notice tone="warning" className="mx-3 mb-3">{controls.notice}</Notice>}
+              {loading && <RoomControlsSkeleton teacher={teacher} />}
+              {client && !controls.pending && <RoomControls controls={controls} teacher={teacher} panel={panel} unread={chat.unread} speaking={selfSpeaking} fullscreen={fullscreen} onFullscreen={() => void toggleFullscreen()} onChat={() => toggleTab('chat')} onParticipants={() => toggleTab('class')} onLeave={() => void handleLeave()} onEnd={() => setConfirmEnd(true)} />}
+            </>
           )}
         </>
       )}
