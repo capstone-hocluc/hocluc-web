@@ -24,12 +24,11 @@ export interface ConsoleLiveClass {
   startUrl?: string | null
   recordingUrl?: string | null
   joinable?: boolean
-  capacity?: number | null
-  bookedCount?: number
-  seatsLeft?: number | null
-  booked?: boolean
+  joinPrice?: number
+  admitted?: boolean
+  admittedCount?: number
+  refunded?: boolean
   detailsFilled?: boolean
-  attendanceTaken?: boolean
   needsAttention?: boolean
   hostZoomReconnectRequired?: boolean
   attentionReason?: string | null
@@ -62,7 +61,6 @@ export interface CreateLiveTimetableRequest {
   endDate?: string
   slots?: LiveTimetableSlot[]
   phaseSessions?: { phaseId: string; sessionCount: number }[]
-  capacity?: number
   sessions?: SelectedLiveSessionInput[]
 }
 
@@ -116,14 +114,27 @@ export interface TeachableSubject {
   parentId?: string | null
 }
 
-export interface LiveClassBookingItem {
-  id: string
+export interface LiveClassJoinResponse {
   liveClassId: string
+  paidAmount: number
+  paidAt: string
+  alreadyAdmitted: boolean
+  balance: number
+}
+
+export interface LiveClassAdmissionItem {
   studentId: string
   studentName: string
-  studentEmail?: string | null
-  status: string
-  bookedAt?: string | null
+  paidAmount: number
+  paidAt: string
+  refundedAt: string | null
+  joinedAt: string | null
+  attendanceMinutes: number
+}
+
+export interface LiveClassRefundResponse {
+  refundedCount: number
+  refundedAmount: number
 }
 
 export interface StudentLiveAttendanceSummary {
@@ -275,12 +286,33 @@ export async function updateLiveClassDetails(
   return response.data
 }
 
-export async function getLiveClassBookings(liveClassId: string): Promise<LiveClassBookingItem[]> {
-  const response = await request<LiveClassBookingItem[]>(
-    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/bookings`,
+export async function joinLiveClass(liveClassId: string): Promise<LiveClassJoinResponse> {
+  const response = await request<LiveClassJoinResponse>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/join`,
+    { method: 'POST', auth: true }
+  )
+  if (!response.data) throw new Error('Không thể tham gia buổi học.')
+  return response.data
+}
+
+export async function getLiveClassAdmissions(liveClassId: string): Promise<LiveClassAdmissionItem[]> {
+  const response = await request<LiveClassAdmissionItem[]>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/admissions`,
     { auth: true }
   )
   return response.data ?? []
+}
+
+export async function refundLiveClass(
+  liveClassId: string,
+  body: { reason: string }
+): Promise<LiveClassRefundResponse> {
+  const response = await request<LiveClassRefundResponse>(
+    `/api/v1/live-classes/${encodeURIComponent(liveClassId)}/refund`,
+    { method: 'POST', auth: true, body }
+  )
+  if (!response.data) throw new Error('Không thể hoàn Sao cho buổi học.')
+  return response.data
 }
 
 export async function getLiveClassAttendances(liveClassId: string): Promise<AttendanceResponse[]> {
