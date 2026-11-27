@@ -113,6 +113,10 @@ export async function installQuizFixture(page: Page, role: UserRole, { authentic
     if (path === '/api/v1/notifications/unread-count') return answer({ unread: 0 })
     // No live notifications here: an empty answer stops the bell from following them.
     if (path === '/api/v1/notifications/stream') return route.fulfill({ status: 204 })
+    if (path === '/api/v1/live-classes' && method === 'GET') return answer([])
+    if (path === '/api/v1/teacher/zoom' && method === 'GET') {
+      return answer({ connected: false, zoomEmail: null, planType: null, zoomEnabled: false, status: null, lastError: null })
+    }
     // Every student page shows the star balance and the streak in its top bar.
     if (path === '/api/v1/credits/me') {
       const earned = Number(state.studentEarnedToday)

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { installQuizFixture } from './quiz-permissions-fixture'
+import { installQuizFixture, QUIZ_IDS } from './quiz-permissions-fixture'
 
 // The console menu is declared once in src/lib/console-nav.ts. This spec pins the
 // menu each role gets (groups and order), and the router's answer for pages that
@@ -28,20 +28,20 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
     { label: '', items: ['Tổng quan'] },
     { label: 'Đào tạo', items: ['Khóa học', 'Bài kiểm tra', 'Ngân hàng câu hỏi'] },
     { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
-    { label: 'Vận hành', items: ['Lịch học', 'Giám sát hỗ trợ'] },
+    { label: 'Vận hành', items: ['Lịch dạy', 'Giám sát hỗ trợ'] },
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
   ],
   STAFF: [
     { label: '', items: ['Tổng quan'] },
     { label: 'Đào tạo', items: ['Khóa học', 'Bài kiểm tra', 'Ngân hàng câu hỏi'] },
     { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
-    { label: 'Vận hành', items: ['Lịch học', 'Phân công Mentor'] },
+    { label: 'Vận hành', items: ['Lịch dạy', 'Phân công Mentor'] },
     { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
   ],
   TEACHER: [
     { label: '', items: ['Tổng quan'] },
     { label: 'Lớp học', items: ['Lịch dạy', 'Giờ rảnh'] },
-    { label: 'Đào tạo', items: ['Lớp của tôi', 'Bài kiểm tra', 'Trợ lý AI'] },
+    { label: 'Đào tạo', items: ['Lớp của tôi'] },
   ],
   MENTOR: [
     { label: '', items: ['Tổng quan'] },
@@ -74,7 +74,10 @@ const TAB_ONLY_PAGES = [
   'Sao',
 ]
 // "Học viên" is a real page for STAFF, MANAGER and ADMINISTRATOR; MENTOR's copy is unfinished.
-const ALSO_HIDDEN: Partial<Record<MenuRole, string[]>> = { MENTOR: ['Học viên'] }
+const ALSO_HIDDEN: Partial<Record<MenuRole, string[]>> = {
+  MENTOR: ['Học viên'],
+  TEACHER: ['Trợ lý AI', 'Bài kiểm tra', 'Bài thi thử', 'Bài làm học viên', 'Duyệt lời giải AI'],
+}
 
 /** The expanded sidebar's groups, in the order the DOM renders them; a group without a heading has label ''. */
 async function readSidebar(page: Page) {
@@ -122,10 +125,31 @@ test('a page deleted from the menu opens the 404 screen in place', async ({ page
   expect(new URL(page.url()).pathname).toBe('/console/staff/reports')
 })
 
+test('TEACHER: opening removed quiz, AI or assignment URLs lands on teacher home without 403 or fetches', async ({ page }) => {
+  test.setTimeout(60_000)
+  const state = await installQuizFixture(page, 'TEACHER')
+  await page.setViewportSize({ width: 1440, height: 900 })
+
+  for (const removedPath of [
+    '/console/teacher/quizzes',
+    '/console/teacher/mock-exams',
+    '/console/teacher/attempts',
+    '/console/teacher/ai-assistant',
+    '/console/teacher/solution-queue',
+    `/console/teacher/my-courses/${QUIZ_IDS.course}/assignments`,
+  ]) {
+    await page.goto(removedPath)
+    await expect(page).toHaveURL(/\/console\/teacher\/dashboard$/)
+    await expect(page.getByRole('heading', { name: '403 · Không có quyền truy cập' })).toHaveCount(0)
+  }
+
+  expect(state.requests.filter((r) => r.path.startsWith('/api/v1/teacher/quizzes') || r.path.includes('/ai/'))).toEqual([])
+  expect(state.pageErrors).toEqual([])
+})
+
 for (const [role, pageKey, title] of [
   ['ADMINISTRATOR', 'audit-log', 'Nhật ký hoạt động'],
   ['MENTOR', 'students', 'Học viên'],
-  ['TEACHER', 'solution-queue', 'Duyệt lời giải AI'],
 ] as const) {
   test(`${role}: unfinished ${pageKey} stays out of the menu but opens "Đang phát triển"`, async ({ page }) => {
     await installQuizFixture(page, role)
