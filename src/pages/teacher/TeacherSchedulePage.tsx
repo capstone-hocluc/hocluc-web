@@ -10,7 +10,6 @@ import WeekNavigator from '../../components/console/schedule/week-navigator'
 import LiveScheduleSkeleton from '../../components/console/schedule/live-schedule-skeleton'
 import LiveWeekGrid from '../../components/console/schedule/live-week-grid'
 import LiveClassContentDialog from '../../components/console/schedule/live-class-content-dialog'
-import LiveClassAttendanceDialog from '../../components/console/schedule/live-class-attendance-dialog'
 import { useTeacherSchedule } from '../../hooks/useTeacherSchedule'
 import { formatWeekRangeLabel } from '../../lib/liveScheduleFormat'
 
@@ -73,7 +72,6 @@ export default function TeacherSchedulePage() {
               />
               <TeacherTodoPanel
                 todos={t.todos}
-                onOpenAttendance={(item) => t.setAttendanceTarget(item)}
                 onOpenContent={(item) => t.setContentTarget(item)}
               />
             </div>
@@ -94,11 +92,6 @@ export default function TeacherSchedulePage() {
             t.setSelectedClass(null)
             t.setContentTarget(target)
           }}
-          onOpenAttendance={() => {
-            const target = t.selectedClass
-            t.setSelectedClass(null)
-            t.setAttendanceTarget(target)
-          }}
         />
       )}
 
@@ -108,17 +101,6 @@ export default function TeacherSchedulePage() {
           onClose={() => t.setContentTarget(null)}
           onSaved={() => {
             t.setContentTarget(null)
-            t.reloadAll()
-          }}
-        />
-      )}
-
-      {t.attendanceTarget && (
-        <LiveClassAttendanceDialog
-          liveClass={t.attendanceTarget}
-          onClose={() => t.setAttendanceTarget(null)}
-          onSaved={() => {
-            t.setAttendanceTarget(null)
             t.reloadAll()
           }}
         />

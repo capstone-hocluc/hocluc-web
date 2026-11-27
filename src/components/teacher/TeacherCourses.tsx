@@ -1,7 +1,6 @@
-import { ArrowLeft, ArrowRight, BookOpen, CalendarDays, ClipboardList } from '../console/icons'
+import { ArrowLeft, ArrowRight, BookOpen, CalendarDays } from '../console/icons'
 import TeacherPageHeader from './TeacherPageHeader'
 import Button from '../console/button'
-import Panel from '../console/panel'
 import ScheduleResourceState from '../console/schedule/schedule-resource-state'
 import { usePageResource } from '../../hooks/usePageResource'
 import { getAdminCourse, type CourseAdmin } from '../../services/courseAdminService'
@@ -40,17 +39,14 @@ function CourseCard({ course, onOpen }: { course: CourseAdmin; onOpen: (course: 
   )
 }
 
-const quickActionClass =
-  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-text-primary transition-colors hover:bg-background-gray-secondary'
-
-function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
+function CourseDetail({ course, onBack }: { course: Pick<CourseAdmin, 'id' | 'title'>; onBack: () => void }) {
   const { data, status, errorMessage, reload } = usePageResource(async () => {
     const [detail, sections] = await Promise.all([getAdminCourse(course.id), getContentSections(course.id)])
     return { ...detail, contentSections: sections }
   }, [course.id])
   const phases = data?.phases ?? []
   const sections = data?.contentSections ?? []
-  const title = data?.title ?? course.name ?? course.title
+  const title = data?.title ?? course.title
 
   return (
     <section className="flex flex-col gap-5">
@@ -64,59 +60,38 @@ function CourseDetail({ course, onBack, onOpenQuiz, onOpenAssignments }) {
         title={title}
         description={data ? `${phases.length} giai đoạn · ${sections.length} phần nội dung` : undefined}
       />
-      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
-        <div className="flex min-w-0 flex-col gap-5">
-          <ScheduleResourceState skeleton="cards"
-            status={status}
-            errorMessage={errorMessage}
-            onRetry={reload}
-          >
-            {status === 'ready' && (
-              <CourseContentPanel
-                courseId={course.id}
-                sections={sections}
-                readOnly
-                title="Nội dung khóa học"
-                chapterAction={(chapter) => (
-                  <Button size="sm" appearance="ghost" onClick={() => onOpenAssignments(course, chapter)}>
-                    <ClipboardList size={14} />
-                    Giao bài tập
-                  </Button>
-                )}
-              />
-            )}
-          </ScheduleResourceState>
-        </div>
-
-        <aside className="flex flex-col gap-5">
-          {status === 'ready' && <Panel title="Thao tác nhanh">
-            <div className="-mx-2 flex flex-col">
-              <button type="button" className={quickActionClass} onClick={() => onOpenAssignments(course)}>
-                <ClipboardList size={17} className="text-icon-tertiary" />
-                Bài tập
-              </button>
-              <button type="button" className={quickActionClass} onClick={() => onOpenQuiz(course)}>
-                <ClipboardList size={17} className="text-icon-tertiary" />
-                Bài kiểm tra
-              </button>
-            </div>
-          </Panel>}
-        </aside>
-      </div>
+      <ScheduleResourceState
+        skeleton="cards"
+        status={status}
+        errorMessage={errorMessage}
+        onRetry={reload}
+      >
+        {status === 'ready' && (
+          <CourseContentPanel
+            courseId={course.id}
+            sections={sections}
+            readOnly
+            title="Nội dung khóa học"
+          />
+        )}
+      </ScheduleResourceState>
     </section>
   )
 }
 
-function TeacherCourses({ selectedCourse, onOpenCourse, onBack, onOpenQuiz, onOpenAssignments }) {
-  const { data, status, errorMessage, reload } = usePageResource(async () => {
-    return getQuizCourses()
-  }, [])
-  if (selectedCourse)
-    return <CourseDetail course={selectedCourse} onBack={onBack} onOpenQuiz={onOpenQuiz} onOpenAssignments={onOpenAssignments} />
+interface TeacherCoursesProps {
+  selectedCourse: Pick<CourseAdmin, 'id' | 'title'> | null
+  onOpenCourse: (course: CourseAdmin) => void
+  onBack: () => void
+}
+
+function TeacherCourses({ selectedCourse, onOpenCourse, onBack }: TeacherCoursesProps) {
+  const { data, status, errorMessage, reload } = usePageResource(async () => getQuizCourses(), [])
+  if (selectedCourse) return <CourseDetail course={selectedCourse} onBack={onBack} />
   const courses = data ?? []
   return (
     <section className="flex flex-col gap-5">
-      <TeacherPageHeader title="Lớp học" />
+      <TeacherPageHeader title="Lớp của tôi" />
       <ScheduleResourceState
         status={status}
         errorMessage={errorMessage}

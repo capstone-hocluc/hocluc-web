@@ -95,15 +95,6 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     roles: ['STAFF', 'MANAGER'],
   },
   {
-    page: 'attendance',
-    tabOf: 'schedules',
-    label: 'Điểm danh',
-    icon: ClipboardCheck,
-    group: 'operations',
-    permission: 'ATTENDANCE_WRITE',
-    roles: ['STAFF'],
-  },
-  {
     page: 'chat-queue',
     label: 'Phân công Mentor',
     icon: MailQuestion,
@@ -275,15 +266,6 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     permission: 'TAXONOMY_WRITE',
     // A teacher teaches: the exam framework and the bank are kept by staff.
     roles: ['STAFF', 'MANAGER', 'ADMINISTRATOR'],
-  },
-  {
-    // A teacher has no bank page to reach the assistant through, so it is a menu entry of its own.
-    page: 'ai-assistant',
-    label: 'Trợ lý AI',
-    icon: Sparkles,
-    group: 'training',
-    permission: ['CONTENT_WRITE', 'QUIZ_READ'],
-    roles: ['TEACHER'],
   },
   {
     page: 'solution-queue',

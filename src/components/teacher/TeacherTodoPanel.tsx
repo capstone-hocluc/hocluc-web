@@ -5,21 +5,15 @@ import type { ConsoleLiveClass } from '../../services/liveClassService'
 import {
   dateKeyOfInstant,
   formatDdMm,
-  formatTimeRangeFromInstants,
-  relativeDayLabel,
   shortDayLabel,
 } from '../../lib/liveScheduleFormat'
-import { localToday } from '../../lib/scheduling'
 
 interface Props {
   todos: TeacherTodoItem[]
-  onOpenAttendance: (liveClass: ConsoleLiveClass) => void
   onOpenContent: (liveClass: ConsoleLiveClass) => void
 }
 
-export default function TeacherTodoPanel({ todos, onOpenAttendance, onOpenContent }: Props) {
-  const todayKey = localToday()
-
+export default function TeacherTodoPanel({ todos, onOpenContent }: Props) {
   return (
     <Panel title="Cần làm" className="w-full">
       {todos.length === 0 ? (
@@ -28,7 +22,6 @@ export default function TeacherTodoPanel({ todos, onOpenAttendance, onOpenConten
         <ul className="flex flex-col gap-3">
           {todos.map((item) => {
             const dateKey = dateKeyOfInstant(item.liveClass.startTime)
-            const attendance = item.kind === 'attendance'
             return (
               <li
                 key={`${item.kind}-${item.liveClass.id}`}
@@ -36,19 +29,11 @@ export default function TeacherTodoPanel({ todos, onOpenAttendance, onOpenConten
               >
                 <strong className="text-sm font-medium text-text-primary">{item.liveClass.title}</strong>
                 <span className="text-xs text-text-tertiary">
-                  {attendance
-                    ? `${relativeDayLabel(dateKey, todayKey)}, ${formatDdMm(dateKey)} · ${formatTimeRangeFromInstants(item.liveClass.startTime, item.liveClass.endTime)}`
-                    : `${shortDayLabel(dateKey)} ${formatDdMm(dateKey)} · chưa có nội dung buổi`}
+                  {`${shortDayLabel(dateKey)} ${formatDdMm(dateKey)} · chưa có nội dung buổi`}
                 </span>
-                {attendance ? (
-                  <Button size="sm" className="self-start" onClick={() => onOpenAttendance(item.liveClass)}>
-                    Điểm danh
-                  </Button>
-                ) : (
-                  <Button size="sm" appearance="outline" className="self-start" onClick={() => onOpenContent(item.liveClass)}>
-                    Thêm nội dung
-                  </Button>
-                )}
+                <Button size="sm" appearance="outline" className="self-start" onClick={() => onOpenContent(item.liveClass)}>
+                  Thêm nội dung
+                </Button>
               </li>
             )
           })}
