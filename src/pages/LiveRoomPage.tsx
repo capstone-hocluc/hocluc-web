@@ -102,10 +102,11 @@ export default function LiveRoomPage({ liveClassId, teacher = false, onLeave }: 
     setEndError('')
     try {
       if (!ended) {
-        await endZoomMeeting()
+        // Only the device holding Zoom's host role can close the room from here. On another device
+        // (the teacher's second tab or computer) this fails, and the backend closes the room when the class ends.
+        ended = await endZoomMeeting().then(() => true, () => false)
         if (signal?.aborted) return
-        ended = true
-        setZoomEnded(true)
+        if (ended) setZoomEnded(true)
       }
       await endLiveClass(liveClassId)
       if (!signal?.aborted) onLeave()
