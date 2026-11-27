@@ -48,6 +48,7 @@ export default function LiveClassDetailPanel({
 }: Props) {
   const dateKey = dateKeyOfInstant(liveClass.startTime)
   const isEditable = canManage && liveClass.status !== 'CANCELLED' && liveClass.status !== 'COMPLETED'
+  const canCancel = canManage && liveClass.status === 'SCHEDULED'
   const isActiveOrPast = liveClass.status === 'LIVE' || liveClass.status === 'COMPLETED'
   const canRefund = canManage && isActiveOrPast && !liveClass.refunded
   const showAttendance = canEditAttendance && isActiveOrPast
@@ -111,10 +112,12 @@ export default function LiveClassDetailPanel({
                   <UserRound size={15} />
                   Đổi giảng viên
                 </Button>
-                <Button variant="danger" appearance="outline" onClick={onCancel}>
-                  <Trash2 size={15} />
-                  Hủy buổi
-                </Button>
+                {canCancel && (
+                  <Button variant="danger" appearance="outline" onClick={onCancel}>
+                    <Trash2 size={15} />
+                    Hủy buổi
+                  </Button>
+                )}
               </>
             )}
             {showAttendance && (
