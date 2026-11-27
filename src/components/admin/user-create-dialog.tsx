@@ -148,7 +148,7 @@ function UserCreateDialog({ open, accountType, onClose, onCreated }: UserCreateD
           <fieldset disabled={loading} className="flex flex-col gap-2">
             <legend className="mb-2 text-sm font-medium text-text-primary">Chuyên môn</legend>
             {subjects.status === 'ready' && subjects.data ? (
-              <div className="flex max-h-56 flex-col gap-2 overflow-y-auto rounded-lg border border-card-border p-3">
+              <div className="grid max-h-56 content-start gap-2 overflow-y-auto rounded-lg border border-card-border p-3">
                 {subjects.data.map(({ category, child }) => (
                   <Checkbox key={category.id} className={child ? 'pl-6' : undefined}
                     isSelected={mentorSubjects.includes(category.id)} isDisabled={loading}
