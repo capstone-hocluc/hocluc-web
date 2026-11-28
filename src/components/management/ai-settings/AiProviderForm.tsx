@@ -22,7 +22,7 @@ export default function AiProviderForm({ form, secrets, disabled, onChange }: {
     {form.provider === 'openai' && <>{field('organization', 'Organization ID (tùy chọn)')}{field('project', 'Project ID (tùy chọn)')}</>}
     {field('model', 'Model')}{field('reviewModel', 'Model kiểm tra bài đọc (tùy chọn)')}
     {field('secondReviewModel', 'Model kiểm tra lần hai (tùy chọn)')}
-    {(form.provider === 'cloudflare' || form.provider === 'compatible') && <label className="flex items-center gap-3 self-end py-3 text-sm font-medium text-text-primary">
+    {(form.provider === 'openai' || form.provider === 'cloudflare' || form.provider === 'compatible') && <label className="flex items-center gap-3 self-end py-3 text-sm font-medium text-text-primary">
       <input type="checkbox" checked={form.vision} disabled={disabled} onChange={(event) => onChange('vision', event.target.checked)} /> Model hỗ trợ ảnh
     </label>}
   </div>
