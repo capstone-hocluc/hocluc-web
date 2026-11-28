@@ -213,8 +213,9 @@ test('staff schedules without capacity, views admissions, corrects attendance fr
   expect('capacity' in createBodies[0]).toBe(false)
 
   // Switch to list view: shows admittedCount instead of seats.
-  await page.getByRole('button', { name: 'Danh sách', exact: true }).click()
-  await expect(page.getByText('1 học viên đã vào lớp', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Xem dạng danh sách', exact: true }).click()
+  await expect(page.getByRole('columnheader', { name: 'Đã vào lớp', exact: true })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '1', exact: true })).toBeVisible()
 
   // SCHEDULED & CANCELLED hide "Hoàn Sao".
   await page.getByRole('button', { name: 'Xem chi tiết Buổi sắp tới', exact: true }).click()

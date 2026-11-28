@@ -12,13 +12,27 @@ export default function ScheduleViewToggle({
 }) {
   return (
     <div className="flex gap-1 rounded-lg border border-card-border p-1" role="group" aria-label="Kiểu xem">
-      <Button size="sm" appearance={view === 'week' ? 'fill' : 'ghost'} aria-pressed={view === 'week'} onClick={() => onChange('week')}>
+      <Button
+        size="icon"
+        className="size-8.5"
+        appearance={view === 'week' ? 'fill' : 'ghost'}
+        aria-label="Xem theo tuần"
+        title="Tuần"
+        aria-pressed={view === 'week'}
+        onClick={() => onChange('week')}
+      >
         <CalendarDays size={15} />
-        Tuần
       </Button>
-      <Button size="sm" appearance={view === 'list' ? 'fill' : 'ghost'} aria-pressed={view === 'list'} onClick={() => onChange('list')}>
+      <Button
+        size="icon"
+        className="size-8.5"
+        appearance={view === 'list' ? 'fill' : 'ghost'}
+        aria-label="Xem dạng danh sách"
+        title="Danh sách"
+        aria-pressed={view === 'list'}
+        onClick={() => onChange('list')}
+      >
         <List size={15} />
-        Danh sách
       </Button>
     </div>
   )
