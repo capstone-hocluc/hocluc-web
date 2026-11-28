@@ -25,6 +25,10 @@ export interface Course {
   /** Average stars over visible reviews (one decimal); null while the course has none. */
   averageRating?: number | null
   reviewCount?: number
+  matchedWeakSkillCount?: number | null
+  totalWeakSkillCount?: number | null
+  matchedWeakSkillNames?: string[] | null
+  recommendationReason?: string | null
 }
 
 export interface MyCourseEnrollment {
@@ -364,6 +368,7 @@ export interface SectionOrderItem {
   title: string
   phaseName: string | null
   sequence: number
+  weakSkillCount?: number | null
 }
 
 export interface EnrollmentPlan {

@@ -8,7 +8,7 @@ import ResourceState from '../../components/student/common/ResourceState'
 import StudentChatPage from './StudentChatPage'
 import StudentAiSolvePage from './StudentAiSolvePage'
 import ChatFeatureGate from '../../components/chat-feature-gate'
-import MascotState from '../../components/common/MascotState'
+import StudentRoadmapPage from './StudentRoadmapPage'
 import StudentDashboard from './StudentDashboard'
 import MyCourses from './MyCourses'
 import StudentAssessments from './StudentAssessments'
@@ -64,7 +64,7 @@ function StudentRoutes({
   const studyCourseId: unknown = window.history.state?.lessonStudyCourseId
   const isProfileReturn = typeof returnPath === 'string' &&
     (returnPath === studentRoutes.learningProfile() || returnPath.startsWith(`${studentRoutes.learningProfile()}?`))
-  const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn || returnPath === '/free-exams' || isStudentAssessmentsPath(returnPath))
+  const quizReturnTo = typeof returnPath === 'string' && (returnPath.startsWith('/student/courses/') || isProfileReturn || returnPath === studentRoutes.roadmap() || returnPath === '/free-exams' || isStudentAssessmentsPath(returnPath))
     ? returnPath : new URLSearchParams(window.location.search).get('from') === 'free-exams' ? '/free-exams' : undefined
   const lessonStudyCourseId = typeof studyCourseId === 'string' ? studyCourseId : undefined
   // An old address shows its new page in its place, so Back does not land on it and get sent forward again.
@@ -115,12 +115,17 @@ function StudentRoutes({
       case 'tutor':
         return <StudentAiSolvePage onOpenWallet={() => navigate(studentRoutes.wallet())}
           onBack={() => navigate(tutorReturnTo, { lessonStudyCourseId })} />
-      // Listed in the sidebar, not built yet.
       case 'roadmap':
         return (
-          <MascotState
-            title="Lộ trình của tôi đang phát triển"
-            message="Tính năng này đã có trong kế hoạch và sẽ sớm ra mắt."
+          <StudentRoadmapPage
+            onOpenLesson={(courseId, lessonId) =>
+              navigate(studentRoutes.lesson(courseId, lessonId), { lessonStudyCourseId: courseId })
+            }
+            onOpenQuiz={(quizId) =>
+              navigateQuiz(studentRoutes.quiz(quizId), studentRoutes.roadmap())
+            }
+            onOpenCourses={() => navigate('/courses')}
+            onOpenPlacement={() => navigate(studentRoutes.assessments('free'))}
           />
         )
       case 'learning-profile':

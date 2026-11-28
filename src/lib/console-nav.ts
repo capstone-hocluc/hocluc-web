@@ -297,7 +297,6 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     group: 'support',
     permission: 'REVIEW_QUEUE_HANDLE',
     roles: ['MENTOR'],
-    soon: true,
   },
   {
     page: 'users',

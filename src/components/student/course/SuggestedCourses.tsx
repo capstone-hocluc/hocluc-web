@@ -33,7 +33,29 @@ export default function SuggestedCourses({ onOpen, query = '', compact = false }
       : <>
         <div className={styles.grid}>{courses.slice((current - 1) * 6, current * 6).map(course => <button type="button" key={course.id} className={styles.card} onClick={() => onOpen(course)}>
           <div className={styles.cover}>{course.imageUrl ? <img src={course.imageUrl} alt="" loading="lazy" /> : <BookOpen size={48} />}{course.recommended && <span className={styles.recommended}><Sparkles size={13} />Phù hợp nhất</span>}</div>
-          <div className={styles.body}><div className={styles.tags}><span>{formatCourseTrack(course.track) || formatExamLabel(course.targetExam) || 'Khóa học'}</span>{course.purchased && <span>Đã đăng ký</span>}</div><h3>{course.title}</h3><p className={styles.description}>{course.description || 'Khám phá nội dung và lộ trình học của khóa học.'}</p>{course.startDate && <p className={styles.date}>Khai giảng: {formatDate(course.startDate)}</p>}
+          <div className={styles.body}>
+            <div className={styles.tags}>
+              <span>{formatCourseTrack(course.track) || formatExamLabel(course.targetExam) || 'Khóa học'}</span>
+              {course.purchased && <span>Đã đăng ký</span>}
+              {course.matchedWeakSkillCount != null && course.matchedWeakSkillCount > 0 && (
+                <span className={styles.weakTag}>
+                  Khớp {course.matchedWeakSkillCount}/{course.totalWeakSkillCount ?? course.matchedWeakSkillCount} kỹ năng yếu
+                </span>
+              )}
+              {!compact && course.matchedWeakSkillNames?.slice(0, 2).map((name) => (
+                <span key={name}>{name}</span>
+              ))}
+              {!compact && course.matchedWeakSkillNames && course.matchedWeakSkillNames.length > 2 && (
+                <span>+{course.matchedWeakSkillNames.length - 2}</span>
+              )}
+            </div>
+            <h3>{course.title}</h3>
+            {course.recommendationReason ? (
+              <p className={styles.recommendation}>{course.recommendationReason}</p>
+            ) : (
+              <p className={styles.description}>{course.description || 'Khám phá nội dung và lộ trình học của khóa học.'}</p>
+            )}
+            {course.startDate && <p className={styles.date}>Khai giảng: {formatDate(course.startDate)}</p>}
             <div className={styles.footer}><strong>{formatCoursePrice(course.price)}</strong><span>{course.purchased ? 'Vào học' : 'Xem khóa học'}<ArrowRight size={16} /></span></div>
           </div>
         </button>)}</div>
