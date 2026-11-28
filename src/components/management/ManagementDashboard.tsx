@@ -27,6 +27,11 @@ import QuizConsoleScreen from './quiz/QuizConsoleScreen'
 import QuestionBankScreen from './question-bank/QuestionBankScreen'
 import AiAssistantWorkspace from './ai-assistant/AiAssistantWorkspace'
 import AiSettingsScreen from './ai-settings/AiSettingsScreen'
+import SePaySettingsScreen from './system-settings/SePaySettingsScreen'
+import EmailSettingsScreen from './system-settings/EmailSettingsScreen'
+import ZoomSettingsScreen from './system-settings/ZoomSettingsScreen'
+import CreditSettingsScreen from './system-settings/CreditSettingsScreen'
+import ConfidenceSettingsScreen from './system-settings/ConfidenceSettingsScreen'
 import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import {
   buildNavSections,
@@ -84,6 +89,16 @@ export function ManagementScreen({
 
   function renderScreen() {
     switch (page) {
+      case 'confidence-settings':
+        return <ConfidenceSettingsScreen />
+      case 'credit-settings':
+        return <CreditSettingsScreen />
+      case 'zoom-settings':
+        return <ZoomSettingsScreen />
+      case 'email-settings':
+        return <EmailSettingsScreen />
+      case 'sepay-settings':
+        return <SePaySettingsScreen />
       case 'ai-settings':
         return <AiSettingsScreen />
       case 'dashboard':

@@ -100,6 +100,7 @@ export {
   Row as Rows3,
   BagShopping2 as ShoppingBag,
   Cart2 as ShoppingCart,
+  SlidersDoubleHorizontal as Sliders,
   Sparkle as Sparkles,
   StarIcon as Star,
   Target3 as Target,

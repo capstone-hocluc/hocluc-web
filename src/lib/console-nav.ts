@@ -13,7 +13,9 @@ import {
   ListTree,
   MailQuestion,
   ShoppingCart,
+  Sliders,
   Sparkles,
+  Star,
   UserCog,
   UserRound,
 } from '../components/console/icons'
@@ -27,7 +29,7 @@ import { can, type Permission } from './permissions'
 // sidebar from here and the router refuses pages that are not listed for the role.
 // Like permissions.ts this is display logic only: the backend's @PreAuthorize rules decide.
 
-export type NavGroupId = 'overview' | 'operations' | 'classes' | 'learners' | 'training' | 'support' | 'system'
+export type NavGroupId = 'overview' | 'operations' | 'classes' | 'learners' | 'training' | 'support' | 'system' | 'settings'
 
 export type NavBadgeKey = 'solutionQueue' | 'mentorAsk'
 
@@ -67,6 +69,7 @@ const GROUP_LABELS: Record<NavGroupId, string | null> = {
   training: 'Đào tạo',
   support: 'Hỗ trợ',
   system: 'Hệ thống',
+  settings: 'Cấu hình hệ thống',
 }
 
 // From the work a role does every day down to what it opens now and then: the courses, tests and question bank first,
@@ -80,6 +83,7 @@ const GROUP_ORDER: NavGroupId[] = [
   'operations',
   'support',
   'system',
+  'settings',
 ]
 
 // Within a group, entries keep this order: the most used first. A host precedes its tabs.
@@ -303,7 +307,12 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     permission: ['USER_MANAGE', 'USER_READ'],
     writePermission: 'USER_MANAGE',
   },
-  { page: 'ai-settings', label: 'Cấu hình AI', icon: Sparkles, group: 'system', roles: ['ADMINISTRATOR'] },
+  { page: 'confidence-settings', label: 'Ngưỡng AI', icon: Sliders, group: 'settings', roles: ['ADMINISTRATOR'] },
+  { page: 'credit-settings', label: 'Giá và Sao', icon: Star, group: 'settings', roles: ['ADMINISTRATOR'] },
+  { page: 'zoom-settings', label: 'Zoom', icon: CalendarDays, group: 'settings', roles: ['ADMINISTRATOR'] },
+  { page: 'email-settings', label: 'Email', icon: MailQuestion, group: 'settings', roles: ['ADMINISTRATOR'] },
+  { page: 'sepay-settings', label: 'SePay', icon: ShoppingCart, group: 'settings', roles: ['ADMINISTRATOR'] },
+  { page: 'ai-settings', label: 'Cấu hình AI', icon: Sparkles, group: 'settings', roles: ['ADMINISTRATOR'] },
   {
     page: 'audit-log',
     label: 'Nhật ký hoạt động',
