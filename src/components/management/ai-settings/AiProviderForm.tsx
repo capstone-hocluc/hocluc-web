@@ -47,7 +47,7 @@ export default function AiProviderForm({
         </>
       )}
       {field('model', 'Model')}
-      {field('reviewModel', 'Model kiểm tra bài đọc (tùy chọn)')}
+      {field('reviewModel', 'Model kiểm tra lại đề (tùy chọn)')}
       {field('secondReviewModel', 'Model kiểm tra lần hai (tùy chọn)')}
       {(form.provider === 'openai' ||
         form.provider === 'cloudflare' ||

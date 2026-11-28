@@ -6,6 +6,7 @@ test('administrator loads, switches, tests and saves provider settings', async (
   let active = 'openai'
   let shouldFail = false
   let saved: Record<string, unknown> | null = null
+  let jevSaved: Record<string, unknown> | null = null
   await page.route('**/api/v1/admin/ai-settings**', async (route) => {
     const request = route.request(),
       url = new URL(request.url())
@@ -16,6 +17,18 @@ test('administrator loads, switches, tests and saves provider settings', async (
         contentType: 'application/json',
         body: JSON.stringify({ success: true, status: 200, data }),
       })
+    if (url.pathname.endsWith('/jev/test'))
+      return response({ ok: true, model: 'jev-test', latencyMs: 18 })
+    if (url.pathname.endsWith('/jev')) {
+      if (request.method() === 'PUT') jevSaved = request.postDataJSON() as Record<string, unknown>
+      return response({
+        baseUrl: 'https://example.invalid',
+        model: 'jev-test',
+        maskedApiKey: '••••9999',
+        secretSavingAvailable: true,
+        source: 'database',
+      })
+    }
     if (url.pathname.endsWith('/test'))
       return response(
         shouldFail
@@ -44,16 +57,19 @@ test('administrator loads, switches, tests and saves provider settings', async (
   })
   await page.goto('/console/admin/ai-settings')
   await expect(page.getByRole('heading', { name: 'Cấu hình AI' })).toBeVisible()
-  await expect(page.getByLabel('Khóa API')).toHaveAttribute('placeholder', 'Đã lưu ••••1234')
+  await expect(page.getByLabel('Khóa API', { exact: true })).toHaveAttribute(
+    'placeholder',
+    'Đã lưu ••••1234'
+  )
   await expect(page.getByRole('radio', { name: /OpenAI/ }).first()).toBeChecked()
   await page.getByText('Cloudflare Workers AI', { exact: true }).click()
   await page.getByLabel('Account ID').fill('fake-account')
-  await page.getByLabel('Khóa API').fill('fake-token-5678')
+  await page.getByLabel('Khóa API', { exact: true }).fill('fake-token-5678')
   await page.getByLabel('Model', { exact: true }).fill('fake-model')
-  await page.getByRole('button', { name: 'Kiểm tra kết nối' }).click()
+  await page.getByRole('button', { name: 'Kiểm tra kết nối', exact: true }).click()
   await expect(page.getByText('Kết nối thành công · fake-model · 42 ms')).toBeVisible()
   shouldFail = true
-  await page.getByRole('button', { name: 'Kiểm tra kết nối' }).click()
+  await page.getByRole('button', { name: 'Kiểm tra kết nối', exact: true }).click()
   await expect(page.getByText('Không thể kết nối.')).toBeVisible()
   await page.getByRole('button', { name: 'Lưu', exact: true }).click()
   await expect(page.getByText('Đã lưu cấu hình AI.')).toBeVisible()
@@ -63,10 +79,20 @@ test('administrator loads, switches, tests and saves provider settings', async (
     apiKey: 'fake-token-5678',
     model: 'fake-model',
   })
-  await expect(page.getByRole('radio', { name: /Cloudflare Workers AI/ }).locator('..')).toContainText(
-    'Đang hoạt động'
-  )
-  await expect(page.getByLabel('Khóa API')).toHaveValue('')
+  await expect(
+    page.getByRole('radio', { name: /Cloudflare Workers AI/ }).locator('..')
+  ).toContainText('Đang hoạt động')
+  await expect(page.getByLabel('Khóa API', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Khóa API Jev')).toHaveAttribute('placeholder', 'Đã lưu ••••9999')
+  await page.getByRole('button', { name: 'Kiểm tra kết nối Jev' }).click()
+  await expect(page.getByText('Kết nối Jev thành công · jev-test · 18 ms')).toBeVisible()
+  await page.getByRole('button', { name: 'Lưu Jev' }).click()
+  await expect(page.getByText('Đã lưu cấu hình gán nhãn.')).toBeVisible()
+  expect(jevSaved).toMatchObject({
+    baseUrl: 'https://example.invalid',
+    model: 'jev-test',
+    apiKey: '',
+  })
 })
 
 test('staff cannot open the page or see its menu entry', async ({ page }) => {

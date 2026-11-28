@@ -7,12 +7,14 @@ import ProviderPicker from './ProviderPicker'
 import { providers } from './providers'
 import AiProviderForm from './AiProviderForm'
 import AiSettingsSkeleton from './AiSettingsSkeleton'
+import JevSettingsCard from './JevSettingsCard'
 
 export default function AiSettingsScreen() {
   const state = useAiSettings()
   return (
     <section className="flex flex-col gap-5">
       <PageHeading title="Cấu hình AI" />
+      <p className="text-sm text-text-secondary">Soạn đề, đọc đề, giải và trợ lý</p>
       {state.loading ? (
         <AiSettingsSkeleton />
       ) : (
@@ -70,6 +72,7 @@ export default function AiSettingsScreen() {
           </Card>
         </>
       )}
+      <JevSettingsCard />
     </section>
   )
 }
