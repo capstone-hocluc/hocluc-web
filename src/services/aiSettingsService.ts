@@ -33,12 +33,20 @@ export interface AiSettingsForm {
   secretAccessKey: string
   sessionToken: string
 }
-export interface AiConnectionResult { ok: boolean; model: string; latencyMs?: number; error?: string }
+export interface AiConnectionResult {
+  ok: boolean
+  model: string
+  latencyMs?: number
+  error?: string
+}
 const endpoint = '/api/v1/admin/ai-settings'
 
 export const aiSettingsService = {
   async get(provider?: AiProvider) {
-    const response = await request<AiSettings>(`${endpoint}${provider ? `?provider=${encodeURIComponent(provider)}` : ''}`, { auth: true })
+    const response = await request<AiSettings>(
+      `${endpoint}${provider ? `?provider=${encodeURIComponent(provider)}` : ''}`,
+      { auth: true }
+    )
     if (!response.data) throw new Error('Không thể tải cấu hình AI.')
     return response.data
   },
@@ -48,7 +56,12 @@ export const aiSettingsService = {
     return response.data
   },
   async test(form: AiSettingsForm) {
-    const response = await request<AiConnectionResult>(`${endpoint}/test`, { auth: true, method: 'POST', body: form, timeoutMs: 330_000 })
+    const response = await request<AiConnectionResult>(`${endpoint}/test`, {
+      auth: true,
+      method: 'POST',
+      body: form,
+      timeoutMs: 330_000,
+    })
     if (!response.data) throw new Error('Không thể kiểm tra kết nối.')
     return response.data
   },
