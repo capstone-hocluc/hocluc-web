@@ -4,6 +4,7 @@ import {
   FileText,
   MailQuestion,
   BarChart3,
+  Target,
   User,
 } from '../components/console/icons'
 import { parseStudentRoute, studentRoutes, type StudentRoute } from './studentRoutes'
@@ -35,13 +36,14 @@ export interface StudentNavGroup {
 }
 
 // Rendered by StudentSidebar; the only place the sidebar entries are declared.
-// Overview, roadmap, schedule and AI tutor entries are temporarily hidden;
+// Overview, schedule and AI tutor entries are temporarily hidden;
 // their routes remain available through existing links.
 export const studentNavGroups: StudentNavGroup[] = [
   {
     label: 'Học tập',
     items: [
       { key: 'learning-profile', label: 'Hồ sơ năng lực', icon: BarChart3, path: studentRoutes.learningProfile() },
+      { key: 'roadmap', label: 'Lộ trình học', icon: Target, path: studentRoutes.roadmap() },
       { key: 'courses', label: 'Khóa học', icon: BookOpen, path: studentRoutes.courses() },
     ],
   },

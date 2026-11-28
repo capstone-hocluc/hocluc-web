@@ -5,6 +5,7 @@ import Button from '../../ui/Button'
 import Card, { CardEyebrow, CardTitle } from '../../ui/Card'
 import Progress from '../../ui/Progress'
 import Skeleton from '../../ui/Skeleton'
+import StatusBadge from '../../ui/StatusBadge'
 import CourseListRow from './CourseListRow'
 import { usePageResource } from '../../../hooks/usePageResource'
 import { getCourseEnrollmentPlan, type Course } from '../../../services/courseService'
@@ -116,7 +117,7 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse, compact = false }: Co
                 key={item.contentSectionId}
               >
                 {compact && <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary-text">{index + 1}</span>}
-                <div className="flex min-w-0 flex-col gap-[3px]">
+                <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
                   <strong className="text-base font-semibold break-words text-text-heading">
                     {item.title}
                   </strong>
@@ -124,6 +125,11 @@ function CourseEnrollmentPlanTab({ courseId, onOpenCourse, compact = false }: Co
                     {item.phaseName}
                   </span>
                 </div>
+                {item.weakSkillCount != null && item.weakSkillCount > 0 && (
+                  <StatusBadge tone="warning" size="sm">
+                    {item.weakSkillCount} kỹ năng cần củng cố
+                  </StatusBadge>
+                )}
               </div>
             ))}
           </div>

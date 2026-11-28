@@ -22,6 +22,7 @@ import SubjectScopeEditor from './subject-scope-editor'
 import FactGrid from './fact-grid'
 import MentorProfilePanel from './mentor-profile-panel'
 import TeacherZoomPanel from './teacher-zoom-panel'
+import StudentLearningDiagnosticPanel from '../console/student-diagnostic/StudentLearningDiagnosticPanel'
 import {
   STATUS_LABELS,
   getStatusTone,
@@ -43,7 +44,7 @@ interface UserDetailDialogProps {
 
 const LISTED_COURSES = 3
 
-type UserTab = 'overview' | 'learning' | 'profile' | 'mentor' | 'zoom' | 'subjects' | 'system'
+type UserTab = 'overview' | 'learning' | 'diagnostic' | 'profile' | 'mentor' | 'zoom' | 'subjects' | 'system'
 
 const GENDER_LABELS: Record<string, string> = { MALE: 'Nam', FEMALE: 'Nữ', OTHER: 'Khác' }
 const TRACK_LABELS: Record<string, string> = {
@@ -79,6 +80,8 @@ function UserDetail({
     user?.role === 'TEACHER' && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
   const showMentorTab =
     user?.role === 'MENTOR' && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
+  const showDiagnosticTab =
+    isStudent && (viewer?.role === 'ADMINISTRATOR' || viewer?.role === 'MANAGER' || viewer?.role === 'STAFF')
   const [tab, setTab] = useState<UserTab>('overview')
   const busy = grantingRoles || savingProfile
   const [editing, setEditing] = useState(false)
@@ -265,6 +268,7 @@ function UserDetail({
                 <ConsoleTabsList aria-label="Thông tin tài khoản">
                   <ConsoleTabsTrigger value="overview">Tổng quan</ConsoleTabsTrigger>
                   {isStudent && <ConsoleTabsTrigger value="learning">Học tập</ConsoleTabsTrigger>}
+                  {showDiagnosticTab && <ConsoleTabsTrigger value="diagnostic">Năng lực &amp; Lộ trình</ConsoleTabsTrigger>}
                   {isStudent && <ConsoleTabsTrigger value="profile">Hồ sơ</ConsoleTabsTrigger>}
                   {showMentorTab && <ConsoleTabsTrigger value="mentor">Hồ sơ Mentor</ConsoleTabsTrigger>}
                   {showZoomTab && <ConsoleTabsTrigger value="zoom">Zoom</ConsoleTabsTrigger>}
@@ -300,6 +304,12 @@ function UserDetail({
                           { label: 'Môn tự tin nhất', value: student?.selfReportedStrongCategoryName },
                         ]}
                       />
+                    </ConsoleTabsContent>
+                  )}
+
+                  {showDiagnosticTab && (
+                    <ConsoleTabsContent value="diagnostic">
+                      <StudentLearningDiagnosticPanel studentId={user.id} active={tab === 'diagnostic'} />
                     </ConsoleTabsContent>
                   )}
 

@@ -13,6 +13,8 @@
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .body h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; color: var(--color-text-heading); font-size: 17px; font-weight: 700; line-height: 1.5; }
 .description { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 14px; line-height: 1.6; color: var(--color-text-secondary); }
+.recommendation { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 13px; font-weight: 600; line-height: 1.45; color: var(--color-primary-text); }
+.weakTag { background: var(--color-badge-warning-bg) !important; color: var(--color-badge-warning-text) !important; }
 .date { font-size: 13px; color: var(--color-text-secondary); }
 .footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--color-line-card); color: var(--color-primary-text); font-size: 14px; }
 .footer span { display: flex; align-items: center; gap: 6px; font-weight: 600; }
@@ -24,6 +26,7 @@
 .compact .body { min-height: 0; gap: 10px; padding: 12px 16px; }
 .compact .body h3 { min-height: 44px; font-size: 16px; line-height: 1.35; letter-spacing: -0.2px; }
 .compact .description { -webkit-line-clamp: 1; font-size: 12px; line-height: 1.5; }
+.compact .recommendation { -webkit-line-clamp: 1; font-size: 12px; line-height: 1.4; }
 .compact .tags span { padding: 3px 8px; font-size: 11px; }
 .compact .date, .compact .footer { font-size: 12px; }
 .compact .footer { padding-top: 10px; }

@@ -11,7 +11,7 @@ import { fieldControlClass, textareaControlClass } from '../console/form-field'
 import { ChatAvatar, ChatInboxRow, ChatMessageBubble } from '../console/chat-presentation'
 import { chatDay } from '../console/chat-format'
 import Modal from '../ui/Modal'
-import { ArrowLeft, Send, Search, RefreshCw, FileText, Check, Plus } from '../console/icons'
+import { ArrowLeft, BarChart3, Send, Search, RefreshCw, FileText, Check, Plus } from '../console/icons'
 import { chatService } from '../../services/chatService'
 import { ApiError } from '../../lib/api'
 import {
@@ -34,6 +34,7 @@ import { refreshCredits } from '../../lib/credits'
 import MentorHoursEditor from './MentorHoursEditor'
 import MentorCardDialog from './mentor-card-dialog'
 import SubjectChipGroup from './SubjectChipGroup'
+import StudentDiagnosticDialog from '../console/student-diagnostic/StudentDiagnosticDialog'
 export interface ChatWorkspaceProps {
   conversationId?: string
   onSelectConversation: (id?: string) => void
@@ -101,6 +102,7 @@ export default function ChatWorkspace({
   const [newRequest, setNewRequest] = useState(false)
   const [hoursOpen, setHoursOpen] = useState(false)
   const [mentorCardId, setMentorCardId] = useState<string | null>(null)
+  const [diagnosticStudent, setDiagnosticStudent] = useState<{ id: string; name: string } | null>(null)
   const [newMessages, setNewMessages] = useState(false)
   const scroll = useRef<HTMLDivElement>(null)
   const previousMessageCount = useRef(0)
@@ -156,6 +158,7 @@ export default function ChatWorkspace({
     setBusy(false)
     setUploading(false)
     setNewRequest(false)
+    setDiagnosticStudent(null)
     nearBottom.current = true
     previousMessageCount.current = 0
     setNewMessages(false)
@@ -656,17 +659,34 @@ export default function ChatWorkspace({
                     )}
                   </div>
                 </div>
-                {canSend && chat.detail && chat.detail.status !== 'RESOLVED' && (
-                  <Button
-                    appearance="outline"
-                    size="sm"
-                    disabled={busy || Boolean(draft.trim()) || attachments.length > 0}
-                    onClick={() => void resolve()}
-                  >
-                    <Check size={14} />
-                    Hoàn tất
-                  </Button>
-                )}
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  {isConsole && chat.detail?.student?.id && (
+                    <Button
+                      appearance="outline"
+                      size="sm"
+                      onClick={() =>
+                        setDiagnosticStudent({
+                          id: chat.detail!.student.id,
+                          name: chat.detail!.student.displayName,
+                        })
+                      }
+                    >
+                      <BarChart3 size={14} />
+                      Năng lực học viên
+                    </Button>
+                  )}
+                  {canSend && chat.detail && chat.detail.status !== 'RESOLVED' && (
+                    <Button
+                      appearance="outline"
+                      size="sm"
+                      disabled={busy || Boolean(draft.trim()) || attachments.length > 0}
+                      onClick={() => void resolve()}
+                    >
+                      <Check size={14} />
+                      Hoàn tất
+                    </Button>
+                  )}
+                </div>
               </div>
               {chat.detailError && (
                 <div className="p-4">
@@ -955,6 +975,14 @@ export default function ChatWorkspace({
       )}
       {hoursOpen && <MentorHoursEditor isConsole={isConsole} onClose={() => setHoursOpen(false)} />}
       {mentorCardId && <MentorCardDialog mentorId={mentorCardId} onClose={() => setMentorCardId(null)} />}
+      {isConsole && (
+        <StudentDiagnosticDialog
+          open={Boolean(diagnosticStudent)}
+          studentId={diagnosticStudent?.id ?? null}
+          studentName={diagnosticStudent?.name}
+          onClose={() => setDiagnosticStudent(null)}
+        />
+      )}
       {guard.hasPendingAction &&
         (isConsole ? (
           <ConsoleDialog open title="Bỏ bản nháp chưa gửi?" onClose={guard.cancelDiscard}>

@@ -7,6 +7,7 @@ import { SegmentedTabs } from '../../components/student/learning-profile/control
 import { CourseDistribution, CourseMockExamResults, LearningCourseList, type ProfileNavigate } from '../../components/student/learning-profile/LearningCoursePanel'
 import CourseLearningAnalytics from '../../components/student/learning-profile/CourseLearningAnalytics'
 import CourseCompetencyPanel from '../../components/student/learning-profile/CourseCompetencyPanel'
+import SkillMasterySummaryCard from '../../components/student/learning-profile/SkillMasterySummaryCard'
 import LearningPracticePanel from '../../components/student/learning-profile/LearningPracticePanel'
 import SuggestedCourses from '../../components/student/course/SuggestedCourses'
 import { useCourseCompetency } from '../../hooks/useCourseCompetency'
@@ -106,6 +107,7 @@ function LearningProfile({ onNavigate }: LearningProfileProps) {
             </aside>
           </div>
           <CourseCompetencyPanel competency={competency} onNavigate={onNavigate} compact />
+          <SkillMasterySummaryCard onOpenRoadmap={() => onNavigate(studentRoutes.roadmap())} />
           <SavedLearningGoals />
           <SuggestedCourses compact onOpen={course => onNavigate(course.purchased ? studentRoutes.courseStudy(course.id) : `/courses/${encodeURIComponent(course.id)}`)} />
         </>}

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { DashboardActions, RoleDashboardWelcome } from '../common/DashboardWelcome'
 import MentorChatScreen from './screens/MentorChatScreen'
+import MentorAssignedStudentsScreen from './screens/MentorAssignedStudentsScreen'
 import ChatAssignmentScreen from './screens/ChatAssignmentScreen'
 import ChatFeatureGate from '../chat-feature-gate'
 import ConsoleShell from '../console/console-shell'
@@ -21,7 +22,6 @@ import type { ManagementRole } from './ManagementRouteGuard'
 import {
   AdminAuditLog,
   MentorSolutionQueue,
-  MentorStudents,
 } from './role-screens'
 import QuizConsoleScreen from './quiz/QuizConsoleScreen'
 import QuestionBankScreen from './question-bank/QuestionBankScreen'
@@ -150,7 +150,7 @@ export function ManagementScreen({
           </Suspense>
         )
       case 'students':
-        return <MentorStudents />
+        return <MentorAssignedStudentsScreen />
       case 'enrollments':
         return <EnrollmentManagement readOnly={readOnly} title={title} navigation={navigation} />
       case 'orders':
