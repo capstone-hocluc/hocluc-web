@@ -1,4 +1,6 @@
-import { ArrowUpRight, CalendarClock } from '../icons'
+import { useMemo } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { ArrowUpRight } from '../icons'
 import type { ConsoleLiveClass } from '../../../services/liveClassService'
 import {
   dateKeyOfInstant,
@@ -8,6 +10,7 @@ import {
 } from '../../../lib/liveScheduleFormat'
 import { cn } from '../../../lib/cn'
 import Button from '../button'
+import DataTable from '../data-table'
 import Status from '../status'
 import LiveClassStatus from './live-class-status'
 
@@ -24,76 +27,103 @@ export default function LiveClassListView({
   onSelect,
   emptyMessage = 'Không có buổi học nào trong tuần này.',
 }: Props) {
-  if (!classes.length) {
-    return (
-      <div className="rounded-xl border border-card-border bg-card-background px-5 py-12 text-center text-sm text-text-tertiary">
-        {emptyMessage}
-      </div>
-    )
-  }
-
-  const grouped = new Map<string, ConsoleLiveClass[]>()
-  for (const item of classes) {
-    const key = dateKeyOfInstant(item.startTime)
-    grouped.set(key, [...(grouped.get(key) ?? []), item])
-  }
+  const columns = useMemo<ColumnDef<ConsoleLiveClass>[]>(
+    () => [
+      {
+        id: 'date',
+        header: 'Ngày',
+        meta: { className: 'whitespace-nowrap' },
+        cell: ({ row }) => {
+          const dateKey = dateKeyOfInstant(row.original.startTime)
+          return (
+            <div>
+              <p>{formatDdMmYyyy(dateKey)}</p>
+              <p className="text-xs text-text-tertiary">{fullDayLabel(dateKey)}</p>
+            </div>
+          )
+        },
+      },
+      {
+        id: 'time',
+        header: 'Giờ',
+        meta: { className: 'whitespace-nowrap' },
+        cell: ({ row }) => (
+          <time dateTime={row.original.startTime}>
+            {formatTimeRangeFromInstants(row.original.startTime, row.original.endTime)}
+          </time>
+        ),
+      },
+      {
+        id: 'title',
+        header: 'Buổi học',
+        cell: ({ row }) => {
+          const item = row.original
+          const isCancelled = item.status === 'CANCELLED'
+          const isAttention = !isCancelled && item.status !== 'COMPLETED' && Boolean(item.needsAttention)
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn('font-medium', isCancelled && 'line-through')}>{item.title}</span>
+              {item.refunded && <Status tone="warning">Đã hoàn Sao</Status>}
+              {isAttention && <Status tone="warning">Ngoài giờ rảnh</Status>}
+              {item.hostZoomReconnectRequired && <Status tone="danger">Zoom GV cần kết nối lại</Status>}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'teacher',
+        header: 'Giáo viên',
+        meta: { className: 'whitespace-nowrap' },
+        cell: ({ row }) => row.original.teacherName ?? '—',
+      },
+      {
+        id: 'course',
+        header: 'Khóa học',
+        meta: { className: 'min-w-56 text-text-secondary' },
+        cell: ({ row }) => row.original.courseTitle ?? '—',
+      },
+      {
+        id: 'admitted',
+        header: 'Đã vào lớp',
+        meta: { className: 'whitespace-nowrap tabular-nums' },
+        cell: ({ row }) => row.original.admittedCount ?? 0,
+      },
+      {
+        id: 'status',
+        header: 'Trạng thái',
+        meta: { className: 'whitespace-nowrap' },
+        cell: ({ row }) => <LiveClassStatus status={row.original.status} />,
+      },
+      {
+        id: 'actions',
+        header: () => <span className="sr-only">Thao tác</span>,
+        meta: { className: 'w-12 text-right' },
+        cell: ({ row }) => (
+          <Button
+            size="icon"
+            appearance="ghost"
+            aria-label={'Xem chi tiết ' + row.original.title}
+            aria-pressed={selectedId === row.original.id}
+            onClick={(event) => {
+              event.stopPropagation()
+              onSelect(row.original)
+            }}
+          >
+            <ArrowUpRight size={17} />
+          </Button>
+        ),
+      },
+    ],
+    [onSelect, selectedId]
+  )
 
   return (
-    <div aria-label="Danh sách buổi học" className="flex flex-col gap-5">
-      {[...grouped.entries()].map(([dateKey, dayClasses]) => (
-        <section key={dateKey} aria-labelledby={'live-date-' + dateKey}>
-          <h2 id={'live-date-' + dateKey} className="mb-2 text-sm font-medium text-text-tertiary">
-            {fullDayLabel(dateKey)}, {formatDdMmYyyy(dateKey)}
-          </h2>
-          <div className="flex flex-col gap-2">
-            {dayClasses.map((item) => {
-              const isCancelled = item.status === 'CANCELLED'
-              const isAttention = !isCancelled && item.status !== 'COMPLETED' && Boolean(item.needsAttention)
-              const admittedLabel = `${item.admittedCount ?? 0} học viên đã vào lớp`
-              return (
-                <article
-                  key={item.id}
-                  className={cn(
-                    'flex items-center gap-3 rounded-xl border bg-card-background p-4 sm:gap-4',
-                    selectedId === item.id ? 'border-brand-500' : 'border-card-border'
-                  )}
-                >
-                  <span className="grid size-11 shrink-0 place-items-center rounded-full bg-badge-blue-background text-badge-blue-icon-color">
-                    <CalendarClock size={19} aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className={cn('truncate text-sm font-medium text-text-primary', isCancelled && 'line-through')}>
-                        {item.title}
-                      </h3>
-                      <LiveClassStatus status={item.status} />
-                      {item.refunded && <Status tone="warning">Đã hoàn Sao</Status>}
-                      {isAttention && <Status tone="warning">Ngoài giờ rảnh</Status>}
-                      {item.hostZoomReconnectRequired && <Status tone="danger">Zoom GV cần kết nối lại</Status>}
-                    </div>
-                    <p className="mt-1 truncate text-sm text-text-tertiary">
-                      {[item.teacherName, item.courseTitle].filter(Boolean).join(' · ')}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-tertiary">
-                      <time dateTime={item.startTime}>{formatTimeRangeFromInstants(item.startTime, item.endTime)}</time>
-                      <span>{admittedLabel}</span>
-                    </div>
-                  </div>
-                  <Button
-                    size="icon"
-                    appearance="ghost"
-                    aria-label={'Xem chi tiết ' + item.title}
-                    aria-pressed={selectedId === item.id}
-                    onClick={() => onSelect(item)}
-                  >
-                    <ArrowUpRight size={17} />
-                  </Button>
-                </article>
-              )
-            })}
-          </div>
-        </section>
-      ))}
-    </div>
+    <DataTable
+      columns={columns}
+      data={classes}
+      getRowKey={(item) => item.id}
+      onRowClick={onSelect}
+      emptyMessage={emptyMessage}
+    />
   )
 }

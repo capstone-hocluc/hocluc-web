@@ -121,13 +121,11 @@ export default function SchedulingPage({ role, navigation }: Props) {
                 mode="management"
               />
             ) : (
-              <div className="p-4">
-                <LiveClassListView
-                  classes={s.displayedClasses}
-                  selectedId={s.selectedClass?.id}
-                  onSelect={(item) => s.setSelectedId(item.id)}
-                />
-              </div>
+              <LiveClassListView
+                classes={s.displayedClasses}
+                selectedId={s.selectedClass?.id}
+                onSelect={(item) => s.setSelectedId(item.id)}
+              />
             )}
           </ScheduleResourceState>
         )}
