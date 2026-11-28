@@ -53,7 +53,7 @@ const EXPECTED_MENU: Record<MenuRole, SidebarGroup[]> = {
     { label: 'Đào tạo', items: ['Khóa học', 'Bài kiểm tra', 'Ngân hàng câu hỏi'] },
     { label: 'Học viên & thanh toán', items: ['Học viên', 'Thanh toán'] },
     { label: 'Vận hành', items: ['Phân công Mentor'] },
-    { label: 'Hệ thống', items: ['Nhân sự & phân quyền'] },
+    { label: 'Hệ thống', items: ['Nhân sự & phân quyền', 'Cấu hình AI'] },
   ],
 }
 

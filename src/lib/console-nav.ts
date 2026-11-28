@@ -303,6 +303,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     permission: ['USER_MANAGE', 'USER_READ'],
     writePermission: 'USER_MANAGE',
   },
+  { page: 'ai-settings', label: 'Cấu hình AI', icon: Sparkles, group: 'system', roles: ['ADMINISTRATOR'] },
   {
     page: 'audit-log',
     label: 'Nhật ký hoạt động',
