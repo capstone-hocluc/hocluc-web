@@ -305,6 +305,7 @@ const CONSOLE_NAV: ConsoleNavItem[] = [
     permission: ['USER_MANAGE', 'USER_READ'],
     writePermission: 'USER_MANAGE',
   },
+  { page: 'email-settings', label: 'Email', icon: MailQuestion, group: 'settings', roles: ['ADMINISTRATOR'] },
   { page: 'sepay-settings', label: 'Thanh toán', icon: ShoppingCart, group: 'settings', roles: ['ADMINISTRATOR'] },
   { page: 'ai-settings', label: 'Cấu hình AI', icon: Sparkles, group: 'settings', roles: ['ADMINISTRATOR'] },
   {
