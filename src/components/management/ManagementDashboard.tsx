@@ -29,6 +29,7 @@ import AiAssistantWorkspace from './ai-assistant/AiAssistantWorkspace'
 import AiSettingsScreen from './ai-settings/AiSettingsScreen'
 import SePaySettingsScreen from './system-settings/SePaySettingsScreen'
 import EmailSettingsScreen from './system-settings/EmailSettingsScreen'
+import ZoomSettingsScreen from './system-settings/ZoomSettingsScreen'
 import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import {
   buildNavSections,
@@ -86,6 +87,8 @@ export function ManagementScreen({
 
   function renderScreen() {
     switch (page) {
+      case 'zoom-settings':
+        return <ZoomSettingsScreen />
       case 'email-settings':
         return <EmailSettingsScreen />
       case 'sepay-settings':
