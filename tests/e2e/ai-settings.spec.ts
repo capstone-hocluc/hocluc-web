@@ -7,6 +7,7 @@ test('administrator loads, switches, tests and saves provider settings', async (
   let shouldFail = false
   let saved: Record<string, unknown> | null = null
   let jevSaved: Record<string, unknown> | null = null
+  let composeSaved: Record<string, unknown> | null = null
   await page.route('**/api/v1/admin/ai-settings**', async (route) => {
     const request = route.request(),
       url = new URL(request.url())
@@ -17,6 +18,10 @@ test('administrator loads, switches, tests and saves provider settings', async (
         contentType: 'application/json',
         body: JSON.stringify({ success: true, status: 200, data }),
       })
+    if (url.pathname.endsWith('/compose')) {
+      if (request.method() === 'PUT') composeSaved = request.postDataJSON() as Record<string, unknown>
+      return response({ source: 'database', values: composeSaved ?? { reuseRatio: 0.2, maxCellsPerCall: 30, minHardShare: 0.2, maxRepairAttempts: 1, maxAnswerRewrites: 1, consecutiveFailureLimit: 3, similarityThreshold: 0.7, parallelism: 3, maxTokensPerJob: 3000000, mathSandboxUrl: '' } })
+    }
     if (url.pathname.endsWith('/jev/test'))
       return response({ ok: true, model: 'jev-test', latencyMs: 18 })
     if (url.pathname.endsWith('/jev')) {
@@ -88,6 +93,11 @@ test('administrator loads, switches, tests and saves provider settings', async (
   await expect(page.getByText('Kết nối Jev thành công · jev-test · 18 ms')).toBeVisible()
   await page.getByRole('button', { name: 'Lưu Jev' }).click()
   await expect(page.getByText('Đã lưu cấu hình gán nhãn.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Thông số soạn đề' })).toBeVisible()
+  await page.getByLabel('Số phần chạy song song (1–20)').fill('5')
+  await page.getByRole('button', { name: 'Lưu thông số' }).click()
+  await expect(page.getByText('Đã lưu thông số soạn đề.')).toBeVisible()
+  expect(composeSaved).toMatchObject({ parallelism: 5 })
   expect(jevSaved).toMatchObject({
     baseUrl: 'https://example.invalid',
     model: 'jev-test',

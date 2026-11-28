@@ -8,6 +8,7 @@ import { providers } from './providers'
 import AiProviderForm from './AiProviderForm'
 import AiSettingsSkeleton from './AiSettingsSkeleton'
 import JevSettingsCard from './JevSettingsCard'
+import ComposeSettingsCard from './ComposeSettingsCard'
 
 export default function AiSettingsScreen() {
   const state = useAiSettings()
@@ -73,6 +74,7 @@ export default function AiSettingsScreen() {
         </>
       )}
       <JevSettingsCard />
+      <ComposeSettingsCard />
     </section>
   )
 }
