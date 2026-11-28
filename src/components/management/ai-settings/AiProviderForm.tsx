@@ -12,7 +12,7 @@ export default function AiProviderForm({ form, secrets, disabled, onChange }: {
       placeholder={secret && secrets[key] ? `Đã lưu ${secrets[key]}` : undefined} />
   </Field>
   return <div className="grid gap-5 sm:grid-cols-2">
-    {form.provider !== 'bedrock' && field('apiKey', 'Khóa API', true)}
+    {form.provider !== 'bedrock' && field('apiKey', form.provider === 'compatible' ? 'Khóa API (tùy chọn)' : 'Khóa API', true)}
     {form.provider === 'bedrock' && <>
       {field('accessKeyId', 'Access key ID', true)}{field('secretAccessKey', 'Secret access key', true)}
       {field('sessionToken', 'Session token (tùy chọn)', true)}{field('region', 'Khu vực AWS')}
