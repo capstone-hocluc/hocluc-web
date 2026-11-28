@@ -31,6 +31,7 @@ import SePaySettingsScreen from './system-settings/SePaySettingsScreen'
 import EmailSettingsScreen from './system-settings/EmailSettingsScreen'
 import ZoomSettingsScreen from './system-settings/ZoomSettingsScreen'
 import CreditSettingsScreen from './system-settings/CreditSettingsScreen'
+import ConfidenceSettingsScreen from './system-settings/ConfidenceSettingsScreen'
 import { isQuizPage, quizMenuPage } from '../../lib/console-routes'
 import {
   buildNavSections,
@@ -88,6 +89,8 @@ export function ManagementScreen({
 
   function renderScreen() {
     switch (page) {
+      case 'confidence-settings':
+        return <ConfidenceSettingsScreen />
       case 'credit-settings':
         return <CreditSettingsScreen />
       case 'zoom-settings':
